@@ -1,0 +1,216 @@
+package com.tb24.discordbot.util
+
+import com.mojang.brigadier.LiteralMessage
+import com.mojang.brigadier.StringReader
+import com.mojang.brigadier.context.CommandContext
+import com.mojang.brigadier.exceptions.CommandSyntaxException
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.CatalogEntryHolder
+import com.tb24.discordbot.DiscordBot
+import com.tb24.discordbot.HttpException
+import com.tb24.fn.EpicApi
+import com.tb24.fn.ProfileManager
+import com.tb24.fn.assetdata.FortQuestRewardTableRow
+import com.tb24.fn.model.EStoreCurrencyType
+import com.tb24.fn.model.FortCatalogResponse
+import com.tb24.fn.model.FortCatalogResponse.Price
+import com.tb24.fn.model.FortItemStack
+import com.tb24.fn.model.mcpprofile.ProfileUpdate
+import com.tb24.fn.util.CatalogHelper
+import com.tb24.fn.util.Formatters
+import com.tb24.fn.util.getPreviewImagePath
+import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
+import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
+import me.fungames.jfortniteparse.ue4.objects.uobject.FName
+import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.entities.*
+import retrofit2.Call
+import retrofit2.Response
+import java.io.ByteArrayOutputStream
+import java.io.IOException
+import java.text.DateFormat
+import java.util.*
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Future
+import javax.imageio.ImageIO
+import kotlin.math.min
+
+@Throws(HttpException::class, IOException::class)
+fun ProfileManager.dispatchClientCommandRequest(payload: Any, profileId: String = "common_core"): CompletableFuture<ProfileUpdate> =
+	CompletableFuture.supplyAsync { makeClientCommandCall(payload.javaClass.simpleName, profileId, payload).exec().body().apply { handleProfileUpdate(this) } }
+
+@Throws(HttpException::class, IOException::class)
+fun <T> Call<T>.exec(): Response<T> = execute().apply {
+	if (!isSuccessful)
+		throw HttpException(this)
+}
+
+@Throws(HttpException::class, IOException::class)
+fun <T> Call<T>.future(): CompletableFuture<Response<T>> = CompletableFuture.supplyAsync {
+	execute().apply {
+		if (!isSuccessful)
+			throw HttpException(this)
+	}
+}
+
+@Throws(HttpException::class, IOException::class)
+fun okhttp3.Call.exec(): okhttp3.Response = execute().apply {
+	if (!isSuccessful)
+		throw HttpException(this)
+}
+
+inline fun <reified T> okhttp3.Response.to(): T = body()!!.run { EpicApi.GSON.fromJson(charStream(), T::class.java) }.apply { close() }
+
+fun CommandContext<*>.getCommandName(): String = nodes.first().node.name
+
+private val DF = DateFormat.getDateTimeInstance()
+
+fun Date.format(): String = DF.format(this)
+
+fun FortItemStack.render(displayQty: Int = quantity) = (if (displayQty > 1) Formatters.num.format(displayQty) + " \u00d7 " else "") + if (templateId.startsWith("Currency:Mtx")) Utils.MTX_EMOJI else displayName
+
+fun FortItemStack.renderWithIcon(displayQty: Int = quantity) = (getItemIconEmote(templateId)?.run { "$asMention " } ?: "") + render(displayQty)
+
+fun Price.icon(): String = when (currencyType) {
+	EStoreCurrencyType.MtxCurrency -> Utils.MTX_EMOJI
+	EStoreCurrencyType.GameItem -> getItemIconEmote(currencySubType)?.asMention ?: currencySubType
+	else -> currencyType.name
+}
+
+fun Price.emote(): Emote? = when (currencyType) {
+	EStoreCurrencyType.MtxCurrency -> DiscordBot.instance.discord.getEmoteById(751101530626588713L)
+	EStoreCurrencyType.GameItem -> getItemIconEmote(currencySubType)
+	else -> null
+}
+
+@Suppress("EXPERIMENTAL_API_USAGE")
+@Synchronized
+fun getItemIconEmote(templateId: String, createIfNonexistent: Boolean = DiscordBot.ENV == "test"): Emote? {
+	val existing = DiscordBot.instance.discord.getEmotesByName(templateId.split(":")[1].run { substring(0, min(32, length)) }, true).firstOrNull()
+	if (existing != null) {
+		return existing
+	}
+	if (!createIfNonexistent) {
+		return null
+	}
+	val item = FortItemStack(templateId, 1)
+	val defData = item.defData ?: return null
+	val icon = item.getPreviewImagePath(true)?.load<UTexture2D>()?.toBufferedImage()
+	val baos = ByteArrayOutputStream()
+	ImageIO.write(icon, "png", baos)
+	return DiscordBot.instance.discord.getGuildById(648556726672556048L)?.createEmote(defData.name.run { substring(0, min(32, length)) }, Icon.from(baos.toByteArray(), Icon.IconType.PNG))?.complete()
+}
+
+fun Price.render(quantity: Int = 1) = icon() + ' ' + Formatters.num.format(quantity * basePrice) + if (saleType != null) " ~~${Formatters.num.format(quantity * regularPrice)}~~" else ""
+
+fun Price.getAccountBalance(profileManager: ProfileManager): Int {
+	if (currencyType == EStoreCurrencyType.MtxCurrency) {
+		return CatalogHelper.countMtxCurrency(profileManager.getProfileData("common_core"))
+	} else if (currencyType == EStoreCurrencyType.GameItem) {
+		for (profile in profileManager.profileData.values) {
+			for (item in profile.items.values) {
+				if (item.templateId == currencySubType && item.quantity > 0) {
+					return item.quantity
+				}
+			}
+		}
+	}
+	return 0
+}
+
+fun Price.getAccountBalanceText(profileManager: ProfileManager) = icon() + ' ' + Formatters.num.format(getAccountBalance(profileManager))
+
+fun Map<FName, FortQuestRewardTableRow>.render(prefix: String, fac: Float = 1f, bold: Boolean = false): String {
+	val fmt = if (bold) "**" else ""
+	val lines = arrayListOf<String>()
+	var lastEntry: FortQuestRewardTableRow? = null
+	toSortedMap { o1, o2 ->
+		val priority1 = o1.text.substringAfterLast('_', "0").toInt()
+		val priority2 = o2.text.substringAfterLast('_', "0").toInt()
+		priority1 - priority2
+	}.forEach {
+		lines.add("$prefix$fmt${it.value.asItemStack().renderWithIcon((it.value.Quantity * fac).toInt())}$fmt")
+		if (lastEntry != null && lastEntry!!.Selectable && it.value.Selectable) {
+			lines.add("$prefix- OR -")
+		}
+		lastEntry = it.value
+	}
+	return lines.joinToString("\n")
+}
+
+@Throws(CommandSyntaxException::class)
+fun <T> List<T>.safeGetOneIndexed(index: Int, reader: StringReader? = null, start: Int = 0): T {
+	if (index < 1) {
+		val type = CommandSyntaxException.BUILT_IN_EXCEPTIONS.integerTooLow()
+		throw if (reader != null) type.createWithContext(reader.apply { cursor = start }, index, 1) else type.create(index, 1)
+	} else if (index > size) {
+		val type = CommandSyntaxException.BUILT_IN_EXCEPTIONS.integerTooHigh()
+		throw if (reader != null) type.createWithContext(reader.apply { cursor = start }, index, size) else type.create(index, size)
+	}
+	return get(index - 1)
+}
+
+@Throws(CommandSyntaxException::class)
+fun <T> Array<T>.safeGetOneIndexed(index: Int, reader: StringReader? = null, start: Int = 0): T {
+	if (index < 1) {
+		val type = CommandSyntaxException.BUILT_IN_EXCEPTIONS.integerTooLow()
+		throw if (reader != null) type.createWithContext(reader.apply { cursor = start }, index, 1) else type.create(index, 1)
+	} else if (index > size) {
+		val type = CommandSyntaxException.BUILT_IN_EXCEPTIONS.integerTooHigh()
+		throw if (reader != null) type.createWithContext(reader.apply { cursor = start }, index, size) else type.create(index, size)
+	}
+	return get(index - 1)
+}
+
+@Throws(CommandSyntaxException::class)
+fun Message.yesNoReactions(author: User, inTime: Long = 30000L): CompletableFuture<Boolean> = CompletableFuture.supplyAsync {
+	try {
+		val icons = arrayOf("✅", "❌").apply { forEach { addReaction(it).queue() } }
+		awaitReactions({ reaction, user, _ -> icons.contains(reaction.reactionEmote.name) && user?.idLong == author.idLong }, AwaitReactionsOptions().apply {
+			max = 1
+			time = inTime
+			errors = arrayOf(CollectorEndReason.TIME)
+		}).await().values.first().reactionEmote.name == "✅"
+	} catch (e: CollectorException) {
+		throw SimpleCommandExceptionType(LiteralMessage("Timed out while waiting for your confirmation.")).create()
+	}
+}
+
+fun <T> Future<T>.await(): T {
+	try {
+		return get()
+	} catch (e: ExecutionException) {
+		throw e.cause!!
+	}
+}
+
+fun <T> EmbedBuilder.addFieldSeparate(title: String, entries: Collection<T>?, bullet: Int = 2, inline: Boolean = false, mapper: ((T) -> String)? = null): EmbedBuilder {
+	if (entries == null || entries.isEmpty()) {
+		addField(title, "No entries", inline)
+		return this
+	}
+	var buffer = ""
+	var fieldCount = 0
+	for ((i, entry) in entries.withIndex()) {
+		val s = (when (bullet) {
+			1 -> "\u2022 "
+			2 -> "${Formatters.num.format(i + 1)}. "
+			else -> ""
+		}) + if (mapper != null) mapper(entry) else entry.toString()
+		val separator = if (i > 0) "\n" else ""
+		if (buffer.length + separator.length + s.length <= MessageEmbed.VALUE_MAX_LENGTH) {
+			buffer += separator + s
+		} else {
+			addField(title + if (fieldCount > 0) " (continued)" else "", buffer, inline)
+			++fieldCount
+			buffer = s
+		}
+	}
+	if (buffer.isNotEmpty()) {
+		addField(title + if (fieldCount > 0) " (continued)" else "", buffer, inline)
+	}
+	return this
+}
+
+fun FortCatalogResponse.CatalogEntry.holder() = CatalogEntryHolder(this)

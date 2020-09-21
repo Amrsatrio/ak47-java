@@ -1,0 +1,11 @@
+rootProject.name = 'ak47'
+includeBuild('../Matchmaker') {
+	dependencySubstitution {
+		substitute module('com.tb24:EpicApi') with project(':')
+	}
+}
+includeBuild('../JFortniteParse') {
+	dependencySubstitution {
+		substitute module('me.fungames:JFortniteParse') with project(':')
+	}
+}
