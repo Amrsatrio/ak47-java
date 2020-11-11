@@ -1,8 +1,8 @@
 package com.tb24.discordbot.util;
 
 import com.google.gson.JsonElement;
-import com.tb24.fn.assetdata.FortQuestItemDefinition;
 import com.tb24.fn.model.FortItemStack;
+import com.tb24.fn.model.assetdata.FortQuestItemDefinition;
 import com.tb24.fn.util.EAuthClient;
 
 import java.net.URLEncoder;

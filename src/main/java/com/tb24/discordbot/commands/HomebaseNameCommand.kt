@@ -10,8 +10,8 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.util.await
+import com.tb24.discordbot.util.commandName
 import com.tb24.discordbot.util.dispatchClientCommandRequest
-import com.tb24.discordbot.util.getCommandName
 import com.tb24.fn.model.mcpprofile.attributes.CommonPublicProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.SetHomebaseName
@@ -40,7 +40,7 @@ class HomebaseNameCommand : BrigadierCommand("homebasename", "Displays or change
 				.setTitle("Homebase name")
 				.addField("Current", currentHomebaseName, false)
 				.addField("Last updated (UTC)", SimpleDateFormat().format(commonPublic.updated), false)
-				.setFooter("Use '" + source.prefix + context.getCommandName() + " <new name>' to change it.")
+				.setFooter("Use '" + source.prefix + context.commandName + " <new name>' to change it.")
 				.setColor(0x40FAA1)
 				.build())
 		} else {

@@ -10,11 +10,11 @@ import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
 import com.tb24.fn.EpicApi
 import com.tb24.fn.ProfileManager
-import com.tb24.fn.assetdata.FortQuestRewardTableRow
 import com.tb24.fn.model.EStoreCurrencyType
 import com.tb24.fn.model.FortCatalogResponse
 import com.tb24.fn.model.FortCatalogResponse.Price
 import com.tb24.fn.model.FortItemStack
+import com.tb24.fn.model.assetdata.FortQuestRewardTableRow
 import com.tb24.fn.model.mcpprofile.ProfileUpdate
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Formatters
@@ -26,6 +26,7 @@ import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.*
 import retrofit2.Call
 import retrofit2.Response
+import java.awt.Color
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.text.DateFormat
@@ -62,7 +63,7 @@ fun okhttp3.Call.exec(): okhttp3.Response = execute().apply {
 
 inline fun <reified T> okhttp3.Response.to(): T = body()!!.run { EpicApi.GSON.fromJson(charStream(), T::class.java) }.apply { close() }
 
-fun CommandContext<*>.getCommandName(): String = nodes.first().node.name
+val CommandContext<*>.commandName: String get() = nodes.first().node.name
 
 private val DF = DateFormat.getDateTimeInstance()
 
@@ -213,4 +214,6 @@ fun <T> EmbedBuilder.addFieldSeparate(title: String, entries: Collection<T>?, bu
 	return this
 }
 
-fun FortCatalogResponse.CatalogEntry.holder() = CatalogEntryHolder(this)
+inline fun FortCatalogResponse.CatalogEntry.holder() = CatalogEntryHolder(this)
+
+fun Number.awtColor() = toInt().run { Color(this, ushr(24) == 0xFF) }

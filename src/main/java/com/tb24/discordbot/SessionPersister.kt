@@ -23,7 +23,7 @@ object SessionPersister {
 		EpicApi.GSON.fromJson(sessions[sessionId], PersistedSession::class.java)
 
 	fun set(session: Session) {
-		sessions.add(session.id, EpicApi.GSON.toJsonTree(PersistedSession(session.api.userToken, session.api.currentLoggedIn.run { GameProfile(id, displayName) })))
+		sessions.add(session.id, EpicApi.GSON.toJsonTree(PersistedSession(session.api.userToken, session.api.currentLoggedIn.run { GameProfile(id, epicDisplayName) })))
 		save()
 	}
 

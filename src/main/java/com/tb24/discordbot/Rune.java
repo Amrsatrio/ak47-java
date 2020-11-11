@@ -5,6 +5,8 @@ import com.tb24.uasset.AssetManager;
 
 import java.util.Arrays;
 
+import static com.rethinkdb.RethinkDB.r;
+
 public class Rune {
 	public static boolean isBotDevOrPotato(CommandSourceStack source) {
 		return Arrays.asList(
@@ -17,5 +19,9 @@ public class Rune {
 
 	public static boolean hasAssetsLoaded(CommandSourceStack source) {
 		return !AssetManager.INSTANCE.provider.files().isEmpty();
+	}
+
+	public static boolean hasAccess(CommandSourceStack source) {
+		return r.table("members").get(source.getAuthor().getId()).run(DiscordBot.instance.dbConn).first() != null;
 	}
 }

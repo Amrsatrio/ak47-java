@@ -2,15 +2,17 @@ package com.tb24.discordbot
 
 import com.mojang.brigadier.Command
 import com.tb24.discordbot.commands.CommandSourceStack
-import com.tb24.discordbot.commands.LoginCommand
+import com.tb24.discordbot.commands.GrantType
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.event.ProfileUpdatedEvent
 import com.tb24.fn.model.mcpprofile.McpLootEntry
 import com.tb24.fn.model.mcpprofile.item.GiftBoxAttributes
 import com.tb24.fn.util.EAuthClient
+import com.tb24.fn.util.Utils.DEFAULT_GSON
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.internal.entities.UserImpl
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import org.slf4j.LoggerFactory
@@ -21,7 +23,7 @@ import java.util.concurrent.CompletableFuture
 
 class Session(val client: DiscordBot, val id: String) {
 	val LOGGER = LoggerFactory.getLogger("Session")
-	val api: EpicApi = EpicApi(client.okHttpClient)
+	val api = EpicApi(client.okHttpClient)
 	val creation = System.currentTimeMillis()
 	var channelsManager = ChannelsManager(api)
 
@@ -30,19 +32,20 @@ class Session(val client: DiscordBot, val id: String) {
 			api.userToken = token
 			api.currentLoggedIn = accountData
 		}
+		api.buildServices()
 		api.eventBus.register(this)
 	}
 
 	@Throws(HttpException::class, IOException::class)
-	fun login(source: CommandSourceStack?, grantType: LoginCommand.GrantType, fields: Map<String, String>, auth: EAuthClient = EAuthClient.FORTNITE_IOS_GAME_CLIENT, sendMessages: Boolean = true): Int {
+	fun login(source: CommandSourceStack?, grantType: GrantType, fields: Map<String, String>, auth: EAuthClient = EAuthClient.FORTNITE_IOS_GAME_CLIENT, sendMessages: Boolean = true): Int {
 		if (source != null) {
-			if (grantType != LoginCommand.GrantType.device_auth && grantType != LoginCommand.GrantType.device_code && source.message.isFromGuild) {
+			if (grantType != GrantType.device_auth && grantType != GrantType.device_code && source.message.isFromGuild) {
 				source.message.delete().queue()
 			}
 			if (api.userToken != null) {
 				logout(source.message)
 			}
-			if (grantType != LoginCommand.GrantType.device_code) {
+			if (grantType != GrantType.device_code) {
 				if (sendMessages) {
 					source.errorTitle = "Login Failed"
 					source.loading("Signing in to Epic services")
@@ -52,6 +55,7 @@ class Session(val client: DiscordBot, val id: String) {
 		}
 		val token = api.accountService.getAccessToken(auth.asBasicAuthString(), grantType.name, fields, null).exec().body()!!
 		api.userToken = token
+		api.buildServices()
 		val accountData = api.accountService.findAccountsByIds(Collections.singletonList(token.account_id)).exec().body()?.firstOrNull()
 		api.currentLoggedIn = accountData
 		save()
@@ -61,7 +65,7 @@ class Session(val client: DiscordBot, val id: String) {
 				.setTitle("👋 Welcome, %s!".format(accountData?.displayName ?: "Unknown"))
 				.addField("Account ID", token.account_id, false)
 				.setThumbnail("https://cdn2.unrealengine.com/Kairos/portraits/${avatarKeys[0]}.png?preview=1")
-				.setColor(Color.decode(com.tb24.fn.util.Utils.DEFAULT_GSON.fromJson(avatarKeys[1], Array<String>::class.java)[1]))
+				.setColor(Color.decode(DEFAULT_GSON.fromJson(avatarKeys[1], Array<String>::class.java)[1]))
 
 			if (accountData?.externalAuths != null) {
 				for (externalAuth in accountData.externalAuths.values) {
@@ -115,6 +119,7 @@ class Session(val client: DiscordBot, val id: String) {
 
 	@Subscribe(threadMode = ThreadMode.ASYNC)
 	fun onProfileUpdated(event: ProfileUpdatedEvent) {
+		if (true) return
 		val profile = event.profileObj
 		try {
 			if (profile.profileId == "common_core") {
@@ -149,7 +154,7 @@ class Session(val client: DiscordBot, val id: String) {
 							"gb_stwgift" -> {
 								title = "You received a gift!"
 								attrs.fromAccountId?.apply {
-									icon = channelsManager.getUserSettings(this, "avatar")[0]
+									icon = "https://cdn2.unrealengine.com/Kairos/portraits/${channelsManager.getUserSettings(this, "avatar")[0]}.png?preview=1"
 									line1 = "From: ${fromAccount?.displayName ?: attrs.fromAccountId}"
 								}
 								attrs.params["userMessage"]?.apply {
@@ -180,9 +185,13 @@ class Session(val client: DiscordBot, val id: String) {
 							.apply {
 								addFieldSeparate("Items", customLootList) { it.asItemStack().render() }
 							}
+							.addField("Your Account ID", api.currentLoggedIn.id, false)
+							.addField("Gift ID", item.itemId, false)
 							.setFooter("React this with anything to acknowledge")
 							.build()
-						client.discord.getUserById(id)?.openPrivateChannel()?.queue { it.sendMessage(embed).queue() }
+						val user = client.discord.getUserById(id) ?: client.discord.retrieveUserById(id).complete()
+						val channel = (user as UserImpl).privateChannel ?: user.openPrivateChannel().complete()
+						channel.sendMessage(embed).complete()
 					}
 				}
 			}

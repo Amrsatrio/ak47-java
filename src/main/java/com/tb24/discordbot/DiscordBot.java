@@ -3,7 +3,7 @@ package com.tb24.discordbot;
 import com.google.common.collect.ImmutableMap;
 import com.rethinkdb.net.Connection;
 import com.tb24.discordbot.commands.CommandManager;
-import com.tb24.discordbot.commands.LoginCommand;
+import com.tb24.discordbot.commands.GrantType;
 import com.tb24.discordbot.util.Utils;
 import com.tb24.fn.model.account.DeviceAuth;
 import com.tb24.fn.util.EAuthClient;
@@ -33,7 +33,7 @@ import okhttp3.OkHttpClient;
 import static com.rethinkdb.RethinkDB.r;
 
 public final class DiscordBot {
-	public static final String VERSION = "6.0.1";
+	public static final String VERSION = "6.0.2";
 	private static final Logger LOGGER = LoggerFactory.getLogger("DiscordBot");
 	public static final CertificatePinner CERT_PINNER = new CertificatePinner.Builder()
 		.add("discordapp.com", "sha256/DACsWb3zfNT9ttV6g6o5wwpzvgKJ66CliW2GCh2m8LQ=")
@@ -84,26 +84,21 @@ public final class DiscordBot {
 			.setHttpClient(okHttpClient)
 			.build();
 		discord.addEventListener(commandManager = new CommandManager(this));
-		/*discord.addEventListener(new ListenerAdapter() {
-			@Override
-			public void onMessageReactionAdd(MessageReactionAddEvent event) {
-				event.retrieveMessage().complete().getEmbeds().get(0).getFields().get(0).getName();
-			}
-		});*/
+//		discord.addEventListener(new ReactionHandler(this)); // TODO doesn't respond if the channel hasn't been interacted with
 		discord.awaitReady();
 		LOGGER.info("Logged in as {}! v{}", discord.getSelfUser().getAsTag(), VERSION);
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 			internalSession.logout(null);
 			discord.shutdown();
 		}));
-		discord.getPresence().setActivity(Activity.playing("with user's accounts \u00b7 v" + VERSION));
+		discord.getPresence().setActivity(Activity.playing("with users' accounts \u00b7 v" + VERSION));
 	}
 
 	private void setupInternalSession() {
 		internalSession = getSession("__internal__");
 		DeviceAuth internalDeviceData = savedLoginsManager.getAll("__internal__").get(0);
 		try {
-			internalSession.login(null, LoginCommand.GrantType.device_auth, ImmutableMap.of(
+			internalSession.login(null, GrantType.device_auth, ImmutableMap.of(
 				"account_id", internalDeviceData.accountId,
 				"device_id", internalDeviceData.deviceId,
 				"secret", internalDeviceData.secret), EAuthClient.FORTNITE_IOS_GAME_CLIENT, false);

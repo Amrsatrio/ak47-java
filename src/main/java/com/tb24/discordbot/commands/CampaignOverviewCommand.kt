@@ -4,7 +4,6 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
-import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.discordbot.util.getItemIconEmote
@@ -21,12 +20,11 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Displays summary of you
 				.build())
 			Command.SINGLE_SUCCESS
 		}*/
-		.requires(Rune::isBotDevOrPotato)
 		.executes(::execute)
 
 	fun execute(c: CommandContext<CommandSourceStack>): Int {
 		c.source.ensureSession()
-		c.source.loading("Getting your STW data")
+		c.source.loading("Getting STW data")
 		val profileManager = c.source.api.profileManager
 		profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
 		val campaign = profileManager.getProfileData("campaign")

@@ -3,6 +3,7 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
@@ -14,9 +15,13 @@ import com.tb24.fn.util.getStringOr
 class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the account owns on all platforms.", arrayListOf("bal", "balance", "mtx", "v", "vbucksbalance")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
+/*
+			if (it.source.author.idLong == 720148351626248192L)
+				throw SimpleCommandExceptionType(LiteralMessage("do u think i wont notice u selling services thru this bot? ur so dumb, no more access to this command for u !!!! 😡")).create()
+*/
 			val source = it.source
 			source.ensureSession()
-			source.loading("Getting your balance")
+			source.loading("Getting balance")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 			val commonCore = source.api.profileManager.getProfileData("common_core")
 			val current = (commonCore.stats.attributes as CommonCoreProfileAttributes).current_mtx_platform
@@ -33,6 +38,7 @@ class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the
 				.setTitle(Formatters.num.format(CatalogHelper.countMtxCurrency(commonCore)) + " V-Bucks")
 				.addField("Breakdown", if (breakdown.isEmpty()) "You have no V-Bucks." else breakdown.joinToString("\n"), false)
 				.setFooter("V-Bucks platform: " + current + " (" + source.prefix + "vbucksplatform to change)")
+				.setThumbnail(Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Items/T-Items-MTX-L.T-Items-MTX-L"))
 				.setColor(0x40FAA1)
 				.build())
 			Command.SINGLE_SUCCESS

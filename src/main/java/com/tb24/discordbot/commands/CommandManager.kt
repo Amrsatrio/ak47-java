@@ -5,7 +5,6 @@ import com.google.common.collect.ImmutableMap
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.StringReader
 import com.mojang.brigadier.arguments.*
-import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.mojang.brigadier.tree.ArgumentCommandNode
@@ -49,33 +48,40 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 			}
 		)*/
 		register(AboutCommand())
+		register(AccountCommand())
 		register(AffiliateNameCommand())
 		register(AthenaDailyChallengesCommand())
 		register(AvatarCommand())
 //		BanCommand.register(dispatcher)
 		register(CampaignOverviewCommand())
 		register(CampaignShopCommand())
+		register(CatabaCommand())
 		register(ClaimMfaCommand())
 		register(CosmeticCommand())
 		register(DailyQuestsCommand())
 		register(DailyRewardsCommand())
 		register(EvalCommand())
 		register(ExchangeCommand())
+		register(ExtendedLoginCommand())
 		register(FishCollectionCommand())
+//		register(FriendsCommand())
+		register(GenXpCoinsDataCommand())
 		register(GiftCommand())
 		register(GiftHistoryCommand())
 		register(GiftSettingsCommand())
 		register(HelpCommand())
 		register(HomebaseNameCommand())
 //		KickCommand.register(dispatcher)
+//		register(LockerCommand())
 		register(LoginCommand())
 		register(LogoutCommand())
 		register(MtxBalanceCommand())
 		register(MtxPlatformCommand())
+		register(PhoenixCommand())
 		register(PingCommand())
 		register(PrefixCommand())
 		register(PurchaseCommand())
-		register(ShopCommand())
+//		register(ShopCommand())
 		register(ShopTextCommand())
 		register(UndoCommand())
 	}
@@ -83,7 +89,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 	private fun register(command: BrigadierCommand): LiteralCommandNode<CommandSourceStack> {
 		commandMap[command.name] = command
 		val node = command.getNode(dispatcher)
-		val registered = dispatcher.register(node)
+		val registered = command.register(dispatcher)
 		for (alias in command.aliases) {
 			redirects[alias] = command
 			dispatcher.register(buildRedirect(alias, registered))
@@ -92,19 +98,14 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		return registered
 	}
 
-	private fun buildRedirect(alias: String, destination: LiteralCommandNode<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> {
-		// Redirects only work for nodes with children, but break the top argument-less command.
-		// Manually adding the root command after setting the redirect doesn't fix it.
-		// See https://github.com/Mojang/brigadier/issues/46). Manually clone the node instead.
-		val builder: LiteralArgumentBuilder<CommandSourceStack> = literal<CommandSourceStack>(alias)
+	// Redirects only work for nodes with children, but break the top argument-less command.
+	// Manually adding the root command after setting the redirect doesn't fix it.
+	// See https://github.com/Mojang/brigadier/issues/46). Manually clone the node instead.
+	private fun buildRedirect(alias: String, destination: LiteralCommandNode<CommandSourceStack>) =
+		destination.children.fold(literal<CommandSourceStack>(alias)
 			.requires(destination.requirement)
 			.forward(destination.redirect, destination.redirectModifier, destination.isFork)
-			.executes(destination.command)
-		for (child in destination.children) {
-			builder.then(child)
-		}
-		return builder
-	}
+			.executes(destination.command)) { acc, it -> acc.then(it) }
 
 	override fun onMessageReceived(event: MessageReceivedEvent) {
 		threadPool.submit {
@@ -179,46 +180,36 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				source.complete(null, embed.setDescription(lines.joinToString("\n")).build())
 			}
 		} catch (e: HttpException) {
-			if (commandError(source, e)) {
-				source.session = source.initialSession
+			if (httpError(source, e)) {
 				handleCommand(command, source, prefix)
 			}
 		} catch (e: Throwable) {
-			System.err.println("Unhandled exception while executing command\nCommand: ${reader.string}")
+			val additional = "\nCommand: ${reader.string}"
+			System.err.println("Unhandled exception while executing command$additional")
 			e.printStackTrace()
-			source.complete(null, EmbedBuilder()
-				.setTitle("💥 Uh oh! That was unexpected!")
-				.setDescription("An error has occurred and we're working to fix the problem!\nYou can [join our server](${Utils.HOMEBASE_GUILD_INVITE}) and report it there if we failed to fix it in time!")
-				.addField("Error", "```$e```", false)
-				.setColor(0xFF4526)
-				.build())
-			if (DiscordBot.ENV == "prod" || DiscordBot.ENV == "stage") {
-				client.dlog("""__**Error report**__
-User: ${source.author.asMention}
-Command: ${reader.string}
-```${Throwables.getStackTraceAsString(e)}```""", null)
-			}
+			unhandledException(source, e, additional)
 		}
 	}
 
 	/**
-	 * @return true if the command should be executed again
+	 * @return true if the action should be executed again
 	 */
-	private fun commandError(source: CommandSourceStack, e: HttpException, errorTitle: String = source.errorTitle!!): Boolean {
+	fun httpError(source: CommandSourceStack, e: HttpException, errorTitle: String = source.errorTitle!!): Boolean {
 		var description: String? = null
-		var footer: String? = null
+		var footer = ""
 		val host: String = e.response.request().url().host()
-		val isEpicGames = host.endsWith("epicgames.com")
+		val isEpicGames = host.endsWith("epicgames.com") || host.endsWith("fortnite.qq.com")
 		if (isEpicGames) {
 			if (e.code() == HttpURLConnection.HTTP_UNAUTHORIZED && source.api.userToken?.account_id != null) {
 				val savedDevice = client.savedLoginsManager.get(source.session.id, source.api.userToken.account_id)
 				source.api.userToken = null
 				if (savedDevice != null) {
 					try {
-						source.session.login(source, LoginCommand.GrantType.device_auth, ImmutableMap.of("account_id", savedDevice.accountId, "device_id", savedDevice.deviceId, "secret", savedDevice.secret, "token_type", "eg1"), sendMessages = false)
+						source.session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", savedDevice.accountId, "device_id", savedDevice.deviceId, "secret", savedDevice.secret, "token_type", "eg1"), sendMessages = false)
+						source.session = source.initialSession
 						return true
 					} catch (e: HttpException) {
-						commandError(source, e, "Login Failed")
+						httpError(source, e, "Login Failed")
 					}
 				}
 				source.session.clear()
@@ -245,6 +236,20 @@ Command: ${reader.string}
 			.setColor(0xFFF300)
 			.build())
 		return false
+	}
+
+	fun unhandledException(source: CommandSourceStack, e: Throwable, additional: String) {
+		source.complete(null, EmbedBuilder()
+			.setTitle("💥 Uh oh! That was unexpected!")
+			.setDescription("An error has occurred and we're working to fix the problem!\nYou can [join our server](${Utils.HOMEBASE_GUILD_INVITE}) and report it there if we failed to fix it in time!")
+			.addField("Error", "```$e```", false)
+			.setColor(0xFF4526)
+			.build())
+		if (DiscordBot.ENV == "prod" || DiscordBot.ENV == "stage") {
+			client.dlog("""__**Error report**__
+	User: ${source.author.asMention}$additional
+	```${Throwables.getStackTraceAsString(e)}```""", null)
+		}
 	}
 
 	fun ArgumentType<*>.string(): String {

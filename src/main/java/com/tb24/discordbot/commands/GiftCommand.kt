@@ -6,7 +6,6 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.commands.arguments.CatalogEntryArgument
@@ -40,7 +39,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 		)
 
 	private fun execute(source: CommandSourceStack, catalogEntry: CatalogEntry, recipients: Map<String, GameProfile>): Int {
-		val ce = CatalogEntryHolder(catalogEntry)
+		val ce = catalogEntry.holder()
 		if (catalogEntry.giftInfo == null || !catalogEntry.giftInfo.bIsEnabled) {
 			throw SimpleCommandExceptionType(LiteralMessage("${ce.friendlyName} is not giftable.")).create()
 		}

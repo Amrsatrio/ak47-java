@@ -8,11 +8,11 @@ import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.discordbot.util.render
-import com.tb24.fn.assetdata.AthenaDailyQuestDefinition
-import com.tb24.fn.assetdata.FortQuestItemDefinition
-import com.tb24.fn.assetdata.FortQuestItemDefinition.EFortQuestType
-import com.tb24.fn.assetdata.FortQuestRewardTableRow
 import com.tb24.fn.model.FortItemStack
+import com.tb24.fn.model.assetdata.AthenaDailyQuestDefinition
+import com.tb24.fn.model.assetdata.FortQuestItemDefinition
+import com.tb24.fn.model.assetdata.FortQuestItemDefinition.EFortQuestType
+import com.tb24.fn.model.assetdata.FortQuestRewardTableRow
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
 
@@ -22,7 +22,7 @@ class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Shows 
 		.executes { c ->
 			val source = c.source
 			source.ensureSession()
-			source.loading("Getting your challenges")
+			source.loading("Getting challenges")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 			source.complete(null, source.createEmbed()
 				.setTitle("Quick Challenges")
@@ -40,7 +40,7 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Shows your active ST
 		.executes { c ->
 			val source = c.source
 			source.ensureSession()
-			source.loading("Getting your quests")
+			source.loading("Getting quests")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
 			source.complete(null, source.createEmbed()
 				.setTitle("Daily Quests")

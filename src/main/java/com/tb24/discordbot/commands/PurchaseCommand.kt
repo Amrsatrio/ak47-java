@@ -8,7 +8,6 @@ import com.mojang.brigadier.arguments.IntegerArgumentType.integer
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.commands.arguments.CatalogEntryArgument
 import com.tb24.discordbot.commands.arguments.CatalogEntryArgument.Companion.catalogEntry
@@ -80,7 +79,7 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 		} else if (priceIndex < 0) {
 			priceIndex = 0
 		}
-		val sd = CatalogEntryHolder(catalogEntry).apply { resolve(profileManager, priceIndex) }
+		val sd = catalogEntry.holder().apply { resolve(profileManager, priceIndex) }
 		val price = sd.price
 		if (sd.owned) {
 			throw SimpleCommandExceptionType(LiteralMessage(L10N.format("purchase.failed.owned", sd.friendlyName))).create()
@@ -93,29 +92,33 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 			val priceIcon = price.icon()
 			throw SimpleCommandExceptionType(LiteralMessage("Not enough $priceIcon to afford ${sd.friendlyName}. You need $priceIcon ${Formatters.num.format(price.basePrice - accountBalance)} more.\nCurrent balance: $priceIcon ${Formatters.num.format(accountBalance)}")).create()
 		}
-		val embed = source.createEmbed()
-			.setColor(0x4BDA74)
-			.setTitle(L10N.format("purchase.confirmation.title"))
-			.addField(L10N.format("catalog.items"), sd.compiledNames.mapIndexed { i, s ->
-				val strike = if (catalogEntry.offerType == ECatalogOfferType.DynamicBundle && isItemOwned(profileManager, catalogEntry.itemGrants[i].templateId, catalogEntry.itemGrants[i].quantity)) "~~" else ""
-				strike + s + strike
-			}.joinToString("\n"), false)
-			.addField(L10N.format("catalog.quantity"), Formatters.num.format(quantity), false)
-			.addField(L10N.format("catalog.total_price"), price.render(quantity), true)
-			.addField(L10N.format("catalog.balance"), price.getAccountBalanceText(profileManager), true)
-		if (price.currencyType == EStoreCurrencyType.MtxCurrency) {
-			embed.addField(L10N.format("catalog.mtx_platform"), (commonCore.stats.attributes as CommonCoreProfileAttributes).current_mtx_platform.name, true)
-				.addField(L10N.format("sac.verb"), CatalogHelper.getAffiliateNameRespectingSetDate(commonCore) ?: L10N.format("common.none"), false)
+		var confirmed = true
+		if (sd.price.basePrice > 0) {
+			val embed = source.createEmbed()
+				.setColor(0x4BDA74)
+				.setTitle(L10N.format("purchase.confirmation.title"))
+				.addField(L10N.format("catalog.items"), sd.compiledNames.mapIndexed { i, s ->
+					val strike = if (catalogEntry.offerType == ECatalogOfferType.DynamicBundle && isItemOwned(profileManager, catalogEntry.itemGrants[i].templateId, catalogEntry.itemGrants[i].quantity)) "~~" else ""
+					strike + s + strike
+				}.joinToString("\n"), false)
+				.addField(L10N.format("catalog.quantity"), Formatters.num.format(quantity), false)
+				.addField(L10N.format("catalog.total_price"), price.render(quantity), true)
+				.addField(L10N.format("catalog.balance"), price.getAccountBalanceText(profileManager), true)
+			if (price.currencyType == EStoreCurrencyType.MtxCurrency) {
+				embed.addField(L10N.format("catalog.mtx_platform"), (commonCore.stats.attributes as CommonCoreProfileAttributes).current_mtx_platform.name, true)
+					.addField(L10N.format("sac.verb"), CatalogHelper.getAffiliateNameRespectingSetDate(commonCore) ?: L10N.format("common.none"), false)
+			}
+			val warnings = mutableListOf<String>()
+			if (CatalogHelper.isUndoUnderCooldown(profileManager.getProfileData("common_core"), catalogEntry.offerId)) {
+				warnings.add(L10N.format("purchase.undo_cooldown_warning"))
+			}
+			if (!catalogEntry.refundable) {
+				warnings.add("This purchase is not eligible for refund.")
+			}
+			embed.setDescription(warnings.joinToString("\n") { "⚠ $it" })
+			confirmed = source.complete(null, embed.build()).yesNoReactions(source.author).await()
 		}
-		val warnings = mutableListOf<String>()
-		if (CatalogHelper.isUndoUnderCooldown(profileManager.getProfileData("common_core"), catalogEntry.offerId)) {
-			warnings.add(L10N.format("purchase.undo_cooldown_warning"))
-		}
-		if (!catalogEntry.refundable) {
-			warnings.add("This purchase is not eligible for refund.")
-		}
-		embed.setDescription(warnings.joinToString("\n") { "⚠ $it" })
-		if (source.complete(null, embed.build()).yesNoReactions(source.author).await()) {
+		if (confirmed) {
 			source.errorTitle = "Purchase Failed"
 			source.loading("Purchasing ${sd.friendlyName}")
 			val response = source.api.profileManager.dispatchClientCommandRequest(PurchaseCatalogEntry().apply {

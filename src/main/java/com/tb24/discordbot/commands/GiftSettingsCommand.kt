@@ -24,7 +24,7 @@ class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift s
 		.executes {
 			val source = it.source
 			source.ensureSession()
-			source.loading("Getting your gift settings")
+			source.loading("Getting gift settings")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 			val canReceiveGifts = (source.api.profileManager.getProfileData("common_core").stats.attributes as CommonCoreProfileAttributes).allowed_to_receive_gifts
 			val settings = /*r.table("giftsettings").get(source.author.id).run(source.client.dbConn, GiftSettingsEntry::class.java).first() ?: */GiftSettingsEntry(source.author.id)

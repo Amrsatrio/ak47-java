@@ -13,10 +13,12 @@ import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.ChannelType
 import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.entities.MessageChannel
 import net.dv8tion.jda.api.entities.MessageEmbed
+import net.dv8tion.jda.internal.entities.ReceivedMessage
 import java.net.URLEncoder
 
-class CommandSourceStack(val client: DiscordBot, val message: Message, sessionId: String) {
+open class CommandSourceStack(val client: DiscordBot, val message: Message, sessionId: String) {
 	// message delegates
 	val author get() = message.author
 	val channel get() = message.channel
@@ -72,3 +74,25 @@ class CommandSourceStack(val client: DiscordBot, val message: Message, sessionId
 		}
 	}
 }
+
+class OnlyChannelCommandSource(client: DiscordBot, channel: MessageChannel) : CommandSourceStack(client, ReceivedMessage(
+	-1L,
+	channel,
+	null,
+	false,
+	false,
+	null,
+	null,
+	false,
+	false,
+	null,
+	null,
+	null,
+	null,
+	null,
+	null,
+	emptyList(),
+	emptyList(),
+	emptyList(),
+	0
+), channel.id)

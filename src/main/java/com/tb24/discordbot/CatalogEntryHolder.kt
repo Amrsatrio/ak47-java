@@ -1,26 +1,24 @@
 package com.tb24.discordbot
 
-import android.text.TextUtils
 import android.util.Log2
 import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.tb24.discordbot.util.render
 import com.tb24.discordbot.util.safeGetOneIndexed
 import com.tb24.fn.ProfileManager
-import com.tb24.fn.model.EAppStore
-import com.tb24.fn.model.EStoreCurrencyType
 import com.tb24.fn.model.FortCatalogResponse
 import com.tb24.fn.model.FortCatalogResponse.ECatalogOfferType
 import com.tb24.fn.model.FortCatalogResponse.Price
 import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
-import com.tb24.fn.util.*
+import com.tb24.fn.util.CatalogHelper
+import com.tb24.fn.util.Utils
+import com.tb24.fn.util.format
 import com.tb24.uasset.AssetManager
 import me.fungames.jfortniteparse.fort.exports.FortMtxOfferData
-import java.text.NumberFormat
 import java.util.*
 import kotlin.math.max
 
 @Suppress("EXPERIMENTAL_API_USAGE")
-class CatalogEntryHolder(private val ce: FortCatalogResponse.CatalogEntry) {
+class CatalogEntryHolder(val ce: FortCatalogResponse.CatalogEntry) {
 	private var offerData: FortMtxOfferData? = null
 	var owned = false
 	var ownedItems: MutableSet<String>? = null
@@ -46,7 +44,9 @@ class CatalogEntryHolder(private val ce: FortCatalogResponse.CatalogEntry) {
 	}
 	var purchaseLimit = 0
 	var purchasesCount = 0
-	val metaInfo by lazy { KV.arrToMap(ce.metaInfo) }
+	private val metaInfo by lazy { ce.metaInfo?.associate { it.key.toLowerCase(Locale.ENGLISH) to it.value } ?: emptyMap() }
+
+	fun getMeta(key: String) = metaInfo[key.toLowerCase(Locale.ENGLISH)]
 
 	@Throws(CommandSyntaxException::class)
 	fun resolve(profileManager: ProfileManager, priceIndex: Int = 0) {
@@ -85,15 +85,15 @@ class CatalogEntryHolder(private val ce: FortCatalogResponse.CatalogEntry) {
 		}
 		purchaseLimit = -1
 		purchasesCount = 0
-		if (metaInfo.containsKey("EventLimit")) {
+		getMeta("EventLimit")?.apply {
 			try {
-				purchaseLimit = metaInfo["EventLimit"]!!.toInt()
+				purchaseLimit = toInt()
 			} catch (ignored: NumberFormatException) {
 			}
 		}
 		try {
 			if (purchaseLimit >= 0) {
-				val purchaseLimitingEventId = metaInfo["PurchaseLimitingEventId"]
+				val purchaseLimitingEventId = getMeta("PurchaseLimitingEventId")
 				if (purchaseLimitingEventId != null) {
 					for (item in commonCore.items.values) {
 						if (item.templateId == "EventPurchaseTracker:generic_instance" && purchaseLimitingEventId == item.attributes["event_instance_id"].asString) {
@@ -139,7 +139,7 @@ class CatalogEntryHolder(private val ce: FortCatalogResponse.CatalogEntry) {
 
 	val displayAsset by lazy { if (!Utils.isNone(ce.displayAssetPath)) AssetManager.INSTANCE.provider.loadObject(ce.displayAssetPath) as? FortMtxOfferData else null }
 
-	fun getDisplayPrice(qty: Int): String {
+	/*fun getDisplayPrice(qty: Int): String {
 		if (price == Price.NO_PRICE) {
 			return "\u2014"
 		}
@@ -153,7 +153,7 @@ class CatalogEntryHolder(private val ce: FortCatalogResponse.CatalogEntry) {
 		return nf.format(qty * catalogOffer.basePrice / 100.0f.toDouble())
 	}
 
-	val catalogOffer by lazy { if (ce.appStoreId.isNotEmpty()) FortCatalogResponse.sCatalogOffersMap[ce.appStoreId[EAppStore.EpicPurchasingService.ordinal]] else null }
+	val catalogOffer by lazy { if (ce.appStoreId.isNotEmpty()) FortCatalogResponse.sCatalogOffersMap[ce.appStoreId[EAppStore.EpicPurchasingService.ordinal]] else null }*/
 
 	val friendlyName by lazy { "${ce.title ?: compiledNames.joinToString(", ")} [${(if (ce.offerType == ECatalogOfferType.DynamicBundle) arrayOf(price) else ce.prices).joinToString(" | ") { it.render() }}]" }
 }

@@ -4,11 +4,15 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import com.mojang.brigadier.tree.CommandNode
+import com.mojang.brigadier.tree.LiteralCommandNode
 
 abstract class BrigadierCommand @JvmOverloads constructor(val name: String, val description: String, val aliases: List<String> = emptyList()) {
 	lateinit var registeredNode: CommandNode<CommandSourceStack>
 
 	abstract fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack>
+
+	open fun register(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralCommandNode<CommandSourceStack> =
+		dispatcher.register(getNode(dispatcher))
 
 	protected fun newRootNode(): LiteralArgumentBuilder<CommandSourceStack> = literal(name)
 }

@@ -29,7 +29,6 @@ class HelpCommand : BrigadierCommand("help", "Shows all commands and their infos
 							addField(source.prefix + it.name, it.description, true)
 						}
 					}
-					.build()
 				).build()
 			}
 			Command.SINGLE_SUCCESS

@@ -11,10 +11,10 @@ import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.*
-import com.tb24.fn.assetdata.FortCollectionDataEntryFish
-import com.tb24.fn.assetdata.FortCollectionsDataTable
-import com.tb24.fn.assetdata.GameDataBR
 import com.tb24.fn.model.QueryMultipleUserStats
+import com.tb24.fn.model.assetdata.FortCollectionDataEntryFish
+import com.tb24.fn.model.assetdata.FortCollectionsDataTable
+import com.tb24.fn.model.assetdata.GameDataBR
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.item.CollectableFishAttributes
 import com.tb24.fn.model.mcpprofile.item.CollectableFishAttributes.EFortCollectedState
@@ -43,7 +43,7 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 	private fun execute(context: CommandContext<CommandSourceStack>, all: Boolean = false): Int {
 		val source = context.source
 		source.ensureSession()
-		source.loading("Getting your fishing data")
+		source.loading("Getting fishing data")
 		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "collections").await()
 		val collected = source.api.profileManager.getProfileData("collections").items.values.flatMap { it.getAttributes(CollectableFishAttributes::class.java).collected.toList() }
 		if (!all && collected.isEmpty()) {
@@ -60,7 +60,7 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 			?.load()?.Entries
 			?.mapIndexed { i, o -> o.run { Entry(this, EntryTag.TagName.run { collected.firstOrNull { it.variantTag == text } }, i) } }
 			?: throw SimpleCommandExceptionType(LiteralMessage("Data not found.")).create()
-		source.message.replyPaginated(if (all) data else data.filter { it.collected != null && it.collected.seenState != EFortCollectedState.New }, 1, source.loadingMsg) { content, page, pageSize ->
+		source.message.replyPaginated(if (all) data else data.filter { it.collected != null && it.collected.seenState != EFortCollectedState.New }, 1, source.loadingMsg) { content, page, pageCount ->
 			val entry = content.first()
 			val def = entry.def
 			val collected = entry.collected
@@ -115,9 +115,8 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 						}
 						.joinToString("\n", limit = 10, truncated = ""), false)
 				}
-				.setFooter("Page %,d of %,d".format(page + 1, pageSize))
+				.setFooter("Page %,d of %,d".format(page + 1, pageCount))
 				.setColor(def.hashCode())
-				.build()
 			).build()
 		}
 		return Command.SINGLE_SUCCESS

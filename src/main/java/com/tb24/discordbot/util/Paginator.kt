@@ -8,7 +8,7 @@ import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 
-fun <T> Message.replyPaginated(all: List<T>, pageSize: Int = 9, messageToEdit: Message? = null, render: (List<T>, Int, Int) -> Message) { // slice, page, page count
+fun <T> Message.replyPaginated(all: List<T>, pageSize: Int = 9, messageToEdit: Message? = null, render: (content: List<T>, page: Int, pageCount: Int) -> Message) {
 	val pageCount = ceil(all.size / pageSize.toFloat()).toInt()
 	var page = 0
 	val rendered = render(all.subList(page * pageSize, min(all.size, (page * pageSize) + pageSize)), page, pageCount)

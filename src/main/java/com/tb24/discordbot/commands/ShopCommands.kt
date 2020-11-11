@@ -3,20 +3,17 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.tb24.discordbot.util.await
-import com.tb24.discordbot.util.dispatchClientCommandRequest
-import com.tb24.discordbot.util.getAccountBalanceText
-import com.tb24.discordbot.util.holder
-import com.tb24.fn.assetdata.ESubGame
+import com.tb24.discordbot.util.*
 import com.tb24.fn.model.EStoreCurrencyType
 import com.tb24.fn.model.FortCatalogResponse
+import com.tb24.fn.model.assetdata.ESubGame
 import com.tb24.fn.model.mcpprofile.commands.PopulatePrerolledOffers
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import net.dv8tion.jda.api.EmbedBuilder
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
-import java.time.Instant
+import java.util.concurrent.CompletableFuture
 import javax.imageio.ImageIO
 
 class ShopCommand : BrigadierCommand("shop", "Description later plz", arrayListOf("s")) {
@@ -37,9 +34,10 @@ class ShopCommand : BrigadierCommand("shop", "Description later plz", arrayListO
 			// fetch fortnite-api.com
 //			val slots = mutableListOf<>()
 			val img = BufferedImage(128, 128, BufferedImage.TYPE_INT_RGB)
-			val g = img.createGraphics()
-			g.color = Color(0x7FFF7F)
-			g.drawRect(0, 0, 128, 128)
+			val g = img.createGraphics().apply {
+				color = Color(0x7FFF7F)
+				fillRect(0, 0, 128, 128)
+			}
 //			ImageIO.read(URL("https://"))
 			source.loading("Rendering and uploading image")
 			source.channel.sendFile(ByteArrayOutputStream().apply { ImageIO.write(img, "png", this) }.toByteArray(), "unknown.png").complete()
@@ -67,16 +65,17 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 	val catalogManager = source.client.catalogManager
 	val profileManager = source.api.profileManager
 	catalogManager.ensureCatalogData(source.api)
-	profileManager.dispatchClientCommandRequest(QueryProfile()).await()
-	val commonCore = profileManager.getProfileData("common_core")
-	if (subGame == ESubGame.Campaign) {
-		profileManager.dispatchClientCommandRequest(PopulatePrerolledOffers(), "campaign").await()
-	} else {
-		profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
-	}
-	var useEmbed = true
+	CompletableFuture.allOf(
+		profileManager.dispatchClientCommandRequest(QueryProfile()),
+		if (subGame == ESubGame.Campaign) {
+			profileManager.dispatchClientCommandRequest(PopulatePrerolledOffers(), "campaign")
+		} else {
+			profileManager.dispatchClientCommandRequest(QueryProfile(), "athena")
+		}
+	).await()
+//	var useEmbed = true
 	val groups = if (subGame == ESubGame.Campaign) catalogManager.campaignCatalogGroups else catalogManager.athenaCatalogGroups
-	val contents = arrayOfNulls<String>(groups.size)
+	val contents = arrayOfNulls<List<String>>(groups.size)
 	val prices = mutableMapOf<String, FortCatalogResponse.Price>()
 	for (i in groups.indices) {
 		val lines = mutableListOf<String>()
@@ -89,36 +88,35 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 			lines.add("${(catalogEntry.__ak47_index + 1)}. ${sd.friendlyName}${if (sd.owned) " ✅" else ""}")
 			catalogEntry.prices.forEach { prices.putIfAbsent(it.currencyType.name + ' ' + it.currencySubType, it) }
 		}
-		contents[i] = lines.joinToString("\n")
-		if (contents[i]!!.length >= 1024) {
-			useEmbed = false
-		}
+		contents[i] = lines
+//		if (contents[i]!!.length >= 1024) {
+//			useEmbed = false
+//		}
 	}
 	val embed = EmbedBuilder()
 		.setColor(0x0099FF)
 		.setTitle(if (subGame == ESubGame.Campaign) "⚡ " + "Save the World Item Shop" else "☂ " + "Battle Royale Item Shop")
-		.setTimestamp(Instant.now())
 	if (source.session.id != "__internal__") {
 		embed.setDescription("Use `${source.prefix}buy` or `${source.prefix}gift` to perform operations with these items.\n✅ = Owned")
 			.addField(if (prices.size == 1) "Balance" else "Balances", prices.values.joinToString(" \u00b7 ") { it.getAccountBalanceText(profileManager) }, false)
 	}
-	if (useEmbed) {
-		for (i in groups.indices) {
-			if (contents[i].isNullOrEmpty()) {
-				continue
-			}
-			embed.addField(groups[i].title, contents[i], false)
+//	if (useEmbed) {
+	for (i in groups.indices) {
+		if (contents[i]!!.isEmpty()) {
+			continue
 		}
+		embed.addFieldSeparate(groups[i].title, contents[i], 0)
 	}
+//	}
 	source.complete(null, embed.build())
-	if (!useEmbed) {
-		for (i in groups.indices) {
-			if (contents[i].isNullOrEmpty()) {
-				continue
-			}
-			source.channel.sendMessage("**" + groups[i].title + "**\n" + contents[i]).queue()
-		}
-	}
+//	if (!useEmbed) {
+//		for (i in groups.indices) {
+//			if (contents[i].isNullOrEmpty()) {
+//				continue
+//			}
+//			source.channel.sendMessage("**" + groups[i].title + "**\n" + contents[i]).queue()
+//		}
+//	}
 	return Command.SINGLE_SUCCESS
 }
 
