@@ -3,7 +3,7 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
-import com.mojang.brigadier.arguments.StringArgumentType
+import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
@@ -26,7 +26,12 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", listOf("
 		.executes(::summary)
 		.then(literal<CommandSourceStack>("displayname")
 			.then(argument<CommandSourceStack, String>("new name", greedyString())
-				.executes { setDisplayName(it, StringArgumentType.getString(it, "new name")) }
+				.executes { setDisplayName(it.source, getString(it, "new name")) }
+			)
+		)
+		.then(literal<CommandSourceStack>("unlink")
+			.then(argument<CommandSourceStack, String>("external auth type", greedyString())
+				.executes { unlink(it.source, getString(it, "external auth type").toLowerCase()) }
 			)
 		)
 
@@ -66,8 +71,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", listOf("
 		return Command.SINGLE_SUCCESS
 	}
 
-	private fun setDisplayName(c: CommandContext<CommandSourceStack>, newName: String): Int {
-		val source = c.source
+	private fun setDisplayName(source: CommandSourceStack, newName: String): Int {
 		source.ensureSession()
 		source.loading("Checking `$newName` for validity")
 		runCatching { source.api.accountService.getByDisplayName(newName).exec() }.getOrNull()?.body()?.apply {
@@ -76,7 +80,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", listOf("
 		val oldName = source.api.currentLoggedIn.epicDisplayName.orDash()
 		if (!source.complete(null, source.createEmbed()
 				.setTitle("Change display name?")
-				.setDescription("You're about to change the display name of account `${source.api.currentLoggedIn.id}`:\n\n`${oldName.orDash()}` \u2192 `$newName`\n\nThis action will be recorded in the Account History as `HISTORY_ACCOUNT_UPDATE`. Are you sure you want to continue? (❌ in 30s)")
+				.setDescription("You're about to change the display name of account `${source.api.currentLoggedIn.id}`:\n\n`${oldName.orDash()}` \u2192 `$newName`\n\nThis action will be recorded in the Account History as `HISTORY_ACCOUNT_UPDATE`. You will not be able to change the display name again for the next 14 days if you proceed. Are you sure you want to continue? (❌ in 30s)")
 				.setColor(0xFFF300)
 				.build()).yesNoReactions(source.author).await()) {
 			source.complete("👌 Alright.")
@@ -95,7 +99,34 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", listOf("
 			.setTitle("✅ Updated the Epic display name")
 			.addField("Old name", oldName.orDash(), true)
 			.addField("New name", response.accountInfo.epicDisplayName.orDash(), true)
+			.setFooter("You can change your name again on")
+			.setTimestamp(response.accountInfo.canUpdateDisplayNameNext.toInstant())
 			.setColor(0x40FAA1)
+			.build())
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun unlink(source: CommandSourceStack, externalAuthType: String): Int {
+		source.ensureSession()
+		source.loading("Getting linked accounts")
+		val externalAuth = runCatching { source.api.accountService.getExternalAuth(source.api.currentLoggedIn.id, externalAuthType).exec() }.getOrNull()?.body()
+			?: throw SimpleCommandExceptionType(LiteralMessage("You don't have $externalAuthType linked.")).create()
+		val consoleWarning = when (externalAuth.type) {
+			"psn", "xbl", "nintendo" -> "Because the account you're about to unlink is a console account, **you won't be able to link another external account for the lifetime of this Epic account**. However, you can link the same external account again to this Epic account if you wish." + ' '
+			else -> ""
+		}
+		if (!source.complete(null, source.createEmbed()
+				.setTitle("Unlink $externalAuthType?")
+				.setDescription("You're about to unlink a linked account with the following details:\n\n**Name**: ${externalAuth.externalDisplayName.orDash()}\n**ID(s)**:\n${externalAuth.authIds.joinToString("\n") { "\u2022 ${it.type}: ${it.id}" }}\n**Added**: ${externalAuth.dateAdded.renderWithRelative()}\n\nThis action will be recorded in the Account History as `HISTORY_ACCOUNT_EXTERNAL_AUTH_REMOVE`.\n\n${consoleWarning}Are you sure you want to continue? (❌ in 30s)")
+				.setColor(0x40FAA1)
+				.build()).yesNoReactions(source.author).await()) {
+			source.complete("👌 Alright.")
+			return Command.SINGLE_SUCCESS
+		}
+		source.loading("Unlinking $externalAuthType")
+		source.api.accountService.removeExternalAuth(source.api.currentLoggedIn.id, externalAuthType)
+		source.complete(null, source.createEmbed()
+			.setTitle("✅ Successfully unlinked $externalAuthType")
 			.build())
 		return Command.SINGLE_SUCCESS
 	}
