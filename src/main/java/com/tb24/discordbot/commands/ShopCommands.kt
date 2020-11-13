@@ -16,7 +16,7 @@ import java.io.ByteArrayOutputStream
 import java.util.concurrent.CompletableFuture
 import javax.imageio.ImageIO
 
-class ShopCommand : BrigadierCommand("shop", "Description later plz", arrayListOf("s")) {
+class ShopCommand : BrigadierCommand("shop", "Description later plz", arrayOf("s")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
 			val source = it.source
@@ -46,7 +46,7 @@ class ShopCommand : BrigadierCommand("shop", "Description later plz", arrayListO
 		}
 }
 
-class ShopTextCommand : BrigadierCommand("shoptext", "Sends the current item shop items as a text.", arrayListOf("st")) {
+class ShopTextCommand : BrigadierCommand("shoptext", "Sends the current item shop items as a text.", arrayOf("st")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { executeShopText(it.source, ESubGame.Athena) }
 }

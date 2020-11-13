@@ -7,7 +7,7 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder
 import com.mojang.brigadier.tree.CommandNode
 import com.mojang.brigadier.tree.LiteralCommandNode
 
-abstract class BrigadierCommand @JvmOverloads constructor(val name: String, val description: String, val aliases: List<String> = emptyList()) {
+abstract class BrigadierCommand @JvmOverloads constructor(val name: String, val description: String, val aliases: Array<String> = emptyArray()) {
 	lateinit var registeredNode: CommandNode<CommandSourceStack>
 
 	abstract fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack>

@@ -88,7 +88,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 
 	private fun register(command: BrigadierCommand): LiteralCommandNode<CommandSourceStack> {
 		commandMap[command.name] = command
-		val node = command.getNode(dispatcher)
+//		val node = command.getNode(dispatcher)
 		val registered = command.register(dispatcher)
 		for (alias in command.aliases) {
 			redirects[alias] = command

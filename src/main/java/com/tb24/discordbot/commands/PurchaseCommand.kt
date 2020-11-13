@@ -24,7 +24,7 @@ import com.tb24.fn.util.Formatters
 import java.time.Instant
 import java.util.concurrent.CompletableFuture
 
-class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry from the Battle Royale or Save the World Item Shop.", arrayListOf("buy", "b")) {
+class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry from the Battle Royale or Save the World Item Shop.", arrayOf("buy", "b")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.then(argument("item number", catalogEntry())
 			.executes { execute(it.source, getCatalogEntry(it, "item number")) }

@@ -16,7 +16,7 @@ import com.tb24.fn.model.assetdata.FortQuestRewardTableRow
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
 
-class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Shows your active BR daily challenges.", arrayListOf("dailychals")) {
+class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Shows your active BR daily challenges.", arrayOf("dailychals")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires(Rune::hasAssetsLoaded)
 		.executes { c ->
@@ -34,7 +34,7 @@ class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Shows 
 		}
 }
 
-class DailyQuestsCommand : BrigadierCommand("dailyquests", "Shows your active STW daily quests.", arrayListOf("dailies")) {
+class DailyQuestsCommand : BrigadierCommand("dailyquests", "Shows your active STW daily quests.", arrayOf("dailies")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires(Rune::hasAssetsLoaded)
 		.executes { c ->

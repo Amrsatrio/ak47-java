@@ -2,6 +2,7 @@ package com.tb24.discordbot
 
 import com.tb24.discordbot.util.exec
 import com.tb24.fn.EpicApi
+import com.tb24.fn.util.Utils
 import java.io.IOException
 import java.util.*
 
@@ -10,26 +11,52 @@ class ChannelsManager(private val client: EpicApi) {
 		@JvmStatic val KEY_AVATAR = "avatar"
 		@JvmStatic val KEY_AVATAR_BACKGROUND = "avatarBackground"
 		@JvmStatic val KEY_APP_INSTALLED = "appInstalled"
-		@JvmStatic val COLORS = mapOf(
-			"Ocean Blue" to arrayOf("#1CA2E6", "#0C5498", "#081E3E"),
-			"Sky Blue" to arrayOf("#B4F2FE", "#00ACF2", "#005679"),
-			"Acid Green" to arrayOf("#B5F277", "#339A24", "#194D12"),
-			"Army Green" to arrayOf("#D6E0B5", "#8BA022", "#404B07"),
-			"Storm Purple" to arrayOf("#B35EEF", "#4D1397", "#2E0A5D"),
-			"Electric Violet" to arrayOf("#E93FEB", "#7B009C", "#500066"),
-			"Party Pink" to arrayOf("#FF81AE", "#D8033C", "#790625"),
-			"Racing Car Red" to arrayOf("#F16712", "#D8033C", "#6E0404"),
-			"Tangerine" to arrayOf("#FFAF5D", "#FF6D32", "#852A05"),
-			"Sunburst Yellow" to arrayOf("#FFDF00", "#FBA000", "#975B04"),
-			"Bronze" to arrayOf("#D47D49", "#78371D", "#4E2312"),
-			"Blush" to arrayOf("#FFB4B4", "#DC718F", "#7D3449"),
-			"Teal" to arrayOf("#8EFDE5", "#1CBA9E", "#034D3F"),
-			"Titanium" to arrayOf("#AEC1D3", "#687B8E", "#36404A"),
-			"Gold" to arrayOf("#FFCF7D", "#A07D40", "#684B19")
+		@JvmStatic val COLOR_SCHEMES = arrayOf(
+			AvatarColor(0x8EFDE5, 0x1CBA9E, 0x034D3F, "Teal"),
+			AvatarColor(0xFF81AE, 0xD8033C, 0x790625, "Party Pink"),
+			AvatarColor(0xFFDF00, 0xFBA000, 0x975B04, "Sunburst Yellow"),
+			AvatarColor(0xCCF95A, 0x30C11B, 0x194D12, "Dark Green"), // not in the src
+			AvatarColor(0xB4F2FE, 0x00ACF2, 0x005679, "Sky Blue"),
+			AvatarColor(0x1CA2E6, 0x0C5498, 0x081E3E, "Ocean Blue"),
+			AvatarColor(0xFFB4B4, 0xDC718F, 0x7D3449, "Blush"),
+			AvatarColor(0xF16712, 0xD8033C, 0x6E0404, "Racing Car Red"),
+			AvatarColor(0xAEC1D3, 0x687B8E, 0x36404A, "Titanium"),
+			AvatarColor(0xFFAF5D, 0xFF6D32, 0x852A05, "Tangerine"),
+			AvatarColor(0xE93FEB, 0x7B009C, 0x500066, "Electric Violet"),
+			AvatarColor(0xDFFF73, 0x86CF13, 0x404B07, "Light Green"), // not in the src
+			AvatarColor(0xB35EEF, 0x4D1397, 0x2E0A5D, "Storm Purple"),
+
+			// these colors below were not available as an option
+			/*AvatarColor(0xD6E0B5, 0x8BA022, 0x404B07, "Army Green"),
+			AvatarColor(0xB5F277, 0x339A24, 0x194D12, "Acid Green"),
+			AvatarColor(0xD47D49, 0x78371D, 0x4E2312, "Bronze"),
+			AvatarColor(0xFFCF7D, 0xA07D40, 0x684B19, "Gold")*/
 		)
 	}
 
-	enum class ColorIndex { LIGHT, DARK, SHADE }
+	class AvatarColor {
+		val light: Int
+		val dark: Int
+		val shade: Int
+		val name: String?
+
+		constructor(light: Int, dark: Int, shade: Int, name: String?) {
+			this.light = light
+			this.dark = dark
+			this.shade = shade
+			this.name = name
+		}
+
+		constructor(jsonArray: String) {
+			val list = Utils.DEFAULT_GSON.fromJson(jsonArray, Array<String>::class.java)
+			light = Integer.parseInt(list[0].substring(2), 16)
+			dark = Integer.parseInt(list[1].substring(2), 16)
+			shade = Integer.parseInt(list[2].substring(2), 16)
+			name = null
+		}
+
+		override fun toString() = "[\"0x%06X\", \"0x%06X\", \"0x%06X\"]".format(light, dark, shade)
+	}
 
 	private val avatars = mutableMapOf<String, MutableMap<String, String>>()
 
@@ -75,4 +102,10 @@ class ChannelsManager(private val client: EpicApi) {
 	fun clear() {
 		avatars.clear()
 	}
+
+	/**
+	 * @return previous value if present
+	 */
+	fun put(accountId: String, settingKey: String, newSetting: String) =
+		avatars.getOrPut(accountId) { mutableMapOf() }.put(settingKey, newSetting)
 }

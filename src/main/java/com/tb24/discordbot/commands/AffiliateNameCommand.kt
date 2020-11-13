@@ -12,7 +12,7 @@ import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.SetAffiliateName
 
-class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Support a Creator code. Use `clear` to unset the code.", arrayListOf("code")) {
+class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Support a Creator code. Use `clear` to unset the code.", arrayOf("code")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it, null) }
 		.then(argument("new code", greedyString())

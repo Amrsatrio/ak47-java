@@ -26,7 +26,7 @@ import net.dv8tion.jda.api.MessageBuilder
 import java.util.concurrent.CompletableFuture
 
 @Suppress("EXPERIMENTAL_API_USAGE")
-class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fish collection.", arrayListOf("fishing", "collections")) {
+class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fish collection.", arrayOf("fishing", "collections")) {
 	private val defaultGameDataBR by lazy { INSTANCE.provider.loadObject<GameDataBR>("/Game/Balance/DefaultGameDataBR.DefaultGameDataBR") }
 	private val itemDefToItemVariantMapping by lazy { defaultGameDataBR?.ItemDefToItemVariantDataMappingAsset?.load()?.ItemDefToItemVariantDataMappings }
 	private val fishTagToItemVariantDataMapping by lazy { itemDefToItemVariantMapping?.map { it.ItemVariantData }?.flatMap { it.Variants.toList() }?.associateBy { it.CollectionTag.TagName.text } }

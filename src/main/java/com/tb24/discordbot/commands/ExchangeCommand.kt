@@ -6,7 +6,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.tb24.discordbot.util.StringUtil
 import com.tb24.discordbot.util.exec
 
-class ExchangeCommand : BrigadierCommand("exchange", "Generates an exchange code.", arrayListOf("xc")) {
+class ExchangeCommand : BrigadierCommand("exchange", "Generates an exchange code.", arrayOf("xc")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
 			val source = it.source

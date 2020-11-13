@@ -12,7 +12,7 @@ import com.tb24.discordbot.DiscordBot
 import net.dv8tion.jda.api.Permission
 import java.nio.charset.StandardCharsets
 
-class PrefixCommand : BrigadierCommand("prefix", "Change prefix for the server/user. (Server admins only)", arrayListOf("akprefix")) {
+class PrefixCommand : BrigadierCommand("prefix", "Change prefix for the server/user. (Server admins only)", arrayOf("akprefix")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires { it.message.isFromGuild && it.member!!.hasPermission(Permission.ADMINISTRATOR) }
 		.executes {

@@ -9,24 +9,26 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.ChannelsManager
+import com.tb24.discordbot.ChannelsManager.AvatarColor
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.AccountMutationPayload
 import com.tb24.fn.model.account.BackupCodesResponse
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.util.Formatters
-import com.tb24.fn.util.Utils
 import net.dv8tion.jda.api.EmbedBuilder
-import java.awt.Color
 import java.util.*
 import kotlin.math.abs
 
-class AccountCommand : BrigadierCommand("account", "Account commands.", listOf("a")) {
+class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf("a")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes(::displaySummary)
 		.then(literal("displayname")
 			.then(argument("new name", greedyString())
 				.executes { setDisplayName(it.source, getString(it, "new name")) }
 			)
+		)
+		.then(literal("password")
+			.executes(::changePasswordFlow)
 		)
 		.then(literal("backupcodes")
 			.executes(::displayBackupCodes)
@@ -52,7 +54,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", listOf("
 			return Command.SINGLE_SUCCESS
 		}
 		source.loading("Getting account data")
-		val avatarKeys = source.session.channelsManager.getUserSettings(source.api.currentLoggedIn.id, "avatar", "avatarBackground")
+		val avatarKeys = source.session.channelsManager.getUserSettings(source.api.currentLoggedIn.id, ChannelsManager.KEY_AVATAR, ChannelsManager.KEY_AVATAR_BACKGROUND)
 		val data = source.api.accountService.getById(source.api.currentLoggedIn.id).exec().body()!!
 		source.complete(null, EmbedBuilder()
 			.setTitle("Epic Account Summary")
@@ -71,7 +73,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", listOf("
 				"__${it.type}: ||**${it.externalDisplayName.orDash()}**||__\nAdded: ${it.dateAdded?.run { renderWithRelative() } ?: "\u2014"}"
 			} ?: "No linked accounts", false)
 			.setThumbnail("https://cdn2.unrealengine.com/Kairos/portraits/${avatarKeys[0]}.png?preview=1")
-			.setColor(Color.decode(Utils.DEFAULT_GSON.fromJson(avatarKeys[1], Array<String>::class.java)[ChannelsManager.ColorIndex.DARK.ordinal]))
+			.setColor(AvatarColor(avatarKeys[1]!!).dark)
 			.build())
 		return Command.SINGLE_SUCCESS
 	}
@@ -109,6 +111,11 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", listOf("
 			.setColor(0x40FAA1)
 			.build())
 		return Command.SINGLE_SUCCESS
+	}
+
+	private fun changePasswordFlow(c: CommandContext<CommandSourceStack>): Int {
+		// PLEASE don't let me do this for real
+		throw SimpleCommandExceptionType(LiteralMessage("oh, so you want to change your password through the bot directly? well it is illegal so go to the account page yourself.")).create()
 	}
 
 	private fun displayBackupCodes(c: CommandContext<CommandSourceStack>): Int {

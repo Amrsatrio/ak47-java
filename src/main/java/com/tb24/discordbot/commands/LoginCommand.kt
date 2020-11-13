@@ -19,9 +19,10 @@ import net.dv8tion.jda.api.entities.User
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.schedule
 
-class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", arrayListOf("i", "signin")) {
+class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", arrayOf("i", "signin")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires(Rune::hasAccess)
 		.executes { accountPicker(it.source) }
@@ -30,7 +31,7 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 		)
 }
 
-class ExtendedLoginCommand : BrigadierCommand("loginx", "Login with arbitrary parameters.", listOf("lx")) {
+class ExtendedLoginCommand : BrigadierCommand("loginx", "Login with arbitrary parameters.", arrayOf("lx")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires(Rune::hasAccess)
 		.executes { extendedLogin(it.source) }
@@ -94,14 +95,15 @@ private fun accountPicker(source: CommandSourceStack): Int {
 	if (devices.isEmpty()) {
 		return startDefaultLoginFlow(source)
 	}
+	val numberEmojis = arrayOf("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "0️⃣")
+	check(devices.size <= numberEmojis.size)
 	source.loading("Preparing your login")
 	source.session = source.client.internalSession
 	val users = source.queryUsers(devices.map { it.accountId })
-	val numberEmojis = arrayOf("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "0️⃣")
 	val description = mutableListOf<String>().apply {
 		for (i in devices.indices) {
 			val accountId = devices[i].accountId
-			add("${numberEmojis[i % numberEmojis.size]} ${users.firstOrNull { it.id == accountId }?.displayName ?: accountId}")
+			add("${numberEmojis[i]} ${users.firstOrNull { it.id == accountId }?.displayName ?: accountId}")
 		}
 		add("✨ Login to another account")
 	}
@@ -110,11 +112,18 @@ private fun accountPicker(source: CommandSourceStack): Int {
 		.setDescription(description.joinToString("\n"))
 		.setColor(0x8AB4F8)
 		.build()
-	).apply {
+	)
+	val shouldStop = AtomicBoolean()
+	CompletableFuture.supplyAsync {
 		for (i in devices.indices) {
-			addReaction(numberEmojis[i % numberEmojis.size]).queue()
+			if (shouldStop.get()) {
+				return@supplyAsync
+			}
+			botMessage.addReaction(numberEmojis[i % numberEmojis.size]).complete()
 		}
-		addReaction("✨").queue()
+		if (!shouldStop.get()) {
+			botMessage.addReaction("✨").complete()
+		}
 	}
 	try {
 		val choice = botMessage.awaitReactions({ _, user, _ -> user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
@@ -122,6 +131,7 @@ private fun accountPicker(source: CommandSourceStack): Int {
 			time = 30000
 			errors = arrayOf(CollectorEndReason.TIME)
 		}).await().values.first().reactionEmote.name
+		shouldStop.set(true)
 		return if (choice == "✨") {
 			startDefaultLoginFlow(source)
 		} else {

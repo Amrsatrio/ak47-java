@@ -15,7 +15,7 @@ import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Formatters
 import java.text.ParsePosition
 
-class UndoCommand : BrigadierCommand("undo", "Cancel your last purchase.", arrayListOf("cancelpurchase", "refund")) {
+class UndoCommand : BrigadierCommand("undo", "Cancel your last purchase.", arrayOf("cancelpurchase", "refund")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { c ->
 			val source = c.source

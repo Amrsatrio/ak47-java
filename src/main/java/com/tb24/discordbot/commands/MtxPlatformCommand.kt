@@ -15,7 +15,7 @@ import com.tb24.fn.model.mcpprofile.commands.SetMtxPlatform
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Formatters
 
-class MtxPlatformCommand : BrigadierCommand("vbucksplatform", "Changes the V-Bucks platform.", arrayListOf("vp", "mtxplatform")) {
+class MtxPlatformCommand : BrigadierCommand("vbucksplatform", "Changes the V-Bucks platform.", arrayOf("vp", "mtxplatform")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.then(argument("platform", word())
 			.suggests { _, b -> EFortMtxPlatform.values().fold(b) { acc, it -> acc.suggest(it.name) }.buildFuture() }

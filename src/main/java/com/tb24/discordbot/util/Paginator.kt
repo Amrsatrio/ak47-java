@@ -8,26 +8,35 @@ import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 
-fun <T> Message.replyPaginated(all: List<T>, pageSize: Int = 9, messageToEdit: Message? = null, render: (content: List<T>, page: Int, pageCount: Int) -> Message) {
+fun <T> Message.replyPaginated(all: List<T>,
+							   pageSize: Int = 9,
+							   messageToEdit: Message? = null,
+							   initialPage: Int = 0,
+							   customReactions: PaginatorCustomReactions<T>? = null,
+							   render: (content: List<T>, page: Int, pageCount: Int) -> Message) {
 	val pageCount = ceil(all.size / pageSize.toFloat()).toInt()
-	var page = 0
+	var page = initialPage
 	val rendered = render(all.subList(page * pageSize, min(all.size, (page * pageSize) + pageSize)), page, pageCount)
 	val msg = (messageToEdit?.editMessage(rendered)?.override(true) ?: channel.sendMessage(rendered)).complete()
 	if (pageCount <= 1) {
 		return
 	}
-	val icons = arrayOf("⏮", "◀", "▶", "⏭")
-	icons.forEach { msg.addReaction(it).queue() }
-	val collector = msg.createReactionCollector({ reaction, user, _ -> icons.contains(reaction.reactionEmote.name) && user?.idLong == author.idLong }, ReactionCollectorOptions().apply { idle = 30000L })
+	val reactions = mutableListOf("⏮", "◀", "▶", "⏭")
+	customReactions?.addReactions(reactions)
+	reactions.forEach { msg.addReaction(it).queue() }
+	val collector = msg.createReactionCollector({ reaction, user, _ -> reactions.contains(reaction.reactionEmote.name) && user?.idLong == author.idLong }, ReactionCollectorOptions().apply { idle = 30000L })
 	collector.callback = object : Collector.CollectorCallback<MessageReaction> {
 		override fun onCollect(item: MessageReaction, user: User?) {
 			val oldPage = page
-			page = when (icons.indexOf(item.reactionEmote.name)) {
+			page = when (reactions.indexOf(item.reactionEmote.name)) {
 				0 -> 0
 				1 -> max(page - 1, 0)
 				2 -> min(page + 1, pageCount - 1)
 				3 -> pageCount - 1
-				else -> return
+				else -> {
+					customReactions?.handleReaction(collector, item, user, page, pageCount)
+					return
+				}
 			}
 
 			if (msg.member != null && msg.member!!.hasPermission(Permission.MESSAGE_MANAGE)) {
@@ -49,4 +58,9 @@ fun <T> Message.replyPaginated(all: List<T>, pageSize: Int = 9, messageToEdit: M
 			}
 		}
 	}
+}
+
+interface PaginatorCustomReactions<T> {
+	fun addReactions(reactions: MutableCollection<String>)
+	fun handleReaction(collector: ReactionCollector, item: MessageReaction, user: User?, page: Int, pageCount: Int)
 }

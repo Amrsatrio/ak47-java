@@ -17,7 +17,7 @@ import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.SetReceiveGiftsEnabled
 import com.tb24.fn.util.format
 
-class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift settings such as the gift wrap to use.", arrayListOf("gs")) {
+class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift settings such as the gift wrap to use.", arrayOf("gs")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
 			val source = it.source

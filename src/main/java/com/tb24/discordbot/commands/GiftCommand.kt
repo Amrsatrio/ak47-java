@@ -25,7 +25,7 @@ import net.dv8tion.jda.api.EmbedBuilder
 import kotlin.math.min
 
 @Suppress("EXPERIMENTAL_API_USAGE")
-class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry from current Battle Royale item shop.", arrayListOf("g")) {
+class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry from current Battle Royale item shop.", arrayOf("g")) {
 	val FAILED_FORMATS = arrayOf(FText("{0}"), L10N.GiftFailedTwoAccounts, L10N.GiftFailedThreeAccounts, L10N.GiftFailedFourAccounts, L10N.GiftFailedFivePlusAccounts)
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()

@@ -8,7 +8,6 @@ import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.DiscordBot
 import com.tb24.uasset.AssetManager
 import javax.script.ScriptEngineManager
 import javax.script.ScriptException
@@ -28,7 +27,7 @@ class EvalCommand : BrigadierCommand("eval", "Evaluate an expression for debuggi
 	private fun handle(source: CommandSourceStack, code: String): Int {
 		try {
 			synchronized(engine) {
-				engine.put("M", DiscordBot.instance)
+				engine.put("M", source.client)
 				engine.put("S", source)
 				source.complete("```\n${engine.eval(code)}```", null)
 			}

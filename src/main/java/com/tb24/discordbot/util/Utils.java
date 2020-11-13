@@ -83,7 +83,7 @@ public class Utils {
 	}
 
 	public static String benBotExportAsset(String objectPath) {
-		return com.tb24.fn.util.Utils.isNone(objectPath) ? null : "https://benbotfn.tk/api/v1/exportAsset?path=" + objectPath;
+		return null; //com.tb24.fn.util.Utils.isNone(objectPath) ? null : "https://benbotfn.tk/api/v1/exportAsset?path=" + objectPath;
 	}
 
 	public static int getCompletion(FortQuestItemDefinition.FortMcpQuestObjectiveInfo objective, FortItemStack item) {

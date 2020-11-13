@@ -28,7 +28,7 @@ class ReactionHandler(val client: DiscordBot) : ListenerAdapter() {
 			if (accountId == null || giftBoxId == null) {
 				return
 			}
-			val session = DiscordBot.instance.getSession(event.userId)
+			val session = source.client.getSession(event.userId)
 			if (accountId != session.api.currentLoggedIn.id) {
 				event.channel.sendMessage("Cannot acknowledge gift `$giftBoxId` because you are currently not on the account that gift was sent to.").queue()
 				return
