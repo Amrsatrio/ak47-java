@@ -5,7 +5,6 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import com.mojang.brigadier.context.CommandContext
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.util.*
@@ -16,7 +15,7 @@ import com.tb24.fn.model.mcpprofile.commands.SetAffiliateName
 class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Support a Creator code. Use `clear` to unset the code.", arrayListOf("code")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it, null) }
-		.then(argument<CommandSourceStack, String>("new code", greedyString())
+		.then(argument("new code", greedyString())
 			.executes { execute(it, getString(it, "new code")) }
 		)
 

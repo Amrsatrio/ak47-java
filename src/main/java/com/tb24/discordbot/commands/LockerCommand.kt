@@ -8,9 +8,9 @@ import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 
 class LockerCommand : BrigadierCommand("locker", "kek") {
-	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> =newRootNode()
+	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { c ->
-			val source = c .source
+			val source = c.source
 			source.ensureSession()
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 

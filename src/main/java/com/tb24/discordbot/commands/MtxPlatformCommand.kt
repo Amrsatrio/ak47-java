@@ -6,7 +6,6 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.word
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
@@ -18,7 +17,7 @@ import com.tb24.fn.util.Formatters
 
 class MtxPlatformCommand : BrigadierCommand("vbucksplatform", "Changes the V-Bucks platform.", arrayListOf("vp", "mtxplatform")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.then(argument<CommandSourceStack, String>("platform", word())
+		.then(argument("platform", word())
 			.suggests { _, b -> EFortMtxPlatform.values().fold(b) { acc, it -> acc.suggest(it.name) }.buildFuture() }
 			.executes { c ->
 				val source = c.source

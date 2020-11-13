@@ -7,8 +7,6 @@ import com.mojang.brigadier.arguments.BoolArgumentType.bool
 import com.mojang.brigadier.arguments.BoolArgumentType.getBool
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
-import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
 import com.tb24.discordbot.L10N
@@ -36,14 +34,14 @@ class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift s
 				.build())
 			Command.SINGLE_SUCCESS
 		}
-		.then(literal<CommandSourceStack>("receive")
+		.then(literal("receive")
 			.executes { updateReceiveGifts(it.source) }
-			.then(argument<CommandSourceStack, Boolean>("can receive gifts?", bool())
+			.then(argument("can receive gifts?", bool())
 				.executes { updateReceiveGifts(it.source, getBool(it, "can receive gifts?")) }
 			)
 		)
-		.then(literal<CommandSourceStack>("message")
-			.then(argument<CommandSourceStack, String>("gift message", greedyString())
+		.then(literal("message")
+			.then(argument("gift message", greedyString())
 				.executes {
 					r.table("giftsettings").insert(GiftSettingsEntry(it.source.author.id, null, null)).run(it.source.client.dbConn)
 					Command.SINGLE_SUCCESS

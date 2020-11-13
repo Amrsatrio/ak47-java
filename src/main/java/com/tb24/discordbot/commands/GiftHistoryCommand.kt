@@ -3,7 +3,6 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
@@ -56,10 +55,10 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 			source.complete(null, embed.build())
 			Command.SINGLE_SUCCESS
 		}
-		.then(literal<CommandSourceStack>("sent")
+		.then(literal("sent")
 			.executes { detail(it.source, false) }
 		)
-		.then(literal<CommandSourceStack>("received")
+		.then(literal("received")
 			.executes { detail(it.source, true) }
 		)
 

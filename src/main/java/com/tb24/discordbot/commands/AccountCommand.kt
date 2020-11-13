@@ -6,13 +6,12 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
-import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.ChannelsManager
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.AccountMutationPayload
+import com.tb24.fn.model.account.BackupCodesResponse
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.Utils
@@ -23,19 +22,25 @@ import kotlin.math.abs
 
 class AccountCommand : BrigadierCommand("account", "Account commands.", listOf("a")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes(::summary)
-		.then(literal<CommandSourceStack>("displayname")
-			.then(argument<CommandSourceStack, String>("new name", greedyString())
+		.executes(::displaySummary)
+		.then(literal("displayname")
+			.then(argument("new name", greedyString())
 				.executes { setDisplayName(it.source, getString(it, "new name")) }
 			)
 		)
-		.then(literal<CommandSourceStack>("unlink")
-			.then(argument<CommandSourceStack, String>("external auth type", greedyString())
+		.then(literal("backupcodes")
+			.executes(::displayBackupCodes)
+			.then(literal("generate")
+				.executes(::generateBackupCodes)
+			)
+		)
+		.then(literal("unlink")
+			.then(argument("external auth type", greedyString())
 				.executes { unlink(it.source, getString(it, "external auth type").toLowerCase()) }
 			)
 		)
 
-	private fun summary(c: CommandContext<CommandSourceStack>): Int {
+	private fun displaySummary(c: CommandContext<CommandSourceStack>): Int {
 		val source = c.source
 		source.ensureSession()
 		if (!source.complete(null, source.createEmbed()
@@ -106,6 +111,50 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", listOf("
 		return Command.SINGLE_SUCCESS
 	}
 
+	private fun displayBackupCodes(c: CommandContext<CommandSourceStack>): Int {
+		val source = c.source
+		source.ensureSession()
+		source.loading("Getting backup codes")
+		val response = source.api.accountService.getBackupCodes(source.api.currentLoggedIn.id).exec().body()!!
+		val unusedCodes = response.backupCodes.filter { !it.used }
+		source.complete(null, source.createEmbed()
+			.setTitle("Backup Codes")
+			.setDescription("${Formatters.num.format(unusedCodes.size)}/${Formatters.num.format(response.backupCodes.size)} available for use")
+			.addField("Available", renderBackupCodes(unusedCodes).takeIf { it.isNotEmpty() } ?: "No available codes", false)
+			.addField("Used", renderBackupCodes(response.backupCodes.filter { it.used }).takeIf { it.isNotEmpty() } ?: "No used codes", false)
+			.setFooter("Generated at")
+			.setTimestamp(response.generatedAt.toInstant())
+			.setColor(0x40FAA1)
+			.build())
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun generateBackupCodes(c: CommandContext<CommandSourceStack>): Int {
+		val source = c.source
+		source.ensureSession()
+		source.loading("Generating backup codes")
+		val response = source.api.accountService.generateBackupCodes(source.api.currentLoggedIn.id).exec().body()!!
+		source.complete(null, source.createEmbed()
+			.setTitle("✅ Generated new backup codes")
+			.addField("Backup codes", renderBackupCodes(response.backupCodes.toList()), true)
+			.setColor(0x40FAA1)
+			.build())
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun renderBackupCodes(backupCodes: Collection<BackupCodesResponse.BackupCode>, columnSize: Int = 3) = StringBuilder().apply {
+		backupCodes.forEachIndexed { i, it ->
+			if (it.used) {
+				append("~~`").append(it.code).append("`~~")
+			} else {
+				append('`').append(it.code).append('`')
+			}
+			if (i < backupCodes.size - 1) {
+				append(if (i % columnSize == columnSize - 1) '\n' else ' ')
+			}
+		}
+	}.toString()
+
 	private fun unlink(source: CommandSourceStack, externalAuthType: String): Int {
 		source.ensureSession()
 		source.loading("Getting linked accounts")
@@ -127,6 +176,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", listOf("
 		source.api.accountService.removeExternalAuth(source.api.currentLoggedIn.id, externalAuthType)
 		source.complete(null, source.createEmbed()
 			.setTitle("✅ Successfully unlinked $externalAuthType")
+			.setColor(0xFFF300)
 			.build())
 		return Command.SINGLE_SUCCESS
 	}

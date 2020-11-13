@@ -6,7 +6,6 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.string
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.util.Utils
 import com.tb24.fn.model.FortItemStack
@@ -19,7 +18,7 @@ import net.dv8tion.jda.api.EmbedBuilder
 @Suppress("EXPERIMENTAL_API_USAGE")
 class CosmeticCommand : BrigadierCommand("cosmetic", "Shows info of a cosmetic by their ID.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.then(argument<CommandSourceStack, String>("id", string())
+		.then(argument("id", string())
 			.executes { c ->
 				val start = System.currentTimeMillis()
 				val item = FortItemStack("", getString(c, "id"), 1)

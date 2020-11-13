@@ -6,7 +6,6 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.mojang.brigadier.tree.LiteralCommandNode
 import com.tb24.discordbot.util.replyPaginated
@@ -33,7 +32,7 @@ class HelpCommand : BrigadierCommand("help", "Shows all commands and their infos
 			}
 			Command.SINGLE_SUCCESS
 		}
-		.then(argument<CommandSourceStack, String>("command", greedyString())
+		.then(argument("command", greedyString())
 			.executes { c ->
 				val source = c.source
 				val parseResults = dispatcher.parse(getString(c, "command"), source)

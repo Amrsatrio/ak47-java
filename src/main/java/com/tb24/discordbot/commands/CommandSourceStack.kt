@@ -19,20 +19,20 @@ import net.dv8tion.jda.internal.entities.ReceivedMessage
 import java.net.URLEncoder
 
 open class CommandSourceStack(val client: DiscordBot, val message: Message, sessionId: String) {
-	// message delegates
-	val author get() = message.author
-	val channel get() = message.channel
-	val guild get() = message.guild
-	val member get() = message.member
-	fun isFromType(type: ChannelType) = message.isFromType(type)
+	// Message delegates
+	inline val author get() = message.author
+	inline val channel get() = message.channel
+	inline val guild get() = message.guild
+	inline val member get() = message.member
+	inline fun isFromType(type: ChannelType) = message.isFromType(type)
 
 	val initialSession: Session = client.getSession(sessionId)
 	var session = initialSession
-	val api get() = session.api
+	inline val api get() = session.api
 
 	val prefix: String by lazy { client.getCommandPrefix(message) }
 
-	// flow control
+	// region Flow control
 	var errorTitle: String? = null
 		get() = field ?: Utils.randomError()
 
@@ -49,6 +49,7 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 		loadingMsg = null
 		return complete
 	}
+	// endregion
 
 	@Throws(CommandSyntaxException::class)
 	fun ensureSession() {
@@ -58,14 +59,18 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 	}
 
 	@Throws(HttpException::class)
-	fun createEmbed() = EmbedBuilder().setAuthor(api.currentLoggedIn.displayName, null, session.channelsManager.getUserSettings(api.currentLoggedIn.id, "avatar").firstOrNull()?.let { "https://cdn2.unrealengine.com/Kairos/portraits/$it.png?preview=1" })
+	fun createEmbed() = EmbedBuilder().setAuthor(
+		api.currentLoggedIn.displayName, null,
+		session.channelsManager.getUserSettings(api.currentLoggedIn.id, "avatar")
+			.firstOrNull()?.let { "https://cdn2.unrealengine.com/Kairos/portraits/$it.png?preview=1" }
+	)
 
 	@Throws(HttpException::class)
 	fun queryUsers(ids: Iterable<String>) = session.queryUsers(ids)
 
 	@Throws(HttpException::class)
 	fun generateUrl(url: String) =
-		"https://www.epicgames.com/id/exchange?exchangeCode=${api.accountService.getExchangeCode().exec().body()!!.code}&redirectUrl=${URLEncoder.encode(url, "UTF-8")}"
+		"https://www.epicgames.com/id/exchange?exchangeCode=${api.accountService.exchangeCode.exec().body()!!.code}&redirectUrl=${URLEncoder.encode(url, Charsets.UTF_8)}"
 
 	@Throws(CommandSyntaxException::class)
 	fun ensureCampaignAccess() {

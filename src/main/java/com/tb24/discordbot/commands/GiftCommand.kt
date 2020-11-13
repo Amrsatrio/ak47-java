@@ -4,14 +4,11 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.L10N
-import com.tb24.discordbot.commands.arguments.CatalogEntryArgument
 import com.tb24.discordbot.commands.arguments.CatalogEntryArgument.Companion.catalogEntry
 import com.tb24.discordbot.commands.arguments.CatalogEntryArgument.Companion.getCatalogEntry
-import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
 import com.tb24.discordbot.util.*
@@ -32,8 +29,8 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 	val FAILED_FORMATS = arrayOf(FText("{0}"), L10N.GiftFailedTwoAccounts, L10N.GiftFailedThreeAccounts, L10N.GiftFailedFourAccounts, L10N.GiftFailedFivePlusAccounts)
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.then(argument<CommandSourceStack, CatalogEntryArgument.Result>("item number", catalogEntry())
-			.then(argument<CommandSourceStack, UserArgument.Result>("recipients", users(4))
+		.then(argument("item number", catalogEntry())
+			.then(argument("recipients", users(4))
 				.executes { execute(it.source, getCatalogEntry(it, "item number"), getUsers(it, "recipients")) }
 			)
 		)

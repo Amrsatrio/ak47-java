@@ -6,7 +6,6 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.StringArgumentType.*
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.Rune
@@ -26,7 +25,7 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires(Rune::hasAccess)
 		.executes { accountPicker(it.source) }
-		.then(argument<CommandSourceStack, String>("authorization code", greedyString())
+		.then(argument("authorization code", greedyString())
 			.executes { doLogin(it.source, GrantType.authorization_code, getString(it, "authorization code"), EAuthClient.FORTNITE_IOS_GAME_CLIENT) }
 		)
 }
@@ -35,11 +34,11 @@ class ExtendedLoginCommand : BrigadierCommand("loginx", "Login with arbitrary pa
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires(Rune::hasAccess)
 		.executes { extendedLogin(it.source) }
-		.then(argument<CommandSourceStack, String>("method", word())
+		.then(argument("method", word())
 			.executes { extendedLogin(it.source, getString(it, "method")) }
-			.then(argument<CommandSourceStack, String>("params", string())
+			.then(argument("params", string())
 				.executes { extendedLogin(it.source, getString(it, "method"), getString(it, "params")) }
-				.then(argument<CommandSourceStack, String>("auth client", word())
+				.then(argument("auth client", word())
 					.executes { extendedLogin(it.source, getString(it, "method"), getString(it, "params"), getString(it, "auth client")) }
 				)
 			)

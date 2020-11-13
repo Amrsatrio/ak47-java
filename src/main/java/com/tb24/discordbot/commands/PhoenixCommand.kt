@@ -6,7 +6,6 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
@@ -76,7 +75,7 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 				.build())
 			Command.SINGLE_SUCCESS
 		}
-		.then(literal<CommandSourceStack>("rewards")
+		.then(literal("rewards")
 			.executes { c ->
 				val currentEvent = "EventFlag.Phoenix.Fortnitemares"
 				val table = phoenixLevelRewardsTable ?: throw noDataErr.create()

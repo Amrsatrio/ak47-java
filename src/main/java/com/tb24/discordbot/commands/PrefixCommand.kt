@@ -6,7 +6,6 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
 import com.tb24.discordbot.DiscordBot
@@ -20,7 +19,7 @@ class PrefixCommand : BrigadierCommand("prefix", "Change prefix for the server/u
 			it.source.channel.sendMessage("Current prefix: `${it.source.prefix}`\nUse ${it.source.prefix}prefix <new prefix> to change it.").queue()
 			Command.SINGLE_SUCCESS
 		}
-		.then(argument<CommandSourceStack, String>("new prefix", greedyString())
+		.then(argument("new prefix", greedyString())
 			.executes {
 				val newPrefix = getString(it, "new prefix")
 				if (!StandardCharsets.US_ASCII.newEncoder().canEncode(newPrefix)) {

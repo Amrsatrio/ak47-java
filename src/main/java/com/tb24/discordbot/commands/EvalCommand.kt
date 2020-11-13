@@ -7,7 +7,6 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.DiscordBot
 import com.tb24.uasset.AssetManager
@@ -22,7 +21,7 @@ class EvalCommand : BrigadierCommand("eval", "Evaluate an expression for debuggi
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires { it.author.idLong == 624299014388711455L }
-		.then(argument<CommandSourceStack, String>("code", greedyString())
+		.then(argument("code", greedyString())
 			.executes { handle(it.source, getString(it, "code")) }
 		)
 

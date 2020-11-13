@@ -3,20 +3,19 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import com.mojang.brigadier.tree.LiteralCommandNode
 import com.tb24.discordbot.util.exec
 
 class FriendsCommand : BrigadierCommand("friends", "friends operations") {
-	val list = literal<CommandSourceStack>("list")
+	val list = literal("list")
 		.executes { list(it.source, "friends") }
-		.then(literal<CommandSourceStack>("friends").executes { list(it.source, "friends") })
-		.then(literal<CommandSourceStack>("incoming").executes { list(it.source, "incoming") })
-		.then(literal<CommandSourceStack>("outgoing").executes { list(it.source, "outgoing") })
-		.then(literal<CommandSourceStack>("suggested").executes { list(it.source, "outgoing") })
-		.then(literal<CommandSourceStack>("blocklist").executes { list(it.source, "outgoing") })
+		.then(literal("friends").executes { list(it.source, "friends") })
+		.then(literal("incoming").executes { list(it.source, "incoming") })
+		.then(literal("outgoing").executes { list(it.source, "outgoing") })
+		.then(literal("suggested").executes { list(it.source, "outgoing") })
+		.then(literal("blocklist").executes { list(it.source, "outgoing") })
 		.build()
-	val add = literal<CommandSourceStack>("add")
+	val add = literal("add")
 		.executes { Command.SINGLE_SUCCESS }
 		.build()
 
@@ -27,7 +26,7 @@ class FriendsCommand : BrigadierCommand("friends", "friends operations") {
 
 	override fun register(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralCommandNode<CommandSourceStack> {
 		val node = super.register(dispatcher)
-		dispatcher.register(literal<CommandSourceStack>("f").redirect(list))
+		dispatcher.register(literal("f").redirect(list))
 		return node
 	}
 

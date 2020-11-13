@@ -6,10 +6,8 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.IntegerArgumentType.getInteger
 import com.mojang.brigadier.arguments.IntegerArgumentType.integer
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.L10N
-import com.tb24.discordbot.commands.arguments.CatalogEntryArgument
 import com.tb24.discordbot.commands.arguments.CatalogEntryArgument.Companion.catalogEntry
 import com.tb24.discordbot.commands.arguments.CatalogEntryArgument.Companion.getCatalogEntry
 import com.tb24.discordbot.util.*
@@ -28,15 +26,15 @@ import java.util.concurrent.CompletableFuture
 
 class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry from the Battle Royale or Save the World Item Shop.", arrayListOf("buy", "b")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.then(argument<CommandSourceStack, CatalogEntryArgument.Result>("item number", catalogEntry())
+		.then(argument("item number", catalogEntry())
 			.executes { execute(it.source, getCatalogEntry(it, "item number")) }
-			.then(argument<CommandSourceStack, Int>("quantity", integer())
+			.then(argument("quantity", integer())
 				.executes { execute(it.source, getCatalogEntry(it, "item number"), getInteger(it, "quantity")) }
-				.then(argument<CommandSourceStack, Int>("price index", integer())
+				.then(argument("price index", integer())
 					.executes { execute(it.source, getCatalogEntry(it, "item number"), getInteger(it, "quantity"), getInteger(it, "price index") - 1) }
-					/*.then(argument<CommandSourceStack, Int>("more", integer())
-						.then(argument<CommandSourceStack, Int>("and more", integer())
-							.then(argument<CommandSourceStack, Int>("and more again", integer())
+					/*.then(argument("more", integer())
+						.then(argument("and more", integer())
+							.then(argument("and more again", integer())
 								.executes { Command.SINGLE_SUCCESS }
 							)
 						)

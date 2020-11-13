@@ -6,7 +6,6 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.BoolArgumentType.bool
 import com.mojang.brigadier.arguments.BoolArgumentType.getBool
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.Rune
@@ -36,7 +35,7 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires(Rune::hasAssetsLoaded)
 		.executes(::execute)
-		.then(argument<CommandSourceStack, Boolean>("all", bool())
+		.then(argument("all", bool())
 			.executes { execute(it, getBool(it, "all")) }
 		)
 

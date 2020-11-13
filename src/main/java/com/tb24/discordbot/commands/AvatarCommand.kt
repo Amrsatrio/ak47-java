@@ -21,7 +21,7 @@ class AvatarCommand : BrigadierCommand("avatar", "Manage your Party Hub avatar."
 				.build())
 			Command.SINGLE_SUCCESS
 		}
-	/*.then(literal<CommandSourceStack>("set")
+	/*.then(literal("set")
 		.executes {
 			val source = it.source
 			source.ensureSession()
