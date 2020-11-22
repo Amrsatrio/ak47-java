@@ -5,7 +5,6 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
-import com.tb24.discordbot.L10N
 import com.tb24.discordbot.Session
 import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.exec
@@ -54,7 +53,7 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 	@Throws(CommandSyntaxException::class)
 	fun ensureSession() {
 		if (api.userToken == null) {
-			throw SimpleCommandExceptionType(LiteralMessage(L10N.format("account.not_logged_in"))).create()
+			throw SimpleCommandExceptionType(LiteralMessage("You're not logged in to an Epic account. Do `${prefix}login`, preferably in DMs, to log in.")).create()
 		}
 	}
 
@@ -70,7 +69,7 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 
 	@Throws(HttpException::class)
 	fun generateUrl(url: String) =
-		"https://www.epicgames.com/id/exchange?exchangeCode=${api.accountService.exchangeCode.exec().body()!!.code}&redirectUrl=${URLEncoder.encode(url, Charsets.UTF_8)}"
+		"https://www.epicgames.com/id/exchange?exchangeCode=${api.accountService.exchangeCode.exec().body()!!.code}&redirectUrl=${URLEncoder.encode(url, "UTF-8")}"
 
 	@Throws(CommandSyntaxException::class)
 	fun ensureCampaignAccess() {

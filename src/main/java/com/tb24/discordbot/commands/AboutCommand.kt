@@ -14,8 +14,8 @@ class AboutCommand : BrigadierCommand("about", "Shows credits of this bot.") {
 		.executes {
 			val selfUser = it.source.message.jda.selfUser
 			val embed = EmbedBuilder()
-				.setTitle("${selfUser.name} Java Rewrite v${DiscordBot.VERSION}")
-				.addField("Developers", "kemo\ntb24", false)
+				.setTitle("${selfUser.name} Kotlin/JVM Rewrite v${DiscordBot.VERSION}")
+				.addField("Developers", "kemo\namrsatrio\nFunGames", false)
 				.addField("Third party libraries", arrayOf(
 					"Brigadier",
 					"Guava",

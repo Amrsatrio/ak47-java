@@ -17,7 +17,6 @@ import me.fungames.jfortniteparse.fort.exports.FortMtxOfferData
 import java.util.*
 import kotlin.math.max
 
-@Suppress("EXPERIMENTAL_API_USAGE")
 class CatalogEntryHolder(val ce: FortCatalogResponse.CatalogEntry) {
 	private var offerData: FortMtxOfferData? = null
 	var owned = false

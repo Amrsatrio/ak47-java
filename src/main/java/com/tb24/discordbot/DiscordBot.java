@@ -85,13 +85,14 @@ public final class DiscordBot {
 			.build();
 		discord.addEventListener(commandManager = new CommandManager(this));
 //		discord.addEventListener(new ReactionHandler(this)); // TODO doesn't respond if the channel hasn't been interacted with
+		discord.addEventListener(new GhostPingHandler(this));
 		discord.awaitReady();
 		LOGGER.info("Logged in as {}! v{}", discord.getSelfUser().getAsTag(), VERSION);
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 			internalSession.logout(null);
 			discord.shutdown();
 		}));
-		discord.getPresence().setActivity(Activity.playing("with users' accounts \u00b7 v" + VERSION));
+		discord.getPresence().setActivity(Activity.playing("☕ Kotlin/JVM \u00b7 v" + VERSION));
 	}
 
 	private void setupInternalSession() {

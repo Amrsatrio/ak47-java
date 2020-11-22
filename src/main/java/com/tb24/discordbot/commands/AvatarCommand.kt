@@ -12,6 +12,7 @@ import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.MessageReaction
 import net.dv8tion.jda.api.entities.User
 import java.util.concurrent.CompletableFuture
+import kotlin.math.max
 
 class AvatarCommand : BrigadierCommand("avatar", "Manage your Party Hub avatar.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -51,7 +52,7 @@ class AvatarCommand : BrigadierCommand("avatar", "Manage your Party Hub avatar."
 		val current = avatarKeys[settingKeyIndex]
 		val available = source.api.channelsService.QueryAvailableUserSettingValues(source.api.currentLoggedIn.id, settingKey).exec().body()!!.toList()
 		val event = CompletableFuture<String>()
-		source.message.replyPaginated(available, 1, source.loadingMsg, available.indexOf(current), AvatarReactions(available, event)) { content, page, pageCount ->
+		source.message.replyPaginated(available, 1, source.loadingMsg, max(available.indexOf(current), 0), AvatarReactions(available, event)) { content, page, pageCount ->
 			val pageValue = content[0]
 			MessageBuilder(EmbedBuilder()
 				.setAuthor(source.api.currentLoggedIn.displayName)

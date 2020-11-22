@@ -2,7 +2,6 @@ package com.tb24.discordbot.util;
 
 import com.google.gson.JsonElement;
 import com.tb24.fn.model.FortItemStack;
-import com.tb24.fn.model.assetdata.FortQuestItemDefinition;
 import com.tb24.fn.util.EAuthClient;
 
 import java.net.URLEncoder;
@@ -11,9 +10,12 @@ import java.util.Map;
 import java.util.Random;
 import java.util.regex.Pattern;
 
+import me.fungames.jfortniteparse.fort.objects.FortMcpQuestObjectiveInfo;
+
 public class Utils {
 	public static final String LOADING_EMOJI = "<a:loading:740564597643149404>";
-	public static final String MTX_EMOJI = "<:vbucks:751101530626588713>";
+	public static final long MTX_EMOJI_ID = 751101530626588713L;
+	public static final String MTX_EMOJI = "<:vbucks:" + MTX_EMOJI_ID + ">";
 	private static final String[] ERROR_TITLES = new String[]{
 		"DRAT! WE'RE SORRY",
 		"NOT THE LLAMA YOU'RE LOOKING FOR",
@@ -86,7 +88,7 @@ public class Utils {
 		return null; //com.tb24.fn.util.Utils.isNone(objectPath) ? null : "https://benbotfn.tk/api/v1/exportAsset?path=" + objectPath;
 	}
 
-	public static int getCompletion(FortQuestItemDefinition.FortMcpQuestObjectiveInfo objective, FortItemStack item) {
+	public static int getCompletion(FortMcpQuestObjectiveInfo objective, FortItemStack item) {
 		if (item == null || item.attributes == null) {
 			return -1;
 		}

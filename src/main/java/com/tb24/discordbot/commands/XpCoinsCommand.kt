@@ -1,5 +1,3 @@
-@file:Suppress("EXPERIMENTAL_API_USAGE")
-
 package com.tb24.discordbot.commands
 
 import com.mojang.brigadier.Command

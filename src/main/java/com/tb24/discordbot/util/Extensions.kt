@@ -14,11 +14,11 @@ import com.tb24.fn.model.EStoreCurrencyType
 import com.tb24.fn.model.FortCatalogResponse
 import com.tb24.fn.model.FortCatalogResponse.Price
 import com.tb24.fn.model.FortItemStack
-import com.tb24.fn.model.assetdata.FortQuestRewardTableRow
 import com.tb24.fn.model.mcpprofile.ProfileUpdate
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.getPreviewImagePath
+import me.fungames.jfortniteparse.fort.objects.rows.FortQuestRewardTableRow
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
 import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
@@ -36,6 +36,8 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import javax.imageio.ImageIO
 import kotlin.math.min
+
+val WHITELIST_ICON_EMOJI_ITEM_TYPES = arrayOf("AccountResource", "Currency", "Stat")
 
 @Throws(HttpException::class, IOException::class)
 fun ProfileManager.dispatchClientCommandRequest(payload: Any, profileId: String = "common_core"): CompletableFuture<ProfileUpdate> =
@@ -69,26 +71,37 @@ private val DF = DateFormat.getDateTimeInstance()
 
 fun Date.format(): String = DF.format(this)
 
-fun FortItemStack.render(displayQty: Int = quantity) = (if (displayQty > 1) Formatters.num.format(displayQty) + " \u00d7 " else "") + if (templateId.startsWith("Currency:Mtx")) Utils.MTX_EMOJI else displayName
+fun FortItemStack.render(displayQty: Int = quantity) = (if (displayQty > 1) Formatters.num.format(displayQty) + " \u00d7 " else "") + displayName
 
-fun FortItemStack.renderWithIcon(displayQty: Int = quantity) = (getItemIconEmote(templateId)?.run { "$asMention " } ?: "") + render(displayQty)
+fun FortItemStack.renderWithIcon(displayQty: Int = quantity): String {
+	transformedDefData // resolves this item if it is FortConditionalResourceItemDefinition
+	return (getItemIconEmoji(templateId)?.run { "$asMention " } ?: "") + render(displayQty)
+}
 
 fun Price.icon(): String = when (currencyType) {
 	EStoreCurrencyType.MtxCurrency -> Utils.MTX_EMOJI
-	EStoreCurrencyType.GameItem -> getItemIconEmote(currencySubType)?.asMention ?: currencySubType
+	EStoreCurrencyType.GameItem -> getItemIconEmoji(currencySubType)?.asMention ?: currencySubType
 	else -> currencyType.name
 }
 
 fun Price.emote(): Emote? = when (currencyType) {
 	EStoreCurrencyType.MtxCurrency -> DiscordBot.instance.discord.getEmoteById(751101530626588713L)
-	EStoreCurrencyType.GameItem -> getItemIconEmote(currencySubType)
+	EStoreCurrencyType.GameItem -> getItemIconEmoji(currencySubType)
 	else -> null
 }
 
-@Suppress("EXPERIMENTAL_API_USAGE")
 @Synchronized
-fun getItemIconEmote(templateId: String, createIfNonexistent: Boolean = DiscordBot.ENV == "test"): Emote? {
-	val existing = DiscordBot.instance.discord.getEmotesByName(templateId.split(":")[1].run { substring(0, min(32, length)) }, true).firstOrNull()
+fun getItemIconEmoji(templateId: String, createIfNonexistent: Boolean = DiscordBot.ENV == "test"): Emote? {
+	if (templateId.toLowerCase().contains(":mtx")) {
+		return DiscordBot.instance.discord.getEmoteById(Utils.MTX_EMOJI_ID)
+	}
+	val split = templateId.split(":")
+	val type = split[0]
+	val name = split[1]
+	if (type !in WHITELIST_ICON_EMOJI_ITEM_TYPES) {
+		return null
+	}
+	val existing = DiscordBot.instance.discord.getEmotesByName(name.run { substring(0, min(32, length)) }, true).firstOrNull()
 	if (existing != null) {
 		return existing
 	}
@@ -96,7 +109,7 @@ fun getItemIconEmote(templateId: String, createIfNonexistent: Boolean = DiscordB
 		return null
 	}
 	val item = FortItemStack(templateId, 1)
-	val defData = item.defData ?: return null
+	val defData = item.transformedDefData ?: return null
 	val icon = item.getPreviewImagePath(true)?.load<UTexture2D>()?.toBufferedImage()
 	val baos = ByteArrayOutputStream()
 	ImageIO.write(icon, "png", baos)
@@ -122,7 +135,7 @@ fun Price.getAccountBalance(profileManager: ProfileManager): Int {
 
 fun Price.getAccountBalanceText(profileManager: ProfileManager) = icon() + ' ' + Formatters.num.format(getAccountBalance(profileManager))
 
-fun Map<FName, FortQuestRewardTableRow>.render(prefix: String, fac: Float = 1f, bold: Boolean = false): String {
+fun Map<FName, FortQuestRewardTableRow>.render(prefix: String, fac: Float = 1f, bold: Boolean = false, conditionalCondition: Boolean): String {
 	val fmt = if (bold) "**" else ""
 	val lines = arrayListOf<String>()
 	var lastEntry: FortQuestRewardTableRow? = null
@@ -131,7 +144,7 @@ fun Map<FName, FortQuestRewardTableRow>.render(prefix: String, fac: Float = 1f, 
 		val priority2 = o2.text.substringAfterLast('_', "0").toInt()
 		priority1 - priority2
 	}.forEach {
-		lines.add("$prefix$fmt${it.value.asItemStack().renderWithIcon((it.value.Quantity * fac).toInt())}$fmt")
+		lines.add("$prefix$fmt${it.value.asItemStack().apply { setConditionForConditionalItem(conditionalCondition) }.renderWithIcon((it.value.Quantity * fac).toInt())}$fmt")
 		if (lastEntry != null && lastEntry!!.Selectable && it.value.Selectable) {
 			lines.add("$prefix- OR -")
 		}
@@ -139,6 +152,8 @@ fun Map<FName, FortQuestRewardTableRow>.render(prefix: String, fac: Float = 1f, 
 	}
 	return lines.joinToString("\n")
 }
+
+fun FortQuestRewardTableRow.asItemStack() = FortItemStack(TemplateId.text, Quantity)
 
 @Throws(CommandSyntaxException::class)
 fun <T> List<T>.safeGetOneIndexed(index: Int, reader: StringReader? = null, start: Int = 0): T {

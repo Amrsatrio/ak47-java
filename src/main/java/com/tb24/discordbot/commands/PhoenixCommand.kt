@@ -1,5 +1,3 @@
-@file:Suppress("EXPERIMENTAL_API_USAGE")
-
 package com.tb24.discordbot.commands
 
 import com.mojang.brigadier.Command
@@ -9,10 +7,10 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
-import com.tb24.fn.model.assetdata.FortPhoenixLevelRewardData
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.util.Formatters
 import com.tb24.uasset.AssetManager
+import me.fungames.jfortniteparse.fort.objects.rows.FortPhoenixLevelRewardData
 import me.fungames.jfortniteparse.ue4.assets.exports.UDataTable
 import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
 import net.dv8tion.jda.api.EmbedBuilder
@@ -30,9 +28,9 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
 			val phoenixXpItem = source.api.profileManager.getProfileData("campaign").items.values.firstOrNull { it.templateId == "AccountResource:phoenixxp" }
 				?: throw SimpleCommandExceptionType(LiteralMessage("no ventures xp item, profile is bugged !!111!!1!")).create()
-			val currentEvent = "EventFlag.Phoenix.Fortnitemares"
+			val currentEvent = "EventFlag.Phoenix.Winterfest" // TODO don't hardcode this by querying the calendar endpoint
 			val table = phoenixLevelRewardsTable ?: throw noDataErr.create()
-			val levels = table.rows.filterKeys { it.text.startsWith(currentEvent) }.values.map { it.mapToClass<FortPhoenixLevelRewardData>() }.toList()
+			val levels = table.rows.filterKeys { it.text.startsWith(currentEvent) }.entries.sortedBy { it.key.text.substringAfter(currentEvent).toInt() }.map { it.value.mapToClass<FortPhoenixLevelRewardData>() }.toList()
 			var levelData: FortPhoenixLevelRewardData? = null
 			var levelIdx = levels.size
 			while (levelIdx-- > 0) {
@@ -45,19 +43,14 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 				throw SimpleCommandExceptionType(LiteralMessage("Dunno what level dude, idk anymore")).create()
 			}
 			val nextLevelData = if (levelIdx + 1 < levels.size) levels[levelIdx + 1] else null
-			var nextMajorData: FortPhoenixLevelRewardData? = null
-			var nextMajorIdx = levelIdx + /*next level*/1
-			while (nextMajorIdx < levels.size) {
-				val entry = levels[nextMajorIdx]
-				if (entry.bIsMajorReward) {
-					nextMajorData = entry
-					break
-				}
-				++nextMajorIdx
+			var nextMajorIdx = findMajor(levelIdx + /*next level*/1, levels)
+			if (nextMajorIdx == levelIdx + 1) {
+				nextMajorIdx = findMajor(nextMajorIdx + 1, levels)
 			}
+			val nextMajorData = if (nextMajorIdx != -1) levels[nextMajorIdx] else null
 			source.complete(null, source.createEmbed()
-				.setTitle("Ventures: Season 2")
-				.setDescription("Level ${Formatters.num.format(levelIdx + 1)} - ${(getItemIconEmote(phoenixXpItem.templateId)?.run { "$asMention " } ?: "")}${Formatters.num.format(phoenixXpItem.quantity)}\n" + if (nextLevelData != null) {
+				.setTitle("Ventures: Season 3")
+				.setDescription("Level ${Formatters.num.format(levelIdx + 1)} - ${(getItemIconEmoji(phoenixXpItem.templateId)?.run { "$asMention " } ?: "")}${Formatters.num.format(phoenixXpItem.quantity)}\n" + if (nextLevelData != null) {
 					val current = phoenixXpItem.quantity - levelData.TotalRequiredXP
 					val delta = nextLevelData.TotalRequiredXP - levelData.TotalRequiredXP
 					"`${progress(current, delta)}`\n${Formatters.num.format(nextLevelData.TotalRequiredXP - phoenixXpItem.quantity)} XP to next level."
@@ -72,17 +65,18 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 						addField("Rewards for level ${Formatters.num.format(nextMajorIdx + /*index offset*/1)}", nextMajorData.VisibleReward.joinToString("\n") { FortItemStack(it.TemplateId, it.Quantity).renderWithIcon() }, true)
 					}
 				}
+				.setColor(0x40FAA1)
 				.build())
 			Command.SINGLE_SUCCESS
 		}
 		.then(literal("rewards")
 			.executes { c ->
-				val currentEvent = "EventFlag.Phoenix.Fortnitemares"
+				val currentEvent = "EventFlag.Phoenix.Winterfest"
 				val table = phoenixLevelRewardsTable ?: throw noDataErr.create()
-				val levels = table.rows.filterKeys { it.text.startsWith(currentEvent) }.values.map { it.mapToClass<FortPhoenixLevelRewardData>() }.toList()
+				val levels = table.rows.filterKeys { it.text.startsWith(currentEvent) }.entries.sortedBy { it.key.text.substringAfter(currentEvent).toInt() }.map { it.value.mapToClass<FortPhoenixLevelRewardData>() }.toList()
 				c.source.message.replyPaginated(levels, 10) { content, page, pageCount ->
 					MessageBuilder(EmbedBuilder()
-						.setAuthor("Ventures: Season 2")
+						.setAuthor("Ventures: Season 3")
 						.setTitle("Rewards")
 						.apply {
 							content.forEachIndexed { i, entry ->
@@ -91,11 +85,24 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 							}
 						}
 						.setFooter("Page %d of %d".format(page + 1, pageCount))
+						.setColor(0x40FAA1)
 					).build()
 				}
 				Command.SINGLE_SUCCESS
 			}
 		)
+
+	private fun findMajor(startIdx: Int, levels: List<FortPhoenixLevelRewardData>): Int {
+		var nextMajorIdx = startIdx
+		while (nextMajorIdx < levels.size) {
+			val entry = levels[nextMajorIdx]
+			if (entry.bIsMajorReward) {
+				return nextMajorIdx
+			}
+			++nextMajorIdx
+		}
+		return -1
+	}
 
 	private fun progress(current: Int, max: Int, width: Int = 32): String {
 		val barWidth: Int = width - 2

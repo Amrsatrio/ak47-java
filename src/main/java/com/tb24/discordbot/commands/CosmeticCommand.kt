@@ -15,13 +15,16 @@ import com.tb24.fn.util.toObjectPath
 import me.fungames.jfortniteparse.fort.exports.FortMtxOfferData
 import net.dv8tion.jda.api.EmbedBuilder
 
-@Suppress("EXPERIMENTAL_API_USAGE")
 class CosmeticCommand : BrigadierCommand("cosmetic", "Shows info of a cosmetic by their ID.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.then(argument("id", string())
 			.executes { c ->
 				val start = System.currentTimeMillis()
-				val item = FortItemStack("", getString(c, "id"), 1)
+				val id = getString(c, "id")
+				if (id.split(':').size < 2) {
+					throw SimpleCommandExceptionType(LiteralMessage("Please retype it in this format: `PrimaryAssetName:primary_asset_type`")).create()
+				}
+				val item = FortItemStack(id, 1)
 				val defData = item.defData ?: throw SimpleCommandExceptionType(LiteralMessage("Not found")).create()
 				val embed = EmbedBuilder()
 					.setTitle(defData.DisplayName.format())

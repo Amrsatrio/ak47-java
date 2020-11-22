@@ -17,15 +17,15 @@ class MapProcessor(val provider: MyFileProvider) {
 	val entries = JsonArray()
 
 	fun processMap(mapPath: String = "/Game/Content/Athena/Apollo/Maps/Apollo_Terrain.umap",
-						   parentLoc: FVector = FVector(0f, 0f, 0f),
-						   parentRot: FRotator = FRotator(0f, 0f, 0f),
-						   parentScale: FVector = FVector(1f, 1f, 1f)): JsonArray {
+				   parentLoc: FVector = FVector(0f, 0f, 0f),
+				   parentRot: FRotator = FRotator(0f, 0f, 0f),
+				   parentScale: FVector = FVector(1f, 1f, 1f)): JsonArray {
 		provider.loadGameFile(mapPath)?.exports?.forEach { export ->
 			var relativeLocation = FVector(0f, 0f, 0f)
 			var relativeRotation = FRotator(0f, 0f, 0f)
 			var relativeScale3D = FVector(1f, 1f, 1f)
 
-			provider.loadObject(export.get<FPackageIndex>("RootComponent"))?.apply {
+			export.owner!!.loadObjectGeneric(export.get<FPackageIndex>("RootComponent"))?.apply {
 				get<FVector>("RelativeLocation")?.let { relativeLocation = it }
 				get<FRotator>("RelativeRotation")?.let { relativeRotation = it }
 				get<FVector>("RelativeScale3D")?.let { relativeScale3D = it }
@@ -41,7 +41,7 @@ class MapProcessor(val provider: MyFileProvider) {
 			if (objStatTag != null) {
 //				collectItemQuest?.let { quests[collectItemQuest.importObject?.objectName?.text!!] = provider.loadObject(it) }
 				entries.add(JsonObject().apply {
-					addProperty("collectItemQuest", collectItemQuest?.importObject?.objectName?.text)
+//					addProperty("collectItemQuest", collectItemQuest?.importObject?.objectName?.text)
 					addProperty("questBackendName", questBackendName?.text)
 					add("objStatTag", JWPSerializer.GSON.toJsonTree(objStatTag.gameplayTags))
 					add("loc", JWPSerializer.GSON.toJsonTree(objectLoc))

@@ -60,12 +60,14 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(CosmeticCommand())
 		register(DailyQuestsCommand())
 		register(DailyRewardsCommand())
+		register(DumpAssetCommand())
 		register(EvalCommand())
 		register(ExchangeCommand())
+		register(ExportObjectCommand())
 		register(ExtendedLoginCommand())
-		register(FishCollectionCommand())
+//		register(FishCollectionCommand())
 //		register(FriendsCommand())
-		register(GenXpCoinsDataCommand())
+//		register(GenXpCoinsDataCommand())
 		register(GiftCommand())
 		register(GiftHistoryCommand())
 		register(GiftSettingsCommand())
@@ -247,8 +249,8 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 			.build())
 		if (DiscordBot.ENV == "prod" || DiscordBot.ENV == "stage") {
 			client.dlog("""__**Error report**__
-	User: ${source.author.asMention}$additional
-	```${Throwables.getStackTraceAsString(e)}```""", null)
+User: ${source.author.asMention}$additional
+```${Throwables.getStackTraceAsString(e)}```""", null)
 		}
 	}
 

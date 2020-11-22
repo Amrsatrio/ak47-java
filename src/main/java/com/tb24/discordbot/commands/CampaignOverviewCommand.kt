@@ -6,7 +6,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
-import com.tb24.discordbot.util.getItemIconEmote
+import com.tb24.discordbot.util.getItemIconEmoji
 import com.tb24.fn.model.mcpprofile.attributes.CampaignProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.util.Formatters
@@ -28,7 +28,7 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Displays summary of you
 		val profileManager = c.source.api.profileManager
 		profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
 		val campaign = profileManager.getProfileData("campaign")
-		val embed = c.source.createEmbed()
+		val embed = c.source.createEmbed().setColor(0x40FAA1)
 		for ((categoryName, categoryItemTypes) in mapOf(
 			"Perk-UP" to listOf(
 				"AccountResource:reagent_alteration_upgrade_sr",
@@ -86,7 +86,7 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Displays summary of you
 			)
 		)) {
 			embed.addField(categoryName, categoryItemTypes.joinToString("\n") { tid ->
-				(getItemIconEmote(tid)?.asMention ?: tid) + ' ' + Formatters.num.format(campaign.items.values.firstOrNull { it.templateId == tid }?.quantity ?: 0)
+				(getItemIconEmoji(tid)?.asMention ?: tid) + ' ' + Formatters.num.format(campaign.items.values.firstOrNull { it.templateId == tid }?.quantity ?: 0)
 			}, true)
 		}
 		c.source.complete(null, embed.build())

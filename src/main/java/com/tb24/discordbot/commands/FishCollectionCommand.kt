@@ -11,9 +11,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.QueryMultipleUserStats
-import com.tb24.fn.model.assetdata.FortCollectionDataEntryFish
-import com.tb24.fn.model.assetdata.FortCollectionsDataTable
-import com.tb24.fn.model.assetdata.GameDataBR
+import com.tb24.fn.model.assetdata.*
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.item.CollectableFishAttributes
 import com.tb24.fn.model.mcpprofile.item.CollectableFishAttributes.EFortCollectedState
@@ -25,10 +23,9 @@ import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import java.util.concurrent.CompletableFuture
 
-@Suppress("EXPERIMENTAL_API_USAGE")
 class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fish collection.", arrayOf("fishing", "collections")) {
 	private val defaultGameDataBR by lazy { INSTANCE.provider.loadObject<GameDataBR>("/Game/Balance/DefaultGameDataBR.DefaultGameDataBR") }
-	private val itemDefToItemVariantMapping by lazy { defaultGameDataBR?.ItemDefToItemVariantDataMappingAsset?.load()?.ItemDefToItemVariantDataMappings }
+	private val itemDefToItemVariantMapping by lazy { defaultGameDataBR?.ItemDefToItemVariantDataMappingAsset?.load<FortItemDefToItemVariantDataMapping>()?.ItemDefToItemVariantDataMappings }
 	private val fishTagToItemVariantDataMapping by lazy { itemDefToItemVariantMapping?.map { it.ItemVariantData }?.flatMap { it.Variants.toList() }?.associateBy { it.CollectionTag.TagName.text } }
 	private val collectionsData by lazy { INSTANCE.provider.loadObject<FortCollectionsDataTable>("/Game/Athena/Collections/CollectionsData.CollectionsData")?.Collections }
 
@@ -55,9 +52,8 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 			.apply { CompletableFuture.allOf(*toTypedArray()).await() }
 			.flatMap { it.get().body()!!.toList() }
 		val data = collectionsData
-			?.firstOrNull { it.CollectionType == "CollectableFish" }?.Collection
-			?.load()?.Entries
-			?.mapIndexed { i, o -> o.run { Entry(this, EntryTag.TagName.run { collected.firstOrNull { it.variantTag == text } }, i) } }
+			?.firstOrNull { it.CollectionType == "CollectableFish" }?.Collection?.load<FortCollectionDataFishing>()?.Entries
+			?.mapIndexed { i, o -> o.run { Entry(this as FortCollectionDataEntryFish, EntryTag.TagName.run { collected.firstOrNull { it.variantTag == text } }, i) } }
 			?: throw SimpleCommandExceptionType(LiteralMessage("Data not found.")).create()
 		source.message.replyPaginated(if (all) data else data.filter { it.collected != null && it.collected.seenState != EFortCollectedState.New }, 1, source.loadingMsg) { content, page, pageCount ->
 			val entry = content.first()
@@ -68,7 +64,7 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 				.setAuthor('#' + Formatters.num.format(idx + 1))
 				.setTitle(def.EntryName.format())
 				.setDescription(def.EntryDescription.format())
-				.setThumbnail(Utils.benBotExportAsset(def.LargeIcon.uniqueID.toString()))
+				.setThumbnail(Utils.benBotExportAsset(def.LargeIcon.assetPathName.text))
 				.addField("Hint", def.AdditionalEntryDescription.format()!!.replace("<text color=\"fff\" fontface=\"black\" case=\"upper\">", "**").replace("</>", "**"), false)
 				.addField("Size", def.Size.getValue0().toString(), false)
 				.apply {

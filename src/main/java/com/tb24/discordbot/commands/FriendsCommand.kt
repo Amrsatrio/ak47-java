@@ -20,7 +20,7 @@ class FriendsCommand : BrigadierCommand("friends", "friends operations") {
 		.build()
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { list.command.run(it) }
+		.executes(list.command)
 		.then(list)
 		.then(add)
 
@@ -31,7 +31,13 @@ class FriendsCommand : BrigadierCommand("friends", "friends operations") {
 	}
 
 	private fun list(source: CommandSourceStack, type: String): Int {
-		val body = source.api.friendsService.queryFriends(source.api.currentLoggedIn.id, true).exec().body()!!
+		source.ensureSession()
+		val entries = source.api.friendsService.queryFriends(source.api.currentLoggedIn.id, true).exec().body()!!
+		/*source.message.replyPaginated(entries, 20, source.loadingMsg) { content, page, pageCount ->
+			MessageBuilder(EmbedBuilder()
+				.setTitle("h")
+			).build()
+		}*/
 		return Command.SINGLE_SUCCESS
 	}
 }
