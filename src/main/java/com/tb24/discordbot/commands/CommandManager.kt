@@ -77,6 +77,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 //		register(LockerCommand())
 		register(LoginCommand())
 		register(LogoutCommand())
+		register(MemoryCommand())
 		register(MtxBalanceCommand())
 		register(MtxPlatformCommand())
 		register(PhoenixCommand())

@@ -12,17 +12,14 @@ buildscript {
 plugins {
 	id 'application'
 	id 'java'
-	id 'org.jetbrains.kotlin.jvm' version '1.4.0'
+	id 'org.jetbrains.kotlin.jvm' version '1.4.20'
 	id 'com.github.johnrengelman.shadow' version '6.0.0'
 }
 
 group 'com.tb24'
 version '6.0.0'
 
-java {
-	sourceCompatibility = JavaVersion.VERSION_1_8
-	targetCompatibility = JavaVersion.VERSION_1_8
-}
+sourceCompatibility = 1.8
 
 ext {
 	javaMainClass = 'com.tb24.discordbot.DiscordBot'
@@ -54,7 +51,7 @@ dependencies {
 	implementation 'com.rethinkdb:rethinkdb-driver:2.4.4'
 	implementation 'com.squareup.okhttp3:okhttp:3.14.9'
 	implementation 'com.squareup.retrofit2:retrofit:2.9.0'
-	implementation('com.tb24:EpicApi:+') { exclude module: 'JFortniteParse' }
+	implementation 'com.tb24:Matchmaker:+'
 	implementation 'me.fungames:JFortniteParse:+'
 	implementation('net.dv8tion:JDA:+') { exclude module: 'opus-java' }
 	implementation 'net.sf.trove4j:trove4j:3.0.3'
@@ -71,9 +68,11 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
 	kotlinOptions {
 		jvmTarget = '1.8'
 		freeCompilerArgs += [
+				'-Xallow-result-return-type',
 				'-Xno-call-assertions',
+				'-Xno-param-assertions',
 				'-Xno-receiver-assertions',
-				'-Xno-param-assertions'
+				'-Xopt-in=kotlin.ExperimentalUnsignedTypes'
 		]
 	}
 }

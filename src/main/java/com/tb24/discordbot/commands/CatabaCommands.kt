@@ -63,7 +63,7 @@ class CatabaCommand : BrigadierCommand("cataba", "New shop") {
 				if (section.items.isEmpty()) {
 					continue
 				}
-				embed.addFieldSeparate(section.cmsBacking.sectionDisplayName, section.items, 0) {
+				embed.addFieldSeparate(section.cmsBacking.sectionDisplayName ?: "", section.items, 0) {
 					it.resolve(source.api.profileManager)
 					"${(it.ce.__ak47_index + 1)}. ${it.friendlyName}${if (it.owned) " ✅" else ""}"
 				}

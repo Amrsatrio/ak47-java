@@ -14,6 +14,7 @@ import com.tb24.fn.model.EStoreCurrencyType
 import com.tb24.fn.model.FortCatalogResponse
 import com.tb24.fn.model.FortCatalogResponse.Price
 import com.tb24.fn.model.FortItemStack
+import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.ProfileUpdate
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Formatters
@@ -37,11 +38,21 @@ import java.util.concurrent.Future
 import javax.imageio.ImageIO
 import kotlin.math.min
 
-val WHITELIST_ICON_EMOJI_ITEM_TYPES = arrayOf("AccountResource", "Currency", "Stat")
+val WHITELIST_ICON_EMOJI_ITEM_TYPES = arrayOf("AccountResource", "ConsumableAccountItem", "Currency", "Stat")
 
 @Throws(HttpException::class, IOException::class)
 fun ProfileManager.dispatchClientCommandRequest(payload: Any, profileId: String = "common_core"): CompletableFuture<ProfileUpdate> =
 	CompletableFuture.supplyAsync { makeClientCommandCall(payload.javaClass.simpleName, profileId, payload).exec().body().apply { handleProfileUpdate(this) } }
+
+@Throws(HttpException::class, IOException::class)
+fun ProfileManager.dispatchPublicCommandRequest(user: GameProfile, payload: Any, profileId: String = "common_core"): CompletableFuture<ProfileUpdate> =
+	CompletableFuture.supplyAsync {
+		val profileGroup = getProfileGroup(user.id)
+		profileGroup.owner = user
+		makePublicCommandCall(profileGroup, payload.javaClass.simpleName, profileId, payload).exec().body().apply {
+			profileGroup.handleProfileUpdate(this)
+		}
+	}
 
 @Throws(HttpException::class, IOException::class)
 fun <T> Call<T>.exec(): Response<T> = execute().apply {
@@ -122,7 +133,7 @@ fun Price.getAccountBalance(profileManager: ProfileManager): Int {
 	if (currencyType == EStoreCurrencyType.MtxCurrency) {
 		return CatalogHelper.countMtxCurrency(profileManager.getProfileData("common_core"))
 	} else if (currencyType == EStoreCurrencyType.GameItem) {
-		for (profile in profileManager.profileData.values) {
+		for (profile in profileManager.profiles.values) {
 			for (item in profile.items.values) {
 				if (item.templateId == currencySubType && item.quantity > 0) {
 					return item.quantity

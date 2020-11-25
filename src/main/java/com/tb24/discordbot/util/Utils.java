@@ -108,4 +108,20 @@ public class Utils {
 		int r = a % b;
 		return r < 0 ? r + b : r;
 	}
+
+	public static String progress(int current, int max, int width) {
+		int barWidth = width - 2;
+		float ratio = (float) current / (float) max;
+		int barEnd = (int) (ratio * barWidth + 0.5F);
+
+		StringBuilder sb = new StringBuilder(width);
+		sb.append('[');
+
+		for (int i = 0; i < barWidth; ++i) {
+			sb.append(i >= barEnd ? ' ' : i == barEnd - 1 ? '>' : '=');
+		}
+
+		sb.append(']');
+		return sb.toString();
+	}
 }

@@ -1,16 +1,4 @@
 rootProject.name = 'ak47'
-includeBuild('../Matchmaker') {
-	dependencySubstitution {
-		substitute module('com.tb24:EpicApi') with project(':')
-	}
-}
-includeBuild('../jfp-zen') {
-	dependencySubstitution {
-		substitute module('me.fungames:JFortniteParse') with project(':')
-	}
-}
-includeBuild('../JOodle') {
-	dependencySubstitution {
-		substitute module('me.fungames:JOodle') with project(':')
-	}
-}
+includeBuild '../Matchmaker'
+includeBuild '../JFortniteParse'
+includeBuild '../JOodle'

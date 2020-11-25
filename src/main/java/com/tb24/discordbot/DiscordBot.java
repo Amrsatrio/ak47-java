@@ -12,7 +12,6 @@ import com.tb24.uasset.AssetManager;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.MessageBuilder;
-import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -33,7 +32,7 @@ import okhttp3.OkHttpClient;
 import static com.rethinkdb.RethinkDB.r;
 
 public final class DiscordBot {
-	public static final String VERSION = "6.0.3";
+	public static final String VERSION = "6.0.4";
 	private static final Logger LOGGER = LoggerFactory.getLogger("DiscordBot");
 	public static final CertificatePinner CERT_PINNER = new CertificatePinner.Builder()
 		.add("discordapp.com", "sha256/DACsWb3zfNT9ttV6g6o5wwpzvgKJ66CliW2GCh2m8LQ=")
@@ -92,7 +91,7 @@ public final class DiscordBot {
 			internalSession.logout(null);
 			discord.shutdown();
 		}));
-		discord.getPresence().setActivity(Activity.playing("☕ Kotlin/JVM \u00b7 v" + VERSION));
+		//discord.getPresence().setActivity(Activity.playing("☕ Kotlin/JVM \u00b7 v" + VERSION));
 	}
 
 	private void setupInternalSession() {

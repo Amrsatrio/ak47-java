@@ -8,12 +8,10 @@ import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.Session
 import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.exec
+import com.tb24.fn.model.account.GameProfile
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
-import net.dv8tion.jda.api.entities.ChannelType
-import net.dv8tion.jda.api.entities.Message
-import net.dv8tion.jda.api.entities.MessageChannel
-import net.dv8tion.jda.api.entities.MessageEmbed
+import net.dv8tion.jda.api.entities.*
 import net.dv8tion.jda.internal.entities.ReceivedMessage
 import java.net.URLEncoder
 
@@ -58,9 +56,9 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 	}
 
 	@Throws(HttpException::class)
-	fun createEmbed() = EmbedBuilder().setAuthor(
-		api.currentLoggedIn.displayName, null,
-		session.channelsManager.getUserSettings(api.currentLoggedIn.id, "avatar")
+	fun createEmbed(user: GameProfile = api.currentLoggedIn) = EmbedBuilder().setAuthor(
+		user.displayName, null,
+		session.channelsManager.getUserSettings(user.id, "avatar")
 			.firstOrNull()?.let { "https://cdn2.unrealengine.com/Kairos/portraits/$it.png?preview=1" }
 	)
 
@@ -82,6 +80,7 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 class OnlyChannelCommandSource(client: DiscordBot, channel: MessageChannel) : CommandSourceStack(client, ReceivedMessage(
 	-1L,
 	channel,
+	MessageType.DEFAULT,
 	null,
 	false,
 	false,

@@ -5,9 +5,13 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
+import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
+import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.commands.QueryPublicProfile
 import com.tb24.fn.util.Formatters
 import com.tb24.uasset.AssetManager
 import me.fungames.jfortniteparse.fort.objects.rows.FortPhoenixLevelRewardData
@@ -21,53 +25,12 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 	private val noDataErr = SimpleCommandExceptionType(LiteralMessage("No data"))
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { c ->
-			val source = c.source
+		.executes {
+			val source = it.source
 			source.ensureSession()
 			source.loading("Getting Ventures data")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
-			val phoenixXpItem = source.api.profileManager.getProfileData("campaign").items.values.firstOrNull { it.templateId == "AccountResource:phoenixxp" }
-				?: throw SimpleCommandExceptionType(LiteralMessage("no ventures xp item, profile is bugged !!111!!1!")).create()
-			val currentEvent = "EventFlag.Phoenix.Winterfest" // TODO don't hardcode this by querying the calendar endpoint
-			val table = phoenixLevelRewardsTable ?: throw noDataErr.create()
-			val levels = table.rows.filterKeys { it.text.startsWith(currentEvent) }.entries.sortedBy { it.key.text.substringAfter(currentEvent).toInt() }.map { it.value.mapToClass<FortPhoenixLevelRewardData>() }.toList()
-			var levelData: FortPhoenixLevelRewardData? = null
-			var levelIdx = levels.size
-			while (levelIdx-- > 0) {
-				if (phoenixXpItem.quantity >= levels[levelIdx].TotalRequiredXP) {
-					levelData = levels[levelIdx]
-					break
-				}
-			}
-			if (levelData == null) {
-				throw SimpleCommandExceptionType(LiteralMessage("Dunno what level dude, idk anymore")).create()
-			}
-			val nextLevelData = if (levelIdx + 1 < levels.size) levels[levelIdx + 1] else null
-			var nextMajorIdx = findMajor(levelIdx + /*next level*/1, levels)
-			if (nextMajorIdx == levelIdx + 1) {
-				nextMajorIdx = findMajor(nextMajorIdx + 1, levels)
-			}
-			val nextMajorData = if (nextMajorIdx != -1) levels[nextMajorIdx] else null
-			source.complete(null, source.createEmbed()
-				.setTitle("Ventures: Season 3")
-				.setDescription("Level ${Formatters.num.format(levelIdx + 1)} - ${(getItemIconEmoji(phoenixXpItem.templateId)?.run { "$asMention " } ?: "")}${Formatters.num.format(phoenixXpItem.quantity)}\n" + if (nextLevelData != null) {
-					val current = phoenixXpItem.quantity - levelData.TotalRequiredXP
-					val delta = nextLevelData.TotalRequiredXP - levelData.TotalRequiredXP
-					"`${progress(current, delta)}`\n${Formatters.num.format(nextLevelData.TotalRequiredXP - phoenixXpItem.quantity)} XP to next level."
-				} else "")
-				.apply {
-					if (nextLevelData != null) {
-						addField("Rewards for level ${Formatters.num.format(levelIdx + /*next level*/1 + /*index offset*/1)}", nextLevelData.VisibleReward.joinToString("\n") { FortItemStack(it.TemplateId, it.Quantity).renderWithIcon() }, true)
-					}
-				}
-				.apply {
-					if (nextMajorData != null && nextMajorData != nextLevelData) {
-						addField("Rewards for level ${Formatters.num.format(nextMajorIdx + /*index offset*/1)}", nextMajorData.VisibleReward.joinToString("\n") { FortItemStack(it.TemplateId, it.Quantity).renderWithIcon() }, true)
-					}
-				}
-				.setColor(0x40FAA1)
-				.build())
-			Command.SINGLE_SUCCESS
+			display(source, source.api.currentLoggedIn)
 		}
 		.then(literal("rewards")
 			.executes { c ->
@@ -91,29 +54,78 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 				Command.SINGLE_SUCCESS
 			}
 		)
+		.then(argument("user", users(1))
+			.executes {
+				val source = it.source
+				if (source.api.userToken == null) {
+					source.session = source.client.internalSession
+				}
+				val user = getUsers(it, "user").values.first()
+				source.loading("Getting Ventures data of ${user.displayName}")
+				source.api.profileManager.dispatchPublicCommandRequest(user, QueryPublicProfile(), "campaign").await()
+				display(source, user)
+			}
+		)
+
+	private fun display(source: CommandSourceStack, user: GameProfile): Int {
+		val phoenixXpItem = source.api.profileManager.getProfileData(user.id, "campaign").items.values.firstOrNull { it.templateId == "AccountResource:phoenixxp" }
+			?: throw SimpleCommandExceptionType(LiteralMessage("no ventures xp item, profile is bugged !!111!!1!")).create()
+		val currentEvent = "EventFlag.Phoenix.Winterfest" // TODO don't hardcode this by querying the calendar endpoint
+		val table = phoenixLevelRewardsTable ?: throw noDataErr.create()
+		val levels = table.rows.filterKeys { it.text.startsWith(currentEvent) }.entries.sortedBy { it.key.text.substringAfter(currentEvent).toInt() }.map { it.value.mapToClass<FortPhoenixLevelRewardData>() }.toList()
+		var levelData: FortPhoenixLevelRewardData? = null
+		var levelIdx = levels.size
+		while (levelIdx-- > 0) {
+			if (phoenixXpItem.quantity >= levels[levelIdx].TotalRequiredXP) {
+				levelData = levels[levelIdx]
+				break
+			}
+		}
+		if (levelData == null) {
+			throw SimpleCommandExceptionType(LiteralMessage("Dunno what level dude, idk anymore")).create()
+		}
+		val nextLevelData = levels.getOrNull(levelIdx + 1)
+		var nextMajorIdx = findMajor(levelIdx + /*next level*/1, levels)
+		if (nextMajorIdx == levelIdx + 1) { // next major reward is the next level, find again starting from next level + 1
+			nextMajorIdx = findMajor(nextMajorIdx + 1, levels)
+		}
+		val nextMajorData = levels.getOrNull(nextMajorIdx)
+		source.complete(null, source.createEmbed(user)
+			.setTitle("Ventures: Season 3")
+			.setDescription("**Level ${Formatters.num.format(levelIdx + 1)}** - ${(getItemIconEmoji(phoenixXpItem.templateId)?.run { "$asMention " } ?: "")}${Formatters.num.format(phoenixXpItem.quantity)}\n" + if (nextLevelData != null) {
+				val current = phoenixXpItem.quantity - levelData.TotalRequiredXP
+				val delta = nextLevelData.TotalRequiredXP - levelData.TotalRequiredXP
+				val lastLevel = levels.last()
+				"`%s`\n%,d / %,d\n\n%,d XP to next level.\n%,d XP to level %,d.".format(
+					Utils.progress(current, delta, 32),
+					current, delta,
+					nextLevelData.TotalRequiredXP - phoenixXpItem.quantity,
+					lastLevel.TotalRequiredXP - phoenixXpItem.quantity,
+					levels.size
+				)
+			} else "Max level.")
+			.apply {
+				if (nextLevelData != null) {
+					addField("Rewards for level ${Formatters.num.format(levelIdx + /*next level*/1 + /*index offset*/1)}", nextLevelData.VisibleReward.joinToString("\n") { FortItemStack(it.TemplateId, it.Quantity).renderWithIcon() }, true)
+				}
+			}
+			.apply {
+				if (nextMajorData != null && nextMajorData != nextLevelData) {
+					addField("Rewards for level ${Formatters.num.format(nextMajorIdx + /*index offset*/1)}", nextMajorData.VisibleReward.joinToString("\n") { FortItemStack(it.TemplateId, it.Quantity).renderWithIcon() }, true)
+				}
+			}
+			.setColor(0x40FAA1)
+			.build())
+		return Command.SINGLE_SUCCESS
+	}
 
 	private fun findMajor(startIdx: Int, levels: List<FortPhoenixLevelRewardData>): Int {
-		var nextMajorIdx = startIdx
-		while (nextMajorIdx < levels.size) {
+		for (nextMajorIdx in startIdx until levels.size) {
 			val entry = levels[nextMajorIdx]
 			if (entry.bIsMajorReward) {
 				return nextMajorIdx
 			}
-			++nextMajorIdx
 		}
 		return -1
-	}
-
-	private fun progress(current: Int, max: Int, width: Int = 32): String {
-		val barWidth: Int = width - 2
-		val ratio = current.toFloat() / max.toFloat()
-		val barEnd = (ratio * barWidth + 0.5f).toInt()
-		val sb: StringBuilder = StringBuilder(width)
-		sb.append('[')
-		for (i in 0 until barWidth) {
-			sb.append(if (i >= barEnd) ' ' else if (i == barEnd - 1) '>' else '=')
-		}
-		sb.append(']')
-		return sb.toString()
 	}
 }

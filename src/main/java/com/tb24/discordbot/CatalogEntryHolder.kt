@@ -11,7 +11,6 @@ import com.tb24.fn.model.FortCatalogResponse.Price
 import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Utils
-import com.tb24.fn.util.format
 import com.tb24.uasset.AssetManager
 import me.fungames.jfortniteparse.fort.exports.FortMtxOfferData
 import java.util.*
@@ -34,10 +33,14 @@ class CatalogEntryHolder(val ce: FortCatalogResponse.CatalogEntry) {
 			val defData = item.defData
 			if (defData == null) {
 				// item data not found from assets, item is encrypted or new
-				compiledNames.add(if (i < fromDevName.size) fromDevName[i] else item.templateId)
+				compiledNames.add(fromDevName.getOrNull(i) ?: item.templateId)
 				continue
 			}
-			compiledNames.add(defData.DisplayName.format() ?: item.primaryAssetName)
+			var name = item.displayName ?: item.primaryAssetName
+			if (name.isEmpty()) {
+				name = item.templateId
+			}
+			compiledNames.add(name)
 		}
 		compiledNames
 	}
