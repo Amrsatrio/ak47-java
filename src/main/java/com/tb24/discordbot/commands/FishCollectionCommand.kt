@@ -11,7 +11,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.QueryMultipleUserStats
-import com.tb24.fn.model.assetdata.*
+import com.tb24.fn.model.assetdata.GameDataBR
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.item.CollectableFishAttributes
 import com.tb24.fn.model.mcpprofile.item.CollectableFishAttributes.EFortCollectedState
@@ -19,6 +19,7 @@ import com.tb24.fn.model.mcpprofile.item.CollectableFishAttributes.FortMcpCollec
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
 import com.tb24.uasset.AssetManager.INSTANCE
+import me.fungames.jfortniteparse.fort.exports.*
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import java.util.concurrent.CompletableFuture
@@ -26,7 +27,7 @@ import java.util.concurrent.CompletableFuture
 class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fish collection.", arrayOf("fishing", "collections")) {
 	private val defaultGameDataBR by lazy { INSTANCE.provider.loadObject<GameDataBR>("/Game/Balance/DefaultGameDataBR.DefaultGameDataBR") }
 	private val itemDefToItemVariantMapping by lazy { defaultGameDataBR?.ItemDefToItemVariantDataMappingAsset?.load<FortItemDefToItemVariantDataMapping>()?.ItemDefToItemVariantDataMappings }
-	private val fishTagToItemVariantDataMapping by lazy { itemDefToItemVariantMapping?.map { it.ItemVariantData }?.flatMap { it.Variants.toList() }?.associateBy { it.CollectionTag.TagName.text } }
+	private val fishTagToItemVariantDataMapping by lazy { itemDefToItemVariantMapping?.map { it.ItemVariantData.load<FortItemVariantData>()!! }?.flatMap { it.Variants }?.associateBy { it.CollectionTag.TagName.text } }
 	private val collectionsData by lazy { INSTANCE.provider.loadObject<FortCollectionsDataTable>("/Game/Athena/Collections/CollectionsData.CollectionsData")?.Collections }
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -53,7 +54,7 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 			.flatMap { it.get().body()!!.toList() }
 		val data = collectionsData
 			?.firstOrNull { it.CollectionType == "CollectableFish" }?.Collection?.load<FortCollectionDataFishing>()?.Entries
-			?.mapIndexed { i, o -> o.run { Entry(this as FortCollectionDataEntryFish, EntryTag.TagName.run { collected.firstOrNull { it.variantTag == text } }, i) } }
+			?.mapIndexed { i, it -> it.load<FortCollectionDataEntryFish>()!!.run { Entry(this, EntryTag.TagName.run { collected.firstOrNull { it.variantTag == text } }, i) } }
 			?: throw SimpleCommandExceptionType(LiteralMessage("Data not found.")).create()
 		source.message.replyPaginated(if (all) data else data.filter { it.collected != null && it.collected.seenState != EFortCollectedState.New }, 1, source.loadingMsg) { content, page, pageCount ->
 			val entry = content.first()
@@ -87,7 +88,7 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 					val split = def.EntryTag.TagName.text.split('.')
 					// br_{type}         _{category}      _{variant}_{metric}_s{season}
 					// br_collection_fish_effectiveflopper_purple   _length  _s14
-					val statKey = "br_${"collection_fish"}_${split[1]}_${split[2]}_${"length"}_s${14 /* TODO WHY HARDCODE */}".toLowerCase()
+					val statKey = "br_${"collection_fish"}_${split[1]}_${split[2]}_${"length"}_s${15 /* TODO WHY HARDCODE */}".toLowerCase()
 					val map = mutableMapOf<String/*account id*/, Float/*length in cm*/>()
 					if (collected != null) {
 						map[source.api.currentLoggedIn.id] = collected.properties.length

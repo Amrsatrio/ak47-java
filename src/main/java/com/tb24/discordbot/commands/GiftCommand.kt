@@ -16,8 +16,8 @@ import com.tb24.fn.model.EStoreCurrencyType
 import com.tb24.fn.model.FortCatalogResponse.CatalogEntry
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
-import com.tb24.fn.model.mcpprofile.commands.GiftCatalogEntry
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.commands.commoncore.GiftCatalogEntry
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.format
 import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText

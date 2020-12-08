@@ -18,7 +18,10 @@ import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.ProfileUpdate
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Formatters
+import com.tb24.fn.util.format
 import com.tb24.fn.util.getPreviewImagePath
+import com.tb24.uasset.AssetManager
+import me.fungames.jfortniteparse.fort.exports.FortWorkerType
 import me.fungames.jfortniteparse.fort.objects.rows.FortQuestRewardTableRow
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
 import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
@@ -28,6 +31,11 @@ import net.dv8tion.jda.api.entities.*
 import retrofit2.Call
 import retrofit2.Response
 import java.awt.Color
+import java.awt.Font
+import java.awt.Graphics2D
+import java.awt.RenderingHints
+import java.awt.image.BufferedImage
+import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.text.DateFormat
@@ -82,7 +90,14 @@ private val DF = DateFormat.getDateTimeInstance()
 
 fun Date.format(): String = DF.format(this)
 
-fun FortItemStack.render(displayQty: Int = quantity) = (if (displayQty > 1) Formatters.num.format(displayQty) + " \u00d7 " else "") + displayName
+fun FortItemStack.render(displayQty: Int = quantity): String {
+	var dn = displayName
+	if (dn.isEmpty() && defData is FortWorkerType) {
+		val asWorker = defData as FortWorkerType
+		dn = defData.Rarity.rarityName.format() + ' ' + if (asWorker.bIsManager) "Lead Survivor" else "Survivor"
+	}
+	return (if (displayQty > 1) Formatters.num.format(displayQty) + " \u00d7 " else "") + dn
+}
 
 fun FortItemStack.renderWithIcon(displayQty: Int = quantity): String {
 	transformedDefData // resolves this item if it is FortConditionalResourceItemDefinition
@@ -242,4 +257,24 @@ fun <T> EmbedBuilder.addFieldSeparate(title: String, entries: Collection<T>?, bu
 
 inline fun FortCatalogResponse.CatalogEntry.holder() = CatalogEntryHolder(this)
 
-fun Number.awtColor() = toInt().run { Color(this, ushr(24) == 0xFF) }
+fun Number.awtColor(hasAlpha: Boolean = toInt() ushr 24 != 0) = Color(toInt(), hasAlpha)
+
+inline fun createAndDrawCanvas(w: Int, h: Int, draw: (ctx: Graphics2D) -> Unit): BufferedImage {
+	val canvas = BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB)
+	val ctx = canvas.createGraphics()
+	ctx.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+	ctx.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
+	ctx.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
+	draw(ctx)
+	return canvas
+}
+
+object ResourcesContext {
+	val burbankSmallBold by lazy { fromPaks("FortniteGame/Content/UI/Foundation/Fonts/burbanksmall-bold.ufont") }
+	val burbankSmallBlack by lazy { fromPaks("FortniteGame/Content/UI/Foundation/Fonts/burbanksmall-black.ufont") }
+	val burbankBigRegularBold by lazy { fromPaks("FortniteGame/Content/UI/Foundation/Fonts/BurbankBigRegular-Bold.ufont") }
+	val burbankBigRegularBlack by lazy { fromPaks("FortniteGame/Content/UI/Foundation/Fonts/BurbankBigRegular-Black.ufont") }
+	val burbankBigCondensedBlack by lazy { fromPaks("FortniteGame/Content/UI/Foundation/Fonts/BurbankBigCondensed-Black.ufont") }
+
+	private inline fun fromPaks(path: String) = Font.createFont(Font.TRUETYPE_FONT, ByteArrayInputStream(AssetManager.INSTANCE.provider.saveGameFile(path)))
+}

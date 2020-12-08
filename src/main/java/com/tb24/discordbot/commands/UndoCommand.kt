@@ -10,7 +10,7 @@ import com.tb24.discordbot.L10N
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
-import com.tb24.fn.model.mcpprofile.commands.RefundMtxPurchase
+import com.tb24.fn.model.mcpprofile.commands.commoncore.RefundMtxPurchase
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Formatters
 import java.text.ParsePosition

@@ -7,8 +7,8 @@ import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.discordbot.util.renderWithIcon
 import com.tb24.fn.model.mcpprofile.attributes.CampaignProfileAttributes
-import com.tb24.fn.model.mcpprofile.commands.ClaimLoginReward
-import com.tb24.fn.model.mcpprofile.commands.ClientQuestLogin
+import com.tb24.fn.model.mcpprofile.commands.campaign.ClaimLoginReward
+import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.model.mcpprofile.notifications.DailyRewardsNotification
 import com.tb24.fn.util.Formatters
 

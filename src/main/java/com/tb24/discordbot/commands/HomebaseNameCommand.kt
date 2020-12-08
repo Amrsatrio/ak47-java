@@ -13,7 +13,7 @@ import com.tb24.discordbot.util.commandName
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.mcpprofile.attributes.CommonPublicProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
-import com.tb24.fn.model.mcpprofile.commands.SetHomebaseName
+import com.tb24.fn.model.mcpprofile.commands.commonpublic.SetHomebaseName
 import java.text.SimpleDateFormat
 
 class HomebaseNameCommand : BrigadierCommand("homebasename", "Displays or changes the homebase name. (STW owning accounts only)") {

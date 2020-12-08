@@ -14,7 +14,7 @@ import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
-import com.tb24.fn.model.mcpprofile.commands.SetReceiveGiftsEnabled
+import com.tb24.fn.model.mcpprofile.commands.commoncore.SetReceiveGiftsEnabled
 import com.tb24.fn.util.format
 
 class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift settings such as the gift wrap to use.", arrayOf("gs")) {

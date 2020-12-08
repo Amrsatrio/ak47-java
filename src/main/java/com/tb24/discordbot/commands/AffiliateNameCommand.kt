@@ -10,7 +10,7 @@ import com.tb24.discordbot.L10N
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
-import com.tb24.fn.model.mcpprofile.commands.SetAffiliateName
+import com.tb24.fn.model.mcpprofile.commands.commoncore.SetAffiliateName
 
 class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Support a Creator code. Use `clear` to unset the code.", arrayOf("code")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()

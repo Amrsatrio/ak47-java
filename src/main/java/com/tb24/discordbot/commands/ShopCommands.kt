@@ -7,8 +7,8 @@ import com.tb24.discordbot.util.*
 import com.tb24.fn.model.EStoreCurrencyType
 import com.tb24.fn.model.FortCatalogResponse
 import com.tb24.fn.model.assetdata.ESubGame
-import com.tb24.fn.model.mcpprofile.commands.PopulatePrerolledOffers
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.commands.campaign.PopulatePrerolledOffers
 import net.dv8tion.jda.api.EmbedBuilder
 import java.awt.Color
 import java.awt.image.BufferedImage

@@ -15,8 +15,8 @@ import com.tb24.fn.model.EStoreCurrencyType
 import com.tb24.fn.model.FortCatalogResponse.CatalogEntry
 import com.tb24.fn.model.FortCatalogResponse.ECatalogOfferType
 import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
-import com.tb24.fn.model.mcpprofile.commands.PurchaseCatalogEntry
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.commands.commoncore.PurchaseCatalogEntry
 import com.tb24.fn.model.mcpprofile.notifications.CatalogPurchaseNotification
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.CatalogHelper.isItemOwned

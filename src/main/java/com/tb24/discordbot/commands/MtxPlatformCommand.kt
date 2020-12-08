@@ -11,7 +11,7 @@ import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.EFortMtxPlatform
 import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
-import com.tb24.fn.model.mcpprofile.commands.SetMtxPlatform
+import com.tb24.fn.model.mcpprofile.commands.commoncore.SetMtxPlatform
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Formatters
 
