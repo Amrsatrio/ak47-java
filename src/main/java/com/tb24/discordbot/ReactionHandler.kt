@@ -33,7 +33,7 @@ class ReactionHandler(val client: DiscordBot) : ListenerAdapter() {
 				event.channel.sendMessage("Cannot acknowledge gift `$giftBoxId` because you are currently not on the account that gift was sent to.").queue()
 				return
 			}
-			session.api.profileManager.dispatchClientCommandRequest(RemoveGiftBox().apply { giftBoxItemId = arrayOf(giftBoxId) }).await()
+			session.api.profileManager.dispatchClientCommandRequest(RemoveGiftBox().apply { giftBoxItemIds = arrayOf(giftBoxId) }).await()
 			message.editMessage("✅ Acknowledged.").queue()
 		} catch (e: HttpException) {
 			if (client.commandManager.httpError(source, e)) {

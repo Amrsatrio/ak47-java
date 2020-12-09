@@ -57,6 +57,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(CampaignShopCommand())
 		register(CatabaCommand())
 		register(ClaimMfaCommand())
+		register(ColorCommand())
 		register(CosmeticCommand())
 		register(DailyQuestsCommand())
 		register(DailyRewardsCommand())
@@ -87,6 +88,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 //		register(ShopCommand())
 		register(ShopTextCommand())
 		register(UndoCommand())
+		register(FortniteAndroidApkCommand())
 	}
 
 	private fun register(command: BrigadierCommand): LiteralCommandNode<CommandSourceStack> {

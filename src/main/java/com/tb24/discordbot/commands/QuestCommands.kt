@@ -6,14 +6,18 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.IntegerArgumentType.getInteger
 import com.mojang.brigadier.arguments.IntegerArgumentType.integer
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.Rune
+import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
+import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.attributes.IQuestManager
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.commands.QueryPublicProfile
 import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.model.mcpprofile.commands.subgame.FortRerollDailyQuest
 import me.fungames.jfortniteparse.fort.enums.EFortRarity
@@ -54,7 +58,7 @@ class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manage
 			if (description.isEmpty()) {
 				description = "You have no quick challenges"
 			} else if (numRerolls > 0) {
-				description += "\n\n" + "You have %,d rerolls remaining today. Use `%s%s replace <%s>` to replace one."
+				description += "\n\n" + "You have %,d reroll(s) remaining today.\nUse `%s%s replace <%s>` to replace one."
 					.format(numRerolls, source.prefix, c.commandName, "quick challenge #")
 			}
 			source.complete(null, source.createEmbed()
@@ -79,34 +83,52 @@ class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manage
 class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active STW daily quests.", arrayOf("dailies")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires(Rune::hasAssetsLoaded)
-		.executes { c ->
-			val source = c.source
+		.executes {
+			val source = it.source
 			source.ensureSession()
 			source.loading("Getting quests")
 			source.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "campaign").await()
-			val campaign = source.api.profileManager.getProfileData("campaign")
-			val canReceiveMtxCurrency = campaign.items.values.firstOrNull { it.templateId == "Token:receivemtxcurrency" } != null
-			val numRerolls = (campaign.stats.attributes as IQuestManager).questManager?.dailyQuestRerolls ?: 0
-			var description = getCampaignDailyQuests(campaign)
-				.joinToString("\n") { renderChallenge(it, "• ", "\u00a0\u00a0\u00a0", true) }
-			if (description.isEmpty()) {
-				description = "You have no active daily quests"
-			} else if (numRerolls > 0) {
-				description += "\n\n" + "You have %,d rerolls remaining today. Use `%s%s replace <%s>` to replace one."
-					.format(numRerolls, source.prefix, c.commandName, "daily quest #")
-			}
-			source.complete(null, source.createEmbed()
-				.setTitle("Daily Quests")
-				.setDescription(description)
-				.setColor(0x40FAA1)
-				.build())
-			Command.SINGLE_SUCCESS
+			displayDailyQuests(it, source.api.currentLoggedIn)
 		}
 		.then(literal("replace")
 			.then(argument("daily quest #", integer())
 				.executes { c -> replaceQuest(c.source, "campaign", getInteger(c, "daily quest #")) { getCampaignDailyQuests(it) } }
 			)
 		)
+		.then(argument("user", UserArgument.users(1))
+			.executes {
+				val source = it.source
+				if (source.api.userToken == null) {
+					source.session = source.client.internalSession
+				}
+				val user = UserArgument.getUsers(it, "user").values.first()
+				source.loading("Getting quests of ${user.displayName}")
+				source.api.profileManager.dispatchPublicCommandRequest(user, QueryPublicProfile(), "campaign").await()
+				displayDailyQuests(it, user)
+			}
+		)
+
+	private fun displayDailyQuests(c: CommandContext<CommandSourceStack>, user: GameProfile): Int {
+		val source = c.source
+		val campaign = source.api.profileManager.getProfileData(user.id, "campaign")
+		val canReceiveMtxCurrency = campaign.items.values.firstOrNull { it.templateId == "Token:receivemtxcurrency" } != null
+		val numRerolls = (campaign.stats.attributes as IQuestManager).questManager?.dailyQuestRerolls ?: 0
+		var description = getCampaignDailyQuests(campaign)
+			.mapIndexed { i, it -> renderChallenge(it, "${i + 1}. ", "\u00a0\u00a0\u00a0", conditionalCondition = canReceiveMtxCurrency) }
+			.joinToString("\n")
+		if (description.isEmpty()) {
+			description = "You have no active daily quests"
+		} else if (user == source.api.currentLoggedIn && numRerolls > 0) {
+			description += "\n\n" + "You have %,d reroll(s) remaining today.\nUse `%s%s replace <%s>` to replace one."
+				.format(numRerolls, source.prefix, c.commandName, "daily quest #")
+		}
+		source.complete(null, source.createEmbed(user)
+			.setTitle("Daily Quests")
+			.setDescription(description)
+			.setColor(0x40FAA1)
+			.build())
+		return Command.SINGLE_SUCCESS
+	}
 
 	private fun getCampaignDailyQuests(campaign: McpProfile) =
 		campaign.items.values

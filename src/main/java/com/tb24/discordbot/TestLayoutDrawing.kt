@@ -1,4 +1,4 @@
-package com.tb24.discordbot.commands
+package com.tb24.discordbot
 
 import me.fungames.jfortniteparse.util.toPngArray
 import java.awt.*
