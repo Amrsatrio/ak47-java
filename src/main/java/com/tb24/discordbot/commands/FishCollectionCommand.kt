@@ -19,7 +19,10 @@ import com.tb24.fn.model.mcpprofile.item.CollectableFishAttributes.FortMcpCollec
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
 import com.tb24.uasset.AssetManager.INSTANCE
-import me.fungames.jfortniteparse.fort.exports.*
+import me.fungames.jfortniteparse.fort.exports.FortCollectionDataEntryFish
+import me.fungames.jfortniteparse.fort.exports.FortCollectionDataFishing
+import me.fungames.jfortniteparse.fort.exports.FortCollectionsDataTable
+import me.fungames.jfortniteparse.fort.exports.FortItemDefToItemVariantDataMapping
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import java.util.concurrent.CompletableFuture
@@ -27,7 +30,7 @@ import java.util.concurrent.CompletableFuture
 class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fish collection.", arrayOf("fishing", "collections")) {
 	private val defaultGameDataBR by lazy { INSTANCE.provider.loadObject<GameDataBR>("/Game/Balance/DefaultGameDataBR.DefaultGameDataBR") }
 	private val itemDefToItemVariantMapping by lazy { defaultGameDataBR?.ItemDefToItemVariantDataMappingAsset?.load<FortItemDefToItemVariantDataMapping>()?.ItemDefToItemVariantDataMappings }
-	private val fishTagToItemVariantDataMapping by lazy { itemDefToItemVariantMapping?.map { it.ItemVariantData.load<FortItemVariantData>()!! }?.flatMap { it.Variants }?.associateBy { it.CollectionTag.TagName.text } }
+	private val fishTagToItemVariantDataMapping by lazy { itemDefToItemVariantMapping?.map { it.ItemVariantData.value }?.flatMap { it.Variants }?.associateBy { it.CollectionTag.TagName.text } }
 	private val collectionsData by lazy { INSTANCE.provider.loadObject<FortCollectionsDataTable>("/Game/Athena/Collections/CollectionsData.CollectionsData")?.Collections }
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -54,7 +57,7 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 			.flatMap { it.get().body()!!.toList() }
 		val data = collectionsData
 			?.firstOrNull { it.CollectionType == "CollectableFish" }?.Collection?.load<FortCollectionDataFishing>()?.Entries
-			?.mapIndexed { i, it -> it.load<FortCollectionDataEntryFish>()!!.run { Entry(this, EntryTag.TagName.run { collected.firstOrNull { it.variantTag == text } }, i) } }
+			?.mapIndexed { i, it -> it.value.run { Entry(this as FortCollectionDataEntryFish, EntryTag.TagName.run { collected.firstOrNull { it.variantTag == text } }, i) } }
 			?: throw SimpleCommandExceptionType(LiteralMessage("Data not found.")).create()
 		source.message.replyPaginated(if (all) data else data.filter { it.collected != null && it.collected.seenState != EFortCollectedState.New }, 1, source.loadingMsg) { content, page, pageCount ->
 			val entry = content.first()

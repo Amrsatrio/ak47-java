@@ -10,11 +10,11 @@ import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
 import com.tb24.fn.EpicApi
 import com.tb24.fn.ProfileManager
-import com.tb24.fn.model.EStoreCurrencyType
-import com.tb24.fn.model.FortCatalogResponse
-import com.tb24.fn.model.FortCatalogResponse.Price
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.account.GameProfile
+import com.tb24.fn.model.gamesubcatalog.CatalogOffer
+import com.tb24.fn.model.gamesubcatalog.CatalogOffer.CatalogItemPrice
+import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.model.mcpprofile.ProfileUpdate
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Formatters
@@ -104,13 +104,13 @@ fun FortItemStack.renderWithIcon(displayQty: Int = quantity): String {
 	return (getItemIconEmoji(templateId)?.run { "$asMention " } ?: "") + render(displayQty)
 }
 
-fun Price.icon(): String = when (currencyType) {
+fun CatalogItemPrice.icon(): String = when (currencyType) {
 	EStoreCurrencyType.MtxCurrency -> Utils.MTX_EMOJI
 	EStoreCurrencyType.GameItem -> getItemIconEmoji(currencySubType)?.asMention ?: currencySubType
 	else -> currencyType.name
 }
 
-fun Price.emote(): Emote? = when (currencyType) {
+fun CatalogItemPrice.emote(): Emote? = when (currencyType) {
 	EStoreCurrencyType.MtxCurrency -> DiscordBot.instance.discord.getEmoteById(751101530626588713L)
 	EStoreCurrencyType.GameItem -> getItemIconEmoji(currencySubType)
 	else -> null
@@ -142,9 +142,9 @@ fun getItemIconEmoji(templateId: String, createIfNonexistent: Boolean = DiscordB
 	return DiscordBot.instance.discord.getGuildById(648556726672556048L)?.createEmote(defData.name.run { substring(0, min(32, length)) }, Icon.from(baos.toByteArray(), Icon.IconType.PNG))?.complete()
 }
 
-fun Price.render(quantity: Int = 1) = icon() + ' ' + Formatters.num.format(quantity * basePrice) + if (saleType != null) " ~~${Formatters.num.format(quantity * regularPrice)}~~" else ""
+fun CatalogItemPrice.render(quantity: Int = 1) = icon() + ' ' + Formatters.num.format(quantity * basePrice) + if (saleType != null) " ~~${Formatters.num.format(quantity * regularPrice)}~~" else ""
 
-fun Price.getAccountBalance(profileManager: ProfileManager): Int {
+fun CatalogItemPrice.getAccountBalance(profileManager: ProfileManager): Int {
 	if (currencyType == EStoreCurrencyType.MtxCurrency) {
 		return CatalogHelper.countMtxCurrency(profileManager.getProfileData("common_core"))
 	} else if (currencyType == EStoreCurrencyType.GameItem) {
@@ -159,7 +159,7 @@ fun Price.getAccountBalance(profileManager: ProfileManager): Int {
 	return 0
 }
 
-fun Price.getAccountBalanceText(profileManager: ProfileManager) = icon() + ' ' + Formatters.num.format(getAccountBalance(profileManager))
+fun CatalogItemPrice.getAccountBalanceText(profileManager: ProfileManager) = icon() + ' ' + Formatters.num.format(getAccountBalance(profileManager))
 
 fun Map<FName, FortQuestRewardTableRow>.render(prefix: String, fac: Float = 1f, bold: Boolean = false, conditionalCondition: Boolean): String {
 	val fmt = if (bold) "**" else ""
@@ -255,7 +255,7 @@ fun <T> EmbedBuilder.addFieldSeparate(title: String, entries: Collection<T>?, bu
 	return this
 }
 
-inline fun FortCatalogResponse.CatalogEntry.holder() = CatalogEntryHolder(this)
+inline fun CatalogOffer.holder() = CatalogEntryHolder(this)
 
 fun Number.awtColor(hasAlpha: Boolean = toInt() ushr 24 != 0) = Color(toInt(), hasAlpha)
 

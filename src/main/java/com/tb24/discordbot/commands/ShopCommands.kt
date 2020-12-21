@@ -4,9 +4,10 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.tb24.discordbot.util.*
-import com.tb24.fn.model.EStoreCurrencyType
-import com.tb24.fn.model.FortCatalogResponse
 import com.tb24.fn.model.assetdata.ESubGame
+import com.tb24.fn.model.gamesubcatalog.CatalogOffer
+import com.tb24.fn.model.gamesubcatalog.CatalogOffer.CatalogItemPrice
+import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.campaign.PopulatePrerolledOffers
 import net.dv8tion.jda.api.EmbedBuilder
@@ -25,7 +26,7 @@ class ShopCommand : BrigadierCommand("shop", "Description later plz", arrayOf("s
 			source.client.catalogManager.ensureCatalogData(source.api)
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 			val commonCore = source.api.profileManager.getProfileData("common_core")
-			val catalogEntries = mutableListOf<FortCatalogResponse.CatalogEntry>()
+			val catalogEntries = mutableListOf<CatalogOffer>()
 			for (catalogGroup in source.client.catalogManager.athenaCatalogGroups) {
 				for (catalogEntry in catalogGroup.items) {
 					catalogEntries.add(catalogEntry)
@@ -76,7 +77,7 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 //	var useEmbed = true
 	val groups = if (subGame == ESubGame.Campaign) catalogManager.campaignCatalogGroups else catalogManager.athenaCatalogGroups
 	val contents = arrayOfNulls<List<String>>(groups.size)
-	val prices = mutableMapOf<String, FortCatalogResponse.Price>()
+	val prices = mutableMapOf<String, CatalogItemPrice>()
 	for (i in groups.indices) {
 		val lines = mutableListOf<String>()
 		for (catalogEntry in groups[i].items) {

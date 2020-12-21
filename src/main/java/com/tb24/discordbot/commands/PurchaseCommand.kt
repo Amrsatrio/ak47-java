@@ -8,12 +8,12 @@ import com.mojang.brigadier.arguments.IntegerArgumentType.integer
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.L10N
-import com.tb24.discordbot.commands.arguments.CatalogEntryArgument.Companion.catalogEntry
-import com.tb24.discordbot.commands.arguments.CatalogEntryArgument.Companion.getCatalogEntry
+import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.catalogEntry
+import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.getCatalogEntry
 import com.tb24.discordbot.util.*
-import com.tb24.fn.model.EStoreCurrencyType
-import com.tb24.fn.model.FortCatalogResponse.CatalogEntry
-import com.tb24.fn.model.FortCatalogResponse.ECatalogOfferType
+import com.tb24.fn.model.gamesubcatalog.CatalogOffer
+import com.tb24.fn.model.gamesubcatalog.ECatalogOfferType
+import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commoncore.PurchaseCatalogEntry
@@ -43,23 +43,23 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 			)
 		)
 
-	private fun execute(source: CommandSourceStack, catalogEntry: CatalogEntry, quantity: Int = 1, priceIndex: Int = -1): Int {
+	private fun execute(source: CommandSourceStack, offer: CatalogOffer, quantity: Int = 1, priceIndex: Int = -1): Int {
 		var priceIndex = priceIndex
 		source.loading("Preparing your purchase")
 		val profileManager = source.api.profileManager
 		CompletableFuture.allOf(
 			profileManager.dispatchClientCommandRequest(QueryProfile()),
-			profileManager.dispatchClientCommandRequest(QueryProfile(), if (catalogEntry.__ak47_storefront.startsWith("BR")) "athena" else "campaign") // there must be a better way to do this
+			profileManager.dispatchClientCommandRequest(QueryProfile(), if (offer.__ak47_storefront.startsWith("BR")) "athena" else "campaign") // there must be a better way to do this
 		).await()
 		var commonCore = profileManager.getProfileData("common_core")
-		if (priceIndex < 0 && catalogEntry.prices.size > 1) {
+		if (priceIndex < 0 && offer.prices.size > 1) {
 			val priceSelectionEbd = source.createEmbed()
 				.setTitle("How do you want to pay?")
 				.setColor(0x4BDA74)
-				.addField("Prices", catalogEntry.prices.joinToString("\n") { it.render(quantity) }, true)
-				.addField("Balances", catalogEntry.prices.joinToString("\n") { it.getAccountBalanceText(profileManager) }, true)
+				.addField("Prices", offer.prices.joinToString("\n") { it.render(quantity) }, true)
+				.addField("Balances", offer.prices.joinToString("\n") { it.getAccountBalanceText(profileManager) }, true)
 			val priceSelectionMsg = source.complete(null, priceSelectionEbd.build())
-			val icons = catalogEntry.prices.map { it.emote() ?: throw SimpleCommandExceptionType(LiteralMessage(it.render(quantity) + " is missing an emote. Please report this problem to the devs.")).create() }
+			val icons = offer.prices.map { it.emote() ?: throw SimpleCommandExceptionType(LiteralMessage(it.render(quantity) + " is missing an emote. Please report this problem to the devs.")).create() }
 			icons.forEach { priceSelectionMsg.addReaction(it).queue() }
 			try {
 				val choice = priceSelectionMsg.awaitReactions({ reaction, user, _ -> icons.firstOrNull { it.idLong == reaction.reactionEmote.idLong } != null && user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
@@ -77,7 +77,7 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 		} else if (priceIndex < 0) {
 			priceIndex = 0
 		}
-		val sd = catalogEntry.holder().apply { resolve(profileManager, priceIndex) }
+		val sd = offer.holder().apply { resolve(profileManager, priceIndex) }
 		val price = sd.price
 		if (sd.owned) {
 			throw SimpleCommandExceptionType(LiteralMessage(L10N.format("purchase.failed.owned", sd.friendlyName))).create()
@@ -96,7 +96,7 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 				.setColor(0x4BDA74)
 				.setTitle(L10N.format("purchase.confirmation.title"))
 				.addField(L10N.format("catalog.items"), sd.compiledNames.mapIndexed { i, s ->
-					val strike = if (catalogEntry.offerType == ECatalogOfferType.DynamicBundle && isItemOwned(profileManager, catalogEntry.itemGrants[i].templateId, catalogEntry.itemGrants[i].quantity)) "~~" else ""
+					val strike = if (offer.offerType == ECatalogOfferType.DynamicBundle && isItemOwned(profileManager, offer.itemGrants[i].templateId, offer.itemGrants[i].quantity)) "~~" else ""
 					strike + s + strike
 				}.joinToString("\n"), false)
 				.addField(L10N.format("catalog.quantity"), Formatters.num.format(quantity), false)
@@ -107,10 +107,10 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 					.addField(L10N.format("sac.verb"), CatalogHelper.getAffiliateNameRespectingSetDate(commonCore) ?: L10N.format("common.none"), false)
 			}
 			val warnings = mutableListOf<String>()
-			if (CatalogHelper.isUndoUnderCooldown(profileManager.getProfileData("common_core"), catalogEntry.offerId)) {
+			if (CatalogHelper.isUndoUnderCooldown(profileManager.getProfileData("common_core"), offer.offerId)) {
 				warnings.add(L10N.format("purchase.undo_cooldown_warning"))
 			}
-			if (!catalogEntry.refundable) {
+			if (!offer.refundable) {
 				warnings.add("This purchase is not eligible for refund.")
 			}
 			embed.setDescription(warnings.joinToString("\n") { "⚠ $it" })
@@ -120,7 +120,7 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 			source.errorTitle = "Purchase Failed"
 			source.loading("Purchasing ${sd.friendlyName}")
 			val response = source.api.profileManager.dispatchClientCommandRequest(PurchaseCatalogEntry().apply {
-				offerId = catalogEntry.offerId
+				offerId = offer.offerId
 				purchaseQuantity = quantity
 				currency = price.currencyType
 				currencySubType = price.currencySubType
@@ -135,7 +135,7 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 				.addField(L10N.format("purchase.success.received"), if (results.isEmpty()) "No items" else results.joinToString("\n") { it.asItemStack().render() }, false)
 				.addField(L10N.format("purchase.success.final_balance"), price.getAccountBalanceText(profileManager), false)
 				.setTimestamp(Instant.now())
-			if (catalogEntry.refundable && !CatalogHelper.isUndoUnderCooldown(commonCore, catalogEntry.offerId)) {
+			if (offer.refundable && !CatalogHelper.isUndoUnderCooldown(commonCore, offer.offerId)) {
 				successEmbed.setDescription(L10N.format("purchase.success.undo_instruction", source.prefix))
 			}
 			source.complete(null, successEmbed.build())

@@ -5,9 +5,9 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.tb24.discordbot.util.render
 import com.tb24.discordbot.util.safeGetOneIndexed
 import com.tb24.fn.ProfileManager
-import com.tb24.fn.model.FortCatalogResponse
-import com.tb24.fn.model.FortCatalogResponse.ECatalogOfferType
-import com.tb24.fn.model.FortCatalogResponse.Price
+import com.tb24.fn.model.gamesubcatalog.CatalogOffer
+import com.tb24.fn.model.gamesubcatalog.CatalogOffer.CatalogItemPrice
+import com.tb24.fn.model.gamesubcatalog.ECatalogOfferType
 import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Utils
@@ -16,11 +16,11 @@ import me.fungames.jfortniteparse.fort.exports.FortMtxOfferData
 import java.util.*
 import kotlin.math.max
 
-class CatalogEntryHolder(val ce: FortCatalogResponse.CatalogEntry) {
+class CatalogEntryHolder(val ce: CatalogOffer) {
 	private var offerData: FortMtxOfferData? = null
 	var owned = false
 	var ownedItems: MutableSet<String>? = null
-	var price: Price = Price.NO_PRICE
+	var price: CatalogItemPrice = CatalogItemPrice.NO_PRICE
 	val compiledNames by lazy {
 		val fromDevName = try {
 			ce.devName.substring("[VIRTUAL]".length, ce.devName.lastIndexOf(" for ")).replace("1 x ", "").replace(" x ", " \u00d7 ").split(", ")
@@ -56,14 +56,14 @@ class CatalogEntryHolder(val ce: FortCatalogResponse.CatalogEntry) {
 		val attrs = commonCore.stats.attributes as CommonCoreProfileAttributes
 		owned = false
 		ownedItems = hashSetOf()
-		price = Price.NO_PRICE
+		price = CatalogItemPrice.NO_PRICE
 		if (ce.offerType == ECatalogOfferType.StaticPrice) {
 			if (ce.prices.isNotEmpty()) {
 				price = ce.prices.safeGetOneIndexed(priceIndex + 1)
 			}
 			owned = CatalogHelper.isStaticPriceCtlgEntryOwned(profileManager, ce)
 		} else if (ce.offerType == ECatalogOfferType.DynamicBundle) {
-			price = Price()
+			price = CatalogItemPrice()
 			price.regularPrice = ce.dynamicBundleInfo.regularBasePrice
 			price.basePrice = ce.dynamicBundleInfo.discountedBasePrice
 			price.currencyType = ce.dynamicBundleInfo.currencyType
@@ -157,5 +157,5 @@ class CatalogEntryHolder(val ce: FortCatalogResponse.CatalogEntry) {
 
 	val catalogOffer by lazy { if (ce.appStoreId.isNotEmpty()) FortCatalogResponse.sCatalogOffersMap[ce.appStoreId[EAppStore.EpicPurchasingService.ordinal]] else null }*/
 
-	val friendlyName by lazy { "${ce.title ?: compiledNames.joinToString(", ")} [${(if (ce.offerType == ECatalogOfferType.DynamicBundle) arrayOf(price) else ce.prices).joinToString(" | ") { it.render() }}]" }
+	val friendlyName by lazy { "${ce.title ?: compiledNames.joinToString(", ")} [${(if (ce.offerType == ECatalogOfferType.DynamicBundle) listOf(price) else ce.prices).joinToString(" | ") { it.render() }}]" }
 }

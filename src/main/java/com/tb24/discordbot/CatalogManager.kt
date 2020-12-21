@@ -2,11 +2,11 @@ package com.tb24.discordbot
 
 import com.tb24.discordbot.util.exec
 import com.tb24.fn.EpicApi
-import com.tb24.fn.model.FortCatalogResponse
-import com.tb24.fn.model.FortCatalogResponse.CatalogEntry
+import com.tb24.fn.model.gamesubcatalog.CatalogDownload
+import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 
 class CatalogManager(private val client: DiscordBot) {
-	var catalogData: FortCatalogResponse? = null
+	var catalogData: CatalogDownload? = null
 	val limitedTimeOffers = Section("Limited Time Offers")
 	val featuredItems = Section("Featured Items")
 	val dailyItems = Section("Daily Items")
@@ -17,9 +17,9 @@ class CatalogManager(private val client: DiscordBot) {
 	val llamas = Section("Llamas")
 	val athenaCatalogGroups = arrayOf(limitedTimeOffers, featuredItems, dailyItems, specialFeatured, specialDaily)
 	val campaignCatalogGroups = arrayOf(stwEvent, stwWeekly, llamas)
-	val purchasableCatalogEntries = mutableListOf<CatalogEntry>()
+	val purchasableCatalogEntries = mutableListOf<CatalogOffer>()
 
-	class Section(val title: String, val items: MutableList<CatalogEntry> = mutableListOf())
+	class Section(val title: String, val items: MutableList<CatalogOffer> = mutableListOf())
 
 	fun ensureCatalogData(api: EpicApi, force: Boolean = false): Boolean {
 		if (force || catalogData == null || System.currentTimeMillis() >= catalogData!!.expiration.time) {

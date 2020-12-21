@@ -25,7 +25,6 @@ import me.fungames.jfortniteparse.fort.exports.AthenaDailyQuestDefinition
 import me.fungames.jfortniteparse.fort.exports.FortQuestItemDefinition
 import me.fungames.jfortniteparse.fort.exports.FortQuestItemDefinition.EFortQuestType
 import me.fungames.jfortniteparse.fort.objects.rows.FortQuestRewardTableRow
-import me.fungames.jfortniteparse.ue4.assets.exports.UDataTable
 import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
 import me.fungames.jfortniteparse.util.toPngArray
 import java.awt.AlphaComposite
@@ -188,7 +187,7 @@ fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: Str
 	}
 	val xpRewardScalar = item.attributes["xp_reward_scalar"]?.asFloat ?: 1f
 	val sb = StringBuilder("%s**%s** ( %,d / %,d )".format(prefix, item.displayName, completion, max))
-	val rewards = quest.RewardsTable?.load<UDataTable>()?.rows
+	val rewards = quest.RewardsTable?.value?.rows
 		?.mapValues { it.value.mapToClass(FortQuestRewardTableRow::class.java) }
 		?.filter { it.value.QuestTemplateId == "*" || it.value.QuestTemplateId == item.templateId && !it.value.Hidden }
 	if (rewards != null && rewards.isNotEmpty()) {

@@ -7,14 +7,14 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.L10N
-import com.tb24.discordbot.commands.arguments.CatalogEntryArgument.Companion.catalogEntry
-import com.tb24.discordbot.commands.arguments.CatalogEntryArgument.Companion.getCatalogEntry
+import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.catalogEntry
+import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.getCatalogEntry
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
 import com.tb24.discordbot.util.*
-import com.tb24.fn.model.EStoreCurrencyType
-import com.tb24.fn.model.FortCatalogResponse.CatalogEntry
 import com.tb24.fn.model.account.GameProfile
+import com.tb24.fn.model.gamesubcatalog.CatalogOffer
+import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commoncore.GiftCatalogEntry
@@ -34,9 +34,9 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 			)
 		)
 
-	private fun execute(source: CommandSourceStack, catalogEntry: CatalogEntry, recipients: Map<String, GameProfile>): Int {
-		val ce = catalogEntry.holder()
-		if (catalogEntry.giftInfo == null || !catalogEntry.giftInfo.bIsEnabled) {
+	private fun execute(source: CommandSourceStack, catalogOffer: CatalogOffer, recipients: Map<String, GameProfile>): Int {
+		val ce = catalogOffer.holder()
+		if (catalogOffer.giftInfo == null || !catalogOffer.giftInfo.bIsEnabled) {
 			throw SimpleCommandExceptionType(LiteralMessage("${ce.friendlyName} is not giftable.")).create()
 		}
 		source.loading("Preparing your gift")
@@ -54,7 +54,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 		if (recipients.size == 1) {
 			try {
 				source.loading("Checking eligibility")
-				source.api.fortniteService.checkGiftEligibility(recipients.values.first().id, catalogEntry.offerId).exec()
+				source.api.fortniteService.checkGiftEligibility(recipients.values.first().id, catalogOffer.offerId).exec()
 			} catch (e: HttpException) {
 				var errorTitle: FText? = null
 				var errorText: FText? = null
@@ -104,7 +104,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 			source.loading("Sending gifts")
 			try {
 				profileManager.dispatchClientCommandRequest(GiftCatalogEntry().apply {
-					offerId = catalogEntry.offerId
+					offerId = catalogOffer.offerId
 					currency = price.currencyType
 					currencySubType = price.currencySubType
 					expectedTotalPrice = recipients.size * price.basePrice

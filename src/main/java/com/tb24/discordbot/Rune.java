@@ -18,7 +18,7 @@ public class Rune {
 	}
 
 	public static boolean hasAssetsLoaded(CommandSourceStack source) {
-		return !AssetManager.INSTANCE.provider.getFiles().isEmpty();
+		return !AssetManager.INSTANCE.provider.files().isEmpty();
 	}
 
 	public static boolean hasAccess(CommandSourceStack source) {

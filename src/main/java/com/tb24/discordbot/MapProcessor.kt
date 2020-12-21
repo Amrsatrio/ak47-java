@@ -4,7 +4,7 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.tb24.uasset.JWPSerializer
 import com.tb24.uasset.MyFileProvider
-import com.tb24.uasset.get
+import me.fungames.jfortniteparse.ue4.assets.exports.actors.AActor
 import me.fungames.jfortniteparse.ue4.objects.core.math.FRotator
 import me.fungames.jfortniteparse.ue4.objects.core.math.FVector
 import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
@@ -20,15 +20,15 @@ class MapProcessor(val provider: MyFileProvider) {
 				   parentLoc: FVector = FVector(0f, 0f, 0f),
 				   parentRot: FRotator = FRotator(0f, 0f, 0f),
 				   parentScale: FVector = FVector(1f, 1f, 1f)): JsonArray {
-		provider.loadGameFile(mapPath)?.exports?.forEach { export ->
+		provider.loadGameFile(mapPath).exports.forEach { export ->
 			var relativeLocation = FVector(0f, 0f, 0f)
 			var relativeRotation = FRotator(0f, 0f, 0f)
 			var relativeScale3D = FVector(1f, 1f, 1f)
 
-			export.owner!!.loadObjectGeneric(export.get<FPackageIndex>("RootComponent"))?.apply {
-				get<FVector>("RelativeLocation")?.let { relativeLocation = it }
-				get<FRotator>("RelativeRotation")?.let { relativeRotation = it }
-				get<FVector>("RelativeScale3D")?.let { relativeScale3D = it }
+			(export as? AActor)?.RootComponent?.value?.apply {
+				RelativeLocation?.let { relativeLocation = it }
+				RelativeRotation?.let { relativeRotation = it }
+				RelativeScale3D?.let { relativeScale3D = it }
 			}
 
 			val objectLoc = parentLoc + parentScale * parentRot.rotateVector(relativeLocation)
@@ -48,12 +48,12 @@ class MapProcessor(val provider: MyFileProvider) {
 				})
 			}
 
-			export.get<Array<FSoftObjectPath>>("AdditionalWorlds")?.forEach {
+			export.getOrNull<Array<FSoftObjectPath>>("AdditionalWorlds")?.forEach {
 				processMap(it.assetPathName.text.substringBeforeLast('.') + ".umap", objectLoc, objectRot, objectScale)
 			}
 
 			if (export.exportType == "LevelStreamingAlwaysLoaded") {
-				export.get<FSoftObjectPath>("WorldAsset")?.apply {
+				export.getOrNull<FSoftObjectPath>("WorldAsset")?.apply {
 					processMap(assetPathName.text.substringBeforeLast('.') + ".umap", objectLoc, objectRot, objectScale)
 				}
 			}

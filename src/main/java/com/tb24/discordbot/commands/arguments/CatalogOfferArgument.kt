@@ -6,16 +6,16 @@ import com.mojang.brigadier.arguments.ArgumentType
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.commands.CommandSourceStack
-import com.tb24.discordbot.commands.arguments.CatalogEntryArgument.Result
+import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Result
 import com.tb24.discordbot.util.safeGetOneIndexed
-import com.tb24.fn.model.FortCatalogResponse.CatalogEntry
+import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 
-class CatalogEntryArgument : ArgumentType<Result> {
+class CatalogOfferArgument : ArgumentType<Result> {
 	companion object {
 		private val CATALOG_ENTRY_UNKNOWN = SimpleCommandExceptionType(LiteralMessage("Catalog entry not found."))
 
 		@JvmStatic
-		fun catalogEntry() = CatalogEntryArgument()
+		fun catalogEntry() = CatalogOfferArgument()
 
 		@JvmStatic
 		fun getCatalogEntry(context: CommandContext<CommandSourceStack>, name: String, loadingText: String = "Getting the shop") =
@@ -52,6 +52,6 @@ class CatalogEntryArgument : ArgumentType<Result> {
 	}
 
 	fun interface Result {
-		fun getCatalogEntry(source: CommandSourceStack, loadingText: String): CatalogEntry
+		fun getCatalogEntry(source: CommandSourceStack, loadingText: String): CatalogOffer
 	}
 }

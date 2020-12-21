@@ -8,9 +8,9 @@ import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.EItemShopTileSize
 import com.tb24.fn.model.EItemShopTileSize.*
-import com.tb24.fn.model.FortCatalogResponse
 import com.tb24.fn.model.FortCmsData
 import com.tb24.fn.model.FortCmsData.ShopSection
+import com.tb24.fn.model.gamesubcatalog.CatalogDownload
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.uasset.AssetManager
 import me.fungames.jfortniteparse.fileprovider.FileProvider
@@ -80,7 +80,7 @@ class CatabaSection(val cmsBacking: ShopSection) {
 fun main() {
 //	AssetManager.INSTANCE.loadPaks()
 	val img = CatabaImageGenerator(
-		EpicApi.GSON.fromJson(FileReader("D:\\Downloads\\shop-17-10-2020-en.json"), FortCatalogResponse::class.java),
+		EpicApi.GSON.fromJson(FileReader("D:\\Downloads\\shop-17-10-2020-en.json"), CatalogDownload::class.java),
 		EpicApi.GSON.fromJson(FileReader("C:\\Users\\satri\\Downloads\\cms17-10-2020.json"), FortCmsData::class.java),
 		AssetManager.INSTANCE.provider
 	).draw()
@@ -94,7 +94,7 @@ const val CATABA_SECTION_ENTRY_WIDTH = 375
 const val CATABA_SECTION_ENTRY_HEIGHT = 648
 const val CATABA_SECTION_ENTRY_GAP = 28
 
-class CatabaImageGenerator(val data: FortCatalogResponse, val cmsData: FortCmsData, val provider: FileProvider) {
+class CatabaImageGenerator(val data: CatalogDownload, val cmsData: FortCmsData, val provider: FileProvider) {
 //	val burbankBigRgBk by lazy { Font.createFont(Font.TRUETYPE_FONT, ByteArrayInputStream(provider.saveGameFile("FortniteGame/Content/UI/Foundation/Fonts/BurbankBigRegular-Black.ufont"))) }
 //	val burbankBigCdBk by lazy { Font.createFont(Font.TRUETYPE_FONT, ByteArrayInputStream(provider.saveGameFile("FortniteGame/Content/UI/Foundation/Fonts/BurbankBigCondensed-Black.ufont"))) }
 

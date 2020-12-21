@@ -3,7 +3,6 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.ResourcesContext
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.createAndDrawCanvas
@@ -29,7 +28,7 @@ import kotlin.math.sqrt
 
 class LockerCommand : BrigadierCommand("locker", "kek") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires(Rune::isBotDevOrPotato)
+		//.requires(Rune::isBotDevOrPotato)
 		.executes { c ->
 			val source = c.source
 			source.ensureSession()

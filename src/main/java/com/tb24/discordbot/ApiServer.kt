@@ -4,8 +4,6 @@ import com.tb24.fn.EpicApi.GSON
 import com.tb24.fn.model.EpicError
 import com.tb24.uasset.AssetManager
 import me.fungames.jfortniteparse.GDisableRecursiveImports
-import me.fungames.jfortniteparse.fileprovider.AbstractFileProvider
-import me.fungames.jfortniteparse.ue4.assets.IoPackage
 import me.fungames.jfortniteparse.ue4.assets.exports.USoundWave
 import me.fungames.jfortniteparse.ue4.assets.exports.UStaticMesh
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
@@ -103,12 +101,12 @@ fun main(args: Array<String>) {
 				obj.exportType
 			))
 		}
-		synchronized(cacheClearLock) {
+		/*synchronized(cacheClearLock) {
 			(AssetManager.INSTANCE.provider as AbstractFileProvider).asyncPackageLoader.globalPackageStore.apply {
 				importStore.publicExportObjects.clear()
 				loadedPackageStore.remove((obj.owner as IoPackage).importStore.desc.diskPackageId)
 			}
-		}
+		}*/
 		val cacheFile = File(cacheDir, fileName)
 		cacheFile.parentFile.mkdirs()
 		cacheFile.writeBytes(data)

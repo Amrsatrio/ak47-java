@@ -129,7 +129,7 @@ private fun accountPicker(source: CommandSourceStack): Int {
 		val choice = botMessage.awaitReactions({ _, user, _ -> user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
 			max = 1
 			time = 30000
-			errors = arrayOf(CollectorEndReason.TIME)
+			errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
 		}).await().values.first().reactionEmote.name
 		shouldStop.set(true)
 		return if (choice == "✨") {
@@ -144,7 +144,10 @@ private fun accountPicker(source: CommandSourceStack): Int {
 			source.session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", deviceData.accountId, "device_id", deviceData.deviceId, "secret", deviceData.secret, "token_type", "eg1"))
 		}
 	} catch (e: CollectorException) {
-		throw SimpleCommandExceptionType(LiteralMessage("You didn't respond, your login request has been canceled.")).create()
+		if (e.reason == CollectorEndReason.TIME) {
+			throw SimpleCommandExceptionType(LiteralMessage("You didn't respond, your login request has been canceled.")).create()
+		}
+		return Command.SINGLE_SUCCESS
 	}
 }
 
