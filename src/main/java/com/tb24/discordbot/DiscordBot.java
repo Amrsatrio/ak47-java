@@ -32,7 +32,7 @@ import okhttp3.OkHttpClient;
 import static com.rethinkdb.RethinkDB.r;
 
 public final class DiscordBot {
-	public static final String VERSION = "6.0.8";
+	public static final String VERSION = "6.0.10";
 	private static final Logger LOGGER = LoggerFactory.getLogger("DiscordBot");
 	public static final CertificatePinner CERT_PINNER = new CertificatePinner.Builder()
 		.add("discordapp.com", "sha256/DACsWb3zfNT9ttV6g6o5wwpzvgKJ66CliW2GCh2m8LQ=")

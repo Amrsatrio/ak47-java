@@ -28,8 +28,8 @@ class FortniteAndroidApkCommand : BrigadierCommand("apk", "Get an APK download l
 				.setTitle("Here's your APK download")
 				.addField("Build Version", element.buildVersion, false)
 				.addField("Download Link", manifestLink, false)
-				.setColor(0x40FAA1)
 				.build())
+			api.accountService.killSession(api.userToken.access_token).exec()
 			Command.SINGLE_SUCCESS
 		}
 }

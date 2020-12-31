@@ -3,10 +3,7 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.tb24.discordbot.util.ResourcesContext
-import com.tb24.discordbot.util.await
-import com.tb24.discordbot.util.createAndDrawCanvas
-import com.tb24.discordbot.util.dispatchClientCommandRequest
+import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.util.Formatters
@@ -15,12 +12,14 @@ import me.fungames.jfortniteparse.fort.enums.EFortRarity
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
 import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.util.toPngArray
+import net.dv8tion.jda.api.entities.Message
 import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Font
 import java.awt.font.TextLayout
 import java.awt.image.BufferedImage
 import java.io.File
+import java.util.*
 import java.util.concurrent.CompletableFuture
 import javax.imageio.ImageIO
 import kotlin.math.ceil
@@ -53,24 +52,28 @@ class LockerCommand : BrigadierCommand("locker", "kek") {
 				}
 			}
 
-			fun perform(name: String, ids: Collection<FortItemStack>?): CompletableFuture<Void> {
+			fun perform(name: String, ids: Collection<FortItemStack>?) = CompletableFuture.supplyAsync {
 				if (ids == null || ids.isEmpty()) {
-					return CompletableFuture.completedFuture(null)
+					return@supplyAsync null
 				}
 				val slots = mutableListOf<GridSlot>()
-				for (item in ids) {
-					val itemData = item.defData ?: return CompletableFuture.completedFuture(null)
+				for (item in ids.sortedWith(SimpleAthenaLockerItemComparator())) {
+					val itemData = item.defData ?: return@supplyAsync null
 					slots.add(GridSlot(
 						image = item.getPreviewImagePath()?.load<UTexture2D>()?.toBufferedImage(),
 						name = item.displayName,
 						rarity = itemData.Rarity
 					))
 				}
-				slots.sortBy { it.name }
-				return createAttachmentOfIcons(slots, "locker").thenAccept {
-					source.channel.sendMessage("**$name** (${Formatters.num.format(ids.size)})")
-						.addFile(it, "$name-${source.api.currentLoggedIn.id}.png").queue()
-				}
+				var png: ByteArray
+				var scale = 1f
+				do {
+					png = createAttachmentOfIcons(slots, "locker", scale)
+					//println("png size ${png.size} scale $scale")
+					scale -= 0.2f
+				} while (png.size > Message.MAX_FILE_SIZE && scale >= 0.2f)
+				source.channel.sendMessage("**$name** (${Formatters.num.format(ids.size)})")
+					.addFile(png, "$name-${source.api.currentLoggedIn.id}.png").complete()
 			}
 
 			source.loading("Generating and uploading images")
@@ -89,46 +92,42 @@ class LockerCommand : BrigadierCommand("locker", "kek") {
 			Command.SINGLE_SUCCESS
 		}
 
-	fun createAttachmentOfIcons(slots: List<GridSlot>, type: String) = CompletableFuture.supplyAsync {
-		val COLUMNS = if (type == "shop") {
-			ceil(sqrt(slots.size.toDouble())).toInt()
-		} else {
-			12
-		}
-		val TILE_SIZE = 200
-		createAndDrawCanvas(COLUMNS * TILE_SIZE, ceil((slots.size / COLUMNS).toDouble()).toInt() * TILE_SIZE) { ctx ->
-			ctx.font = ResourcesContext.burbankBigCondensedBlack.deriveFont(Font.PLAIN, 25f)
+	fun createAttachmentOfIcons(slots: List<GridSlot>, type: String, scale: Float = 1f): ByteArray {
+		val COLUMNS = ceil(sqrt(slots.size.toDouble())).toInt()
+		val tileSize = (200 * scale).toInt()
+		return createAndDrawCanvas(COLUMNS * tileSize, ceil(slots.size.toDouble() / COLUMNS.toDouble()).toInt() * tileSize) { ctx ->
+			ctx.font = ResourcesContext.burbankBigCondensedBlack.deriveFont(Font.PLAIN, 25f * scale)
 			val bgImg = ImageIO.read(File("./canvas/base.png"))
 
 			for (i in slots.indices) {
 				val slot = slots[i]
 
-				val x = i % COLUMNS * TILE_SIZE
-				val y = i / COLUMNS * TILE_SIZE
+				val x = i % COLUMNS * tileSize
+				val y = i / COLUMNS * tileSize
 
 				if (type == "shop") { // draw background if it's for item shop, we need to reduce the image size for locker
-					ctx.drawImage(bgImg, x, y, TILE_SIZE, TILE_SIZE, null)
+					ctx.drawImage(bgImg, x, y, tileSize, tileSize, null)
 				}
 
 				if (slot.image != null) {
-					ctx.drawImage(slot.image, x, y, TILE_SIZE, TILE_SIZE, null)
+					ctx.drawImage(slot.image, x, y, tileSize, tileSize, null)
 				} else if (slot.url != null) {
 					TODO() //ctx.drawImage(ImageIO.read(File(slot.url)), x, y, TILE_SIZE, TILE_SIZE, null) // icon
 				}
 
 				if (slot.rarity != null && File("./canvas/${slot.rarity.name.toLowerCase()}.png").exists()) {
-					ctx.drawImage(ImageIO.read(File("./canvas/${slot.rarity.name.toLowerCase()}.png")), x, y, TILE_SIZE, TILE_SIZE, null)
+					ctx.drawImage(ImageIO.read(File("./canvas/${slot.rarity.name.toLowerCase()}.png")), x, y, tileSize, tileSize, null)
 				}
 
 				if (slot.name != null) {
 					val text = if (type == "shop") "(${(slot.index ?: i) + 1}) ${slot.name}" else slot.name
 					val textDimen = TextLayout(text, ctx.font, ctx.fontRenderContext)
 					val shape = textDimen.getOutline(null)
-					val hpad = 10
+					val hpad = (10 * scale).toInt()
 					val tx = x + hpad
-					val ty = y + TILE_SIZE - 6
+					val ty = y + tileSize - (6 * scale).toInt()
 					ctx.translate(tx, ty)
-					ctx.stroke = BasicStroke(6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
+					ctx.stroke = BasicStroke(6f * scale, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
 					ctx.color = Color.BLACK
 					ctx.draw(shape)
 					ctx.color = Color.WHITE

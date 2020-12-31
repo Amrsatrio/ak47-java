@@ -108,7 +108,6 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 			.addField("New name", response.accountInfo.epicDisplayName.orDash(), true)
 			.setFooter("You can change your name again on")
 			.setTimestamp(response.accountInfo.canUpdateDisplayNameNext.toInstant())
-			.setColor(0x40FAA1)
 			.build())
 		return Command.SINGLE_SUCCESS
 	}
@@ -131,7 +130,6 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 			.addField("Used", renderBackupCodes(response.backupCodes.filter { it.used }).takeIf { it.isNotEmpty() } ?: "No used codes", false)
 			.setFooter("Generated at")
 			.setTimestamp(response.generatedAt.toInstant())
-			.setColor(0x40FAA1)
 			.build())
 		return Command.SINGLE_SUCCESS
 	}
@@ -144,7 +142,6 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		source.complete(null, source.createEmbed()
 			.setTitle("✅ Generated new backup codes")
 			.addField("Backup codes", renderBackupCodes(response.backupCodes.toList()), true)
-			.setColor(0x40FAA1)
 			.build())
 		return Command.SINGLE_SUCCESS
 	}
@@ -174,7 +171,6 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		if (!source.complete(null, source.createEmbed()
 				.setTitle("Unlink $externalAuthType?")
 				.setDescription("You're about to unlink a linked account with the following details:\n\n**Name**: ${externalAuth.externalDisplayName.orDash()}\n**ID(s)**:\n${externalAuth.authIds.joinToString("\n") { "\u2022 ${it.type}: ${it.id}" }}\n**Added**: ${externalAuth.dateAdded.renderWithRelative()}\n\nThis action will be recorded in the Account History as `HISTORY_ACCOUNT_EXTERNAL_AUTH_REMOVE`.\n\n${consoleWarning}Are you sure you want to continue? (❌ in 30s)")
-				.setColor(0x40FAA1)
 				.build()).yesNoReactions(source.author).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS

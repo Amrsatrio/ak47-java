@@ -20,15 +20,15 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Displays summary of you
 				.build())
 			Command.SINGLE_SUCCESS
 		}*/
-		.executes(::execute)
+		.then(literal("resources").executes(::resources))
 
-	fun execute(c: CommandContext<CommandSourceStack>): Int {
+	fun resources(c: CommandContext<CommandSourceStack>): Int {
 		c.source.ensureSession()
 		c.source.loading("Getting STW data")
 		val profileManager = c.source.api.profileManager
 		profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
 		val campaign = profileManager.getProfileData("campaign")
-		val embed = c.source.createEmbed().setColor(0x40FAA1)
+		val embed = c.source.createEmbed()
 		for ((categoryName, categoryItemTypes) in mapOf(
 			"Perk-UP" to listOf(
 				"AccountResource:reagent_alteration_upgrade_sr",

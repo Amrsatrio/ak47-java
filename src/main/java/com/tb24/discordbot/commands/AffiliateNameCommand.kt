@@ -31,7 +31,6 @@ class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Su
 				.addField("Creator Code", attrs.mtx_affiliate ?: L10N.format("common.none"), false)
 				.addField("Set on", attrs.mtx_affiliate_set_time?.format() ?: "Never set", false)
 				.setFooter("Use '" + source.prefix + context.commandName + " <new code>' to change it.")
-				.setColor(0x40FAA1)
 			if (!attrs.mtx_affiliate.isNullOrEmpty() && attrs.mtx_affiliate_set_time != null) {
 				val expiry = attrs.mtx_affiliate_set_time.time + 14L * 24L * 60L * 60L * 1000L
 				val expired = System.currentTimeMillis() > expiry

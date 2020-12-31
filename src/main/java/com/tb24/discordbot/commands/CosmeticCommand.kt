@@ -11,7 +11,6 @@ import com.tb24.discordbot.util.Utils
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.util.format
 import com.tb24.fn.util.getPreviewImagePath
-import com.tb24.fn.util.toObjectPath
 import me.fungames.jfortniteparse.fort.exports.FortMtxOfferData
 import net.dv8tion.jda.api.EmbedBuilder
 
@@ -31,9 +30,8 @@ class CosmeticCommand : BrigadierCommand("cosmetic", "Shows info of a cosmetic b
 					.setDescription(defData.Description.format())
 					.addField("Rarity", defData.Rarity.name.format(), false)
 					.setThumbnail(Utils.benBotExportAsset(item.getPreviewImagePath(true).toString()))
-					.setImage(Utils.benBotExportAsset(defData.DisplayAssetPath?.load<FortMtxOfferData>()?.DetailsImage?.ResourceObject?.toObjectPath()))
+					.setImage(Utils.benBotExportAsset(defData.DisplayAssetPath?.load<FortMtxOfferData>()?.DetailsImage?.ResourceObject?.value?.getPathName()))
 					.setFooter("${System.currentTimeMillis() - start}ms")
-					.setColor(0x40FAA1)
 				defData.GameplayTags?.apply {
 					embed.addField("Gameplay Tags", joinToString("\n"), false)
 				}

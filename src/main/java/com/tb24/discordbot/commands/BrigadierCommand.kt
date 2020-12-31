@@ -22,4 +22,8 @@ abstract class BrigadierCommand @JvmOverloads constructor(val name: String, val 
 
 	protected inline fun <T> argument(name: String, type: ArgumentType<T>): RequiredArgumentBuilder<CommandSourceStack, T> =
 		RequiredArgumentBuilder.argument(name, type)
+
+	companion object {
+		const val COLOR_SUCCESS = 0x40FAA1
+	}
 }

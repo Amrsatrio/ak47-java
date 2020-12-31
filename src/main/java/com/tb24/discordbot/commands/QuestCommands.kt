@@ -63,7 +63,6 @@ class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manage
 			source.complete(null, source.createEmbed()
 				.setTitle("Quick Challenges")
 				.setDescription(description)
-				.setColor(0x40FAA1)
 				.build())
 			Command.SINGLE_SUCCESS
 		}
@@ -124,7 +123,6 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 		source.complete(null, source.createEmbed(user)
 			.setTitle("Daily Quests")
 			.setDescription(description)
-			.setColor(0x40FAA1)
 			.build())
 		return Command.SINGLE_SUCCESS
 	}
@@ -166,7 +164,6 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 			.mapIndexed { i, it -> renderChallenge(it, "${i + 1}. ", "\u00a0\u00a0\u00a0", conditionalCondition = canReceiveMtxCurrency) }
 			.joinToString("\n")
 			.takeIf { it.isNotEmpty() } ?: "You have no active daily quests", false)
-		.setColor(0x40FAA1)
 		.build())
 	return Command.SINGLE_SUCCESS
 }

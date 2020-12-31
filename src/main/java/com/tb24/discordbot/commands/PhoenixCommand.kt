@@ -48,7 +48,6 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 							}
 						}
 						.setFooter("Page %d of %d".format(page + 1, pageCount))
-						.setColor(0x40FAA1)
 					).build()
 				}
 				Command.SINGLE_SUCCESS
@@ -114,7 +113,6 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 					addField("Rewards for level ${Formatters.num.format(nextMajorIdx + /*index offset*/1)}", nextMajorData.VisibleReward.joinToString("\n") { FortItemStack(it.TemplateId, it.Quantity).renderWithIcon() }, true)
 				}
 			}
-			.setColor(0x40FAA1)
 			.build())
 		return Command.SINGLE_SUCCESS
 	}

@@ -3,7 +3,6 @@ package com.tb24.discordbot
 import com.tb24.fn.EpicApi.GSON
 import com.tb24.fn.model.EpicError
 import com.tb24.uasset.AssetManager
-import me.fungames.jfortniteparse.GDisableRecursiveImports
 import me.fungames.jfortniteparse.ue4.assets.exports.USoundWave
 import me.fungames.jfortniteparse.ue4.assets.exports.UStaticMesh
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
@@ -17,10 +16,7 @@ import spark.kotlin.ignite
 import java.io.File
 import java.util.*
 
-val cacheClearLock = Object()
-
 fun main(args: Array<String>) {
-	GDisableRecursiveImports = true
 	AssetManager.INSTANCE.loadPaks()
 	val app = ignite()
 	val ipArg = args.getOrNull(0)
@@ -101,12 +97,6 @@ fun main(args: Array<String>) {
 				obj.exportType
 			))
 		}
-		/*synchronized(cacheClearLock) {
-			(AssetManager.INSTANCE.provider as AbstractFileProvider).asyncPackageLoader.globalPackageStore.apply {
-				importStore.publicExportObjects.clear()
-				loadedPackageStore.remove((obj.owner as IoPackage).importStore.desc.diskPackageId)
-			}
-		}*/
 		val cacheFile = File(cacheDir, fileName)
 		cacheFile.parentFile.mkdirs()
 		cacheFile.writeBytes(data)

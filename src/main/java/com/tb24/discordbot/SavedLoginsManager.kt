@@ -9,60 +9,52 @@ class SavedLoginsManager(private val conn: Connection) {
 		private val GODS = arrayOf("624299014388711455") //require("./Gods.json");
 	}
 
-	fun getAll(ticketId: String) =
-		r.table("devices")[ticketId].run(conn, Entry::class.java).first()?.devices ?: emptyList()
+	fun getAll(sessionId: String) =
+		r.table("devices")[sessionId].run(conn, Entry::class.java).first()?.devices ?: emptyList()
 
-	fun get(ticketId: String, accountId: String) =
-		getAll(ticketId).find { it.accountId == accountId }
+	fun get(sessionId: String, accountId: String) =
+		getAll(sessionId).firstOrNull { it.accountId == accountId }
 
-	/*async put(ticketId, device) {
-		const dbEntry = r.table("devices").get(ticketId).run(conn);
-		const devices = dbEntry ? dbEntry.devices || [] : [];
-
-		if (devices.find(it = > it.accountId == device.accountId)){
-			return false; // already exists
+	fun put(sessionId: String, device: DeviceAuth): Boolean {
+		val dbEntry = r.table("devices").get(sessionId).run(conn, Entry::class.java).first()
+		val devices = dbEntry?.devices ?: mutableListOf()
+		if (devices.firstOrNull { it.accountId == device.accountId } != null) {
+			return false // already exists
 		}
-
-		devices.push(device);
-		const newContents = {
-			id:ticketId,
-			devices:devices
-		};
-
-		if (dbEntry) {
-			r.table("devices").update(newContents);
+		devices.add(device)
+		val newContents = Entry()
+		newContents.id = sessionId
+		newContents.devices = devices
+		if (dbEntry != null) {
+			r.table("devices").update(newContents)
 		} else {
-			r.table("devices").insert(newContents);
-		}
-
-		return true;
+			r.table("devices").insert(newContents)
+		}.run(conn)
+		return true
 	}
 
-	async remove(ticketId, accountId) {
-		const dbEntry = r.table("devices").get(ticketId).run(conn);
-
-		if (dbEntry) {
-			const filtered = dbEntry.devices.filter(it = > it.accountId != accountId);
-
-			if (filtered.length > 0) {
-				r.table("devices").update({
-					id:ticketId,
-					devices:filtered
+	fun remove(sessionId: String, accountId: String): Boolean {
+		val dbEntry = r.table("devices").get(sessionId).run(conn, Entry::class.java).first()
+		return if (dbEntry != null) {
+			val filtered = dbEntry.devices!!.filter { it.accountId != accountId }
+			if (filtered.isNotEmpty()) {
+				r.table("devices").update(Entry().apply {
+					id = sessionId
+					devices = filtered.toMutableList()
 				})
 			} else {
-				r.table("devices").get(ticketId).delete().run(conn);
-			}
-
-			return true;
+				r.table("devices").get(sessionId).delete()
+			}.run(conn)
+			true
 		} else {
-			return false;
+			false
 		}
-	}*/
+	}
 
-	fun getLimit(ticketId: String) = if (GODS.contains(ticketId)) 20 else 3
+	fun getLimit(sessionId: String) = if (GODS.contains(sessionId)) 10 else 5
 
 	class Entry {
 		@JvmField var id: String? = null
-		@JvmField var devices: List<DeviceAuth>? = null
+		@JvmField var devices: MutableList<DeviceAuth>? = null
 	}
 }

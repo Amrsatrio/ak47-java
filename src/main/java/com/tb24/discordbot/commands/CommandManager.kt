@@ -58,9 +58,12 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(CatabaCommand())
 		register(ClaimMfaCommand())
 		register(ColorCommand())
+		register(CompetitiveCommand())
 		register(CosmeticCommand())
 		register(DailyQuestsCommand())
 		register(DailyRewardsCommand())
+		register(DeleteSavedLoginCommand())
+		register(DeviceAuthCommand())
 		register(DumpAssetCommand())
 		register(EvalCommand())
 		register(ExchangeCommand())
@@ -85,6 +88,8 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(PingCommand())
 		register(PrefixCommand())
 		register(PurchaseCommand())
+		register(ReceiptsCommand())
+		register(SaveLoginCommand())
 //		register(ShopCommand())
 		register(ShopTextCommand())
 		register(UndoCommand())
@@ -205,7 +210,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		val host: String = e.response.request().url().host()
 		val isEpicGames = host.endsWith("epicgames.com") || host.endsWith("fortnite.qq.com")
 		if (isEpicGames) {
-			if (e.code() == HttpURLConnection.HTTP_UNAUTHORIZED && source.api.userToken?.account_id != null) {
+			if ((e.code() == HttpURLConnection.HTTP_UNAUTHORIZED || (e.code() == HttpURLConnection.HTTP_FORBIDDEN && e.epicError.errorCode == "com.epicgames.common.token_verify_failed") /*special case for events service*/) && source.api.userToken?.account_id != null) {
 				val savedDevice = client.savedLoginsManager.get(source.session.id, source.api.userToken.account_id)
 				source.api.userToken = null
 				if (savedDevice != null) {

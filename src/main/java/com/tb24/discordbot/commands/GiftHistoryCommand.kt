@@ -45,7 +45,6 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 					}
 				}\nTotal sent: **${giftHistory.num_sent}**\nTotal received: **${giftHistory.num_received}**\nThe data below are partial.")
 				.setFooter("Server time: ${Date().format()}")
-				.setColor(0x40FAA1)
 			embed.addField("Sent (${Formatters.num.format(sentTo.size)})", summary(sentTo, localUserMap, source.prefix + c.commandName + " sent"), false)
 			embed.addField("Received (${Formatters.num.format(receivedFrom.size)})", summary(receivedFrom, localUserMap, source.prefix + c.commandName + " received"), false)
 			embed.addFieldSeparate("Recent gifts (${Formatters.num.format(gifts.size)})", gifts.toList()) { e ->

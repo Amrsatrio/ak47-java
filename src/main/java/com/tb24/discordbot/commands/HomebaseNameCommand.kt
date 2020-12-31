@@ -40,7 +40,6 @@ class HomebaseNameCommand : BrigadierCommand("homebasename", "Displays or change
 				.addField("Current", currentHomebaseName, false)
 				.addField("Last updated (UTC)", SimpleDateFormat().format(commonPublic.updated), false)
 				.setFooter("Use '" + source.prefix + context.commandName + " <new name>' to change it.")
-				.setColor(0x40FAA1)
 				.build())
 		} else {
 			source.api.profileManager.dispatchClientCommandRequest(SetHomebaseName().apply {

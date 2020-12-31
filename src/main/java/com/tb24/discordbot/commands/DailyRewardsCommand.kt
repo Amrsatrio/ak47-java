@@ -26,13 +26,11 @@ class DailyRewardsCommand : BrigadierCommand("dailyrewards", "Claims the STW dai
 			val item = notification?.items?.firstOrNull()
 			source.complete(null, if (item != null) source.createEmbed()
 				.setTitle("Daily Reward Claimed")
-				.setColor(0x40FAA1)
 				.addField("Days logged in", Formatters.num.format(notification.daysLoggedIn), true)
 				.addField("Reward", item.asItemStack().renderWithIcon(), true)
 				.build()
 			else source.createEmbed()
 				.setTitle("Already Claimed")
-				.setColor(0x40FAA1)
 				.addField("Days logged in", Formatters.num.format(attrs.daily_rewards?.totalDaysLoggedIn ?: 0), true)
 				.build())
 			Command.SINGLE_SUCCESS

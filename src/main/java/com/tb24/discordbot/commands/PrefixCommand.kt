@@ -36,10 +36,10 @@ class PrefixCommand : BrigadierCommand("prefix", "Change prefix for the server/u
 				}
 				it.source.client.prefixMap[prefixId] = newPrefixObj
 				if (currentPrefix != null) {
-					r.table("prefix").update(newPrefixObj).run(it.source.client.dbConn)
+					r.table("prefix").update(newPrefixObj)
 				} else {
-					r.table("prefix").insert(newPrefixObj).run(it.source.client.dbConn)
-				}
+					r.table("prefix").insert(newPrefixObj)
+				}.run(it.source.client.dbConn)
 				it.source.channel.sendMessage("✅ Prefix changed to `$newPrefix`").queue()
 				Command.SINGLE_SUCCESS
 			}

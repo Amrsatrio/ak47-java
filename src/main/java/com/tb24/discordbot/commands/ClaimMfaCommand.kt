@@ -51,7 +51,6 @@ class ClaimMfaCommand : BrigadierCommand("claimmfa", "Claim 2FA reward (Boogie D
 			source.complete(null, source.createEmbed()
 				.setTitle("✅ 2FA reward claimed for $subGameName")
 				.setDescription("${if (claimForStw) "" else "You're now ready to send gifts and participate in tournaments.\n"}It's your choice whether you want to keep it enabled or disable it for your convenience, albeit making the account less secure.")
-				.setColor(0x40FAA1)
 				.build())
 		} else {
 			source.complete(null, source.createEmbed()
