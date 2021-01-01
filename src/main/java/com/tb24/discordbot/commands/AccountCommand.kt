@@ -195,6 +195,4 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 			else /*delta > 0L*/ -> "$elapsedStr ago"
 		}
 	}
-
-	private inline fun Any?.orDash() = this?.toString() ?: "\u2014"
 }

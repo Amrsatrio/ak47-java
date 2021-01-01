@@ -25,7 +25,7 @@ fun <T> Message.replyPaginated(all: List<T>,
 	customReactions?.addReactions(reactions)
 	reactions.forEach { msg.addReaction(it).queue() }
 	val collector = msg.createReactionCollector({ reaction, user, _ -> reactions.contains(reaction.reactionEmote.name) && user?.idLong == author.idLong }, ReactionCollectorOptions().apply { idle = 30000L })
-	collector.callback = object : Collector.CollectorCallback<MessageReaction> {
+	collector.callback = object : CollectorListener<MessageReaction> {
 		override fun onCollect(item: MessageReaction, user: User?) {
 			val oldPage = page
 			page = when (reactions.indexOf(item.reactionEmote.name)) {

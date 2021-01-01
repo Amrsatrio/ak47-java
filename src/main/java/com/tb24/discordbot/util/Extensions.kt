@@ -213,7 +213,7 @@ fun Message.yesNoReactions(author: User, inTime: Long = 30000L): CompletableFutu
 			max = 1
 			time = inTime
 			errors = arrayOf(CollectorEndReason.TIME)
-		}).await().values.first().reactionEmote.name == "✅"
+		}).await().first().reactionEmote.name == "✅"
 	} catch (e: CollectorException) {
 		throw SimpleCommandExceptionType(LiteralMessage("Timed out while waiting for your confirmation.")).create()
 	}
@@ -256,6 +256,8 @@ fun <T> EmbedBuilder.addFieldSeparate(title: String, entries: Collection<T>?, bu
 }
 
 inline fun CatalogOffer.holder() = CatalogEntryHolder(this)
+
+fun String?.orDash() = this?.takeIf { it.isNotEmpty() } ?: "\u2014"
 
 fun Number.awtColor(hasAlpha: Boolean = toInt() ushr 24 != 0) = Color(toInt(), hasAlpha)
 

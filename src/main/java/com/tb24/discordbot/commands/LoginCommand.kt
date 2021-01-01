@@ -130,7 +130,7 @@ private fun accountPicker(source: CommandSourceStack): Int {
 			max = 1
 			time = 30000
 			errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
-		}).await().values.first().reactionEmote.name
+		}).await().first().reactionEmote.name
 		shouldStop.set(true)
 		return if (choice == "✨") {
 			startDefaultLoginFlow(source)
@@ -140,8 +140,18 @@ private fun accountPicker(source: CommandSourceStack): Int {
 				throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
 			}
 			val deviceData = devices[choiceIndex]
-			source.session = source.initialSession
-			source.session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", deviceData.accountId, "device_id", deviceData.deviceId, "secret", deviceData.secret, "token_type", "eg1"))
+			val auth = deviceData.clientId?.let { EAuthClient.getByClientId(it) } ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT
+			try {
+				source.session = source.initialSession
+				source.session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", deviceData.accountId, "device_id", deviceData.deviceId, "secret", deviceData.secret, "token_type", "eg1"), auth)
+			} catch (e: HttpException) {
+				if (e.epicError.errorCode == "errors.com.epicgames.account.invalid_account_credentials" || e.epicError.errorCode == "errors.com.epicgames.account.account_not_active") {
+					val accountId = deviceData.accountId
+					source.client.savedLoginsManager.remove(source.session.id, accountId)
+					throw SimpleCommandExceptionType(LiteralMessage("The saved login for **${users.firstOrNull { it.id == accountId }?.displayName ?: accountId}** is no longer valid.\nError: ${e.epicError.displayText}")).create()
+				}
+				throw e
+			}
 		}
 	} catch (e: CollectorException) {
 		if (e.reason == CollectorEndReason.TIME) {
@@ -152,8 +162,8 @@ private fun accountPicker(source: CommandSourceStack): Int {
 }
 
 private inline fun startDefaultLoginFlow(source: CommandSourceStack) =
-	authorizationCodeHint(source, EAuthClient.FORTNITE_IOS_GAME_CLIENT)
-//		deviceCode(source)
+	//authorizationCodeHint(source, EAuthClient.FORTNITE_IOS_GAME_CLIENT)
+	deviceCode(source, EAuthClient.FORTNITE_SWITCH_GAME_CLIENT)
 
 private val timer = Timer()
 fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
@@ -200,7 +210,7 @@ fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 	val waitingMsg = source.loading("Waiting for your action %LOADING%\n⏱ ${StringUtil.formatElapsedTime(deviceCodeResponse.expiration - System.currentTimeMillis(), true)}")
 	waitingMsg.addReaction("❌").queue()
 	val collector = waitingMsg.createReactionCollector({ reaction, user, _ -> reaction.reactionEmote.name == "❌" && user?.idLong == source.author.idLong }, ReactionCollectorOptions().apply { max = 1 })
-	collector.callback = object : Collector.CollectorCallback<MessageReaction> {
+	collector.callback = object : CollectorListener<MessageReaction> {
 		override fun onCollect(item: MessageReaction, user: User?) {
 			task.cancel()
 			source.loading("Cancelling")

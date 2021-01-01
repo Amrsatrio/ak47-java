@@ -61,7 +61,7 @@ private fun list(c: CommandContext<CommandSourceStack>): Int {
 		source.complete("No entries")
 		return Command.SINGLE_SUCCESS
 	}
-	for (partitioned in response.toList().chunked(6)) {
+	for (partitioned in response.toList().chunked(6)) { // TODO use pagination instead
 		source.complete(partitioned.joinToString("\n") { item ->
 			val line1: String
 			val line2: String
@@ -98,9 +98,10 @@ private fun list(c: CommandContext<CommandSourceStack>): Int {
 
 private fun create(c: CommandContext<CommandSourceStack>): Int {
 	val source = c.source
-	if (!source.isFromType(ChannelType.PRIVATE)) {
-		throw SimpleCommandExceptionType(LiteralMessage("You can only perform this command in DMs because a sensitive info could be posted.")).create()
-	}
+	val inDMs = source.isFromType(ChannelType.PRIVATE)
+	/*if (!inDMs) {
+		throw SimpleCommandExceptionType(LiteralMessage("Please perform this command in DMs because a sensitive info could be posted.")).create()
+	}*/
 	source.ensureSession()
 	val sessionId = source.session.id
 	val user = source.api.currentLoggedIn
@@ -118,13 +119,16 @@ private fun create(c: CommandContext<CommandSourceStack>): Int {
 		accountId = response.accountId
 		deviceId = response.deviceId
 		secret = response.secret
+		clientId = source.api.userToken.client_id
 	})
-	source.complete(null, source.createEmbed()
+	val embed = source.createEmbed()
 		.setTitle("✅ Device auth created and registered to ${source.client.discord.selfUser.name}")
-		.addField("Account", user.displayName + " - " + user.id, false)
-		.addField("Device ID", response.deviceId, false)
-		.addField("Secret", "||" + response.secret + "||", false)
-		.build())
+	if (inDMs) {
+		embed.addField("Account", user.displayName + " - " + user.id, false)
+			.addField("Device ID", response.deviceId, false)
+			.addField("Secret", "||" + response.secret + "||", false)
+	}
+	source.complete(null, embed.build())
 	return Command.SINGLE_SUCCESS
 }
 

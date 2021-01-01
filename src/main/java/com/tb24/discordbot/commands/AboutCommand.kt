@@ -34,7 +34,7 @@ class AboutCommand : BrigadierCommand("about", "Shows credits of this bot.") {
 			if (message.awaitReactions({ _, _, _ -> true }, AwaitReactionsOptions().apply {
 					max = 1
 					time = 10000L
-				}).await().values.any()) {
+				}).await().any()) {
 				message.editMessage(embed.addField("User agent", it.source.client.internalSession.api.okHttpClientInterceptor.userAgent, false).build()).queue()
 			}
 			Command.SINGLE_SUCCESS

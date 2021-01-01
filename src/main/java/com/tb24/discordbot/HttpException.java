@@ -1,7 +1,5 @@
 package com.tb24.discordbot;
 
-import android.util.Log2;
-
 import com.google.gson.JsonSyntaxException;
 import com.tb24.fn.EpicApi;
 import com.tb24.fn.model.EpicError;
@@ -39,7 +37,7 @@ public class HttpException extends RuntimeException {
 
 	public static <T extends EpicError> EpicError toEpicError(HttpException ex, Class<T> toErrorClass) {
 		try {
-			Log2.e("EpicError", ex.responseStr);
+			//Log2.e("EpicError", ex.responseStr);
 			return EpicApi.GSON.fromJson(ex.responseStr, toErrorClass);
 		} catch (JsonSyntaxException e) {
 			EpicError epicError = new EpicError();

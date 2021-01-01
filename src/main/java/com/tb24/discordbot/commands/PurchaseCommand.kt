@@ -64,12 +64,12 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 			try {
 				val choice = priceSelectionMsg.awaitReactions({ reaction, user, _ -> icons.firstOrNull { it.idLong == reaction.reactionEmote.idLong } != null && user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
 					max = 1
-					time = 30000
+					time = 30000L
 					errors = arrayOf(CollectorEndReason.TIME)
-				}).await().values.first().reactionEmote.idLong
+				}).await().first().reactionEmote.idLong
 				priceIndex = icons.indexOfFirst { it.idLong == choice }
 				if (priceIndex == -1) {
-					throw SimpleCommandExceptionType(LiteralMessage("Invalid input")).create()
+					throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
 				}
 			} catch (e: CollectorException) {
 				throw SimpleCommandExceptionType(LiteralMessage("Timed out while waiting for your response.")).create()

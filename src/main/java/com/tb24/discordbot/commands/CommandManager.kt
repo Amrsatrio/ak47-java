@@ -28,7 +28,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 	@JvmField var dispatcher = CommandDispatcher<CommandSourceStack>()
 	val commandMap = hashMapOf<String, BrigadierCommand>()
 	val redirects = hashMapOf<String, BrigadierCommand>()
-	private val threadPool = Executors.newFixedThreadPool(16)
+	private val threadPool = Executors.newCachedThreadPool()
 
 	init {
 		/*dispatcher.register(literal<CommandSourceStack>("magmareef")
@@ -70,7 +70,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(ExportObjectCommand())
 		register(ExtendedLoginCommand())
 		register(FishCollectionCommand())
-//		register(FriendsCommand())
+		register(FriendsCommand())
 //		register(GenXpCoinsDataCommand())
 		register(GiftCommand())
 		register(GiftHistoryCommand())
