@@ -80,7 +80,8 @@ class Session(val client: DiscordBot, val id: String) {
 		return Command.SINGLE_SUCCESS
 	}
 
-	fun logout(message: Message?): Boolean {
+	@JvmOverloads
+	fun logout(message: Message?, clearPersisted: Boolean = true): Boolean {
 		val logoutMsg = message?.run {
 			if (author.idLong == client.discord.selfUser.idLong) {
 				editMessage(Utils.loadingText("Logging out")).complete()
@@ -95,19 +96,18 @@ class Session(val client: DiscordBot, val id: String) {
 		} catch (e: HttpException) {
 			logoutMsg?.editMessage("✅ Already logged out.")?.queue()
 			bError = true
-		} finally {
-			clear()
-			return bError
 		}
+		clear(clearPersisted)
+		return bError
 	}
 
 	fun save() {
 		SessionPersister.set(this)
 	}
 
-	fun clear() {
+	fun clear(clearPersisted: Boolean = true) {
 		api.clear()
-		SessionPersister.remove(id)
+		if (clearPersisted) SessionPersister.remove(id)
 	}
 
 	@Throws(HttpException::class)

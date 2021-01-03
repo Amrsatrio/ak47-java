@@ -15,7 +15,7 @@ import net.dv8tion.jda.api.entities.*
 import net.dv8tion.jda.internal.entities.ReceivedMessage
 import java.net.URLEncoder
 
-open class CommandSourceStack(val client: DiscordBot, val message: Message, sessionId: String) {
+open class CommandSourceStack(val client: DiscordBot, val message: Message, sessionId: String?) {
 	// Message delegates
 	inline val author get() = message.author
 	inline val channel get() = message.channel
@@ -23,7 +23,7 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 	inline val member get() = message.member
 	inline fun isFromType(type: ChannelType) = message.isFromType(type)
 
-	val initialSession: Session = client.getSession(sessionId)
+	val initialSession: Session = sessionId?.let { client.getSession(sessionId) } ?: client.internalSession
 	var session = initialSession
 	inline val api get() = session.api
 
@@ -98,4 +98,27 @@ class OnlyChannelCommandSource(client: DiscordBot, channel: MessageChannel) : Co
 	emptyList(),
 	emptyList(),
 	0
-), channel.id)
+), null)
+
+class PrivateChannelCommandSource(client: DiscordBot, channel: PrivateChannel) : CommandSourceStack(client, ReceivedMessage(
+	-1L,
+	channel,
+	MessageType.DEFAULT,
+	null,
+	false,
+	false,
+	null,
+	null,
+	false,
+	false,
+	null,
+	null,
+	channel.user,
+	null,
+	null,
+	null,
+	emptyList(),
+	emptyList(),
+	emptyList(),
+	0
+), null)

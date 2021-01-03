@@ -7,6 +7,7 @@ import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.discordbot.util.renderWithIcon
 import com.tb24.fn.model.mcpprofile.attributes.CampaignProfileAttributes
+import com.tb24.fn.model.mcpprofile.attributes.ProfileAttributes.FortDailyLoginRewardStat
 import com.tb24.fn.model.mcpprofile.commands.campaign.ClaimLoginReward
 import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.model.mcpprofile.notifications.DailyRewardsNotification
@@ -21,18 +22,23 @@ class DailyRewardsCommand : BrigadierCommand("dailyrewards", "Claims the STW dai
 			source.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "campaign").await()
 			val response = source.api.profileManager.dispatchClientCommandRequest(ClaimLoginReward(), "campaign").await()
 			val campaign = source.api.profileManager.getProfileData("campaign")
-			val attrs = campaign.stats.attributes as CampaignProfileAttributes
-			val notification = response.notifications.filterIsInstance<DailyRewardsNotification>().firstOrNull()
-			val item = notification?.items?.firstOrNull()
-			source.complete(null, if (item != null) source.createEmbed()
-				.setTitle("Daily Reward Claimed")
-				.addField("Days logged in", Formatters.num.format(notification.daysLoggedIn), true)
-				.addField("Reward", item.asItemStack().renderWithIcon(), true)
-				.build()
-			else source.createEmbed()
-				.setTitle("Already Claimed")
-				.addField("Days logged in", Formatters.num.format(attrs.daily_rewards?.totalDaysLoggedIn ?: 0), true)
-				.build())
+			notifyDailyRewardsClaimed(source,
+				(campaign.stats.attributes as CampaignProfileAttributes).daily_rewards,
+				response.notifications.filterIsInstance<DailyRewardsNotification>().firstOrNull())
 			Command.SINGLE_SUCCESS
-		} // TODO since you got assets working, please make a comprehensive rewards info
+		}
 }
+
+fun notifyDailyRewardsClaimed(source: CommandSourceStack, stat: FortDailyLoginRewardStat?, notification: DailyRewardsNotification?) {
+	val item = notification?.items?.firstOrNull()
+	val daysLoggedIn = Formatters.num.format(stat?.totalDaysLoggedIn ?: 0)
+	source.complete(null, if (item != null) source.createEmbed()
+		.setTitle("✅ Daily rewards claimed")
+		.addField("Days logged in", daysLoggedIn, true)
+		.addField("Reward", item.asItemStack().renderWithIcon(), true)
+		.build()
+	else source.createEmbed()
+		.setTitle("Already claimed")
+		.addField("Days logged in", daysLoggedIn, true)
+		.build())
+} // TODO since you got assets working, please make a comprehensive rewards info

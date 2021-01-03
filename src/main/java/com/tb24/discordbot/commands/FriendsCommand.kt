@@ -12,6 +12,8 @@ import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.friends.FriendV2
 import okhttp3.MediaType
 import okhttp3.RequestBody
+import java.net.URL
+import java.util.concurrent.CompletableFuture
 
 class FriendsCommand : BrigadierCommand("friends", "friends operations") {
 	val list = literal("list")
@@ -26,8 +28,24 @@ class FriendsCommand : BrigadierCommand("friends", "friends operations") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes(list.command)
 		.then(list)
+		.then(literal("avatarids").executes { c ->
+			val source = c.source
+			source.ensureSession()
+			val friends = source.api.friendsService.queryFriends(source.api.currentLoggedIn.id, null).exec().body()!!
+			val ids = friends.map { it.accountId }
+				.chunked(100)
+				.map { source.api.channelsService.QueryMultiUserSingleSetting_Field(it, "avatar").future() }
+				.apply { CompletableFuture.allOf(*toTypedArray()).await() }
+				.flatMap { it.get().body()!!.toList() }
+				.map { it.value }
+				.toSortedSet()
+				.joinToString("\n")
+			source.channel.sendFile(ids.toByteArray(), "avatar_ids_${source.api.currentLoggedIn.displayName}.txt").queue()
+			Command.SINGLE_SUCCESS
+		})
 		.then(argument("user", users(1))
 			.executes { c ->
+				c.source.ensureSession()
 				val friends = c.source.api.friendsService.queryFriends(c.source.api.currentLoggedIn.id, true).exec().body()!!.sortedBy { it.displayName ?: it.accountId }
 				entryDetails(c.source, getUsers(c, "user", friends).values.first(), friends)
 			}
@@ -76,7 +94,7 @@ class FriendsCommand : BrigadierCommand("friends", "friends operations") {
 	private fun aliasOrNote(source: CommandSourceStack, friend: FriendV2, bNote: Boolean): Int {
 		val propName = if (bNote) "note" else "nickname"
 		val old = friend.alias
-		source.complete("The current $propName is: `${old.orDash()}`\nEnter the new $propName: (⏱ 45s)")
+		source.complete("The current $propName is: `${old.orUnset()}`\nEnter the new $propName: (⏱ 45s)")
 		var new = source.channel.awaitMessages({ collected, _, _ -> collected.author.idLong == source.author.idLong }, AwaitMessagesOptions().apply {
 			max = 1
 			time = 45000L
@@ -94,7 +112,7 @@ class FriendsCommand : BrigadierCommand("friends", "friends operations") {
 		}
 		source.complete(null, source.createEmbed()
 			.setTitle("✅ Updated $propName of ${friend.displayName}")
-			.setDescription("${old.orDash()} \u2192 ${new.orDash()}")
+			.setDescription("${old.orUnset()} \u2192 ${new.orUnset()}")
 			.build())
 		return Command.SINGLE_SUCCESS
 	}
@@ -102,4 +120,10 @@ class FriendsCommand : BrigadierCommand("friends", "friends operations") {
 	private fun remove(source: CommandSourceStack, friend: FriendV2): Int {
 		return Command.SINGLE_SUCCESS
 	}
+
+	private fun String?.orUnset() = this?.takeIf { it.isNotEmpty() } ?: "(unset)"
+}
+
+fun main() {
+	URL("H").readBytes()
 }

@@ -10,7 +10,7 @@ class SavedLoginsManager(private val conn: Connection) {
 	}
 
 	fun getAll(sessionId: String) =
-		r.table("devices")[sessionId].run(conn, Entry::class.java).first()?.devices ?: emptyList()
+		r.table("devices").get(sessionId).run(conn, Entry::class.java).first()?.devices ?: emptyList()
 
 	fun get(sessionId: String, accountId: String) =
 		getAll(sessionId).firstOrNull { it.accountId == accountId }

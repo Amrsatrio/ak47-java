@@ -9,7 +9,6 @@ import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.uasset.AssetManager
-import me.fungames.jfortniteparse.ue4.io.FIoDispatcher
 import javax.script.ScriptEngineManager
 import javax.script.ScriptException
 
@@ -30,7 +29,6 @@ class EvalCommand : BrigadierCommand("eval", "Evaluate an expression for debuggi
 			synchronized(engine) {
 				engine.put("M", source.client)
 				engine.put("S", source)
-				engine.put("GIoDispatcher", FIoDispatcher.get())
 				source.complete("```\n${engine.eval(code)}```", null)
 			}
 		} catch (e: ScriptException) {

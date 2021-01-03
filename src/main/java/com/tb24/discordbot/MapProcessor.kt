@@ -20,7 +20,7 @@ class MapProcessor(val provider: MyFileProvider) {
 				   parentLoc: FVector = FVector(0f, 0f, 0f),
 				   parentRot: FRotator = FRotator(0f, 0f, 0f),
 				   parentScale: FVector = FVector(1f, 1f, 1f)): JsonArray {
-		provider.loadGameFile(mapPath).exports.forEach { export ->
+		provider.loadGameFile(mapPath)!!.exports.forEach { export ->
 			var relativeLocation = FVector(0f, 0f, 0f)
 			var relativeRotation = FRotator(0f, 0f, 0f)
 			var relativeScale3D = FVector(1f, 1f, 1f)
