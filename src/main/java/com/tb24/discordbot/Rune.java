@@ -8,7 +8,7 @@ import java.util.Arrays;
 import static com.rethinkdb.RethinkDB.r;
 
 public class Rune {
-	public static boolean isBotDevOrPotato(CommandSourceStack source) {
+	public static boolean isBotDev(CommandSourceStack source) {
 		return Arrays.asList(
 			624299014388711455L, // amr
 			299693897859465228L, // kemo

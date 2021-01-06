@@ -34,7 +34,7 @@ class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Su
 			if (!attrs.mtx_affiliate.isNullOrEmpty() && attrs.mtx_affiliate_set_time != null) {
 				val expiry = attrs.mtx_affiliate_set_time.time + 14L * 24L * 60L * 60L * 1000L
 				val expired = System.currentTimeMillis() > expiry
-				embed.addField("Expires in", if (expired) "**EXPIRED**" else StringUtil.formatElapsedTime(expiry - System.currentTimeMillis(), false).toString(), true)
+				embed.addField("Expires", if (expired) "**EXPIRED**" else expiry.relativeFromNow(), true)
 				if (expired) {
 					embed.setColor(0xE53935)
 				}

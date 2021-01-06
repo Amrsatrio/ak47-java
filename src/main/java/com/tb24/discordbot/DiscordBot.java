@@ -20,8 +20,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.login.LoginException;
 
@@ -51,6 +56,7 @@ public final class DiscordBot {
 	public Session internalSession;
 	public CommandManager commandManager;
 	public CatalogManager catalogManager;
+	public AutoLoginRewardTask autoLoginRewardTask = new AutoLoginRewardTask(this);
 
 	public static void main(String[] args) {
 		if (args.length < 1 || Utils.isEmpty(args[0])) {
@@ -92,6 +98,27 @@ public final class DiscordBot {
 			discord.shutdown();
 		}));
 		//discord.getPresence().setActivity(Activity.playing("☕ Kotlin/JVM \u00b7 v" + VERSION));
+		scheduleUtcMidnightTask();
+	}
+
+	private void scheduleUtcMidnightTask() {
+		ZonedDateTime now = ZonedDateTime.now(ZoneId.of("+7"));
+		ZonedDateTime nextRun = now.withHour(0).withMinute(0).withSecond(30);
+		if (now.compareTo(nextRun) > 0)
+			nextRun = nextRun.plusDays(1);
+		Runnable task = () -> {
+			try {
+				autoLoginRewardTask.run();
+			} catch (Throwable e) {
+				dlog("__**AutoLoginRewardTask failure**__\n```\n${Throwables.getStackTraceAsString(e)}```", null);
+			}
+		};
+		Executors.newScheduledThreadPool(1).scheduleAtFixedRate(
+			task,
+			Duration.between(now, nextRun).getSeconds(), // initial delay
+			TimeUnit.DAYS.toSeconds(1),
+			TimeUnit.SECONDS
+		);
 	}
 
 	private void setupInternalSession() {

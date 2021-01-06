@@ -125,39 +125,32 @@ private fun accountPicker(source: CommandSourceStack): Int {
 			botMessage.addReaction("✨").complete()
 		}
 	}
-	try {
-		val choice = botMessage.awaitReactions({ _, user, _ -> user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
-			max = 1
-			time = 30000
-			errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
-		}).await().first().reactionEmote.name
-		shouldStop.set(true)
-		return if (choice == "✨") {
-			startDefaultLoginFlow(source)
-		} else {
-			val choiceIndex = numberEmojis.indexOf(choice)
-			if (!numberEmojis.indices.contains(choiceIndex)) {
-				throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
-			}
-			val deviceData = devices[choiceIndex]
-			val auth = deviceData.clientId?.let { EAuthClient.getByClientId(it) } ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT
-			try {
-				source.session = source.initialSession
-				source.session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", deviceData.accountId, "device_id", deviceData.deviceId, "secret", deviceData.secret, "token_type", "eg1"), auth)
-			} catch (e: HttpException) {
-				if (e.epicError.errorCode == "errors.com.epicgames.account.invalid_account_credentials" || e.epicError.errorCode == "errors.com.epicgames.account.account_not_active") {
-					val accountId = deviceData.accountId
-					source.client.savedLoginsManager.remove(source.session.id, accountId)
-					throw SimpleCommandExceptionType(LiteralMessage("The saved login for **${users.firstOrNull { it.id == accountId }?.displayName ?: accountId}** is no longer valid.\nError: ${e.epicError.displayText}")).create()
-				}
-				throw e
-			}
+	val choice = botMessage.awaitReactions({ _, user, _ -> user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
+		max = 1
+		time = 30000
+		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
+	}).await().first().reactionEmote.name
+	shouldStop.set(true)
+	return if (choice == "✨") {
+		startDefaultLoginFlow(source)
+	} else {
+		val choiceIndex = numberEmojis.indexOf(choice)
+		if (!numberEmojis.indices.contains(choiceIndex)) {
+			throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
 		}
-	} catch (e: CollectorException) {
-		if (e.reason == CollectorEndReason.TIME) {
-			throw SimpleCommandExceptionType(LiteralMessage("You didn't respond, your login request has been canceled.")).create()
+		val deviceData = devices[choiceIndex]
+		val auth = deviceData.clientId?.let { EAuthClient.getByClientId(it) } ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT
+		try {
+			source.session = source.initialSession
+			source.session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", deviceData.accountId, "device_id", deviceData.deviceId, "secret", deviceData.secret, "token_type", "eg1"), auth)
+		} catch (e: HttpException) {
+			if (e.epicError.errorCode == "errors.com.epicgames.account.invalid_account_credentials" || e.epicError.errorCode == "errors.com.epicgames.account.account_not_active") {
+				val accountId = deviceData.accountId
+				source.client.savedLoginsManager.remove(source.session.id, accountId)
+				throw SimpleCommandExceptionType(LiteralMessage("The saved login for **${users.firstOrNull { it.id == accountId }?.displayName ?: accountId}** is no longer valid.\nError: ${e.epicError.displayText}")).create()
+			}
+			throw e
 		}
-		return Command.SINGLE_SUCCESS
 	}
 }
 

@@ -44,6 +44,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
 import javax.imageio.ImageIO
+import kotlin.math.abs
 import kotlin.math.min
 
 val WHITELIST_ICON_EMOJI_ITEM_TYPES = arrayOf("AccountResource", "ConsumableAccountItem", "Currency", "Stat")
@@ -258,6 +259,20 @@ fun <T> EmbedBuilder.addFieldSeparate(title: String, entries: Collection<T>?, bu
 inline fun CatalogOffer.holder() = CatalogEntryHolder(this)
 
 fun String?.orDash() = this?.takeIf { it.isNotEmpty() } ?: "\u2014"
+
+fun Date.renderWithRelative() = "${format()} (${relativeFromNow()})"
+
+inline fun Date.relativeFromNow() = time.relativeFromNow()
+
+fun Long.relativeFromNow(): String {
+	val delta = System.currentTimeMillis() - this
+	val elapsedStr = StringUtil.formatElapsedTime(abs(delta), false).toString()
+	return when {
+		delta < 0L -> "in $elapsedStr"
+		delta < 60L -> "just now"
+		else /*delta > 0L*/ -> "$elapsedStr ago"
+	}
+}
 
 fun Number.awtColor(hasAlpha: Boolean = toInt() ushr 24 != 0) = Color(toInt(), hasAlpha)
 

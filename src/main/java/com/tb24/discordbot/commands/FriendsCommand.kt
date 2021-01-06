@@ -12,22 +12,19 @@ import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.friends.FriendV2
 import okhttp3.MediaType
 import okhttp3.RequestBody
-import java.net.URL
 import java.util.concurrent.CompletableFuture
 
-class FriendsCommand : BrigadierCommand("friends", "friends operations") {
-	val list = literal("list")
-		.executes { list(it.source, "friends") }
-		.then(literal("friends").executes { list(it.source, "friends") })
-		.then(literal("incoming").executes { list(it.source, "incoming") })
-		.then(literal("outgoing").executes { list(it.source, "outgoing") })
-		.then(literal("suggested").executes { list(it.source, "outgoing") })
-		.then(literal("blocklist").executes { list(it.source, "outgoing") })
-		.build()
-
+class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes(list.command)
-		.then(list)
+		.executes { list(it.source, "friends") }
+		.then(literal("list")
+			.executes { list(it.source, "friends") }
+			.then(literal("friends").executes { list(it.source, "friends") })
+			.then(literal("incoming").executes { list(it.source, "incoming") })
+			.then(literal("outgoing").executes { list(it.source, "outgoing") })
+			.then(literal("suggested").executes { list(it.source, "suggested") })
+			.then(literal("blocklist").executes { list(it.source, "blocklist") })
+			.build())
 		.then(literal("avatarids").executes { c ->
 			val source = c.source
 			source.ensureSession()
@@ -54,6 +51,7 @@ class FriendsCommand : BrigadierCommand("friends", "friends operations") {
 	private fun list(source: CommandSourceStack, type: String): Int {
 		source.ensureSession()
 		val entries = source.api.friendsService.queryFriends(source.api.currentLoggedIn.id, true).exec().body()!!
+		TODO()
 		/*source.message.replyPaginated(entries, 20, source.loadingMsg) { content, page, pageCount ->
 			MessageBuilder(EmbedBuilder()
 				.setTitle("h")
@@ -70,7 +68,7 @@ class FriendsCommand : BrigadierCommand("friends", "friends operations") {
 		}
 		val friend = friends[index]
 		val message = source.complete(null, source.createEmbed()
-			.setTitle("You're friends with $user")
+			.setTitle("You're friends with ${user.displayName}")
 			.addField("Friend account ID", friend.accountId, false)
 			.setFooter("Friends since")
 			.setTimestamp(friend.created.toInstant())
@@ -122,8 +120,4 @@ class FriendsCommand : BrigadierCommand("friends", "friends operations") {
 	}
 
 	private fun String?.orUnset() = this?.takeIf { it.isNotEmpty() } ?: "(unset)"
-}
-
-fun main() {
-	URL("H").readBytes()
 }

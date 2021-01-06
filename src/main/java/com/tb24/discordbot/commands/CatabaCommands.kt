@@ -12,7 +12,7 @@ import okhttp3.Request
 import java.time.Instant
 import java.util.concurrent.CompletableFuture
 
-class CatabaCommand : BrigadierCommand("cataba", "New shop") {
+class CatabaCommand : BrigadierCommand("cataba", "Posts the shop in text form with the new format. (BETA)") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { c ->
 			val source = c.source
@@ -63,17 +63,3 @@ class CatabaCommand : BrigadierCommand("cataba", "New shop") {
 class CatabaSection(val cmsBacking: ShopSection) {
 	val items = mutableListOf<CatalogEntryHolder>()
 }
-
-/*
-fun main() {
-//	AssetManager.INSTANCE.loadPaks()
-	val img = CatabaImageGenerator(
-		EpicApi.GSON.fromJson(FileReader("D:\\Downloads\\shop-17-10-2020-en.json"), CatalogDownload::class.java),
-		EpicApi.GSON.fromJson(FileReader("C:\\Users\\satri\\Downloads\\cms17-10-2020.json"), FortCmsData::class.java),
-		AssetManager.INSTANCE.provider
-	).draw()
-	val file = File("test.png")
-	println(file.absolutePath)
-	ImageIO.write(img, "png", file)
-	exitProcess(0)
-}*/

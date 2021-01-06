@@ -35,6 +35,7 @@ class SavedLoginsManager(private val conn: Connection) {
 
 	fun remove(sessionId: String, accountId: String): Boolean {
 		val dbEntry = r.table("devices").get(sessionId).run(conn, Entry::class.java).first()
+		r.table("auto_claim").filter(mapOf("accountId" to accountId, "registrantId" to sessionId)).delete().run(conn)
 		return if (dbEntry != null) {
 			val filtered = dbEntry.devices!!.filter { it.accountId != accountId }
 			if (filtered.isNotEmpty()) {

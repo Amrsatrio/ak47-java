@@ -1,6 +1,8 @@
 package com.tb24.discordbot
 
 import com.google.common.collect.ImmutableMap
+import com.mojang.brigadier.LiteralMessage
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
 import com.tb24.discordbot.commands.GrantType
 import com.tb24.discordbot.commands.PrivateChannelCommandSource
@@ -14,16 +16,25 @@ import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.model.mcpprofile.notifications.DailyRewardsNotification
 import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.internal.entities.UserImpl
+import org.slf4j.LoggerFactory
 import java.util.*
+import java.util.concurrent.atomic.AtomicBoolean
+
+val taskIsRunning = AtomicBoolean()
 
 class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
+	val logger = LoggerFactory.getLogger("AutoLoginReward")
 	val random = Random()
 
 	override fun run() {
+		if (taskIsRunning.get()) {
+			throw SimpleCommandExceptionType(LiteralMessage("Task is already running.")).create()
+		}
+		taskIsRunning.set(true)
 		val autoClaimEntries = r.table("auto_claim").run(client.dbConn, AutoClaimEntry::class.java)
-		while (autoClaimEntries.hasNext()) {
-			val entry = autoClaimEntries.next()!!
-			val epicId = entry.accountId
+		for (entry in autoClaimEntries) {
+			logger.info("Performing auto claiming for account ${entry.id}")
+			val epicId = entry.id
 			val displayName = client.internalSession.queryUsers(setOf(epicId)).first().displayName // TODO what if the account is deleted
 			val discordId = entry.registrantId
 			val user = client.discord.getUserById(discordId) ?: client.discord.retrieveUserById(discordId).complete()
@@ -55,8 +66,8 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 			}
 			session.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "campaign").await()
 			val dailyRewardStat = (source.api.profileManager.getProfileData("campaign").stats.attributes as CampaignProfileAttributes).daily_rewards
-			val millisInDays = 24L * 60L * 60L * 1000L
-			if (dailyRewardStat?.lastClaimDate?.time?.let { it / millisInDays == System.currentTimeMillis() / millisInDays } != false) {
+			val millisInDay = 24L * 60L * 60L * 1000L
+			if (dailyRewardStat?.lastClaimDate?.time?.let { it / millisInDay == System.currentTimeMillis() / millisInDay } != false) {
 				notifyDailyRewardsClaimed(source, dailyRewardStat, null)
 				continue
 			}
@@ -74,6 +85,8 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 	fun removeFromDb(accountId: String) {
 		r.table("auto_claim").get(accountId).delete().run(client.dbConn)
 	}
+}
 
-	class AutoClaimEntry(@JvmField var accountId: String, @JvmField var registrantId: String)
+class AutoClaimEntry(@JvmField var id: String, @JvmField var registrantId: String) {
+	constructor() : this("", "")
 }

@@ -16,8 +16,6 @@ import com.tb24.fn.model.account.BackupCodesResponse
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
-import java.util.*
-import kotlin.math.abs
 
 class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf("a")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -182,17 +180,5 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 			.setColor(0xFFF300)
 			.build())
 		return Command.SINGLE_SUCCESS
-	}
-
-	private fun Date.renderWithRelative() = "${format()} (${relativeFromNow()})"
-
-	private fun Date.relativeFromNow(): String {
-		val delta = System.currentTimeMillis() - time
-		val elapsedStr = StringUtil.formatElapsedTime(abs(delta), false).toString()
-		return when {
-			delta < 0L -> "in $elapsedStr"
-			delta < 60L -> "just now"
-			else /*delta > 0L*/ -> "$elapsedStr ago"
-		}
 	}
 }

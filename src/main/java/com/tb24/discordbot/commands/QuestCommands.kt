@@ -155,7 +155,7 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 		return Command.SINGLE_SUCCESS
 	}
 	source.loading("Replacing daily quest")
-	source.api.profileManager.dispatchClientCommandRequest(FortRerollDailyQuest().apply { questId = questToReplace.itemId }, profileId)
+	source.api.profileManager.dispatchClientCommandRequest(FortRerollDailyQuest().apply { questId = questToReplace.itemId }, profileId).await()
 	profile = source.api.profileManager.getProfileData(profileId)
 	source.complete(null, source.createEmbed()
 		.setTitle("✅ Replaced a daily quest")

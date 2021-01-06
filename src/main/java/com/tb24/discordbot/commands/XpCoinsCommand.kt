@@ -13,7 +13,7 @@ import java.io.FileWriter
 
 class GenXpCoinsDataCommand : BrigadierCommand("genxpcoinsdata", "Generate XP coins data based on the current loaded game files.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires { Rune.isBotDevOrPotato(it) && Rune.hasAssetsLoaded(it) }
+		.requires { Rune.isBotDev(it) && Rune.hasAssetsLoaded(it) }
 		.executes { c ->
 			c.source.loading("Generating XP coins data")
 			val start = System.currentTimeMillis()

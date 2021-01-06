@@ -3,15 +3,19 @@ package com.tb24.discordbot.commands
 import com.google.common.base.Throwables
 import com.google.common.collect.ImmutableMap
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.StringReader
 import com.mojang.brigadier.arguments.*
 import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import com.mojang.brigadier.exceptions.CommandSyntaxException
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.mojang.brigadier.tree.ArgumentCommandNode
 import com.mojang.brigadier.tree.CommandNode
 import com.mojang.brigadier.tree.LiteralCommandNode
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
+import com.tb24.discordbot.util.CollectorEndReason
+import com.tb24.discordbot.util.CollectorException
 import com.tb24.discordbot.util.Utils
 import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.EmbedBuilder
@@ -52,6 +56,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(AccountCommand())
 		register(AffiliateNameCommand())
 		register(AthenaDailyChallengesCommand())
+		register(AutoDailyRewardsCommand())
 		register(AvatarCommand())
 //		BanCommand.register(dispatcher)
 		register(CampaignOverviewCommand())
@@ -60,6 +65,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(ClaimMfaCommand())
 		register(ColorCommand())
 		register(CompetitiveCommand())
+		//register(ComposeMcpCommand())
 		register(CosmeticCommand())
 		register(DailyQuestsCommand())
 		register(DailyRewardsCommand())
@@ -68,6 +74,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(DumpAssetCommand())
 		register(EvalCommand())
 		register(ExchangeCommand())
+		register(ExecAutoDailyRewardsCommand())
 		register(ExportObjectCommand())
 		register(ExtendedLoginCommand())
 		register(FishCollectionCommand())
@@ -139,7 +146,13 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				return
 			}
 			try {
-				dispatcher.execute(parseResults)
+				try {
+					dispatcher.execute(parseResults)
+				} catch (e: CollectorException) {
+					if (e.reason == CollectorEndReason.TIME) {
+						throw SimpleCommandExceptionType(LiteralMessage("Timed out while waiting for your response.")).create()
+					}
+				}
 			} catch (e: CommandSyntaxException) {
 				val unkCmd = CommandSyntaxException.BUILT_IN_EXCEPTIONS.dispatcherUnknownCommand()
 				val unkArgs = CommandSyntaxException.BUILT_IN_EXCEPTIONS.dispatcherUnknownArgument()
@@ -259,7 +272,8 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		if (DiscordBot.ENV == "prod" || DiscordBot.ENV == "stage") {
 			client.dlog("""__**Error report**__
 User: ${source.author.asMention}$additional
-```${Throwables.getStackTraceAsString(e)}```""", null)
+```
+${Throwables.getStackTraceAsString(e)}```""", null)
 		}
 	}
 
