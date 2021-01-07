@@ -91,7 +91,7 @@ fun doLogin(source: CommandSourceStack, grantType: GrantType, params: String, au
 }
 
 private fun accountPicker(source: CommandSourceStack): Int {
-	val devices = source.client.savedLoginsManager.getAll(source.session.id)
+	val devices = source.client.savedLoginsManager.getAll(source.author.id)
 	if (devices.isEmpty()) {
 		return startDefaultLoginFlow(source)
 	}
@@ -131,6 +131,7 @@ private fun accountPicker(source: CommandSourceStack): Int {
 		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
 	}).await().first().reactionEmote.name
 	shouldStop.set(true)
+	source.session = source.initialSession
 	return if (choice == "✨") {
 		startDefaultLoginFlow(source)
 	} else {
@@ -141,7 +142,6 @@ private fun accountPicker(source: CommandSourceStack): Int {
 		val deviceData = devices[choiceIndex]
 		val auth = deviceData.clientId?.let { EAuthClient.getByClientId(it) } ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT
 		try {
-			source.session = source.initialSession
 			source.session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", deviceData.accountId, "device_id", deviceData.deviceId, "secret", deviceData.secret, "token_type", "eg1"), auth)
 		} catch (e: HttpException) {
 			if (e.epicError.errorCode == "errors.com.epicgames.account.invalid_account_credentials" || e.epicError.errorCode == "errors.com.epicgames.account.account_not_active") {

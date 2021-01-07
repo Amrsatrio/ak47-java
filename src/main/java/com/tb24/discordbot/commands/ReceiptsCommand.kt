@@ -20,18 +20,9 @@ class ReceiptsCommand : BrigadierCommand("receipts", "You asked for it") {
 		source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 		val receipts = (source.api.profileManager.getProfileData("common_core").stats.attributes as CommonCoreProfileAttributes).in_app_purchases.receipts
 		//val receipts = source.api.fortniteService.receipts(source.api.currentLoggedIn.id).exec().body()!! //this returns only Epic Store purchases
-		val map = mutableMapOf<String, MutableList<String>>()
-		receipts.forEach {
-			val sep = it.indexOf(':')
-			map.getOrPut(it.substring(0, sep)) { mutableListOf() }.add(it.substring(sep + 1))
-		}
 		source.complete(null, source.createEmbed()
 			.setTitle("Receipts")
-			.apply {
-				map.forEach { (k, v) ->
-					addFieldSeparate(k, v, 2)
-				}
-			}
+			.addFieldSeparate("Entries", receipts.toList(), 2)
 			.build())
 		return Command.SINGLE_SUCCESS
 	}

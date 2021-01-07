@@ -17,9 +17,21 @@ import net.dv8tion.jda.api.EmbedBuilder
 
 class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll your saved accounts for automatic daily rewards claiming.", arrayOf("autostw")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { execute(it.source, null) }
+		.executes {
+			val source = it.source
+			if (source.api.userToken == null) {
+				source.session = source.client.internalSession
+			}
+			execute(source, null)
+		}
 		.then(argument("saved account name", users(1))
-			.executes { execute(it.source, getUsers(it, "saved account name").values.first()) }
+			.executes {
+				val source = it.source
+				if (source.api.userToken == null) {
+					source.session = source.client.internalSession
+				}
+				execute(source, getUsers(it, "saved account name").values.first())
+			}
 		)
 
 	fun execute(source: CommandSourceStack, user: GameProfile?): Int {
@@ -27,7 +39,7 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 		var user = user
 		val discordId = source.author.id
 		val autoClaimEntries = r.table("auto_claim").run(source.client.dbConn, AutoClaimEntry::class.java).toList()
-		val devices = source.client.savedLoginsManager.getAll(source.session.id)
+		val devices = source.client.savedLoginsManager.getAll(source.author.id)
 		if (devices.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("You don't have saved logins. Please perform `.savelogin` before continuing.")).create()
 		}

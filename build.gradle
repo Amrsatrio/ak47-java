@@ -65,6 +65,10 @@ dependencies {
 	testCompile 'junit:junit:4.13.1'
 }
 
+tasks.withType(JavaCompile) {
+	options.encoding = "UTF-8"
+}
+
 tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
 	kotlinOptions {
 		jvmTarget = '1.8'

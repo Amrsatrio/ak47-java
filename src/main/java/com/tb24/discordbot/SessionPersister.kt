@@ -29,6 +29,7 @@ object SessionPersister {
 
 	fun remove(sessionId: String) = sessions.remove(sessionId).also { save() }
 
+	@Synchronized
 	private fun save() {
 		file.parentFile.mkdirs()
 		try {

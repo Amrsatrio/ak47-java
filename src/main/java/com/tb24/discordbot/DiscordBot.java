@@ -1,7 +1,9 @@
 package com.tb24.discordbot;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.common.collect.ImmutableMap;
 import com.rethinkdb.net.Connection;
+import com.rethinkdb.utils.Internals;
 import com.tb24.discordbot.commands.CommandManager;
 import com.tb24.discordbot.commands.GrantType;
 import com.tb24.discordbot.util.Utils;
@@ -12,6 +14,7 @@ import com.tb24.uasset.AssetManager;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.MessageBuilder;
+import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -78,6 +81,7 @@ public final class DiscordBot {
 	public DiscordBot(String token) throws LoginException, InterruptedException {
 		String dbUrl = "rethinkdb://localhost:28015/ak47";
 		LOGGER.info("Connecting to database {}...", dbUrl);
+		Internals.getInternalMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		dbConn = r.connection(dbUrl).connect();
 		savedLoginsManager = new SavedLoginsManager(dbConn);
 		okHttpClient = new OkHttpClient.Builder()
@@ -100,7 +104,7 @@ public final class DiscordBot {
 			internalSession.logout(null);
 			discord.shutdown();
 		}));
-		//discord.getPresence().setActivity(Activity.playing("☕ Kotlin/JVM \u00b7 v" + VERSION));
+		discord.getPresence().setActivity(Activity.playing("☕ Kotlin/JVM \u00b7 v" + VERSION));
 		scheduleUtcMidnightTask();
 	}
 

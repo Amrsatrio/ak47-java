@@ -34,6 +34,7 @@ class Session(val client: DiscordBot, val id: String) {
 		}
 		api.buildServices()
 		api.eventBus.register(this)
+		LOGGER.info("Created session $id")
 	}
 
 	@Throws(HttpException::class, IOException::class)
