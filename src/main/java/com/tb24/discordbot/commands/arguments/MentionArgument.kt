@@ -15,7 +15,7 @@ import java.util.regex.Matcher
 class MentionArgument private constructor(private val mentionType: MentionType) : ArgumentType<MentionArgument.Resolver> {
 	override fun parse(reader: StringReader): Resolver {
 		val start = reader.cursor
-		while (reader.canRead() && isAllowedInUnquotedString2(reader.peek())) {
+		while (reader.canRead() && reader.peek() != ' ') {
 			reader.skip()
 		}
 		return Resolver(mentionType, reader.string.substring(start, reader.cursor))
@@ -26,6 +26,16 @@ class MentionArgument private constructor(private val mentionType: MentionType) 
 
 		fun resolve(message: Message): Collection<IMentionable> {
 			this.message = message
+			val id = input.toLongOrNull()
+			if (id != null) {
+				return when (mentionType) {
+					MentionType.USER -> setOf(message.jda.getUserById(id) ?: message.jda.retrieveUserById(id).complete())
+					MentionType.ROLE -> (if (message.channelType.isGuild) message.guild.getRoleById(id) else message.jda.getRoleById(id))?.let { setOf(it) }
+					MentionType.CHANNEL -> message.jda.getTextChannelById(id)?.let { setOf(it) }
+					MentionType.EMOTE -> message.jda.getEmoteById(id)?.let { setOf(it) }
+					else -> null
+				} ?: emptySet()
+			}
 			return when (mentionType) {
 				MentionType.USER -> processMentions(input, HashSet(), true) { matchUser(it) }
 				MentionType.ROLE -> processMentions(input, HashSet(), true) { matchRole(it) }
@@ -52,7 +62,7 @@ class MentionArgument private constructor(private val mentionType: MentionType) 
 
 		private fun matchUser(matcher: Matcher): User? {
 			val userId = parseSnowflake(matcher.group(1))
-			return message.jda.getUserById(userId)
+			return message.jda.getUserById(userId) ?: message.jda.retrieveUserById(userId).complete()
 		}
 
 		private fun matchRole(matcher: Matcher): Role? {
@@ -84,9 +94,5 @@ class MentionArgument private constructor(private val mentionType: MentionType) 
 		@JvmStatic
 		fun getMention(context: CommandContext<CommandSourceStack>, name: String) =
 			context.getArgument(name, Resolver::class.java).resolve(context.source.message)
-
-		@JvmStatic
-		fun isAllowedInUnquotedString2(c: Char) =
-			c in '0'..'9' || c in 'A'..'Z' || c in 'a'..'z' || c == '_' || c == '-' || c == '.' || c == '+' || c == '<' || c == '>' || c == '@'
 	}
 }

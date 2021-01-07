@@ -22,6 +22,6 @@ public class Rune {
 	}
 
 	public static boolean hasAccess(CommandSourceStack source) {
-		return r.table("members").get(source.getAuthor().getId()).run(DiscordBot.instance.dbConn).first() != null;
+		return r.table("members").get(source.getAuthor().getId()).run(source.getClient().dbConn).first() != null;
 	}
 }

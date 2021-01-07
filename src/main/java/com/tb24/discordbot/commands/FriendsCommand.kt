@@ -16,7 +16,7 @@ import java.util.concurrent.CompletableFuture
 
 class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { list(it.source, "friends") }
+		/*.executes { list(it.source, "friends") }
 		.then(literal("list")
 			.executes { list(it.source, "friends") }
 			.then(literal("friends").executes { list(it.source, "friends") })
@@ -24,7 +24,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.") {
 			.then(literal("outgoing").executes { list(it.source, "outgoing") })
 			.then(literal("suggested").executes { list(it.source, "suggested") })
 			.then(literal("blocklist").executes { list(it.source, "blocklist") })
-			.build())
+			.build())*/
 		.then(literal("avatarids").executes { c ->
 			val source = c.source
 			source.ensureSession()

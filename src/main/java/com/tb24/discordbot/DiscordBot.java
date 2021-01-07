@@ -15,6 +15,7 @@ import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.TextChannel;
+import net.dv8tion.jda.api.requests.GatewayIntent;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +38,7 @@ import okhttp3.OkHttpClient;
 import static com.rethinkdb.RethinkDB.r;
 
 public final class DiscordBot {
-	public static final String VERSION = "6.0.10";
+	public static final String VERSION = "6.0.11";
 	private static final Logger LOGGER = LoggerFactory.getLogger("DiscordBot");
 	public static final CertificatePinner CERT_PINNER = new CertificatePinner.Builder()
 		.add("discordapp.com", "sha256/DACsWb3zfNT9ttV6g6o5wwpzvgKJ66CliW2GCh2m8LQ=")
@@ -85,9 +86,11 @@ public final class DiscordBot {
 		setupInternalSession();
 		catalogManager = new CatalogManager(this);
 		LOGGER.info("Connecting to Discord...");
-		discord = JDABuilder.createDefault(token)
-			.setHttpClient(okHttpClient)
-			.build();
+		JDABuilder builder = JDABuilder.createDefault(token).setHttpClient(okHttpClient);
+		if (ENV.equals("prod")) {
+			builder.enableIntents(GatewayIntent.GUILD_MEMBERS);
+		}
+		discord = builder.build();
 		discord.addEventListener(commandManager = new CommandManager(this));
 //		discord.addEventListener(new ReactionHandler(this)); // TODO doesn't respond if the channel hasn't been interacted with
 		discord.addEventListener(new GhostPingHandler(this));

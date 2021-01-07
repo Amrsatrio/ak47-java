@@ -12,6 +12,8 @@ import java.util.regex.Pattern;
 
 import me.fungames.jfortniteparse.fort.objects.FortMcpQuestObjectiveInfo;
 
+import static com.tb24.fn.util.Utils.isNone;
+
 public class Utils {
 	public static final String LOADING_EMOJI = "<a:loading:740564597643149404>";
 	public static final long MTX_EMOJI_ID = 751101530626588713L;
@@ -85,7 +87,7 @@ public class Utils {
 	}
 
 	public static String benBotExportAsset(String objectPath) {
-		return null; //com.tb24.fn.util.Utils.isNone(objectPath) ? null : "https://benbotfn.tk/api/v1/exportAsset?path=" + objectPath;
+		return isNone(objectPath) ? null : "https://benbotfn.tk/api/v1/exportAsset?path=" + objectPath;
 	}
 
 	public static int getCompletion(FortMcpQuestObjectiveInfo objective, FortItemStack item) {

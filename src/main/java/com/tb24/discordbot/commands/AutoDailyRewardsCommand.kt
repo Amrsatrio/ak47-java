@@ -11,6 +11,7 @@ import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
+import com.tb24.fn.model.mcpprofile.commands.QueryPublicProfile
 import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
 
@@ -27,6 +28,9 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 		val discordId = source.author.id
 		val autoClaimEntries = r.table("auto_claim").run(source.client.dbConn, AutoClaimEntry::class.java).toList()
 		val devices = source.client.savedLoginsManager.getAll(source.session.id)
+		if (devices.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("You don't have saved logins. Please perform `.savelogin` before continuing.")).create()
+		}
 		if (user == null) {
 			val users = source.queryUsers(devices.map { it.accountId })
 			source.complete(null, EmbedBuilder()
@@ -54,14 +58,21 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 		}
 		check(accountId != null)
 		if (!autoClaimEntries.any { it.id == accountId && it.registrantId == discordId }) {
+			source.loading("Checking STW ownership and enrolling")
 			if (autoClaimEntries.any { it.id == accountId }) {
 				throw SimpleCommandExceptionType(LiteralMessage("Another user of ${source.message.jda.selfUser.name} already have that account enrolled for auto claiming. An Epic account can only be enrolled once throughout the whole bot.")).create()
+			}
+			source.api.profileManager.dispatchPublicCommandRequest(user, QueryPublicProfile(), "campaign").await()
+			val campaign = source.api.profileManager.getProfileData(user.id, "campaign")
+			val completedTutorial = campaign.items.values.firstOrNull { it.templateId == "Quest:homebaseonboarding" }?.attributes?.get("completion_hbonboarding_completezone")?.asInt ?: 0 > 0
+			if (!completedTutorial) {
+				throw SimpleCommandExceptionType(LiteralMessage("The account must own Save the World and completed the tutorial in order to start receiving daily rewards.")).create()
 			}
 			r.table("auto_claim").insert(AutoClaimEntry(accountId, discordId)).run(source.client.dbConn)
 			val millisInDay = 24L * 60L * 60L * 1000L
 			val nextUtcMidnight = (System.currentTimeMillis() / millisInDay + 1) * millisInDay
 			source.complete(null, EmbedBuilder()
-				.setTitle("✅ Successfully enrolled auto daily rewards claiming for account `${user?.displayName ?: accountId}`")
+				.setTitle("✅ Successfully enrolled auto daily rewards claiming for account `${user.displayName ?: accountId}`")
 				.setDescription("${source.message.jda.selfUser.name} will automatically claim it after UTC midnight.")
 				.addField("Next claim", nextUtcMidnight.relativeFromNow(), false)
 				.setColor(COLOR_SUCCESS)
@@ -72,7 +83,7 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 			}
 			r.table("auto_claim").get(accountId).delete().run(source.client.dbConn)
 			source.complete(null, EmbedBuilder()
-				.setTitle("✅ Successfully unenrolled auto daily rewards claiming for account `${user?.displayName ?: accountId}`.")
+				.setTitle("✅ Successfully unenrolled auto daily rewards claiming for account `${user.displayName ?: accountId}`.")
 				.setDescription("${source.message.jda.selfUser.name} will no longer automatically claim the daily rewards of that account.")
 				.setColor(COLOR_SUCCESS)
 				.build())
