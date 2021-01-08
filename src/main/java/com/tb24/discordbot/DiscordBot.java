@@ -1,6 +1,7 @@
 package com.tb24.discordbot;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.rethinkdb.net.Connection;
 import com.rethinkdb.utils.Internals;
@@ -25,7 +26,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -109,7 +110,7 @@ public final class DiscordBot {
 	}
 
 	private void scheduleUtcMidnightTask() {
-		ZonedDateTime now = ZonedDateTime.now(ZoneId.of("+7"));
+		ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
 		ZonedDateTime nextRun = now.withHour(0).withMinute(0).withSecond(30);
 		if (now.compareTo(nextRun) > 0)
 			nextRun = nextRun.plusDays(1);
@@ -117,7 +118,7 @@ public final class DiscordBot {
 			try {
 				autoLoginRewardTask.run();
 			} catch (Throwable e) {
-				dlog("__**AutoLoginRewardTask failure**__\n```\n${Throwables.getStackTraceAsString(e)}```", null);
+				dlog("__**AutoLoginRewardTask failure**__\n```\n" + Throwables.getStackTraceAsString(e) + "```", null);
 			}
 		};
 		Executors.newScheduledThreadPool(1).scheduleAtFixedRate(

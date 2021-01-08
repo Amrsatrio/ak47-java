@@ -44,7 +44,7 @@ class Session(val client: DiscordBot, val id: String) {
 				source.message.delete().queue()
 			}
 			if (api.userToken != null) {
-				logout(source.message)
+				logout(if (sendMessages) source.message else null)
 			}
 			if (grantType != GrantType.device_code) {
 				if (sendMessages) {

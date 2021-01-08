@@ -38,7 +38,7 @@ fun notifyDailyRewardsClaimed(source: CommandSourceStack, stat: FortDailyLoginRe
 		.addField("Reward", item.asItemStack().renderWithIcon(), true)
 		.build()
 	else source.createEmbed()
-		.setTitle("Already claimed")
+		.setTitle("Daily rewards already claimed")
 		.addField("Days logged in", daysLoggedIn, true)
 		.build())
 } // TODO since you got assets working, please make a comprehensive rewards info
