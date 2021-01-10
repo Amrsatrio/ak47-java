@@ -5,6 +5,7 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
@@ -12,11 +13,14 @@ import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.friends.FriendV2
 import com.tb24.fn.model.friends.FriendsSummary
+import com.tb24.fn.network.FriendsService
+import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import okhttp3.MediaType
 import okhttp3.RequestBody
+import retrofit2.Call
 import java.util.concurrent.CompletableFuture
 
 class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", arrayOf("f")) {
@@ -25,6 +29,11 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		.then(literal("incoming").executes { list(it.source, "incoming") }.then(literal("withid").executes { list(it.source, "incoming", true) }))
 		.then(literal("outgoing").executes { list(it.source, "outgoing") }.then(literal("withid").executes { list(it.source, "outgoing", true) }))
 		.then(literal("blocklist").executes { list(it.source, "blocklist") }.then(literal("withid").executes { list(it.source, "blocklist", true) }))
+		.then(literal("removeall").executes { bulk(it.source, "remove", FriendsService::queryFriends, FriendsService::deleteFriendOrRejectInvite) })
+		.then(literal("acceptall").executes { bulk(it.source, "accept", FriendsService::queryIncomingFriendRequests, FriendsService::sendInviteOrAcceptInvite) })
+		.then(literal("rejectall").executes { bulk(it.source, "reject", FriendsService::queryIncomingFriendRequests, FriendsService::deleteFriendOrRejectInvite) })
+		.then(literal("cancelall").executes { bulk(it.source, "cancel", FriendsService::queryOutgoingFriendRequests, FriendsService::deleteFriendOrRejectInvite) })
+		.then(literal("unblockall").executes { bulk(it.source, "unblock", FriendsService::queryBlockedPlayers, FriendsService::sendUnblock) })
 		.then(literal("avatarids").executes { c ->
 			val source = c.source
 			source.ensureSession()
@@ -61,11 +70,15 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			else -> throw AssertionError()
 		}
 		val entries = call.exec().body()!!.sortedFriends()
+		if (entries.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("$type is empty")).create()
+		}
 		source.message.replyPaginated(entries, 30, source.loadingMsg) { content, page, pageCount ->
 			val entriesStart = page * 30 + 1
 			var entriesEnd = entriesStart
+			var chunkStart = entriesStart
 			val chunks = content.chunked(15) { chunk ->
-				MessageEmbed.Field("", chunk.joinToString("\n") {
+				MessageEmbed.Field("%,d - %,d".format(chunkStart, (chunkStart + chunk.size).also { chunkStart = it } - 1), chunk.joinToString("\n") {
 					"%,d. %s%s".format(entriesEnd++, when {
 						!it.alias.isNullOrEmpty() -> if (withId) "${it.alias.escapeMarkdown()} (${it.displayName.escapeMarkdown()}) `${it.accountId}`" else "${it.alias.escapeMarkdown()} (${it.displayName.escapeMarkdown()})"
 						!it.displayName.isNullOrEmpty() -> if (withId) "${it.displayName.escapeMarkdown()} `${it.accountId}`" else it.displayName.escapeMarkdown()
@@ -210,7 +223,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		}
 	}
 
-	fun promptToSendFriendRequest(source: CommandSourceStack, user: GameProfile): Int {
+	private fun promptToSendFriendRequest(source: CommandSourceStack, user: GameProfile): Int {
 		val message = source.complete(null, source.createEmbed()
 			.setTitle("You're not friends with ${user.displayName}")
 			.setDescription("📩 Send friend request\n🚫 Block")
@@ -275,6 +288,38 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		source.loading("Unblocking ${user.displayName}")
 		source.api.friendsService.sendUnblock(source.api.currentLoggedIn.id, user.id).exec()
 		source.complete(null, source.createEmbed().setTitle("✅ Unblocked ${user.displayName}").build())
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun bulk(source: CommandSourceStack, type: String, query: FriendsService.(String, Boolean?) -> Call<Array<FriendV2>>, op: FriendsService.(String, String) -> Call<Void>): Int {
+		source.ensureSession()
+		if (!source.complete(null, source.createEmbed()
+				.setTitle("✋ Hold up!")
+				.setDescription(L10N.format("friends.$type.bulk.warning"))
+				.setColor(0xFFF300)
+				.build()).yesNoReactions(source.author).await()) {
+			source.complete("👌 Alright.")
+			return Command.SINGLE_SUCCESS
+		}
+		val accountId = source.api.currentLoggedIn.id
+		val queue = source.api.friendsService.query(accountId, null).exec().body()!!
+		var i = 0
+		while (i < queue.size) {
+			source.loading(L10N.format("friends.$type.bulk", Formatters.num.format(i + 1), Formatters.num.format(queue.size), Formatters.percentZeroFraction.format(i.toDouble() / queue.size)))
+			try {
+				source.api.friendsService.op(accountId, queue[i].accountId).exec()
+				++i // do the next one if successful
+			} catch (e: HttpException) {
+				if (e.epicError.errorCode == "errors.com.epicgames.common.throttled") {
+					Thread.sleep(e.epicError.messageVars[0].toInt() * 1000L)
+				} else {
+					throw e
+				}
+			}
+		}
+		source.complete(null, source.createEmbed()
+			.setTitle("✅ " + L10N.format("friends.$type.bulk.done", Formatters.num.format(i)))
+			.build())
 		return Command.SINGLE_SUCCESS
 	}
 
