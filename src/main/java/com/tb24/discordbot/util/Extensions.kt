@@ -12,6 +12,7 @@ import com.tb24.fn.EpicApi
 import com.tb24.fn.ProfileManager
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.account.GameProfile
+import com.tb24.fn.model.friends.FriendV2
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer.CatalogItemPrice
 import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
@@ -256,17 +257,21 @@ fun <T> EmbedBuilder.addFieldSeparate(title: String, entries: Collection<T>?, bu
 	return this
 }
 
+fun String.escapeMarkdown() = replace("\\", "\\\\").replace("*", "\\*").replace("_", "\\_").replace("~", "\\~")
+
+fun Array<FriendV2>.sortedFriends() = sortedBy { (if (!it.alias.isNullOrEmpty()) it.alias else if (!it.displayName.isNullOrEmpty()) it.displayName else it.accountId).toLowerCase() }
+
 inline fun CatalogOffer.holder() = CatalogEntryHolder(this)
 
-fun String?.orDash() = this?.takeIf { it.isNotEmpty() } ?: "\u2014"
+inline fun String?.orDash() = if (isNullOrEmpty()) "\u2014" else this
 
-fun Date.renderWithRelative() = "${format()} (${relativeFromNow()})"
+inline fun Date.renderWithRelative() = "${format()} (${relativeFromNow()})"
 
-inline fun Date.relativeFromNow() = time.relativeFromNow()
+inline fun Date.relativeFromNow(withSeconds: Boolean = false) = time.relativeFromNow(withSeconds)
 
-fun Long.relativeFromNow(): String {
+fun Long.relativeFromNow(withSeconds: Boolean = false): String {
 	val delta = System.currentTimeMillis() - this
-	val elapsedStr = StringUtil.formatElapsedTime(abs(delta), false).toString()
+	val elapsedStr = StringUtil.formatElapsedTime(abs(delta), withSeconds).toString()
 	return when {
 		delta < 0L -> "in $elapsedStr"
 		delta < 60L -> "just now"

@@ -119,6 +119,7 @@ public final class DiscordBot {
 				autoLoginRewardTask.run();
 			} catch (Throwable e) {
 				dlog("__**AutoLoginRewardTask failure**__\n```\n" + Throwables.getStackTraceAsString(e) + "```", null);
+				AutoLoginRewardTask.TASK_IS_RUNNING.set(false);
 			}
 		};
 		Executors.newScheduledThreadPool(1).scheduleAtFixedRate(

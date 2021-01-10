@@ -21,17 +21,20 @@ import java.io.IOException
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
-val taskIsRunning = AtomicBoolean()
-
 class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
+	companion object{
+		@JvmField
+		val TASK_IS_RUNNING = AtomicBoolean()
+	}
+
 	val logger = LoggerFactory.getLogger("AutoLoginReward")
 	val random = Random()
 
 	override fun run() {
-		if (taskIsRunning.get()) {
+		if (TASK_IS_RUNNING.get()) {
 			throw SimpleCommandExceptionType(LiteralMessage("Task is already running.")).create()
 		}
-		taskIsRunning.set(true)
+		TASK_IS_RUNNING.set(true)
 		val autoClaimEntries = r.table("auto_claim").run(client.dbConn, AutoClaimEntry::class.java)
 		for (entry in autoClaimEntries) {
 			var attempts = 5
@@ -43,6 +46,7 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 			}
 			Thread.sleep(2500L + random.nextInt(2500))
 		}
+		TASK_IS_RUNNING.set(false)
 	}
 
 	private fun perform(entry: AutoClaimEntry): Boolean {

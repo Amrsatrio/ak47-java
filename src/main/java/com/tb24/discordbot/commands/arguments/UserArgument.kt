@@ -9,6 +9,7 @@ import com.tb24.discordbot.commands.CommandSourceStack
 import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.safeGetOneIndexed
+import com.tb24.discordbot.util.sortedFriends
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.friends.FriendV2
 import com.tb24.fn.util.Formatters
@@ -95,7 +96,7 @@ class UserArgument(val max: Int) : ArgumentType<UserArgument.Result> {
 				if (recipient is FriendEntryQuery) {
 					val recipientN = recipient.index
 					if (friends == null) {
-						friends = source.api.friendsService.queryFriends(source.api.currentLoggedIn.id, true).exec().body()!!.sortedBy { it.displayName ?: it.accountId }
+						friends = source.api.friendsService.queryFriends(source.api.currentLoggedIn.id, true).exec().body()!!.sortedFriends()
 					}
 					if (friends.isEmpty()) {
 						throw SimpleCommandExceptionType(LiteralMessage("No friends to choose from.")).create()
