@@ -55,6 +55,7 @@ dependencies {
 	implementation 'com.tb24:Matchmaker:+'
 	implementation 'me.fungames:JFortniteParse:+'
 	implementation('net.dv8tion:JDA:+') { exclude module: 'opus-java' }
+	implementation 'net.jodah:expiringmap:0.5.9'
 	implementation 'net.sf.trove4j:trove4j:3.0.3'
 	implementation 'org.apache.logging.log4j:log4j-api:2.13.3'
 	implementation 'org.apache.logging.log4j:log4j-core:2.13.3'

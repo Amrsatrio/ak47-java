@@ -18,7 +18,7 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 			source.loading("Getting BR data")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 			val attrs = source.api.profileManager.getProfileData("athena").stats.attributes as AthenaProfileAttributes
-			val inventory = source.api.fortniteService.brInventory(source.api.currentLoggedIn.id).exec().body()!!
+			val inventory = source.api.fortniteService.inventorySnapshot(source.api.currentLoggedIn.id).exec().body()!!
 			source.complete(null, source.createEmbed()
 				.setTitle("Season " + attrs.season_num)
 				.addField("Level", "%,d (%,d)".format(attrs.level, attrs.xp), false)

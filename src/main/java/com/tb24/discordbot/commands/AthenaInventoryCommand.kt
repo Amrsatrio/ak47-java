@@ -5,6 +5,7 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
+import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.exec
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.util.Formatters
@@ -19,13 +20,14 @@ class AthenaInventoryCommand : BrigadierCommand("brinventory", "Shows your or ot
 	private fun execute(source: CommandSourceStack, user: GameProfile): Int {
 		source.ensureSession()
 		source.loading("Getting BR global inventory data")
-		val inventory = source.api.fortniteService.brInventory(user.id).exec().body()!!
+		val inventory = source.api.fortniteService.inventorySnapshot(user.id).exec().body()!!
 		source.complete(null, source.createEmbed(user)
 			.setTitle("BR Inventory")
 			.setDescription(inventory.stash?.entries
 				?.joinToString("\n") { it.key + ": " + Formatters.num.format(it.value) }
 				?.takeIf { it.isNotEmpty() }
 				?: "No entries")
+			.setThumbnail(Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Athena/T-T-Icon-BR-GoldBars-UI-Icon-L.T-T-Icon-BR-GoldBars-UI-Icon-L"))
 			.build())
 		return Command.SINGLE_SUCCESS
 	}

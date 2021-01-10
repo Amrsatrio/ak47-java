@@ -24,7 +24,6 @@ import java.util.concurrent.CompletableFuture
 class Session(val client: DiscordBot, val id: String) {
 	val LOGGER = LoggerFactory.getLogger("Session")
 	val api = EpicApi(client.okHttpClient)
-	val creation = System.currentTimeMillis()
 	var channelsManager = ChannelsManager(api)
 
 	init {

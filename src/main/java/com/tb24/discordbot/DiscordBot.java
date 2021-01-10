@@ -20,6 +20,8 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.requests.GatewayIntent;
+import net.jodah.expiringmap.ExpirationPolicy;
+import net.jodah.expiringmap.ExpiringMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +59,10 @@ public final class DiscordBot {
 	public Connection dbConn;
 	public SavedLoginsManager savedLoginsManager;
 	public Map<Long, PrefixConfig> prefixMap = new HashMap<>();
-	public Map<String, Session> sessions = new HashMap<>();
+	public Map<String, Session> sessions = ExpiringMap.builder()
+		.expiration(1, TimeUnit.HOURS)
+		.expirationPolicy(ExpirationPolicy.ACCESSED)
+		.build();
 	public Session internalSession;
 	public CommandManager commandManager;
 	public CatalogManager catalogManager;
