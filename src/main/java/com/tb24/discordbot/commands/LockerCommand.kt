@@ -25,7 +25,7 @@ import javax.imageio.ImageIO
 import kotlin.math.ceil
 import kotlin.math.sqrt
 
-class LockerCommand : BrigadierCommand("locker", "kek") {
+class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form of an image.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		//.requires(Rune::isBotDevOrPotato)
 		.executes { c ->

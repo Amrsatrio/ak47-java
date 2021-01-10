@@ -21,6 +21,7 @@ import net.dv8tion.jda.api.entities.MessageEmbed
 import okhttp3.MediaType
 import okhttp3.RequestBody
 import retrofit2.Call
+import java.net.HttpURLConnection
 import java.util.concurrent.CompletableFuture
 
 class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", arrayOf("f")) {
@@ -29,11 +30,11 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		.then(literal("incoming").executes { list(it.source, "incoming") }.then(literal("withid").executes { list(it.source, "incoming", true) }))
 		.then(literal("outgoing").executes { list(it.source, "outgoing") }.then(literal("withid").executes { list(it.source, "outgoing", true) }))
 		.then(literal("blocklist").executes { list(it.source, "blocklist") }.then(literal("withid").executes { list(it.source, "blocklist", true) }))
-		.then(literal("removeall").executes { bulk(it.source, "remove", FriendsService::queryFriends, FriendsService::deleteFriendOrRejectInvite) })
-		.then(literal("acceptall").executes { bulk(it.source, "accept", FriendsService::queryIncomingFriendRequests, FriendsService::sendInviteOrAcceptInvite) })
-		.then(literal("rejectall").executes { bulk(it.source, "reject", FriendsService::queryIncomingFriendRequests, FriendsService::deleteFriendOrRejectInvite) })
-		.then(literal("cancelall").executes { bulk(it.source, "cancel", FriendsService::queryOutgoingFriendRequests, FriendsService::deleteFriendOrRejectInvite) })
-		.then(literal("unblockall").executes { bulk(it.source, "unblock", FriendsService::queryBlockedPlayers, FriendsService::sendUnblock) })
+		.then(literal("removeall").executes { bulk(it.source, "remove", null, FriendsService::queryFriends, FriendsService::deleteFriendOrRejectInvite) })
+		.then(literal("acceptall").executes { bulk(it.source, "accept", null, FriendsService::queryIncomingFriendRequests, FriendsService::sendInviteOrAcceptInvite) })
+		.then(literal("rejectall").executes { bulk(it.source, "reject", null, FriendsService::queryIncomingFriendRequests, FriendsService::deleteFriendOrRejectInvite) })
+		.then(literal("cancelall").executes { bulk(it.source, "cancel", null, FriendsService::queryOutgoingFriendRequests, FriendsService::deleteFriendOrRejectInvite) })
+		.then(literal("unblockall").executes { bulk(it.source, "unblock", null, FriendsService::queryBlockedPlayers, FriendsService::sendUnblock) })
 		.then(literal("avatarids").executes { c ->
 			val source = c.source
 			source.ensureSession()
@@ -49,12 +50,17 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			source.channel.sendFile(ids.toByteArray(), "avatar_ids_${source.api.currentLoggedIn.displayName}.txt").queue()
 			Command.SINGLE_SUCCESS
 		})
-		.then(argument("user", users(1))
+		.then(argument("user", users())
 			.executes { c ->
 				c.source.ensureSession()
 				val summary = c.source.api.friendsService.queryFriendsSummary(c.source.api.currentLoggedIn.id, true).exec().body()!!
 				val friends = summary.friends.sortedFriends()
-				entryDetails(c.source, getUsers(c, "user", friends).values.first(), summary)
+				val users = getUsers(c, "user", friends)
+				if (users.size > 1) {
+					bulk(c.source, "add", users.values.toList(), null, FriendsService::sendInviteOrAcceptInvite)
+				} else {
+					entryDetails(c.source, users.values.first(), summary)
+				}
 			}
 		)
 
@@ -291,10 +297,10 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		return Command.SINGLE_SUCCESS
 	}
 
-	private fun bulk(source: CommandSourceStack, type: String, query: FriendsService.(String, Boolean?) -> Call<Array<FriendV2>>, op: FriendsService.(String, String) -> Call<Void>): Int {
+	private fun bulk(source: CommandSourceStack, type: String, suppliedQueue: List<GameProfile>?, query: ((FriendsService, String, Boolean?) -> Call<Array<FriendV2>>)?, op: FriendsService.(String, String) -> Call<Void>): Int {
 		source.ensureSession()
 		if (!source.complete(null, source.createEmbed()
-				.setTitle("✋ Hold up!")
+				.setTitle("Confirmation")
 				.setDescription(L10N.format("friends.$type.bulk.warning"))
 				.setColor(0xFFF300)
 				.build()).yesNoReactions(source.author).await()) {
@@ -302,23 +308,40 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			return Command.SINGLE_SUCCESS
 		}
 		val accountId = source.api.currentLoggedIn.id
-		val queue = source.api.friendsService.query(accountId, null).exec().body()!!
+		val usingSuppliedQueue = suppliedQueue != null
+		var sub: Array<FriendV2>? = null
+		val queue = if (usingSuppliedQueue) {
+			suppliedQueue!!.map { it.id }
+		} else {
+			sub = query!!(source.api.friendsService, accountId, null).exec().body()!!
+			sub.map { it.accountId }
+		}
 		var i = 0
+		var success = 0
 		while (i < queue.size) {
 			source.loading(L10N.format("friends.$type.bulk", Formatters.num.format(i + 1), Formatters.num.format(queue.size), Formatters.percentZeroFraction.format(i.toDouble() / queue.size)))
 			try {
-				source.api.friendsService.op(accountId, queue[i].accountId).exec()
+				source.api.friendsService.op(accountId, queue[i]).exec()
 				++i // do the next one if successful
+				++success
 			} catch (e: HttpException) {
-				if (e.epicError.errorCode == "errors.com.epicgames.common.throttled") {
-					Thread.sleep(e.epicError.messageVars[0].toInt() * 1000L)
-				} else {
-					throw e
+				when {
+					e.epicError.errorCode == "errors.com.epicgames.common.throttled" -> Thread.sleep(e.epicError.messageVars[0].toInt() * 1000L)
+					e.code() == HttpURLConnection.HTTP_UNAUTHORIZED -> throw e
+					else -> {
+						val displayName = if (usingSuppliedQueue) {
+							suppliedQueue!![i].displayName
+						} else {
+							sub!![i].displayName
+						}
+						source.channel.sendMessage("%s failed: %s".format(displayName.escapeMarkdown(), e.epicError.displayText)).queue()
+						++i
+					}
 				}
 			}
 		}
 		source.complete(null, source.createEmbed()
-			.setTitle("✅ " + L10N.format("friends.$type.bulk.done", Formatters.num.format(i)))
+			.setTitle("✅ " + L10N.format("friends.$type.bulk.done", Formatters.num.format(success)))
 			.build())
 		return Command.SINGLE_SUCCESS
 	}
