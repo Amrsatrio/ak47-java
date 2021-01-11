@@ -8,6 +8,7 @@ import com.tb24.fn.ProfileManager
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer.CatalogItemPrice
 import com.tb24.fn.model.gamesubcatalog.ECatalogOfferType
+import com.tb24.fn.model.gamesubcatalog.ECatalogSaleType
 import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Utils
@@ -80,7 +81,7 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 			price.regularPrice = max(if (ce.dynamicBundleInfo.floorPrice != null) ce.dynamicBundleInfo.floorPrice else 0, price.regularPrice)
 			price.finalPrice = max(if (ce.dynamicBundleInfo.floorPrice != null) ce.dynamicBundleInfo.floorPrice else 0, price.basePrice)
 			price.basePrice = price.finalPrice
-			if (price.saleType == null && price.regularPrice != price.basePrice) {
+			if (price.saleType == ECatalogSaleType.NotOnSale && price.regularPrice != price.basePrice) {
 				price.saleType = ce.dynamicBundleInfo.displayType
 			}
 			owned = ownedItems!!.size == ce.dynamicBundleInfo.bundleItems.size

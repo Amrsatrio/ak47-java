@@ -15,6 +15,7 @@ import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.friends.FriendV2
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer.CatalogItemPrice
+import com.tb24.fn.model.gamesubcatalog.ECatalogSaleType
 import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.model.mcpprofile.ProfileUpdate
 import com.tb24.fn.util.CatalogHelper
@@ -144,7 +145,7 @@ fun getItemIconEmoji(templateId: String, createIfNonexistent: Boolean = DiscordB
 	return DiscordBot.instance.discord.getGuildById(648556726672556048L)?.createEmote(defData.name.run { substring(0, min(32, length)) }, Icon.from(baos.toByteArray(), Icon.IconType.PNG))?.complete()
 }
 
-fun CatalogItemPrice.render(quantity: Int = 1) = icon() + ' ' + Formatters.num.format(quantity * basePrice) + if (saleType != null) " ~~${Formatters.num.format(quantity * regularPrice)}~~" else ""
+fun CatalogItemPrice.render(quantity: Int = 1) = icon() + ' ' + Formatters.num.format(quantity * basePrice) + if (saleType != ECatalogSaleType.NotOnSale) " ~~${Formatters.num.format(quantity * regularPrice)}~~" else ""
 
 fun CatalogItemPrice.getAccountBalance(profileManager: ProfileManager): Int {
 	if (currencyType == EStoreCurrencyType.MtxCurrency) {

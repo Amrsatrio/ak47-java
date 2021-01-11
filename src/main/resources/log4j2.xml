@@ -1,13 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="INFO">
+	<Properties>
+		<Property name="pattern">%c: %p: %m%n%throwable</Property>
+	</Properties>
 	<Appenders>
-		<Console name="console" target="SYSTEM_OUT">
-			<PatternLayout pattern="%c{1}: %p: %m%n" />
+		<Console name="stdout" target="SYSTEM_OUT">
+			<PatternLayout disableAnsi="false" pattern="%highlight{${pattern}}" />
+			<ThresholdFilter level="ERROR" onMatch="DENY" onMismatch="ACCEPT"/>
+		</Console>
+		<Console name="stderr" target="SYSTEM_ERR">
+			<PatternLayout pattern="${pattern}" />
+			<ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
 		</Console>
 	</Appenders>
 	<Loggers>
 		<Root level="info">
-			<AppenderRef ref="console" />
+			<AppenderRef ref="stdout" />
+			<AppenderRef ref="stderr" />
 		</Root>
 	</Loggers>
 </Configuration>
