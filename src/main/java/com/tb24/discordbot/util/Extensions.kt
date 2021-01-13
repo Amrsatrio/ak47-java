@@ -99,6 +99,9 @@ fun FortItemStack.render(displayQty: Int = quantity): String {
 		val asWorker = defData as FortWorkerType
 		dn = defData.Rarity.rarityName.format() + ' ' + if (asWorker.bIsManager) "Lead Survivor" else "Survivor"
 	}
+	if (dn.isEmpty()) {
+		dn = templateId
+	}
 	return (if (displayQty > 1) Formatters.num.format(displayQty) + " \u00d7 " else "") + dn
 }
 
@@ -289,6 +292,7 @@ inline fun createAndDrawCanvas(w: Int, h: Int, draw: (ctx: Graphics2D) -> Unit):
 	ctx.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
 	ctx.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
 	draw(ctx)
+	ctx.dispose()
 	return canvas
 }
 

@@ -81,7 +81,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(ExtendedLoginCommand())
 		register(FishCollectionCommand())
 		register(FriendsCommand())
-//		register(GenXpCoinsDataCommand())
+		register(GenXpCoinsDataCommand())
 		register(GiftCommand())
 		register(GiftHistoryCommand())
 		register(GiftSettingsCommand())
@@ -106,6 +106,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 //		register(ShopCommand())
 		register(ShopTextCommand())
 		register(UndoCommand())
+		register(XpCoinsCommand())
 		register(FortniteAndroidApkCommand())
 	}
 
