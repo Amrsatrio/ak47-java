@@ -3,4 +3,5 @@
 /build
 /gradle.properties
 /out
+/run
 *.log

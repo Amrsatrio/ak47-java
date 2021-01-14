@@ -52,7 +52,7 @@ dependencies {
 	implementation 'com.sparkjava:spark-kotlin:1.0.0-alpha'
 	implementation 'com.squareup.okhttp3:okhttp:3.14.9'
 	implementation 'com.squareup.retrofit2:retrofit:2.9.0'
-	implementation 'com.tb24:Matchmaker:+'
+	implementation 'com.tb24:epic-api:+'
 	implementation 'me.fungames:JFortniteParse:+'
 	implementation('net.dv8tion:JDA:+') { exclude module: 'opus-java' }
 	implementation 'net.jodah:expiringmap:0.5.9'

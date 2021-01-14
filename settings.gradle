@@ -1,4 +1,3 @@
 rootProject.name = 'ak47'
-includeBuild '../Matchmaker'
+includeBuild '../epic-api'
 includeBuild '../JFortniteParse'
-includeBuild '../JOodle'
