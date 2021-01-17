@@ -1,5 +1,6 @@
 package com.tb24.discordbot.commands
 
+import com.google.gson.reflect.TypeToken
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
@@ -8,18 +9,22 @@ import com.mojang.brigadier.arguments.IntegerArgumentType.integer
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.blenderumap.getProp
 import com.tb24.discordbot.Rune
 import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.account.GameProfile
+import com.tb24.fn.model.assetdata.RewardCategoryTabData
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.attributes.IQuestManager
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryPublicProfile
 import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.model.mcpprofile.commands.subgame.FortRerollDailyQuest
+import com.tb24.fn.util.format
+import com.tb24.uasset.AssetManager
 import me.fungames.jfortniteparse.fort.enums.EFortRarity
 import me.fungames.jfortniteparse.fort.exports.AthenaDailyQuestDefinition
 import me.fungames.jfortniteparse.fort.exports.FortQuestItemDefinition
@@ -42,7 +47,7 @@ import javax.imageio.ImageIO
 import kotlin.math.max
 import kotlin.system.exitProcess
 
-class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manages your active BR daily challenges.", arrayOf("dailychals")) {
+class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manages your active BR daily challenges.", arrayOf("dailychals", "brdailies")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires(Rune::hasAssetsLoaded)
 		.executes { c ->
@@ -78,7 +83,7 @@ class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manage
 			.sortedBy { it.displayName }
 }
 
-class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active STW daily quests.", arrayOf("dailies")) {
+class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active STW daily quests.", arrayOf("dailies", "stwdailies")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires(Rune::hasAssetsLoaded)
 		.executes {
@@ -131,6 +136,24 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 		campaign.items.values
 			.filter { it.primaryAssetType == "Quest" && (it.defData as? FortQuestItemDefinition)?.QuestType == EFortQuestType.DailyQuest && it.attributes["quest_state"]?.asString == "Active" }
 			.sortedBy { it.displayName }
+}
+
+class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR quests.") {
+	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.executes { execute(it.source) }
+
+	private fun execute(source: CommandSourceStack): Int {
+		val rewardTabsData = getFilters()
+		source.complete(rewardTabsData.joinToString("\n") { it.DisplayName.format() ?: "UNK" })
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun getFilters(): List<RewardCategoryTabData> {
+		val d = AssetManager.INSTANCE.provider.loadGameFile("/Game/Athena/HUD/Minimap/AthenaMapGamePanel_BP")?.exportsLazy?.get(7)?.value
+			?: throw SimpleCommandExceptionType(LiteralMessage("Object defining categories not found.")).create()
+		val rewardTabsData = d.getProp<List<RewardCategoryTabData>>("RewardTabsData", TypeToken.getParameterized(List::class.java, RewardCategoryTabData::class.java).type)!!
+		return rewardTabsData
+	}
 }
 
 fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int, questsGetter: (McpProfile) -> List<FortItemStack>): Int {

@@ -58,6 +58,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(AthenaDailyChallengesCommand())
 		register(AthenaInventoryCommand())
 		register(AthenaOverviewCommand())
+		register(AthenaQuestsCommand())
 		register(AutoDailyRewardsCommand())
 		register(AvatarCommand())
 //		BanCommand.register(dispatcher)
