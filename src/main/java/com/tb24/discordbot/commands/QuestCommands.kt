@@ -13,7 +13,8 @@ import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.blenderumap.getProp
 import com.tb24.discordbot.Rune
-import com.tb24.discordbot.commands.arguments.UserArgument
+import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
+import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
@@ -103,13 +104,13 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 				.executes { c -> replaceQuest(c.source, "campaign", getInteger(c, "daily quest #")) { getCampaignDailyQuests(it) } }
 			)
 		)
-		.then(argument("user", UserArgument.users(1))
+		.then(argument("user", users(1))
 			.executes {
 				val source = it.source
 				if (source.api.userToken == null) {
 					source.session = source.client.internalSession
 				}
-				val user = UserArgument.getUsers(it, "user").values.first()
+				val user = getUsers(it, "user").values.first()
 				source.loading("Getting quests of ${user.displayName}")
 				source.api.profileManager.dispatchPublicCommandRequest(user, QueryPublicProfile(), "campaign").await()
 				displayDailyQuests(it, user)

@@ -14,7 +14,7 @@ import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.friends.FriendV2
 import com.tb24.fn.util.Formatters
 
-class UserArgument(val max: Int) : ArgumentType<UserArgument.Result> {
+class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgument.Result> {
 	companion object {
 		val EXAMPLES = arrayListOf(
 			"noobmaster69",
@@ -22,7 +22,7 @@ class UserArgument(val max: Int) : ArgumentType<UserArgument.Result> {
 		)
 
 		@JvmStatic
-		fun users(max: Int = Integer.MAX_VALUE) = UserArgument(max)
+		fun users(max: Int = Integer.MAX_VALUE, greedy: Boolean = true) = UserArgument(max, greedy)
 
 		@JvmStatic
 		fun getUsers(context: CommandContext<CommandSourceStack>, name: String, friends: List<FriendV2>? = null, loadingText: String = "Resolving users") =
@@ -45,7 +45,7 @@ class UserArgument(val max: Int) : ArgumentType<UserArgument.Result> {
 			return readQuotedString()
 		}
 		val start = cursor
-		while (canRead() && peek() != separator && peek() != ' ') {
+		while (canRead() && peek() != separator && (greedy || peek() != ' ')) {
 			skip()
 		}
 		return string.substring(start, cursor)
@@ -55,7 +55,8 @@ class UserArgument(val max: Int) : ArgumentType<UserArgument.Result> {
 		val ids = mutableListOf<Any>()
 		var hasNext = reader.canRead() && reader.peek() != ' '
 		while (hasNext) {
-			if (reader.peek() == '#') { // friend number TODO use this if string length is 3 or less
+			val isHashtag = reader.peek() == '#'
+			if (isHashtag) { // friend number TODO use this if string length is 3 or less
 				reader.skip()
 				ids.add(FriendEntryQuery(reader.readInt(), reader))
 			} else { // display name, email, or account id
