@@ -24,7 +24,10 @@ fun <T> Message.replyPaginated(all: List<T>,
 	val reactions = mutableListOf("⏮", "◀", "▶", "⏭")
 	customReactions?.addReactions(reactions)
 	reactions.forEach { msg.addReaction(it).queue() }
-	val collector = msg.createReactionCollector({ reaction, user, _ -> reactions.contains(reaction.reactionEmote.name) && user?.idLong == author.idLong }, ReactionCollectorOptions().apply { idle = 30000L })
+	val collector = msg.createReactionCollector({ reaction, user, _ -> reactions.contains(reaction.reactionEmote.name) && user?.idLong == author.idLong }, ReactionCollectorOptions().apply {
+		idle = 30000L
+		dispose = true
+	})
 	collector.callback = object : CollectorListener<MessageReaction> {
 		override fun onCollect(item: MessageReaction, user: User?) {
 			val oldPage = page
@@ -39,16 +42,18 @@ fun <T> Message.replyPaginated(all: List<T>,
 				}
 			}
 
-			if (msg.member != null && msg.member!!.hasPermission(Permission.MESSAGE_MANAGE)) {
+			/*if (msg.member != null && msg.member!!.hasPermission(Permission.MESSAGE_MANAGE)) {
 				msg.removeReaction(item.reactionEmote.name, user!!).queue()
-			}
+			}*/
 
 			if (page != oldPage) {
 				msg.editMessage(render(all.subList(page * pageSize, min(all.size, (page * pageSize) + pageSize)), page, pageCount)).queue()
 			}
 		}
 
-		override fun onRemove(item: MessageReaction, user: User?) {}
+		override fun onRemove(item: MessageReaction, user: User?) {
+			onCollect(item, user)
+		}
 
 		override fun onDispose(item: MessageReaction, user: User?) {}
 

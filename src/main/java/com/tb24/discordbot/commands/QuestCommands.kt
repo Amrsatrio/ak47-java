@@ -6,6 +6,8 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.IntegerArgumentType.getInteger
 import com.mojang.brigadier.arguments.IntegerArgumentType.integer
+import com.mojang.brigadier.arguments.StringArgumentType.getString
+import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
@@ -27,11 +29,14 @@ import com.tb24.fn.util.format
 import com.tb24.uasset.AssetManager
 import me.fungames.jfortniteparse.fort.enums.EFortRarity
 import me.fungames.jfortniteparse.fort.exports.AthenaDailyQuestDefinition
+import me.fungames.jfortniteparse.fort.exports.FortChallengeBundleItemDefinition
 import me.fungames.jfortniteparse.fort.exports.FortQuestItemDefinition
 import me.fungames.jfortniteparse.fort.exports.FortQuestItemDefinition.EFortQuestType
 import me.fungames.jfortniteparse.fort.objects.rows.FortQuestRewardTableRow
 import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
+import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
 import me.fungames.jfortniteparse.util.toPngArray
+import net.dv8tion.jda.api.MessageBuilder
 import java.awt.AlphaComposite
 import java.awt.Color
 import java.awt.Font
@@ -73,7 +78,7 @@ class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manage
 		}
 		.then(literal("replace")
 			.then(argument("quick challenge #", integer())
-				.executes { c -> replaceQuest(c.source, "campaign", getInteger(c, "quick challenge #")) { getAthenaDailyQuests(it) } }
+				.executes { c -> replaceQuest(c.source, "athena", getInteger(c, "quick challenge #")) { getAthenaDailyQuests(it) } }
 			)
 		)
 
@@ -141,18 +146,72 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR quests.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it.source) }
+		.then(argument("tab", greedyString())
+			.executes { execute(it.source, getString(it, "tab").toLowerCase()) }
+		)
 
-	private fun execute(source: CommandSourceStack): Int {
-		val rewardTabsData = getFilters()
-		source.complete(rewardTabsData.joinToString("\n") { it.DisplayName.format() ?: "UNK" })
+	private fun execute(source: CommandSourceStack, search: String? = null): Int {
+		source.ensureSession()
+		var tab: RewardCategoryTabData? = null
+		if (search != null) {
+			val maxDistance = search.length / 5 + 3
+			val tabs = getTabs()
+			tab = tabs.firstOrNull {
+				val tabName = it.DisplayName.format()!!.toLowerCase()
+				tabName == search || tabName.startsWith(search) || Utils.damerauLevenshteinDistance(search, tabName) < maxDistance
+			} ?: throw SimpleCommandExceptionType(LiteralMessage("No matches found for \"$search\". Available options:\n${tabs.joinToString("\n") { "\u2022 " + it.DisplayName.format().orDash() }}")).create()
+		}
+		source.loading("Getting challenges")
+		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+		val athena = source.api.profileManager.getProfileData("athena")
+		val entries = mutableListOf<FortItemStack>()
+		for (item in athena.items.values) {
+			if (item.primaryAssetType != "Quest") {
+				continue
+			}
+			val defData = item.defData
+			if (defData !is FortQuestItemDefinition || defData.bHidden == true || item.attributes["quest_state"]?.asString != "Active") {
+				continue
+			}
+			if (tab != null) {
+				val bundleDef = athena.items[item.attributes["challenge_bundle_id"]?.asString]?.defData as? FortChallengeBundleItemDefinition
+					?: continue
+				val tags = bundleDef.GameplayTags ?: FGameplayTagContainer()
+				if (!tab.IncludeTag.TagName.isNone() && tags.getValue(tab.IncludeTag.toString()) == null
+					|| !tab.ExcludeTag.TagName.isNone() && tags.getValue(tab.ExcludeTag.toString()) != null) {
+					continue
+				}
+			}
+			entries.add(item)
+		}
+		if (entries.isNotEmpty()) {
+			entries.sortByDescending { it.rarity }
+			source.message.replyPaginated(entries, 15, source.loadingMsg) { content, page, pageCount ->
+				val entriesStart = page * 15 + 1
+				val entriesEnd = entriesStart + content.size
+				val value = content.joinToString("\n") {
+					renderChallenge(it, "• ", "\u00a0\u00a0\u00a0")
+				}
+				val embed = source.createEmbed()
+					.setTitle("Battle Royale Quests" + if (tab != null) " / " + tab.DisplayName.format() else "")
+					.setDescription("Showing %,d to %,d of %,d entries\n\n%s".format(entriesStart, entriesEnd - 1, entries.size, value))
+					.setFooter("Page %,d of %,d".format(page + 1, pageCount))
+				MessageBuilder(embed).build()
+			}
+		} else {
+			if (tab != null) {
+				throw SimpleCommandExceptionType(LiteralMessage("You have no quests in category ${tab.DisplayName.format()}.")).create()
+			} else {
+				throw SimpleCommandExceptionType(LiteralMessage("You have no quests.")).create()
+			}
+		}
 		return Command.SINGLE_SUCCESS
 	}
 
-	private fun getFilters(): List<RewardCategoryTabData> {
+	private fun getTabs(): List<RewardCategoryTabData> {
 		val d = AssetManager.INSTANCE.provider.loadGameFile("/Game/Athena/HUD/Minimap/AthenaMapGamePanel_BP")?.exportsLazy?.get(7)?.value
 			?: throw SimpleCommandExceptionType(LiteralMessage("Object defining categories not found.")).create()
-		val rewardTabsData = d.getProp<List<RewardCategoryTabData>>("RewardTabsData", TypeToken.getParameterized(List::class.java, RewardCategoryTabData::class.java).type)!!
-		return rewardTabsData
+		return d.getProp<List<RewardCategoryTabData>>("RewardTabsData", TypeToken.getParameterized(List::class.java, RewardCategoryTabData::class.java).type)!!
 	}
 }
 
@@ -192,6 +251,34 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 }
 
 fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: String = "", canBold: Boolean = false, conditionalCondition: Boolean = false): String {
+	val (completion, max) = getQuestCompletion(item)
+	val xpRewardScalar = item.attributes["xp_reward_scalar"]?.asFloat ?: 1f
+	var dn = item.displayName
+	if (dn.isEmpty()) {
+		dn = item.templateId
+	}
+	val sb = StringBuilder("%s**%s** ( %,d / %,d )".format(prefix, dn, completion, max))
+	val quest = item.defData as FortQuestItemDefinition
+	val bold = canBold && xpRewardScalar == 1f
+	quest.Rewards?.let { rewards ->
+		val rendered = rewards.filter { it.ItemPrimaryAssetId.PrimaryAssetType.Name.text != "Quest" }.render(rewardsPrefix, xpRewardScalar, bold, conditionalCondition)
+		if (rendered.isNotEmpty()) {
+			sb.append('\n').append(rendered)
+		}
+	}
+	val tableRewards = quest.RewardsTable?.value?.rows
+		?.mapValues { it.value.mapToClass(FortQuestRewardTableRow::class.java) }
+		?.filter { it.value.QuestTemplateId == "*" || it.value.QuestTemplateId == item.templateId && !it.value.Hidden }
+	if (tableRewards != null && tableRewards.isNotEmpty()) {
+		val rendered = tableRewards.render(rewardsPrefix, xpRewardScalar, bold, conditionalCondition)
+		if (rendered.isNotEmpty()) {
+			sb.append('\n').append(rendered)
+		}
+	}
+	return sb.toString()
+}
+
+private fun getQuestCompletion(item: FortItemStack): Pair<Int, Int> {
 	val quest = item.defData as FortQuestItemDefinition
 	var completion = 0
 	var max = 0
@@ -205,15 +292,7 @@ fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: Str
 	if (quest.ObjectiveCompletionCount != null) {
 		max = quest.ObjectiveCompletionCount
 	}
-	val xpRewardScalar = item.attributes["xp_reward_scalar"]?.asFloat ?: 1f
-	val sb = StringBuilder("%s**%s** ( %,d / %,d )".format(prefix, item.displayName, completion, max))
-	val rewards = quest.RewardsTable?.value?.rows
-		?.mapValues { it.value.mapToClass(FortQuestRewardTableRow::class.java) }
-		?.filter { it.value.QuestTemplateId == "*" || it.value.QuestTemplateId == item.templateId && !it.value.Hidden }
-	if (rewards != null && rewards.isNotEmpty()) {
-		sb.append('\n').append(rewards.render(rewardsPrefix, xpRewardScalar, canBold && xpRewardScalar == 1f, conditionalCondition))
-	}
-	return sb.toString()
+	return Pair(completion, max)
 }
 
 fun main() {

@@ -33,7 +33,7 @@ class ReactionCollector : Collector<MessageReaction, ReactionCollectorOptions> {
 	}
 
 	override fun onGuildMessageReactionRemove(event: GuildMessageReactionRemoveEvent) {
-		handleDispose(event.reaction, event.user)
+		handleDispose(event.reaction, users[event.userIdLong])
 	}
 
 	override fun onMessageReactionRemoveAll(event: MessageReactionRemoveAllEvent) {
@@ -61,7 +61,7 @@ class ReactionCollector : Collector<MessageReaction, ReactionCollectorOptions> {
 	}
 
 	override fun onRemove(item: MessageReaction, user: User?) {
-		super.onCollect(item, user)
+		super.onRemove(item, user)
 		total--
 		if (user != null) users.remove(user.idLong)
 	}

@@ -13,7 +13,7 @@ import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.mcpprofile.attributes.AthenaProfileAttributes
-import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.util.Formatters.num
 import com.tb24.uasset.AssetManager
 import com.tb24.uasset.JWPSerializer
@@ -21,6 +21,7 @@ import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
 import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.ue4.objects.core.math.FVector2D
 import me.fungames.jfortniteparse.util.toPngArray
+import java.awt.AlphaComposite
 import java.io.File
 import java.io.FileReader
 import java.io.FileWriter
@@ -38,7 +39,7 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 	private fun execute(source: CommandSourceStack, withMap: Boolean): Int {
 		source.ensureSession()
 		source.loading("Getting XP coins data")
-		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+		source.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "athena").await()
 		val athena = source.api.profileManager.getProfileData("athena")
 		val processed = mutableMapOf<Int, MutableMap<String, MutableMap<Int, Int>>>()
 		val uncollected = mutableListOf<String>()
@@ -103,7 +104,7 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 			.setTitle("Season ${num.format((athena.stats.attributes as AthenaProfileAttributes).season_num)} XP Coins")
 			.setDescription(L10N.format("xpcoins.collected", overallCompleted, overallMax))
 			.build())
-		if (!withMap) {
+		if (!withMap || overallCompleted >= overallMax) {
 			return Command.SINGLE_SUCCESS
 		}
 
@@ -122,7 +123,8 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 
 		for (xpCoin_ in FileReader("config/xp_coins_data.json").use { JsonParser.parseReader(it) }.asJsonArray) {
 			val xpCoin = xpCoin_.asJsonObject
-			if (uncollected.indexOf(xpCoin["questBackendName"].asString) == -1) continue
+			val hasCollected = uncollected.indexOf(xpCoin["questBackendName"].asString) == -1
+			if (hasCollected) continue
 
 			map.markers.add(MapImageGenerator.MapMarker(xpCoin["loc"].asJsonObject.run { FVector2D(get("x").asFloat, get("y").asFloat) }) { ctx, x, y ->
 				val firstTag = xpCoin["objStatTag"].asJsonArray[0].asString
@@ -133,8 +135,13 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 					firstTag.startsWith("Athena.Quests.ItemCollect.XPCoin.Gold") -> icGold
 					else -> icGreen
 				}
+				val originalComposite = ctx.composite
+				if (hasCollected) {
+					ctx.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, .2f)
+				}
 				val s = 56
 				ctx.drawImage(ic, x - s / 2, y - s / 2, s, s, null)
+				ctx.composite = originalComposite
 			})
 		}
 

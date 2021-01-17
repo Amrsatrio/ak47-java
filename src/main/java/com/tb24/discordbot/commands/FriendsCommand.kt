@@ -95,7 +95,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			val embed = source.createEmbed()
 				.setTitle(type)
 				.setDescription("Showing %,d to %,d of %,d entries\n* = Not eligible for gifting".format(entriesStart, entriesEnd - 1, entries.size))
-				.setFooter("Page %d of %d".format(page + 1, pageCount))
+				.setFooter("Page %,d of %,d".format(page + 1, pageCount))
 			chunks.forEach(embed::addField)
 			MessageBuilder(embed.build()).build()
 		}

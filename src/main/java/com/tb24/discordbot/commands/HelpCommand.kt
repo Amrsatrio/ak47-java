@@ -22,7 +22,7 @@ class HelpCommand : BrigadierCommand("help", "Shows all commands and their infos
 				MessageBuilder(EmbedBuilder()
 					.setTitle(":mailbox_with_mail: Hey! Want some help?")
 					.setColor(0x408BFA)
-					.setFooter("Page %d of %d \u00b7 Powered by Brigadier".format(page + 1, pageCount))
+					.setFooter("Page %,d of %,d \u00b7 Powered by Brigadier".format(page + 1, pageCount))
 					.apply {
 						content.forEach {
 							addField(source.prefix + it.name, it.description, true)

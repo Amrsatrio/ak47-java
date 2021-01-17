@@ -47,7 +47,7 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 								addField("Level ${Formatters.num.format(listIndex + 1)}${(if (listIndex < levels.size - 1) " (${Formatters.num.format(levels[listIndex + 1].TotalRequiredXP - entry.TotalRequiredXP)} XP)" else "")}", entry.VisibleReward.joinToString("\n") { FortItemStack(it.TemplateId, it.Quantity).renderWithIcon() }.takeIf { it.isNotEmpty() } ?: "No rewards", true)
 							}
 						}
-						.setFooter("Page %d of %d".format(page + 1, pageCount))
+						.setFooter("Page %,d of %,d".format(page + 1, pageCount))
 					).build()
 				}
 				Command.SINGLE_SUCCESS

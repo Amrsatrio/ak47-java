@@ -24,6 +24,7 @@ import com.tb24.fn.util.format
 import com.tb24.fn.util.getPreviewImagePath
 import com.tb24.uasset.AssetManager
 import me.fungames.jfortniteparse.fort.exports.FortWorkerType
+import me.fungames.jfortniteparse.fort.objects.FortItemQuantityPair
 import me.fungames.jfortniteparse.fort.objects.rows.FortQuestRewardTableRow
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
 import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
@@ -166,6 +167,15 @@ fun CatalogItemPrice.getAccountBalance(profileManager: ProfileManager): Int {
 }
 
 fun CatalogItemPrice.getAccountBalanceText(profileManager: ProfileManager) = icon() + ' ' + Formatters.num.format(getAccountBalance(profileManager))
+
+fun Collection<FortItemQuantityPair>.render(prefix: String, fac: Float = 1f, bold: Boolean = false, conditionalCondition: Boolean): String {
+	val fmt = if (bold) "**" else ""
+	return joinToString("\n") {
+		"$prefix$fmt${it.asItemStack().apply { setConditionForConditionalItem(conditionalCondition) }.renderWithIcon((it.Quantity * fac).toInt())}$fmt"
+	}
+}
+
+fun FortItemQuantityPair.asItemStack() = FortItemStack(ItemPrimaryAssetId.toString(), Quantity)
 
 fun Map<FName, FortQuestRewardTableRow>.render(prefix: String, fac: Float = 1f, bold: Boolean = false, conditionalCondition: Boolean): String {
 	val fmt = if (bold) "**" else ""
