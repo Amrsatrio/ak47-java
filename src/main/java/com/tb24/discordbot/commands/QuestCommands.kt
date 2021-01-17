@@ -154,11 +154,10 @@ class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR q
 		source.ensureSession()
 		var tab: RewardCategoryTabData? = null
 		if (search != null) {
-			val maxDistance = search.length / 5 + 3
 			val tabs = getTabs()
 			tab = tabs.firstOrNull {
 				val tabName = it.DisplayName.format()!!.toLowerCase()
-				tabName == search || tabName.startsWith(search) || Utils.damerauLevenshteinDistance(search, tabName) < maxDistance
+				tabName == search || tabName.startsWith(search) || Utils.damerauLevenshteinDistance(search, tabName) < tabName.length / 2 + 5
 			} ?: throw SimpleCommandExceptionType(LiteralMessage("No matches found for \"$search\". Available options:\n${tabs.joinToString("\n") { "\u2022 " + it.DisplayName.format().orDash() }}")).create()
 		}
 		source.loading("Getting challenges")
