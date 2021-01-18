@@ -62,8 +62,8 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 			source = PrivateChannelCommandSource(client, channel)
 			var session = client.sessions[discordId]
 			var requiresLogin = false
-			if (session == null) {
-				session = Session(client, discordId)
+			if (session?.api?.currentLoggedIn?.id != epicId) {
+				session = Session(client, discordId, false)
 				requiresLogin = true
 			} else {
 				val verifyResponse = session.api.accountService.verify(null).execute()

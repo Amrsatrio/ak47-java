@@ -21,13 +21,13 @@ import java.io.IOException
 import java.util.*
 import java.util.concurrent.CompletableFuture
 
-class Session(val client: DiscordBot, val id: String) {
+class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, private var persistent: Boolean = true) {
 	val LOGGER = LoggerFactory.getLogger("Session")
 	val api = EpicApi(client.okHttpClient)
 	var channelsManager = ChannelsManager(api)
 
 	init {
-		SessionPersister.get(id)?.apply {
+		if (persistent) SessionPersister.get(id)?.apply {
 			api.userToken = token
 			api.currentLoggedIn = accountData
 		}
@@ -70,7 +70,8 @@ class Session(val client: DiscordBot, val id: String) {
 			if (accountData?.externalAuths != null) {
 				for (externalAuth in accountData.externalAuths.values) {
 					if (externalAuth.type == "psn" || externalAuth.type == "xbl" || externalAuth.type == "nintendo") {
-						embed.addField(L10N.format("account.ext.${externalAuth.type}.name"), externalAuth.externalDisplayName ?: "\u2014", true)
+						embed.addField(L10N.format("account.ext.${externalAuth.type}.name"), externalAuth.externalDisplayName
+							?: "\u2014", true)
 					}
 				}
 			}
@@ -81,7 +82,7 @@ class Session(val client: DiscordBot, val id: String) {
 	}
 
 	@JvmOverloads
-	fun logout(message: Message?, clearPersisted: Boolean = true): Boolean {
+	fun logout(message: Message?): Boolean {
 		val logoutMsg = message?.run {
 			if (author.idLong == client.discord.selfUser.idLong) {
 				editMessage(Utils.loadingText("Logging out")).complete()
@@ -97,17 +98,17 @@ class Session(val client: DiscordBot, val id: String) {
 			logoutMsg?.editMessage("✅ Already logged out.")?.queue()
 			bError = true
 		}
-		clear(clearPersisted)
+		clear()
 		return bError
 	}
 
 	fun save() {
-		SessionPersister.set(this)
+		if (persistent) SessionPersister.set(this)
 	}
 
-	fun clear(clearPersisted: Boolean = true) {
+	fun clear() {
 		api.clear()
-		if (clearPersisted) SessionPersister.remove(id)
+		if (persistent) SessionPersister.remove(id)
 	}
 
 	@Throws(HttpException::class)
