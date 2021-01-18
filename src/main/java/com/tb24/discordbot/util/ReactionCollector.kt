@@ -77,7 +77,7 @@ class ReactionCollector : Collector<MessageReaction, ReactionCollectorOptions> {
 		if (collected.containsKey(item.key()) && user != null && users.containsKey(user.idLong)) {
 			onRemove(item, user)
 		}
-		return if (item.count > 0) null else item.key()
+		return /*if (item.count > 0)*/ null //else item.key() TODO figure out how to get the number of reactions within an event stack
 	}
 	// endregion
 
