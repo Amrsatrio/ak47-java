@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableMap
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
+import com.tb24.discordbot.commands.CommandSourceStack
 import com.tb24.discordbot.commands.GrantType
 import com.tb24.discordbot.commands.PrivateChannelCommandSource
 import com.tb24.discordbot.commands.notifyDailyRewardsClaimed
@@ -15,6 +16,7 @@ import com.tb24.fn.model.mcpprofile.commands.campaign.ClaimLoginReward
 import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.model.mcpprofile.notifications.DailyRewardsNotification
 import com.tb24.fn.util.EAuthClient
+import net.dv8tion.jda.api.exceptions.ErrorResponseException
 import net.dv8tion.jda.internal.entities.UserImpl
 import org.slf4j.LoggerFactory
 import java.io.IOException
@@ -22,7 +24,7 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
 class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
-	companion object{
+	companion object {
 		@JvmField
 		val TASK_IS_RUNNING = AtomicBoolean()
 	}
@@ -51,14 +53,15 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 
 	private fun perform(entry: AutoClaimEntry): Boolean {
 		val epicId = entry.id
-		val displayName = client.internalSession.queryUsers(setOf(epicId)).first().displayName // TODO what if the account is deleted
 		val discordId = entry.registrantId
-		val user = client.discord.getUserById(discordId) ?: client.discord.retrieveUserById(discordId).complete()
-		val channel = (user as UserImpl).privateChannel ?: user.openPrivateChannel().complete()
-		val source = PrivateChannelCommandSource(client, channel)
-		var session = client.sessions[discordId]
-		var requiresLogin = false
+		var source: CommandSourceStack? = null
 		try {
+			val displayName = client.internalSession.queryUsers(setOf(epicId)).first().displayName // TODO what if the account is deleted
+			val user = client.discord.getUserById(discordId) ?: client.discord.retrieveUserById(discordId).complete()
+			val channel = (user as UserImpl).privateChannel ?: user.openPrivateChannel().complete()
+			source = PrivateChannelCommandSource(client, channel)
+			var session = client.sessions[discordId]
+			var requiresLogin = false
 			if (session == null) {
 				session = Session(client, discordId)
 				requiresLogin = true
@@ -85,7 +88,7 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 			val dailyRewardStat = (source.api.profileManager.getProfileData("campaign").stats.attributes as CampaignProfileAttributes).daily_rewards
 			val millisInDay = 24L * 60L * 60L * 1000L
 			if (dailyRewardStat?.lastClaimDate?.time?.let { it / millisInDay == System.currentTimeMillis() / millisInDay } != false) {
-				//notifyDailyRewardsClaimed(source, dailyRewardStat, null)
+				if (user.idLong == 624299014388711455L) notifyDailyRewardsClaimed(source, dailyRewardStat, null)
 				return true
 			}
 			val response = session.api.profileManager.dispatchClientCommandRequest(ClaimLoginReward(), "campaign").await()
@@ -97,10 +100,17 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 			}
 			return true
 		} catch (e: HttpException) {
-			source.client.commandManager.httpError(source, e, "Failed to automatically claim daily rewards")
+			source?.client?.commandManager?.httpError(source, e, "Failed to automatically claim daily rewards")
+			client.dlog("Failed to claim dailies for $epicId (registered by <@$discordId>)\n$e", null)
+			logger.warn("Failed to claim dailies for ${entry.id}", e)
+			return true
+		} catch (e: ErrorResponseException) {
+			client.dlog("Failed to claim dailies for $epicId (registered by <@$discordId>)\n$e", null)
+			logger.warn("Failed to claim dailies for ${entry.id}", e)
 			return true
 		} catch (e: IOException) {
-			logger.warn("Failed to claim dailies for $entry.id", e)
+			client.dlog("Failed to claim dailies for $epicId (registered by <@$discordId>). Retrying\n$e", null)
+			logger.warn("Failed to claim dailies for ${entry.id}. Retrying", e)
 			return false
 		}
 	}
