@@ -74,7 +74,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 				}
 				if (errorTitle != null) {
 					source.complete(null, EmbedBuilder()
-						.setTitle("⚠ ${errorText.format()}")
+						.setTitle("⚠ ${errorTitle.format()}")
 						.setDescription(errorText.format())
 						.setColor(0xFFF300)
 						.build())
@@ -130,7 +130,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 					}
 					source.complete(null, EmbedBuilder()
 						.setTitle("⚠ ${source.errorTitle}")
-						.setDescription(FAILED_FORMATS[min(failedAccIds.size, 5) - 1].format(fmt))
+						.setDescription(FAILED_FORMATS[min(failedAccIds.size, 5) - 1].format(*(fmt as Array<String>)))
 						.setColor(0xFFF300)
 						.build())
 					return 0
