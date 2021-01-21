@@ -15,7 +15,7 @@ class CatalogOfferArgument : ArgumentType<Result> {
 		private val CATALOG_ENTRY_UNKNOWN = SimpleCommandExceptionType(LiteralMessage("Catalog entry not found."))
 
 		@JvmStatic
-		fun catalogEntry() = CatalogOfferArgument()
+		inline fun catalogOffer() = CatalogOfferArgument()
 
 		@JvmStatic
 		fun getCatalogEntry(context: CommandContext<CommandSourceStack>, name: String, loadingText: String = "Getting the shop") =

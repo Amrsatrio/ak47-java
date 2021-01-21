@@ -3,7 +3,6 @@ package com.tb24.discordbot.util;
 import com.google.gson.JsonElement;
 import com.tb24.fn.model.FortItemStack;
 import com.tb24.fn.util.EAuthClient;
-import me.fungames.jfortniteparse.fort.objects.FortMcpQuestObjectiveInfo;
 
 import java.net.URLEncoder;
 import java.util.HashMap;
@@ -11,6 +10,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.regex.Pattern;
+
+import me.fungames.jfortniteparse.fort.objects.FortMcpQuestObjectiveInfo;
 
 import static com.tb24.fn.util.Utils.isNone;
 
@@ -78,10 +79,6 @@ public class Utils {
 		return cs == null || cs.length() == 0;
 	}
 
-	public static String emoji(int codePoint) {
-		return new String(Character.toChars(codePoint));
-	}
-
 	public static String loadingText(String s) {
 		return s.contains("%LOADING%") ? s.replace("%LOADING%", LOADING_EMOJI) : (s + " " + LOADING_EMOJI);
 	}
@@ -96,14 +93,8 @@ public class Utils {
 		}
 
 		String backendName = "completion_" + objective.BackendName.toString().toLowerCase(Locale.ENGLISH);
-
-		for (Map.Entry<String, JsonElement> entry : item.attributes.entrySet()) {
-			if (entry.getKey().startsWith(backendName)) {
-				return entry.getValue().isJsonPrimitive() ? Math.min(entry.getValue().getAsInt(), objective.Count) : -1;
-			}
-		}
-
-		return -1;
+		JsonElement element = item.attributes.get(backendName);
+		return element.isJsonPrimitive() ? element.getAsInt() : -1;
 	}
 
 	public static int mod(int a, int b) {

@@ -7,7 +7,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.L10N
-import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.catalogEntry
+import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.catalogOffer
 import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.getCatalogEntry
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
@@ -28,7 +28,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 	val FAILED_FORMATS = arrayOf(FText("{0}"), L10N.GiftFailedTwoAccounts, L10N.GiftFailedThreeAccounts, L10N.GiftFailedFourAccounts, L10N.GiftFailedFivePlusAccounts)
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.then(argument("item number", catalogEntry())
+		.then(argument("item number", catalogOffer())
 			.then(argument("recipients", users(4))
 				.executes { execute(it.source, getCatalogEntry(it, "item number"), getUsers(it, "recipients")) }
 			)

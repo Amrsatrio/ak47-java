@@ -8,7 +8,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType.integer
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.L10N
-import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.catalogEntry
+import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.catalogOffer
 import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.getCatalogEntry
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
@@ -26,7 +26,7 @@ import java.util.concurrent.CompletableFuture
 
 class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry from the Battle Royale or Save the World Item Shop.", arrayOf("buy", "b")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.then(argument("item number", catalogEntry())
+		.then(argument("item number", catalogOffer())
 			.executes { execute(it.source, getCatalogEntry(it, "item number")) }
 			.then(argument("quantity", integer())
 				.executes { execute(it.source, getCatalogEntry(it, "item number"), getInteger(it, "quantity")) }

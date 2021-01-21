@@ -168,18 +168,14 @@ fun CatalogItemPrice.getAccountBalance(profileManager: ProfileManager): Int {
 
 fun CatalogItemPrice.getAccountBalanceText(profileManager: ProfileManager) = icon() + ' ' + Formatters.num.format(getAccountBalance(profileManager))
 
-fun Collection<FortItemQuantityPair>.render(prefix: String, fac: Float = 1f, bold: Boolean = false, conditionalCondition: Boolean): String {
-	val fmt = if (bold) "**" else ""
-	return joinToString("\n") {
-		"$prefix$fmt${it.asItemStack().apply { setConditionForConditionalItem(conditionalCondition) }.renderWithIcon((it.Quantity * fac).toInt())}$fmt"
-	}
-}
+fun FortItemQuantityPair.render(fac: Float, conditionalCondition: Boolean) =
+	asItemStack().apply { setConditionForConditionalItem(conditionalCondition) }.renderWithIcon((Quantity * fac).toInt())
 
 fun FortItemQuantityPair.asItemStack() = FortItemStack(ItemPrimaryAssetId.toString(), Quantity)
 
-fun Map<FName, FortQuestRewardTableRow>.render(prefix: String, fac: Float = 1f, bold: Boolean = false, conditionalCondition: Boolean): String {
+fun Map<FName, FortQuestRewardTableRow>.render(prefix: String, orPrefix: String, fac: Float, bold: Boolean, conditionalCondition: Boolean): List<String> {
 	val fmt = if (bold) "**" else ""
-	val lines = arrayListOf<String>()
+	val lines = mutableListOf<String>()
 	var lastEntry: FortQuestRewardTableRow? = null
 	toSortedMap { o1, o2 ->
 		val priority1 = o1.text.substringAfterLast('_', "0").toInt()
@@ -188,11 +184,11 @@ fun Map<FName, FortQuestRewardTableRow>.render(prefix: String, fac: Float = 1f, 
 	}.forEach {
 		lines.add("$prefix$fmt${it.value.asItemStack().apply { setConditionForConditionalItem(conditionalCondition) }.renderWithIcon((it.value.Quantity * fac).toInt())}$fmt")
 		if (lastEntry != null && lastEntry!!.Selectable && it.value.Selectable) {
-			lines.add("$prefix- OR -")
+			lines.add("$orPrefix- OR -")
 		}
 		lastEntry = it.value
 	}
-	return lines.joinToString("\n")
+	return lines
 }
 
 fun FortQuestRewardTableRow.asItemStack() = FortItemStack(TemplateId.text, Quantity)

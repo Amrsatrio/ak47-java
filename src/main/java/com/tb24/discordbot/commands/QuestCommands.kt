@@ -11,8 +11,9 @@ import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.blenderumap.getProp
 import com.tb24.discordbot.Rune
+import com.tb24.discordbot.commands.arguments.ItemArgument.Companion.getItem
+import com.tb24.discordbot.commands.arguments.ItemArgument.Companion.item
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
 import com.tb24.discordbot.util.*
@@ -28,6 +29,7 @@ import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.model.mcpprofile.commands.subgame.FortRerollDailyQuest
 import com.tb24.fn.util.format
 import com.tb24.uasset.AssetManager
+import com.tb24.uasset.getProp
 import me.fungames.jfortniteparse.fort.enums.EFortRarity
 import me.fungames.jfortniteparse.fort.exports.AthenaDailyQuestDefinition
 import me.fungames.jfortniteparse.fort.exports.FortChallengeBundleItemDefinition
@@ -37,6 +39,7 @@ import me.fungames.jfortniteparse.fort.objects.rows.FortQuestRewardTableRow
 import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
 import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
 import me.fungames.jfortniteparse.util.toPngArray
+import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import java.awt.AlphaComposite
 import java.awt.Color
@@ -120,7 +123,7 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 	private fun displayDailyQuests(c: CommandContext<CommandSourceStack>, user: GameProfile): Int {
 		val source = c.source
 		val campaign = source.api.profileManager.getProfileData(user.id, "campaign")
-		val canReceiveMtxCurrency = campaign.items.values.firstOrNull { it.templateId == "Token:receivemtxcurrency" } != null
+		val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
 		val numRerolls = (campaign.stats.attributes as IQuestManager).questManager?.dailyQuestRerolls ?: 0
 		var description = getCampaignDailyQuests(campaign)
 			.mapIndexed { i, it -> renderChallenge(it, "${i + 1}. ", "\u00a0\u00a0\u00a0", conditionalCondition = canReceiveMtxCurrency) }
@@ -215,12 +218,67 @@ class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR q
 	}
 }
 
+class QuestCommand : BrigadierCommand("quest", "Shows the details of a quest by description.") {
+	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.then(argument("item", item())
+			.executes {
+				val source = it.source
+				source.ensureSession()
+				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
+				val campaign = source.api.profileManager.getProfileData("campaign")
+				questDetails(source, getItem(it, "item", campaign))
+			}
+		)
+
+	private fun questDetails(source: CommandSourceStack, item: FortItemStack): Int {
+		val conditionalCondition = false
+		val quest = item.defData as? FortQuestItemDefinition
+			?: throw SimpleCommandExceptionType(LiteralMessage("Not a quest item. It is ${item.defData?.clazz?.name}.")).create()
+		val embed = EmbedBuilder()
+			.setColor(COLOR_SUCCESS)
+			.setAuthor(quest.DisplayName?.format(), null, Utils.benBotExportAsset(quest.LargePreviewImage?.toString()))
+			.setDescription(quest.Description?.format())
+		val objectives = quest.Objectives.filter { !it.bHidden }
+		if (objectives.isNotEmpty()) {
+			embed.addField("Objectives", objectives.joinToString("\n") {
+				val completion = Utils.getCompletion(it, item)
+				val objectiveCompleted = completion >= it.Count
+				val sb = StringBuilder(if (objectiveCompleted) "☑ ~~" else "☐ ")
+				sb.append(it.Description)
+				if (it.Count > 1) {
+					sb.append(" [%,d/%,d]".format(completion, it.Count))
+				}
+				if (objectiveCompleted) {
+					sb.append("~~")
+				}
+				sb.toString()
+			}, false)
+		}
+		val rewardLines = mutableListOf<String>()
+		quest.Rewards?.forEach { reward ->
+			if (reward.ItemPrimaryAssetId.PrimaryAssetType.Name.text != "Quest") {
+				rewardLines.add("\u2022 " + reward.render(1f, conditionalCondition))
+			}
+		}
+		quest.RewardsTable?.value?.rows
+			?.mapValues { it.value.mapToClass(FortQuestRewardTableRow::class.java) }
+			?.filter { it.value.QuestTemplateId == "*" || it.value.QuestTemplateId == item.templateId && !it.value.Hidden }
+			?.render("\u2022 ", "  ", 1f, false, conditionalCondition)
+			?.let { rewardLines.addAll(it) }
+		if (rewardLines.isNotEmpty()) {
+			embed.addField("Rewards", rewardLines.joinToString("\n"), false)
+		}
+		source.complete(null, embed.build())
+		return Command.SINGLE_SUCCESS
+	}
+}
+
 fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int, questsGetter: (McpProfile) -> List<FortItemStack>): Int {
 	source.ensureSession()
 	source.loading("Getting quests")
 	source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), profileId).await()
 	var profile = source.api.profileManager.getProfileData(profileId)
-	val canReceiveMtxCurrency = profile.items.values.firstOrNull { it.templateId == "Token:receivemtxcurrency" } != null
+	val canReceiveMtxCurrency = profile.items.values.any { it.templateId == "Token:receivemtxcurrency" }
 	val currentDailies = questsGetter(profile)
 	val questToReplace = currentDailies.getOrNull(questIndex - 1)
 		?: throw SimpleCommandExceptionType(LiteralMessage("Invalid daily quest number.")).create()
@@ -260,21 +318,19 @@ fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: Str
 	val sb = StringBuilder("%s**%s** ( %,d / %,d )".format(prefix, dn, completion, max))
 	val quest = item.defData as FortQuestItemDefinition
 	val bold = canBold && xpRewardScalar == 1f
-	quest.Rewards?.let { rewards ->
-		val rendered = rewards.filter { it.ItemPrimaryAssetId.PrimaryAssetType.Name.text != "Quest" }.render(rewardsPrefix, xpRewardScalar, bold, conditionalCondition)
-		if (rendered.isNotEmpty()) {
-			sb.append('\n').append(rendered)
+	quest.Rewards?.forEach { reward ->
+		if (reward.ItemPrimaryAssetId.PrimaryAssetType.Name.text != "Quest") {
+			sb.append('\n')
+			if (bold) sb.append("**")
+			sb.append(rewardsPrefix).append(reward.render(xpRewardScalar, conditionalCondition))
+			if (bold) sb.append("**")
 		}
 	}
-	val tableRewards = quest.RewardsTable?.value?.rows
+	quest.RewardsTable?.value?.rows
 		?.mapValues { it.value.mapToClass(FortQuestRewardTableRow::class.java) }
 		?.filter { it.value.QuestTemplateId == "*" || it.value.QuestTemplateId == item.templateId && !it.value.Hidden }
-	if (tableRewards != null && tableRewards.isNotEmpty()) {
-		val rendered = tableRewards.render(rewardsPrefix, xpRewardScalar, bold, conditionalCondition)
-		if (rendered.isNotEmpty()) {
-			sb.append('\n').append(rendered)
-		}
-	}
+		?.render(rewardsPrefix, rewardsPrefix, xpRewardScalar, bold, conditionalCondition)
+		?.forEach { sb.append('\n').append(it) }
 	return sb.toString()
 }
 

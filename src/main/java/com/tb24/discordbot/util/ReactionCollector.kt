@@ -6,9 +6,9 @@ import net.dv8tion.jda.api.entities.MessageReaction
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.events.channel.text.TextChannelDeleteEvent
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent
-import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionRemoveEvent
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent
 import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveAllEvent
+import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEvent
 import java.util.concurrent.CompletableFuture
 
 open class ReactionCollectorOptions : CollectorOptions() {
@@ -32,7 +32,7 @@ class ReactionCollector : Collector<MessageReaction, ReactionCollectorOptions> {
 		handleCollect(event.reaction, event.user)
 	}
 
-	override fun onGuildMessageReactionRemove(event: GuildMessageReactionRemoveEvent) {
+	override fun onMessageReactionRemove(event: MessageReactionRemoveEvent) {
 		handleDispose(event.reaction, users[event.userIdLong])
 	}
 

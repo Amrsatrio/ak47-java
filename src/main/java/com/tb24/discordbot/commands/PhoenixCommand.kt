@@ -67,15 +67,15 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 		)
 
 	private fun display(source: CommandSourceStack, user: GameProfile): Int {
-		val phoenixXpItem = source.api.profileManager.getProfileData(user.id, "campaign").items.values.firstOrNull { it.templateId == "AccountResource:phoenixxp" }
-			?: throw SimpleCommandExceptionType(LiteralMessage("no ventures xp item, profile is bugged !!111!!1!")).create()
+		val xpQuantity = source.api.profileManager.getProfileData(user.id, "campaign").items.values.firstOrNull { it.templateId == "AccountResource:phoenixxp" }?.quantity
+			?: 0
 		val currentEvent = "EventFlag.Phoenix.Winterfest" // TODO don't hardcode this by querying the calendar endpoint
 		val table = phoenixLevelRewardsTable ?: throw noDataErr.create()
 		val levels = table.rows.filterKeys { it.text.startsWith(currentEvent) }.entries.sortedBy { it.key.text.substringAfter(currentEvent).toInt() }.map { it.value.mapToClass<FortPhoenixLevelRewardData>() }.toList()
 		var levelData: FortPhoenixLevelRewardData? = null
 		var levelIdx = levels.size
 		while (levelIdx-- > 0) {
-			if (phoenixXpItem.quantity >= levels[levelIdx].TotalRequiredXP) {
+			if (xpQuantity >= levels[levelIdx].TotalRequiredXP) {
 				levelData = levels[levelIdx]
 				break
 			}
@@ -91,15 +91,15 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 		val nextMajorData = levels.getOrNull(nextMajorIdx)
 		source.complete(null, source.createEmbed(user)
 			.setTitle("Ventures: Season 3")
-			.setDescription("**Level ${Formatters.num.format(levelIdx + 1)}** - ${(getItemIconEmoji(phoenixXpItem.templateId)?.run { "$asMention " } ?: "")}${Formatters.num.format(phoenixXpItem.quantity)}\n" + if (nextLevelData != null) {
-				val current = phoenixXpItem.quantity - levelData.TotalRequiredXP
+			.setDescription("**Level ${Formatters.num.format(levelIdx + 1)}** - ${(getItemIconEmoji("AccountResource:phoenixxp")?.run { "$asMention " } ?: "")}${Formatters.num.format(xpQuantity)}\n" + if (nextLevelData != null) {
+				val current = xpQuantity - levelData.TotalRequiredXP
 				val delta = nextLevelData.TotalRequiredXP - levelData.TotalRequiredXP
 				val lastLevel = levels.last()
 				"`%s`\n%,d / %,d\n\n%,d XP to next level.\n%,d XP to level %,d.".format(
 					Utils.progress(current, delta, 32),
 					current, delta,
-					nextLevelData.TotalRequiredXP - phoenixXpItem.quantity,
-					lastLevel.TotalRequiredXP - phoenixXpItem.quantity,
+					nextLevelData.TotalRequiredXP - xpQuantity,
+					lastLevel.TotalRequiredXP - xpQuantity,
 					levels.size
 				)
 			} else "Max level.")

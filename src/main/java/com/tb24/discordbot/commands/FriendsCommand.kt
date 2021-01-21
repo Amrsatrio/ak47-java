@@ -355,6 +355,10 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			}
 		}
 		if (friend.created != null) {
+			val canBeGiftedStart = friend.created.time + 2L * 24L * 60L * 60L * 1000L
+			if (System.currentTimeMillis() < canBeGiftedStart) {
+				addField("Eligible for gifting", canBeGiftedStart.relativeFromNow(), false)
+			}
 			setFooter("Friends since")
 			setTimestamp(friend.created.toInstant())
 		}
