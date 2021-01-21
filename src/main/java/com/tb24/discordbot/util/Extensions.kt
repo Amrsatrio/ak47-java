@@ -1,10 +1,8 @@
 package com.tb24.discordbot.util
 
-import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.StringReader
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.CommandSyntaxException
-import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
@@ -219,16 +217,12 @@ fun <T> Array<T>.safeGetOneIndexed(index: Int, reader: StringReader? = null, sta
 
 @Throws(CommandSyntaxException::class)
 fun Message.yesNoReactions(author: User, inTime: Long = 30000L): CompletableFuture<Boolean> = CompletableFuture.supplyAsync {
-	try {
-		val icons = arrayOf("✅", "❌").apply { forEach { addReaction(it).queue() } }
-		awaitReactions({ reaction, user, _ -> icons.contains(reaction.reactionEmote.name) && user?.idLong == author.idLong }, AwaitReactionsOptions().apply {
-			max = 1
-			time = inTime
-			errors = arrayOf(CollectorEndReason.TIME)
-		}).await().first().reactionEmote.name == "✅"
-	} catch (e: CollectorException) {
-		throw SimpleCommandExceptionType(LiteralMessage("Timed out while waiting for your confirmation.")).create()
-	}
+	val icons = arrayOf("✅", "❌").apply { forEach { addReaction(it).queue() } }
+	awaitReactions({ reaction, user, _ -> icons.contains(reaction.reactionEmote.name) && user?.idLong == author.idLong }, AwaitReactionsOptions().apply {
+		max = 1
+		time = inTime
+		errors = arrayOf(CollectorEndReason.TIME)
+	}).await().first().reactionEmote.name == "✅"
 }
 
 fun <T> Future<T>.await(): T {

@@ -61,18 +61,14 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 			val priceSelectionMsg = source.complete(null, priceSelectionEbd.build())
 			val icons = offer.prices.map { it.emote() ?: throw SimpleCommandExceptionType(LiteralMessage(it.render(quantity) + " is missing an emote. Please report this problem to the devs.")).create() }
 			icons.forEach { priceSelectionMsg.addReaction(it).queue() }
-			try {
-				val choice = priceSelectionMsg.awaitReactions({ reaction, user, _ -> icons.firstOrNull { it.idLong == reaction.reactionEmote.idLong } != null && user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
-					max = 1
-					time = 30000L
-					errors = arrayOf(CollectorEndReason.TIME)
-				}).await().first().reactionEmote.idLong
-				priceIndex = icons.indexOfFirst { it.idLong == choice }
-				if (priceIndex == -1) {
-					throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
-				}
-			} catch (e: CollectorException) {
-				throw SimpleCommandExceptionType(LiteralMessage("Timed out while waiting for your response.")).create()
+			val choice = priceSelectionMsg.awaitReactions({ reaction, user, _ -> icons.firstOrNull { it.idLong == reaction.reactionEmote.idLong } != null && user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
+				max = 1
+				time = 30000L
+				errors = arrayOf(CollectorEndReason.TIME)
+			}).await().first().reactionEmote.idLong
+			priceIndex = icons.indexOfFirst { it.idLong == choice }
+			if (priceIndex == -1) {
+				throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
 			}
 		} else if (priceIndex < 0) {
 			priceIndex = 0

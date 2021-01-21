@@ -41,7 +41,7 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 		source.loading("Getting XP coins data")
 		source.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "athena").await()
 		val athena = source.api.profileManager.getProfileData("athena")
-		val processed = mutableMapOf<Int, MutableMap<String, MutableMap<Int, Int>>>()
+		val processed = sortedMapOf<Int, MutableMap<String, MutableMap<Int, Int>>>()
 		val uncollected = mutableListOf<String>()
 
 		for (item in athena.items.values) {
@@ -52,7 +52,7 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 			val week = tidMatch.group(2).toInt() - 1
 			val type = tidMatch.group(3)
 
-			val weekData = processed.getOrPut(week) { mutableMapOf("green" to mutableMapOf(), "blue" to mutableMapOf(), "purple" to mutableMapOf(), "gold" to mutableMapOf()) }
+			val weekData = processed.getOrPut(week) { mutableMapOf("green" to sortedMapOf(), "blue" to sortedMapOf(), "purple" to sortedMapOf(), "gold" to sortedMapOf()) }
 			val prefix = "completion_" + item.primaryAssetName + "_obj"
 
 			for (entry in item.attributes.entrySet()) {
