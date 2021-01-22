@@ -35,6 +35,11 @@ public class HttpException extends RuntimeException {
 		return response.code();
 	}
 
+	@Override
+	public String toString() {
+		return super.toString() + ": " + (epicError != null ? epicError.getDisplayText() : responseStr);
+	}
+
 	public static <T extends EpicError> EpicError toEpicError(HttpException ex, Class<T> toErrorClass) {
 		try {
 			//Log2.e("EpicError", ex.responseStr);

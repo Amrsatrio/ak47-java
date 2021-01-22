@@ -243,7 +243,7 @@ class QuestCommand : BrigadierCommand("quest", "Shows the details of a quest by 
 			embed.addField("Objectives", objectives.joinToString("\n") {
 				val completion = Utils.getCompletion(it, item)
 				val objectiveCompleted = completion >= it.Count
-				val sb = StringBuilder(if (objectiveCompleted) "☑ ~~" else "☐ ")
+				val sb = StringBuilder(if (objectiveCompleted) "\\☑ ~~" else "☐ ")
 				sb.append(it.Description)
 				if (it.Count > 1) {
 					sb.append(" [%,d/%,d]".format(completion, it.Count))

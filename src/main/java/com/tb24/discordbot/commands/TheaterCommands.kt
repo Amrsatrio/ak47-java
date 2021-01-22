@@ -81,8 +81,8 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 			}
 		}
 		source.complete(null, source.createEmbed(user)
-			.setTitle("Today's V-Bucks alerts")
-			.setDescription(lines.joinToString("\n\n"))
+			//.setTitle("Today's V-Bucks alerts")
+			.setDescription(if (lines.isNotEmpty()) lines.joinToString("\n\n") else "There are no V-Bucks mission alerts today :(")
 			.build())
 		return Command.SINGLE_SUCCESS
 	}

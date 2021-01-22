@@ -25,8 +25,8 @@ fun <T> Message.replyPaginated(all: List<T>,
 	customReactions?.addReactions(reactions)
 	reactions.forEach { msg.addReaction(it).queue() }
 	val collector = msg.createReactionCollector({ reaction, user, _ -> reactions.contains(reaction.reactionEmote.name) && user?.idLong == author.idLong }, ReactionCollectorOptions().apply {
-		idle = 30000L
-		dispose = true
+		idle = 60000L
+		//dispose = true
 	})
 	collector.callback = object : CollectorListener<MessageReaction> {
 		override fun onCollect(item: MessageReaction, user: User?) {
@@ -42,9 +42,9 @@ fun <T> Message.replyPaginated(all: List<T>,
 				}
 			}
 
-			/*if (msg.member != null && msg.member!!.hasPermission(Permission.MESSAGE_MANAGE)) {
+			if (msg.member != null && msg.member!!.hasPermission(Permission.MESSAGE_MANAGE)) {
 				msg.removeReaction(item.reactionEmote.name, user!!).queue()
-			}*/
+			}
 
 			if (page != oldPage) {
 				msg.editMessage(render(all.subList(page * pageSize, min(all.size, (page * pageSize) + pageSize)), page, pageCount)).queue()
@@ -52,7 +52,7 @@ fun <T> Message.replyPaginated(all: List<T>,
 		}
 
 		override fun onRemove(item: MessageReaction, user: User?) {
-			onCollect(item, user)
+			//onCollect(item, user) TODO invoke action on reaction remove needs more testing
 		}
 
 		override fun onDispose(item: MessageReaction, user: User?) {}

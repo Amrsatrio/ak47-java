@@ -113,7 +113,9 @@ private fun create(c: CommandContext<CommandSourceStack>): Int {
 	if (dbDevices.size >= source.client.savedLoginsManager.getLimit(sessionId)) {
 		throw SimpleCommandExceptionType(LiteralMessage("Maximum number of saved logins has been reached.")).create()
 	}
-	//throw SimpleCommandExceptionType(LiteralMessage("The current instance of the bot does not allow saving logins.")).create()
+	if (System.getProperty("disallowDeviceAuthCreation") == "true") {
+		throw SimpleCommandExceptionType(LiteralMessage("The current instance of the bot does not allow saving logins.")).create()
+	}
 	source.loading("Creating device auth")
 	val response = source.api.accountService.createDeviceAuth(user.id, null).exec().body()!!
 	source.client.savedLoginsManager.put(sessionId, DeviceAuth().apply {

@@ -4,12 +4,13 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 
-class MemoryCommand : BrigadierCommand("memory", "Displays the JVM's current memory usage.") {
+class MemoryCommand : BrigadierCommand("memory", "Displays the JVM's current memory usage.", arrayOf("mem")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
-			val max = Runtime.getRuntime().maxMemory()
-			val total = Runtime.getRuntime().totalMemory()
-			val free = Runtime.getRuntime().freeMemory()
+			val runtime = Runtime.getRuntime()
+			val max = runtime.maxMemory()
+			val total = runtime.totalMemory()
+			val free = runtime.freeMemory()
 			val used = total - free
 			val sb = StringBuilder()
 			sb.append("Mem: % 2d%% %03d/%03dMB".format(used * 100L / max, bytesToMb(used), bytesToMb(max))).append("\n")

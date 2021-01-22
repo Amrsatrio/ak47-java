@@ -125,7 +125,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 						val errorMsg = getErrorMsg(failedReasons[i])
 						if (i < 4) {
 							val gameProfile = recipients[failedAccIds[i]]
-							fmt[i] = errorMsg.format(gameProfile?.displayName ?: failedAccIds[i]).toString() + if (errorMsg == L10N.GiftFailedGeneric) " (${failedReasons[i]})" else ""
+							fmt[i] = errorMsg.format(gameProfile?.displayName ?: failedAccIds[i]) + if (errorMsg == L10N.GiftFailedGeneric) " (${failedReasons[i]})" else ""
 						}
 					}
 					source.complete(null, EmbedBuilder()
@@ -144,7 +144,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 
 	private fun getErrorMsg(errorCode: String): FText = when (errorCode) {
 //		"errors.com.epicgames.fortnite.gift_recipient_has_reached_limit" -> L10N.GiftFailedReceiveLimitReached
-		"errors.com.epicgames.modules.gamesubcatalog.gift_recipient_is_not_eligible_friend\n" -> L10N.GiftFailedFriendRequirement
+		"errors.com.epicgames.modules.gamesubcatalog.gift_recipient_is_not_eligible_friend" -> L10N.GiftFailedFriendRequirement
 		"errors.com.epicgames.fortnite.gift_recipient_on_different_platform" -> L10N.GiftFailedCrossPlatform
 		"errors.com.epicgames.modules.gamesubcatalog.purchase_not_allowed" -> L10N.GiftFailedAlreadyOwned
 		"errors.com.epicgames.modules.gamesubcatalog.receiver_will_not_accept_gifts" -> L10N.GiftFailedOptOut

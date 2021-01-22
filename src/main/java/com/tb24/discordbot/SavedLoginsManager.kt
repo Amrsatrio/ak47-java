@@ -52,7 +52,7 @@ class SavedLoginsManager(private val conn: Connection) {
 		}
 	}
 
-	fun getLimit(sessionId: String) = if (GODS.contains(sessionId)) 10 else 5
+	fun getLimit(sessionId: String) = if (GODS.contains(sessionId)) 10 else 7
 
 	class Entry {
 		@JvmField var id: String? = null
