@@ -26,7 +26,7 @@ import java.util.concurrent.CompletableFuture
 
 private val defaultGameDataBR by lazy { INSTANCE.provider.loadObject<GameDataBR>("/Game/Balance/DefaultGameDataBR.DefaultGameDataBR") }
 private val questIndicatorData by lazy { INSTANCE.provider.loadObject<FortQuestIndicatorData>("/Game/Quests/QuestIndicatorData.QuestIndicatorData") }
-private val locationTagToDisplayName by lazy { // TODO QuestIndicatorData does not contain location names for tandem location tags such as Athena.Location.POI.Tandem.RetailRow
+private val locationTagToDisplayName by lazy {
 	val map = hashMapOf<String, FText>()
 	questIndicatorData?.apply {
 		ChallengeMapPoiData.associateTo(map) { it.LocationTag.toString().toLowerCase() to it.Text }
@@ -80,12 +80,16 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 				.setImage(Utils.benBotExportAsset(def.SidePanelIcon.toString()))
 				.setFooter("Page %,d of %,d".format(page + 1, pageCount))
 				.setColor(def.name.hashCode())
-			var visitedLocations = 0
-			val locationsValue = StringBuilder()
 			val locationsIterator = def.POILocations.iterator()
+			val locationsValue = StringBuilder()
+			var visitedLocations = 0
+			var i = 0
 			while (locationsIterator.hasNext()) {
 				val tag = locationsIterator.next().toString()
-				val poiName = locationTagToDisplayName[tag.toLowerCase()]?.format() ?: tag
+				var poiName = (def.POITextOverrides?.getOrNull(i) ?: locationTagToDisplayName[tag.toLowerCase().replace(".tandem", "")])?.format()
+				if (poiName.isNullOrEmpty()) {
+					poiName = tag
+				}
 				locationsValue.append(if (collectedProps != null && collectedProps.contextTags.any { it == tag }) {
 					++visitedLocations
 					"\\☑ ~~$poiName~~"
@@ -95,6 +99,7 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 				if (locationsIterator.hasNext()) {
 					locationsValue.append('\n')
 				}
+				++i
 			}
 			embed.addField("Found near (%,d/%,d)".format(visitedLocations, def.POILocations.gameplayTags.size), locationsValue.toString(), false)
 			collectedProps?.apply {

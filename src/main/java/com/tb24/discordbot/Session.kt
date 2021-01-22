@@ -81,7 +81,6 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		return Command.SINGLE_SUCCESS
 	}
 
-	@JvmOverloads
 	fun logout(message: Message?): Boolean {
 		val logoutMsg = message?.run {
 			if (author.idLong == client.discord.selfUser.idLong) {
