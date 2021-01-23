@@ -31,7 +31,7 @@ class DumpAssetCommand : BrigadierCommand("dump", "Dump a package from the game 
 					.getOrElse { throw SimpleCommandExceptionType(LiteralMessage("Failed to load package.\n```$it```")).create() }
 				val s = JWPSerializer.GSON.newBuilder().setPrettyPrinting().create().toJson(pkg.exports)
 				if (("```json\n\n```".length + s.length) > Message.MAX_CONTENT_LENGTH) {
-					c.source.channel.sendFile(s.toByteArray(), pkg.fileName.substringAfterLast('/') + ".json").queue()
+					c.source.channel.sendFile(s.toByteArray(), pkg.fileName.substringAfterLast('/') + ".json").complete()
 				} else {
 					c.source.complete("```json\n$s\n```")
 				}

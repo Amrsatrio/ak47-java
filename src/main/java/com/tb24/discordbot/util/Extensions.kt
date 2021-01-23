@@ -16,10 +16,7 @@ import com.tb24.fn.model.gamesubcatalog.CatalogOffer.CatalogItemPrice
 import com.tb24.fn.model.gamesubcatalog.ECatalogSaleType
 import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.model.mcpprofile.ProfileUpdate
-import com.tb24.fn.util.CatalogHelper
-import com.tb24.fn.util.Formatters
-import com.tb24.fn.util.format
-import com.tb24.fn.util.getPreviewImagePath
+import com.tb24.fn.util.*
 import com.tb24.uasset.AssetManager
 import me.fungames.jfortniteparse.fort.exports.FortWorkerType
 import me.fungames.jfortniteparse.fort.objects.FortItemQuantityPair
@@ -169,8 +166,6 @@ fun CatalogItemPrice.getAccountBalanceText(profileManager: ProfileManager) = ico
 fun FortItemQuantityPair.render(fac: Float, conditionalCondition: Boolean) =
 	asItemStack().apply { setConditionForConditionalItem(conditionalCondition) }.renderWithIcon((Quantity * fac).toInt())
 
-fun FortItemQuantityPair.asItemStack() = FortItemStack(ItemPrimaryAssetId.toString(), Quantity)
-
 fun Map<FName, FortQuestRewardTableRow>.render(prefix: String, orPrefix: String, fac: Float, bold: Boolean, conditionalCondition: Boolean): List<String> {
 	val fmt = if (bold) "**" else ""
 	val lines = mutableListOf<String>()
@@ -188,8 +183,6 @@ fun Map<FName, FortQuestRewardTableRow>.render(prefix: String, orPrefix: String,
 	}
 	return lines
 }
-
-fun FortQuestRewardTableRow.asItemStack() = FortItemStack(TemplateId.text, Quantity)
 
 @Throws(CommandSyntaxException::class)
 fun <T> List<T>.safeGetOneIndexed(index: Int, reader: StringReader? = null, start: Int = 0): T {

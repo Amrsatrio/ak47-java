@@ -35,14 +35,14 @@ private val locationTagToDisplayName by lazy {
 }
 private val seasonNum = 15
 
-class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Shows your character collection.", arrayOf("characters")) {
+class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Shows your character collection.", arrayOf("characters", "npcs")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes(::execute)
-		.then(literal("all")
-			.executes { execute(it, true) }
-		)
+		.executes { execute(it, ECharCollectionSubCommand.PaginatedDetails) }
+		.then(literal("all").executes { execute(it, ECharCollectionSubCommand.PaginatedDetailsAll) })
+		.then(literal("summary").executes { execute(it, ECharCollectionSubCommand.Summary) })
+		.then(literal("leaderboard").executes { leaderboard(it.source) })
 
-	private fun execute(context: CommandContext<CommandSourceStack>, all: Boolean = false): Int {
+	private fun execute(context: CommandContext<CommandSourceStack>, type: ECharCollectionSubCommand): Int {
 		val source = context.source
 		source.ensureSession()
 		source.loading("Getting character collection data")
@@ -54,7 +54,7 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 				collected.addAll(item.getAttributes(CollectionAttributes::class.java).collected)
 			}
 		}
-		if (!all && collected.isEmpty()) {
+		if (type == ECharCollectionSubCommand.PaginatedDetails && collected.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("You've never caught any fish yet. Use `${source.prefix}${context.commandName} all` to show all entries.")).create()
 		}
 		val seasonData = FortItemStack("AthenaSeason:athenaseason$seasonNum", 1).defData as? AthenaSeasonItemDefinition
@@ -66,9 +66,28 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 				val characterData = entry.CharacterData.load<FortTandemCharacterData>()
 					?: throw SimpleCommandExceptionType(LiteralMessage("Data for ${entry.CharacterData.toString().substringAfterLast('.')} not found.")).create()
 				CharacterEntry(characterData, characterData.GameplayTag.toString().run { collected.firstOrNull { it.variantTag == this } }, i)
+			} ?: throw SimpleCommandExceptionType(LiteralMessage("Character collection data not found.")).create()
+		if (type == ECharCollectionSubCommand.Summary) {
+			val title = "Characters / Summary"
+			var embed = source.createEmbed().setTitle(title)
+			var completed = 0
+			for ((i, entry) in data.withIndex()) {
+				if (i % 24 == 0 && i / 24 > 0) {
+					source.complete(null, embed.build())
+					embed = EmbedBuilder().setTitle("$title (continued)").setColor(COLOR_SUCCESS)
+				}
+				val def = entry.def
+				val collectedProps = entry.collectedProps
+				appendCharacterLocations(def, collectedProps, embed, "%,d. %s".format(i + 1, def.DisplayName.format() ?: def.name), true)
+				if (collectedProps?.seenState == EFortCollectedState.Complete) {
+					++completed
+				}
 			}
-			?: throw SimpleCommandExceptionType(LiteralMessage("Character collection data not found.")).create()
-		source.message.replyPaginated(if (all) data else data.filter { it.collectedProps != null && it.collectedProps.seenState != EFortCollectedState.New }, 1, source.loadingMsg) { content, page, pageCount ->
+			embed.setFooter("%,d of %,d completed".format(completed, data.size))
+			source.complete(null, embed.build())
+			return Command.SINGLE_SUCCESS
+		}
+		source.message.replyPaginated(if (type == ECharCollectionSubCommand.PaginatedDetails) data else data.filter { it.collectedProps != null && it.collectedProps.seenState != EFortCollectedState.New }, 1, source.loadingMsg) { content, page, pageCount ->
 			val entry = content.first()
 			val def = entry.def
 			val collectedProps = entry.collectedProps
@@ -80,28 +99,7 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 				.setImage(Utils.benBotExportAsset(def.SidePanelIcon.toString()))
 				.setFooter("Page %,d of %,d".format(page + 1, pageCount))
 				.setColor(def.name.hashCode())
-			val locationsIterator = def.POILocations.iterator()
-			val locationsValue = StringBuilder()
-			var visitedLocations = 0
-			var i = 0
-			while (locationsIterator.hasNext()) {
-				val tag = locationsIterator.next().toString()
-				var poiName = (def.POITextOverrides?.getOrNull(i) ?: locationTagToDisplayName[tag.toLowerCase().replace(".tandem", "")])?.format()
-				if (poiName.isNullOrEmpty()) {
-					poiName = tag
-				}
-				locationsValue.append(if (collectedProps != null && collectedProps.contextTags.any { it == tag }) {
-					++visitedLocations
-					"\\☑ ~~$poiName~~"
-				} else {
-					"☐ $poiName"
-				})
-				if (locationsIterator.hasNext()) {
-					locationsValue.append('\n')
-				}
-				++i
-			}
-			embed.addField("Found near (%,d/%,d)".format(visitedLocations, def.POILocations.gameplayTags.size), locationsValue.toString(), false)
+			appendCharacterLocations(def, collectedProps, embed, "Found near", false)
 			collectedProps?.apply {
 				val properties = EpicApi.GSON.fromJson(properties, FortMcpCollectedCharacterProperties::class.java)
 				embed.addField("State", seenState.name, false)
@@ -114,6 +112,103 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 			MessageBuilder(embed).build()
 		}
 		return Command.SINGLE_SUCCESS
+	}
+
+	private fun leaderboard(source: CommandSourceStack): Int {
+		source.ensureSession()
+		source.loading("Getting character collection scores")
+		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "collections").await()
+		val collections = source.api.profileManager.getProfileData("collections")
+		var selfScore = 0
+		for (item in collections.items.values) {
+			if (item.primaryAssetType == "CollectableCharacter") {
+				selfScore += item.getAttributes(CollectionAttributes::class.java).collected.count { it.seenState == EFortCollectedState.Complete }
+			}
+		}
+		val self = source.api.currentLoggedIn
+		val friends = source.api.friendsService.queryFriends(self.id, true).exec().body()!!
+		val stats = friends.map { it.accountId }
+			.chunked(50)
+			.map { source.api.statsproxyService.queryMultipleUserStats("collection_character", QueryMultipleUserStats().apply { owners = it.toTypedArray() }).future() }
+			.apply { CompletableFuture.allOf(*toTypedArray()).await() }
+			.flatMap { it.get().body()!!.toList() }
+		val embed = EmbedBuilder().setTitle("Characters / Friends leaderboard").setColor(COLOR_SUCCESS)
+		val scores = mutableMapOf<String, Int>(self.id to selfScore) // account ID -> characters completed
+		stats.associateTo(scores) { it.accountId to (it.stats["br_collection_character_count_s15"] ?: 0) }
+		val iterator = scores.entries.sortedWith { a, b ->
+			if (a.value != b.value) {
+				b.value - a.value
+			} else {
+				a.key.compareTo(b.key)
+			}
+		}.iterator()
+		val sb = StringBuilder()
+		var placement = 0
+		var last = 0
+		var i = 0
+		while (iterator.hasNext()) {
+			val e = iterator.next()
+			if (e.value <= 0) {
+				continue
+			}
+			if (last != e.value) {
+				++placement
+				last = e.value
+			}
+			val dn: String
+			val bold: String
+			if (e.key == self.id) {
+				dn = self.displayName
+				bold = "**"
+			} else {
+				dn = friends.firstOrNull { it.accountId == e.key }?.displayName ?: e.key
+				bold = ""
+			}
+			sb.append("%s#%,d %s \u2014 %,d%s".format(bold, placement, dn.escapeMarkdown(), e.value, bold))
+			if (iterator.hasNext()) {
+				sb.append('\n')
+				if (i + 1 == 50) {
+					sb.append("... ${scores.size - 50} more entries ...")
+					break
+				}
+			}
+			++i
+		}
+		embed.addField("Characters completed", sb.toString(), false)
+		source.complete(null, embed.build())
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun appendCharacterLocations(def: FortTandemCharacterData, collectedProps: FortMcpCollectedItemProperties?, embed: EmbedBuilder, title: String, inline: Boolean) {
+		val iterator = def.POILocations.iterator()
+		val sb = StringBuilder()
+		var visited = 0
+		var i = 0
+		while (iterator.hasNext()) {
+			val tag = iterator.next().toString()
+			var poiName = (def.POITextOverrides?.getOrNull(i) ?: locationTagToDisplayName[tag.toLowerCase().replace(".tandem", "")])?.format()
+			if (poiName.isNullOrEmpty()) {
+				poiName = tag
+			}
+			sb.append(if (collectedProps != null && collectedProps.contextTags.any { it == tag }) {
+				++visited
+				"\\☑ ~~$poiName~~"
+			} else {
+				"☐ $poiName"
+			})
+			if (iterator.hasNext()) {
+				sb.append('\n')
+			}
+			++i
+		}
+		val num = def.POILocations.gameplayTags.size
+		embed.addField("%s (%,d/%,d)".format(title, visited, num), sb.toString(), inline)
+	}
+
+	enum class ECharCollectionSubCommand {
+		PaginatedDetails,
+		PaginatedDetailsAll,
+		Summary
 	}
 
 	class CharacterEntry(val def: FortTandemCharacterData, val collectedProps: FortMcpCollectedItemProperties?, val idx: Int)

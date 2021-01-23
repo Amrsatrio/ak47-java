@@ -254,5 +254,5 @@ enum class GrantType {
 	//otp,
 	//password,
 	//refresh_token,
-	//token_to_token
+	token_to_token
 }

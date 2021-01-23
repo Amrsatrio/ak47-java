@@ -147,7 +147,7 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 			.sortedBy { it.displayName }
 }
 
-class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR quests.") {
+class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR quests.", arrayOf("challenges", "chals")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it.source) }
 		.then(argument("tab", greedyString())

@@ -47,7 +47,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 				.map { it.value }
 				.toSortedSet()
 				.joinToString("\n")
-			source.channel.sendFile(ids.toByteArray(), "avatar_ids_${source.api.currentLoggedIn.displayName}.txt").queue()
+			source.channel.sendFile(ids.toByteArray(), "avatar_ids_${source.api.currentLoggedIn.displayName}.txt").complete()
 			Command.SINGLE_SUCCESS
 		})
 		.then(argument("user", users())
@@ -353,6 +353,9 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			for ((k, v) in friend.connections) {
 				addField(L10N.format("account.ext.$k.name"), v.name.orDash(), true)
 			}
+		}
+		if (!friend.alias.isNullOrEmpty()) {
+			addField("Nickname", friend.alias.escapeMarkdown(), false)
 		}
 		if (friend.created != null) {
 			val canBeGiftedStart = friend.created.time + 2L * 24L * 60L * 60L * 1000L
