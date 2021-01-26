@@ -1,39 +1,44 @@
 package com.tb24.discordbot
 
 import com.tb24.discordbot.util.exec
+import com.tb24.discordbot.util.holder
+import com.tb24.discordbot.util.to
 import com.tb24.fn.EpicApi
+import com.tb24.fn.model.FortCmsData
+import com.tb24.fn.model.FortCmsData.ShopSectionsData
 import com.tb24.fn.model.gamesubcatalog.CatalogDownload
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
+import okhttp3.Request
 
-class CatalogManager(private val client: DiscordBot) {
+class CatalogManager {
 	var catalogData: CatalogDownload? = null
-	val limitedTimeOffers = Section("Limited Time Offers")
-	val featuredItems = Section("Featured Items")
-	val dailyItems = Section("Daily Items")
-	val specialFeatured = Section("Special Offers")
-	val specialDaily = Section("\u2014")
-	val stwEvent = Section("Event Store")
-	val stwWeekly = Section("Weekly Store")
-	val llamas = Section("Llamas")
-	val athenaCatalogGroups = arrayOf(limitedTimeOffers, featuredItems, dailyItems, specialFeatured, specialDaily)
-	val campaignCatalogGroups = arrayOf(stwEvent, stwWeekly, llamas)
+	var sectionsData: ShopSectionsData? = null
+	val stwEvent = ShopSection("Event Store")
+	val stwWeekly = ShopSection("Weekly Store")
+	val llamas = ShopSection("Llamas")
+	val athenaSections = mutableMapOf<String, ShopSection>()
+	val campaignSections = listOf(stwEvent, stwWeekly, llamas)
 	val purchasableCatalogEntries = mutableListOf<CatalogOffer>()
 
-	class Section(val title: String, val items: MutableList<CatalogOffer> = mutableListOf())
-
+	@Synchronized
 	fun ensureCatalogData(api: EpicApi, force: Boolean = false): Boolean {
 		if (force || catalogData == null || System.currentTimeMillis() >= catalogData!!.expiration.time) {
 			catalogData = api.fortniteService.storefrontCatalog("en").exec().body()
-			athenaCatalogGroups.forEach { it.items.clear() }
-			campaignCatalogGroups.forEach { it.items.clear() }
-			for (storefront in catalogData!!.storefronts) {
+			sectionsData = api.okHttpClient.newCall(Request.Builder().url("https://fortnitecontent-website-prod07.ol.epicgames.com/content/api/pages/fortnite-game/shop-sections").build()).exec().to<ShopSectionsData>()
+			athenaSections.clear()
+			sectionsData!!.sectionList.sections.associateTo(athenaSections) {
+				val section = ShopSection(it)
+				section.sectionData.sectionId to section
+			}
+			campaignSections.forEach { it.items.clear() }
+			for (storefront in catalogData!!.storefronts) { // iteration 1: BR shop
+				for (catalogEntry in storefront.catalogEntries) {
+					(athenaSections[catalogEntry.holder().getMeta("SectionId") ?: continue] ?: continue).items.add(catalogEntry)
+				}
+			}
+			for (storefront in catalogData!!.storefronts) { // iteration 2: STW shop
 				storefront.catalogEntries.onEach { it.__ak47_storefront = storefront.name }
 				when (storefront.name) {
-					"BRStarterKits" -> limitedTimeOffers.items.addAll(storefront.catalogEntries)
-					"BRWeeklyStorefront" -> featuredItems.items.addAll(storefront.catalogEntries)
-					"BRDailyStorefront" -> dailyItems.items.addAll(storefront.catalogEntries)
-					"BRSpecialFeatured" -> specialFeatured.items.addAll(storefront.catalogEntries)
-					"BRSpecialDaily" -> specialDaily.items.addAll(storefront.catalogEntries)
 					"STWSpecialEventStorefront" -> stwEvent.items.addAll(storefront.catalogEntries)
 					"STWRotationalEventStorefront" -> stwWeekly.items.addAll(storefront.catalogEntries)
 					"CardPackStorePreroll",
@@ -41,19 +46,22 @@ class CatalogManager(private val client: DiscordBot) {
 				}
 			}
 			purchasableCatalogEntries.clear()
-			purchasableCatalogEntries.addAll(limitedTimeOffers.items)
-			purchasableCatalogEntries.addAll(featuredItems.items)
-			purchasableCatalogEntries.addAll(dailyItems.items)
-			purchasableCatalogEntries.addAll(specialFeatured.items)
-			purchasableCatalogEntries.addAll(specialDaily.items)
-			purchasableCatalogEntries.addAll(stwEvent.items)
-			purchasableCatalogEntries.addAll(stwWeekly.items)
-			purchasableCatalogEntries.addAll(llamas.items)
-			for (i in purchasableCatalogEntries.indices) {
+			athenaSections.values.forEach { section ->
+				section.items.sortByDescending { it.sortPriority ?: 0 }
+				purchasableCatalogEntries.addAll(section.items)
+			}
+			campaignSections.forEach { purchasableCatalogEntries.addAll(it.items) }
+			for (i in purchasableCatalogEntries.indices) { // assign indices
 				purchasableCatalogEntries[i].__ak47_index = i
 			}
 			return true
 		}
 		return false
+	}
+
+	class ShopSection(val sectionData: FortCmsData.ShopSection) {
+		val items = mutableListOf<CatalogOffer>()
+
+		constructor(title: String) : this(FortCmsData.ShopSection().also { it.sectionDisplayName = title })
 	}
 }

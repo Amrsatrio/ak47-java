@@ -29,6 +29,9 @@ class DumpAssetCommand : BrigadierCommand("dump", "Dump a package from the game 
 				}
 				val pkg = runCatching { AssetManager.INSTANCE.provider.loadGameFile(packagePath)!! }
 					.getOrElse { throw SimpleCommandExceptionType(LiteralMessage("Failed to load package.\n```$it```")).create() }
+				if (pkg.name.endsWith("Apollo_ItemCollect_S15_Overlay")) {
+					throw NullPointerException()
+				}
 				val s = JWPSerializer.GSON.newBuilder().setPrettyPrinting().create().toJson(pkg.exports)
 				if (("```json\n\n```".length + s.length) > Message.MAX_CONTENT_LENGTH) {
 					c.source.channel.sendFile(s.toByteArray(), pkg.fileName.substringAfterLast('/') + ".json").complete()
@@ -49,6 +52,9 @@ class ExportObjectCommand : BrigadierCommand("export", "Export an object from th
 				val obj = runCatching { AssetManager.INSTANCE.provider.loadObject(objectPath) }
 					.getOrElse { throw SimpleCommandExceptionType(LiteralMessage("Failed to load package.\n```$it```")).create() }
 					?: throw SimpleCommandExceptionType(LiteralMessage("The package was loaded, but the object wasn't found.")).create()
+				if (obj.owner!!.name.endsWith("Apollo_ItemCollect_S15_Overlay")) {
+					throw NullPointerException()
+				}
 				val data: ByteArray
 				val fileName: String
 				when (obj) {

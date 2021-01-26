@@ -4,14 +4,14 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
-import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
-import com.tb24.discordbot.util.*
+import com.tb24.discordbot.util.Utils
+import com.tb24.discordbot.util.getItemIconEmoji
+import com.tb24.discordbot.util.renderWithIcon
+import com.tb24.discordbot.util.replyPaginated
 import com.tb24.fn.model.FortItemStack
-import com.tb24.fn.model.account.GameProfile
-import com.tb24.fn.model.mcpprofile.commands.QueryProfile
-import com.tb24.fn.model.mcpprofile.commands.QueryPublicProfile
+import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.util.Formatters
 import com.tb24.uasset.AssetManager
 import me.fungames.jfortniteparse.fort.objects.rows.FortPhoenixLevelRewardData
@@ -25,13 +25,7 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 	private val noDataErr = SimpleCommandExceptionType(LiteralMessage("No data"))
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes {
-			val source = it.source
-			source.ensureSession()
-			source.loading("Getting Ventures data")
-			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
-			display(source, source.api.currentLoggedIn)
-		}
+		.withPublicProfile(::display, "Getting Ventures data")
 		.then(literal("rewards")
 			.executes { c ->
 				val currentEvent = "EventFlag.Phoenix.Winterfest"
@@ -53,21 +47,10 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 				Command.SINGLE_SUCCESS
 			}
 		)
-		.then(argument("user", users(1))
-			.executes {
-				val source = it.source
-				if (source.api.userToken == null) {
-					source.session = source.client.internalSession
-				}
-				val user = getUsers(it, "user").values.first()
-				source.loading("Getting Ventures data of ${user.displayName}")
-				source.api.profileManager.dispatchPublicCommandRequest(user, QueryPublicProfile(), "campaign").await()
-				display(source, user)
-			}
-		)
 
-	private fun display(source: CommandSourceStack, user: GameProfile): Int {
-		val xpQuantity = source.api.profileManager.getProfileData(user.id, "campaign").items.values.firstOrNull { it.templateId == "AccountResource:phoenixxp" }?.quantity
+	private fun display(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
+		val source = c.source
+		val xpQuantity = campaign.items.values.firstOrNull { it.templateId == "AccountResource:phoenixxp" }?.quantity
 			?: 0
 		val currentEvent = "EventFlag.Phoenix.Winterfest" // TODO don't hardcode this by querying the calendar endpoint
 		val table = phoenixLevelRewardsTable ?: throw noDataErr.create()
@@ -89,7 +72,7 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 			nextMajorIdx = findMajor(nextMajorIdx + 1, levels)
 		}
 		val nextMajorData = levels.getOrNull(nextMajorIdx)
-		source.complete(null, source.createEmbed(user)
+		source.complete(null, source.createEmbed(campaign.owner)
 			.setTitle("Ventures: Season 3")
 			.setDescription("**Level ${Formatters.num.format(levelIdx + 1)}** - ${(getItemIconEmoji("AccountResource:phoenixxp")?.run { "$asMention " } ?: "")}${Formatters.num.format(xpQuantity)}\n" + if (nextLevelData != null) {
 				val current = xpQuantity - levelData.TotalRequiredXP

@@ -6,10 +6,16 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.MapImageGenerator
+import com.tb24.discordbot.MapImageGenerator.MapMarker
+import com.tb24.discordbot.MapImageGenerator.MapPath
+import com.tb24.discordbot.MapImageGenerator.MapPath.EPathOp
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.QueryMultipleUserStats
+import com.tb24.fn.model.assetdata.FortAthenaPatrolPath
+import com.tb24.fn.model.assetdata.FortAthenaPatrolPathPointProvider
 import com.tb24.fn.model.assetdata.FortQuestIndicatorData
 import com.tb24.fn.model.assetdata.GameDataBR
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
@@ -19,10 +25,26 @@ import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
 import com.tb24.uasset.AssetManager.INSTANCE
 import me.fungames.jfortniteparse.fort.exports.*
+import me.fungames.jfortniteparse.ue4.assets.exports.UWorld
+import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
+import me.fungames.jfortniteparse.ue4.assets.objects.UScriptArray
+import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText
+import me.fungames.jfortniteparse.ue4.objects.core.math.FBox
+import me.fungames.jfortniteparse.ue4.objects.core.math.FVector2D
+import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
+import me.fungames.jfortniteparse.ue4.objects.uobject.FPackageIndex
+import me.fungames.jfortniteparse.util.toPngArray
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
+import java.awt.BasicStroke
+import java.awt.Color
+import java.awt.Font
+import java.awt.Graphics2D
+import java.awt.font.TextLayout
+import java.io.File
 import java.util.concurrent.CompletableFuture
+import kotlin.system.exitProcess
 
 private val defaultGameDataBR by lazy { INSTANCE.provider.loadObject<GameDataBR>("/Game/Balance/DefaultGameDataBR.DefaultGameDataBR") }
 private val questIndicatorData by lazy { INSTANCE.provider.loadObject<FortQuestIndicatorData>("/Game/Quests/QuestIndicatorData.QuestIndicatorData") }
@@ -38,7 +60,6 @@ private val seasonNum = 15
 class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Shows your character collection.", arrayOf("characters", "npcs")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it, ECharCollectionSubCommand.PaginatedDetails) }
-		.then(literal("all").executes { execute(it, ECharCollectionSubCommand.PaginatedDetailsAll) })
 		.then(literal("summary").executes { execute(it, ECharCollectionSubCommand.Summary) })
 		.then(literal("leaderboard").executes { leaderboard(it.source) })
 
@@ -53,9 +74,6 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 			if (item.primaryAssetType == "CollectableCharacter") {
 				collected.addAll(item.getAttributes(CollectionAttributes::class.java).collected)
 			}
-		}
-		if (type == ECharCollectionSubCommand.PaginatedDetails && collected.isEmpty()) {
-			throw SimpleCommandExceptionType(LiteralMessage("You've never caught any fish yet. Use `${source.prefix}${context.commandName} all` to show all entries.")).create()
 		}
 		val seasonData = FortItemStack("AthenaSeason:athenaseason$seasonNum", 1).defData as? AthenaSeasonItemDefinition
 			?: throw SimpleCommandExceptionType(LiteralMessage("Season data not found.")).create()
@@ -87,7 +105,7 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 			source.complete(null, embed.build())
 			return Command.SINGLE_SUCCESS
 		}
-		source.message.replyPaginated(if (type == ECharCollectionSubCommand.PaginatedDetails) data else data.filter { it.collectedProps != null && it.collectedProps.seenState != EFortCollectedState.New }, 1, source.loadingMsg) { content, page, pageCount ->
+		source.message.replyPaginated(data, 1, source.loadingMsg) { content, page, pageCount ->
 			val entry = content.first()
 			val def = entry.def
 			val collectedProps = entry.collectedProps
@@ -192,9 +210,9 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 			}
 			sb.append(if (collectedProps != null && collectedProps.contextTags.any { it == tag }) {
 				++visited
-				"\\☑ ~~$poiName~~"
+				"`☑` ~~$poiName~~"
 			} else {
-				"☐ $poiName"
+				"`☐` $poiName"
 			})
 			if (iterator.hasNext()) {
 				sb.append('\n')
@@ -207,24 +225,20 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 
 	enum class ECharCollectionSubCommand {
 		PaginatedDetails,
-		PaginatedDetailsAll,
 		Summary
 	}
 
 	class CharacterEntry(val def: FortTandemCharacterData, val collectedProps: FortMcpCollectedItemProperties?, val idx: Int)
 }
 
-class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fish collection.", arrayOf("fishing", "collections")) {
+class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fish collection.", arrayOf("fishing", "fish")) {
 	private val itemDefToItemVariantMapping by lazy { defaultGameDataBR?.ItemDefToItemVariantDataMappingAsset?.load<FortItemDefToItemVariantDataMapping>()?.ItemDefToItemVariantDataMappings }
 	private val fishTagToItemVariantDataMapping by lazy { itemDefToItemVariantMapping?.flatMap { it.ItemVariantData.value.Variants }?.associateBy { it.CollectionTag.toString() } }
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes(::execute)
-		.then(literal("all")
-			.executes { execute(it, true) }
-		)
 
-	private fun execute(context: CommandContext<CommandSourceStack>, all: Boolean = false): Int {
+	private fun execute(context: CommandContext<CommandSourceStack>): Int {
 		val source = context.source
 		source.ensureSession()
 		source.loading("Getting fishing collection and friends leaderboard data")
@@ -235,9 +249,6 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 			if (item.primaryAssetType == "CollectableFish") {
 				collected.addAll(item.getAttributes(CollectionAttributes::class.java).collected)
 			}
-		}
-		if (!all && collected.isEmpty()) {
-			throw SimpleCommandExceptionType(LiteralMessage("You've never caught any fish yet. Use `${source.prefix}${context.commandName} all` to show all entries.")).create()
 		}
 		val seasonData = FortItemStack("AthenaSeason:athenaseason$seasonNum", 1).defData as? AthenaSeasonItemDefinition
 			?: throw SimpleCommandExceptionType(LiteralMessage("Season data not found.")).create()
@@ -252,7 +263,7 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 			.map { source.api.statsproxyService.queryMultipleUserStats("collection_fish", QueryMultipleUserStats().apply { owners = it.toTypedArray() }).future() }
 			.apply { CompletableFuture.allOf(*toTypedArray()).await() }
 			.flatMap { it.get().body()!!.toList() }
-		source.message.replyPaginated(if (all) data else data.filter { it.collectedProps != null && it.collectedProps.seenState != EFortCollectedState.New }, 1, source.loadingMsg) { content, page, pageCount ->
+		source.message.replyPaginated(data, 1, source.loadingMsg) { content, page, pageCount ->
 			val entry = content.first()
 			val def = entry.def
 			val collectedProps = entry.collectedProps
@@ -313,4 +324,97 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 	}
 
 	class FishEntry(val def: FortCollectionDataEntryFish, val collectedProps: FortMcpCollectedItemProperties?, val idx: Int)
+}
+
+fun main() {
+	INSTANCE.loadPaks()
+	val tandems = INSTANCE.provider.loadObject<FortCollectionDataCharacter>("/BattlepassS15/SeasonData/CollectionDataCharacter")!!.Entries.map { (it.value as FortCollectionDataEntryCharacter).CharacterData.load<FortTandemCharacterData>()!! }
+	val world = INSTANCE.provider.loadObject<UWorld>("/BattlepassS15/Maps/Apollo_Terrain_LevelOverlay_Islanders")!!
+	val persistentLevel = world.persistentLevel!!.value
+	val map = MapImageGenerator(INSTANCE.provider.loadObject<UTexture2D>("/Game/Athena/Apollo/Maps/UI/Apollo_Terrain_Minimap.Apollo_Terrain_Minimap")?.toBufferedImage())
+	val f = Font.createFont(Font.TRUETYPE_FONT, File("C:\\Users\\satri\\AppData\\Local\\Microsoft\\Windows\\Fonts\\zh-cn.ttf")).deriveFont(26f)
+	val noTagsPatrolPaths = mutableMapOf<String, FortAthenaPatrolPath>()
+	val patrolPathsWithTagsFromOtherObject = mutableMapOf<String, FortAthenaPatrolPath>()
+	for (actorLazy in persistentLevel.actors) {
+		if (actorLazy == null) {
+			continue
+		}
+		val actor = actorLazy.value
+		if (actor is FortAthenaPatrolPath) {
+			if (actor.GameplayTags != null) {
+				addPatrolPath(actor, actor.GameplayTags, map, tandems, f)
+			} else {
+				noTagsPatrolPaths[actor.name] = actor
+			}
+		} else if (actor.exportType == "BP_CalendarProvider_MultiSpot_C") {
+			// TODO honor calendar event name
+			// val calendarPointProviders = actor.getProp<List<Lazy<FortAthenaPatrolPathPointProvider>>>("CalendarPointProviders", object : TypeToken<List<Lazy<FortAthenaPatrolPathPointProvider>>>() {}.type)
+			val calendarPointProviders = actor.get<UScriptArray>("CalendarPointProviders")
+			calendarPointProviders.contents.forEach {
+				val value = it.getTagTypeValueLegacy() as FPackageIndex
+				val calendarPointProvider = value.load<FortAthenaPatrolPathPointProvider>()!!
+				if (calendarPointProvider.FiltersTags != null) {
+					val actor = calendarPointProvider.AssociatedPatrolPath.value
+					addPatrolPath(actor, calendarPointProvider.FiltersTags, map, tandems, f)
+					patrolPathsWithTagsFromOtherObject[actor.name] = actor
+				}
+			}
+		}
+	}
+	for (it in noTagsPatrolPaths.values) {
+		if (it.name !in patrolPathsWithTagsFromOtherObject) {
+			addPatrolPath(it, null, map, tandems, f)
+		}
+	}
+	File("test_npc_map.png").writeBytes(map.draw().toPngArray())
+	exitProcess(0)
+}
+
+private fun addPatrolPath(patrolPath: FortAthenaPatrolPath, tags: FGameplayTagContainer?, map: MapImageGenerator, tandems: List<FortTandemCharacterData>, f: Font) {
+	val path = object : MapPath(EPathStyle.Stroke) {
+		override fun preDraw(ctx: Graphics2D) {
+			ctx.stroke = BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_BEVEL)
+			ctx.color = 0xFFF300.awtColor()
+		}
+	}
+	val bounds = FBox()
+	for ((i, patrolPoint) in patrolPath.PatrolPoints.map { it.value }.withIndex()) {
+		val sceneComp = patrolPoint.RootComponent.value
+		val rl = sceneComp.RelativeLocation
+		path.ops.add(MapPath.Op(if (i == 0) EPathOp.Move else EPathOp.Line, FVector2D(rl.x, rl.y)))
+		bounds += rl
+	}
+	map.paths.add(path)
+	val center3d = bounds.getCenter()
+	val center = FVector2D(bounds.max.x/*center3d.x*/, center3d.y)
+	val tandem = tags?.let { spawnerTagsToTandem(it, tandems) }
+	val text = tandem?.DisplayName.format() ?: patrolPath.name.replace("FortAthenaPatrolPath_Tandem_", "")
+	val pic = tandem?.ToastIcon?.load<UTexture2D>()
+	map.markers.add(MapMarker(center) { ctx, mx, my ->
+		ctx.font = f
+		val metrics = ctx.getFontMetrics(f)
+		val x = mx - metrics.stringWidth(text) / 2
+		val y = my - metrics.height // / 2
+		val oldTransform = ctx.transform
+		ctx.translate(x, y + metrics.ascent)
+		ctx.color = 0x7F000000.awtColor()
+		ctx.stroke = BasicStroke(4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
+		ctx.draw(TextLayout(text, f, ctx.fontRenderContext).getOutline(null))
+		ctx.color = Color.WHITE
+		ctx.drawString(text, 0, 0)
+		ctx.transform = oldTransform
+		if (pic != null) {
+			val sz = metrics.height
+			ctx.drawImage(pic.toBufferedImage(), x + (metrics.stringWidth(text) - sz) / 2, y - sz, sz, sz, null)
+		}
+	})
+}
+
+fun spawnerTagsToTandem(tags: FGameplayTagContainer, tandems: List<FortTandemCharacterData>): FortTandemCharacterData? {
+	// Athena.AI.SpawnLocation.Tandem.Bushranger -> AISpawnerData.Type.Tandem.Bushranger
+	val tandemTag = tags.first().toString().substring("Athena.AI.SpawnLocation.Tandem.".length)
+	val search = "AISpawnerData.Type.Tandem.$tandemTag"
+	val tandem = tandems.firstOrNull { it.GameplayTag.toString().startsWith(search, true) }
+		?: return null
+	return tandem
 }

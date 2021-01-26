@@ -4,31 +4,18 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
-import com.tb24.discordbot.util.await
-import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.discordbot.util.getItemIconEmoji
+import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.attributes.CampaignProfileAttributes
-import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.util.Formatters
 
-class CampaignOverviewCommand : BrigadierCommand("stw", "Displays summary of your Save the World data.") {
+class ResourcesCommand : BrigadierCommand("resources", "Displays a given user's STW resource items.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		/*.executes {
-			val source = it.source
-			source.complete(null, source.createEmbed()
-				.setTitle("⚡ %.2f".format())
-				.build())
-			Command.SINGLE_SUCCESS
-		}*/
-		.then(literal("resources").executes(::resources))
+		.withPublicProfile(::execute, "Getting resources data")
 
-	fun resources(c: CommandContext<CommandSourceStack>): Int {
-		c.source.ensureSession()
-		c.source.loading("Getting STW data")
-		val profileManager = c.source.api.profileManager
-		profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
-		val campaign = profileManager.getProfileData("campaign")
-		val embed = c.source.createEmbed()
+	fun execute(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
+		val source = c.source
+		val embed = source.createEmbed(campaign.owner)
 		for ((categoryName, categoryItemTypes) in mapOf(
 			"Perk-UP" to listOf(
 				"AccountResource:reagent_alteration_upgrade_sr",
@@ -64,7 +51,8 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Displays summary of you
 			),
 			"Llamas" to listOf(
 				"AccountResource:voucher_basicpack",
-				"AccountResource:voucher_cardpack_bronze"
+				"AccountResource:voucher_cardpack_bronze",
+				"AccountResource:voucher_cardpack_jackpot",
 			),
 			"Flux" to listOf(
 				"AccountResource:reagent_evolverarity_sr",
@@ -80,16 +68,16 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Displays summary of you
 				"ConsumableAccountItem:smallxpboost_gift"
 			),
 			"Miscellaneous" to listOf(
+				(campaign.stats.attributes as CampaignProfileAttributes).event_currency.templateId,
 				"AccountResource:currency_xrayllama",
-				"AccountResource:eventcurrency_scaling",
-				(campaign.stats.attributes as CampaignProfileAttributes).event_currency.templateId
+				"AccountResource:eventcurrency_scaling"
 			)
 		)) {
 			embed.addField(categoryName, categoryItemTypes.joinToString("\n") { tid ->
 				(getItemIconEmoji(tid)?.asMention ?: tid) + ' ' + Formatters.num.format(campaign.items.values.firstOrNull { it.templateId == tid }?.quantity ?: 0)
 			}, true)
 		}
-		c.source.complete(null, embed.build())
+		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS
 	}
 }

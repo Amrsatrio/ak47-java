@@ -1,68 +1,95 @@
 package com.tb24.discordbot.commands
 
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonParser
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.tb24.discordbot.CatalogManager
+import com.tb24.discordbot.GridSlot
+import com.tb24.discordbot.createAttachmentOfIcons
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.EItemShopTileSize
 import com.tb24.fn.model.EItemShopTileSize.*
-import com.tb24.fn.model.FortCmsData
 import com.tb24.fn.model.assetdata.ESubGame
 import com.tb24.fn.model.gamesubcatalog.CatalogDownload
-import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer.CatalogItemPrice
 import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.campaign.PopulatePrerolledOffers
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
+import com.tb24.fn.util.getPreviewImagePath
 import com.tb24.uasset.AssetManager
 import me.fungames.jfortniteparse.fort.enums.EFortRarity
 import me.fungames.jfortniteparse.fort.exports.CatalogMessaging
+import me.fungames.jfortniteparse.fort.exports.FortMtxOfferData
 import me.fungames.jfortniteparse.fort.exports.FortRarityData
 import me.fungames.jfortniteparse.fort.objects.FortColorPalette
+import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
+import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.ue4.objects.core.math.FVector2D
 import me.fungames.jfortniteparse.util.toPngArray
 import net.dv8tion.jda.api.EmbedBuilder
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.awt.*
 import java.awt.geom.Path2D
 import java.awt.image.BufferedImage
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileReader
+import java.text.DateFormat
+import java.text.SimpleDateFormat
+import java.util.*
 import java.util.concurrent.CompletableFuture
 import javax.imageio.ImageIO
 import kotlin.math.max
 import kotlin.system.exitProcess
 
-class ShopCommand : BrigadierCommand("shop", "Description later plz", arrayOf("s")) {
+class ShopCommand : BrigadierCommand("shop", "Sends an image of today's item shop.", arrayOf("s")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes {
-			val source = it.source
+		.executes { c ->
+			val source = c.source
+			if (isUserAnIdiot(source)) {
+				return@executes Command.SINGLE_SUCCESS
+			}
 			source.ensureSession()
 			source.loading("Getting the shop")
 			source.client.catalogManager.ensureCatalogData(source.api)
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
-			val commonCore = source.api.profileManager.getProfileData("common_core")
-			val catalogEntries = mutableListOf<CatalogOffer>()
-			for (catalogGroup in source.client.catalogManager.athenaCatalogGroups) {
-				for (catalogEntry in catalogGroup.items) {
-					catalogEntries.add(catalogEntry)
+			val slots = mutableListOf<GridSlot>()
+			for (section in source.client.catalogManager.athenaSections.values) {
+				for (offer in section.items) {
+					if (offer.prices.firstOrNull()?.currencyType == EStoreCurrencyType.RealMoney) {
+						continue
+					}
+					var image: BufferedImage? = null
+					var title: String? = null
+					var rarity: EFortRarity? = null
+					offer.itemGrants.firstOrNull()?.let { item ->
+						image = item.getPreviewImagePath()?.load<UTexture2D>()?.toBufferedImage()
+						title = item.displayName
+						rarity = item.defData.Rarity
+					}
+					if (!offer.displayAssetPath.isNullOrEmpty()) {
+						AssetManager.INSTANCE.provider.loadObject<FortMtxOfferData>(offer.displayAssetPath)?.let {
+							(it.BackgroundImage?.ResourceObject?.value as? UTexture2D)?.run { image = toBufferedImage() }
+							it.DisplayName?.run { title = format() }
+						}
+					}
+					offer.title?.let { title = it }
+					slots.add(GridSlot(
+						image = image,
+						name = if (title.isNullOrEmpty()) offer.devName else title,
+						rarity = if (offer.getMeta("HideRarityBorder").equals("true", true)) null else rarity,
+						index = offer.__ak47_index
+					))
 				}
 			}
-			// fetch fortnite-api.com
-//			val slots = mutableListOf<>()
-			val img = BufferedImage(128, 128, BufferedImage.TYPE_INT_RGB)
-			val g = img.createGraphics().apply {
-				color = Color(0x7FFF7F)
-				fillRect(0, 0, 128, 128)
-			}
-//			ImageIO.read(URL("https://"))
-			source.loading("Rendering and uploading image")
-			source.channel.sendFile(ByteArrayOutputStream().apply { ImageIO.write(img, "png", this) }.toByteArray(), "unknown.png").complete()
+			val tz = TimeZone.getTimeZone("UTC")
+			val now = Date()
+			val fileName = "shop-${SimpleDateFormat("dd-MM-yyyy").apply { timeZone = tz }.format(now)}.png"
+			source.channel.sendMessage("Battle Royale Item Shop (%s)".format(DateFormat.getDateInstance().apply { timeZone = tz }.format(now))).addFile(createAttachmentOfIcons(slots, "shop"), fileName).complete()
 			source.loadingMsg!!.delete().queue()
 			Command.SINGLE_SUCCESS
 		}
@@ -76,6 +103,23 @@ class ShopTextCommand : BrigadierCommand("shoptext", "Sends the current item sho
 class CampaignShopCommand : BrigadierCommand("stwshop", "Sends the current Save the World item shop items as a text.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { executeShopText(it.source, ESubGame.Campaign) }
+}
+
+class ShopDumpCommand : BrigadierCommand("shopdump", "Sends the current item shop as a JSON.") {
+	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.executes { c ->
+			val source = c.source
+			if (source.api.userToken == null) {
+				source.session = source.client.internalSession
+			}
+			val lang = "en"
+			val data = source.api.okHttpClient.newCall(source.api.fortniteService.storefrontCatalog(lang).request()).exec().body()!!.charStream().use {
+				JsonParser.parseReader(it)
+			}
+			val df = SimpleDateFormat("dd-MM-yyyy").apply { timeZone = TimeZone.getTimeZone("UTC") }
+			source.channel.sendFile(GsonBuilder().setPrettyPrinting().create().toJson(data).toByteArray(), "shop-%s-%s.json".format(df.format(Date()), lang)).complete()
+			Command.SINGLE_SUCCESS
+		}
 }
 
 fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
@@ -95,13 +139,12 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 			profileManager.dispatchClientCommandRequest(QueryProfile(), "athena")
 		}
 	).await()
-//	var useEmbed = true
-	val groups = if (subGame == ESubGame.Campaign) catalogManager.campaignCatalogGroups else catalogManager.athenaCatalogGroups
-	val contents = arrayOfNulls<List<String>>(groups.size)
+	val sections = if (subGame == ESubGame.Campaign) catalogManager.campaignSections else catalogManager.athenaSections.values
+	val contents = arrayOfNulls<List<String>>(sections.size)
 	val prices = mutableMapOf<String, CatalogItemPrice>()
-	for (i in groups.indices) {
+	for ((i, section) in sections.withIndex()) {
 		val lines = mutableListOf<String>()
-		for (catalogEntry in groups[i].items) {
+		for (catalogEntry in section.items) {
 /*			if (catalogEntry.shouldBeSkipped(commonCore)) {
 				continue
 			}*/
@@ -111,9 +154,6 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 			catalogEntry.prices.forEach { prices.putIfAbsent(it.currencyType.name + ' ' + it.currencySubType, it) }
 		}
 		contents[i] = lines
-//		if (contents[i]!!.length >= 1024) {
-//			useEmbed = false
-//		}
 	}
 	val embed = EmbedBuilder()
 		.setColor(0x0099FF)
@@ -122,29 +162,19 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 		embed.setDescription("Use `${source.prefix}buy` or `${source.prefix}gift` to perform operations with these items.\n✅ = Owned")
 			.addField(if (prices.size == 1) "Balance" else "Balances", prices.values.joinToString(" \u00b7 ") { it.getAccountBalanceText(profileManager) }, false)
 	}
-//	if (useEmbed) {
-	for (i in groups.indices) {
+	for ((i, section) in sections.withIndex()) {
 		if (contents[i]!!.isEmpty()) {
 			continue
 		}
-		embed.addFieldSeparate(groups[i].title, contents[i], 0)
+		embed.addFieldSeparate(section.sectionData.sectionDisplayName ?: "", contents[i], 0)
 	}
-//	}
 	source.complete(null, embed.build())
-//	if (!useEmbed) {
-//		for (i in groups.indices) {
-//			if (contents[i].isNullOrEmpty()) {
-//				continue
-//			}
-//			source.channel.sendMessage("**" + groups[i].title + "**\n" + contents[i]).queue()
-//		}
-//	}
 	return Command.SINGLE_SUCCESS
 }
 
 private fun isUserAnIdiot(source: CommandSourceStack): Boolean {
 	if (source.channel.idLong == 709667951300706385L || source.channel.idLong == 708845713592811603L) {
-		source.complete("Hey ${source.author.asMention}, in this server there is an <#702307657989619744> channel.\nIf you believe that it is outdated, you can DM one of us to update it.")
+		source.message.reply("Hey ${source.author.asMention}, in this server there is an <#702307657989619744> channel.\nIf you believe that it is outdated, you can DM one of us to update it.").complete()
 		return true
 	}
 	return false
@@ -158,37 +188,28 @@ fun generateShopImage() {
 	AssetManager.INSTANCE.loadPaks()
 	val rarityData = AssetManager.INSTANCE.provider.loadObject<FortRarityData>("/Game/Balance/RarityData.RarityData")!!
 	val store = FileReader("D:\\Downloads\\shop-25-12-2020-en.json").use { EpicApi.GSON.fromJson(it, CatalogDownload::class.java) }
-	val cmsData = EpicApi(OkHttpClient()).okHttpClient.newCall(Request.Builder().url("https://fortnitecontent-website-prod07.ol.epicgames.com/content/api/pages/fortnite-game").build()).exec().to<FortCmsData>()
-	var sections = cmsData.shopSections.sectionList.sections.associate {
-		val section = CatabaSection(it)
-		section.cmsBacking.sectionId to section
-	}
-	for (storefront in store.storefronts) {
-		for (catalogEntry in storefront.catalogEntries) {
-			val ce = catalogEntry.holder()
-			(sections[ce.getMeta("SectionId") ?: continue] ?: continue).items.add(ce)
-		}
-	}
-	sections = sections.filter {
-		if (it.value.items.isEmpty()) {
+	val catalogManager = CatalogManager()
+	catalogManager.ensureCatalogData(EpicApi(OkHttpClient()))
+	val sections = catalogManager.athenaSections.values.filter {
+		if (it.items.isEmpty()) {
 			false
 		} else {
-			it.value.items.sortByDescending { it.ce.sortPriority ?: 0 }
+			it.items.sortByDescending { it.sortPriority ?: 0 }
 			true
 		}
 	}
 	println(store.storefronts.size)
-	var noDisplayNameCountC = 0f
-	var noDisplayNameCount = 0f
-	var firstSection = 300f
-	var itemSpacingX = 25f
-	var itemSpacingY = 25f
-	var sectionSpacing = 92f
-	var normalBaseSizeX = 318f
-	var normalBaseSizeY = 551f
-	var rowStartX = 98f
-	var finalSpacingX = 132f
-	var finalSpacingY = 92f
+	val noDisplayNameCountC = 0f
+	val noDisplayNameCount = 0f
+	val firstSection = 300f
+	val itemSpacingX = 25f
+	val itemSpacingY = 25f
+	val sectionSpacing = 92f
+	val normalBaseSizeX = 318f
+	val normalBaseSizeY = 551f
+	val rowStartX = 98f
+	val finalSpacingX = 132f
+	val finalSpacingY = 92f
 	val tileSizes = mapOf(
 		Mini to FVector2D(normalBaseSizeX, normalBaseSizeY / 3f - itemSpacingY / 1.5f),
 		Small to FVector2D(normalBaseSizeX, normalBaseSizeY / 2 - itemSpacingY / 2),
@@ -212,7 +233,7 @@ fun generateShopImage() {
 
 	val catalogMessages = AssetManager.INSTANCE.provider.loadObject<CatalogMessaging>("/Game/Athena/UI/Frontend/CatalogMessages.CatalogMessages")!!
 
-	for (section in sections.values) {
+	for (section in sections) {
 		++sectionsNum
 
 		var rowStartY = itemSpacingY + sectionsNum * normalBaseSizeY - normalBaseSizeY + sectionsNum * sectionSpacing + firstSection
@@ -226,7 +247,8 @@ fun generateShopImage() {
 		var sortingY = rowStartY
 		var limit = normalBaseSizeY + itemSpacingY * 2 + rowStartY
 
-		for (entry in section.items) {
+		for (entry_ in section.items) {
+			val entry = entry_.holder()
 			val tileSize = EItemShopTileSize.valueOf(entry.getMeta("TileSize") ?: throw RuntimeException("h!"))
 			val currentTileSize = tileSizes[tileSize]!!
 			if (sortingY + currentTileSize.y > limit) {
@@ -288,7 +310,7 @@ fun generateShopImage() {
 		ctx.font = ResourcesContext.burbankBigCondensedBlack.deriveFont(400f)
 		ctx.drawString("ITEM SHOP", imageX.toInt() / 2 + 28 + 330 / 2, 350)
 
-		for (section in sections.values) {
+		for (section in sections) {
 			++sectionsNum2
 			var rowStartY = itemSpacingY + sectionsNum2 * normalBaseSizeY - normalBaseSizeY + sectionsNum2 * sectionSpacing + firstSection
 
@@ -300,16 +322,17 @@ fun generateShopImage() {
 
 			ctx.color = 0x89F0FF.awtColor()
 			ctx.font = ctx.font.deriveFont(32f)
-			val dn = section.cmsBacking.sectionDisplayName ?: ""
+			val dn = section.sectionData.sectionDisplayName ?: ""
 			ctx.drawString(dn, sortingX + 27, sortingY - 20)
 
-			if (section.cmsBacking.bShowTimer) {
+			if (section.sectionData.bShowTimer) {
 				val textWidth = ctx.fontMetrics.stringWidth(dn)
 				drawTimer(ctx, (sortingX + 27 + textWidth + 5 + 6).toInt(), (sortingY - 18 - 30).toInt())
 			}
 
 			ctx.color = Color.BLACK
-			for (entry in section.items) {
+			for (entry_ in section.items) {
+				val entry = entry_.holder()
 				val tileSize = EItemShopTileSize.valueOf(entry.getMeta("TileSize") ?: throw RuntimeException("h!"))
 				val currentTileSize = tileSizes[tileSize]!!
 

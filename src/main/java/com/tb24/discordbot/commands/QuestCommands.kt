@@ -14,18 +14,13 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.Rune
 import com.tb24.discordbot.commands.arguments.ItemArgument.Companion.getItem
 import com.tb24.discordbot.commands.arguments.ItemArgument.Companion.item
-import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
-import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
-import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.assetdata.RewardCategoryTabData
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.attributes.IQuestManager
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
-import com.tb24.fn.model.mcpprofile.commands.QueryPublicProfile
-import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.model.mcpprofile.commands.subgame.FortRerollDailyQuest
 import com.tb24.fn.util.format
 import com.tb24.uasset.AssetManager
@@ -95,34 +90,15 @@ class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manage
 class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active STW daily quests.", arrayOf("dailies", "stwdailies")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires(Rune::hasAssetsLoaded)
-		.executes {
-			val source = it.source
-			source.ensureSession()
-			source.loading("Getting quests")
-			source.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "campaign").await()
-			displayDailyQuests(it, source.api.currentLoggedIn)
-		}
+		.withPublicProfile(::displayDailyQuests, "Getting quests")
 		.then(literal("replace")
 			.then(argument("daily quest #", integer())
 				.executes { c -> replaceQuest(c.source, "campaign", getInteger(c, "daily quest #")) { getCampaignDailyQuests(it) } }
 			)
 		)
-		.then(argument("user", users(1))
-			.executes {
-				val source = it.source
-				if (source.api.userToken == null) {
-					source.session = source.client.internalSession
-				}
-				val user = getUsers(it, "user").values.first()
-				source.loading("Getting quests of ${user.displayName}")
-				source.api.profileManager.dispatchPublicCommandRequest(user, QueryPublicProfile(), "campaign").await()
-				displayDailyQuests(it, user)
-			}
-		)
 
-	private fun displayDailyQuests(c: CommandContext<CommandSourceStack>, user: GameProfile): Int {
+	private fun displayDailyQuests(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
 		val source = c.source
-		val campaign = source.api.profileManager.getProfileData(user.id, "campaign")
 		val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
 		val numRerolls = (campaign.stats.attributes as IQuestManager).questManager?.dailyQuestRerolls ?: 0
 		var description = getCampaignDailyQuests(campaign)
@@ -130,11 +106,11 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 			.joinToString("\n")
 		if (description.isEmpty()) {
 			description = "You have no active daily quests"
-		} else if (user == source.api.currentLoggedIn && numRerolls > 0) {
+		} else if (campaign.owner == source.api.currentLoggedIn && numRerolls > 0) {
 			description += "\n\n" + "You have %,d reroll(s) remaining today.\nUse `%s%s replace <%s>` to replace one."
 				.format(numRerolls, source.prefix, c.commandName, "daily quest #")
 		}
-		source.complete(null, source.createEmbed(user)
+		source.complete(null, source.createEmbed(campaign.owner)
 			.setTitle("Daily Quests")
 			.setDescription(description)
 			.build())

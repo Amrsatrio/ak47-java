@@ -88,7 +88,7 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 			val dailyRewardStat = (source.api.profileManager.getProfileData("campaign").stats.attributes as CampaignProfileAttributes).daily_rewards
 			val millisInDay = 24L * 60L * 60L * 1000L
 			if (dailyRewardStat?.lastClaimDate?.time?.let { it / millisInDay == System.currentTimeMillis() / millisInDay } != false) {
-				if (user.idLong == 624299014388711455L) notifyDailyRewardsClaimed(source, dailyRewardStat, null)
+				//if (user.idLong == 624299014388711455L) notifyDailyRewardsClaimed(source, dailyRewardStat, null)
 				return true
 			}
 			val response = session.api.profileManager.dispatchClientCommandRequest(ClaimLoginReward(), "campaign").await()
