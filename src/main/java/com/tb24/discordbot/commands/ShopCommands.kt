@@ -22,6 +22,7 @@ import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
 import com.tb24.fn.util.getPreviewImagePath
 import com.tb24.uasset.AssetManager
+import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.enums.EFortRarity
 import me.fungames.jfortniteparse.fort.exports.CatalogMessaging
 import me.fungames.jfortniteparse.fort.exports.FortMtxOfferData
@@ -72,7 +73,7 @@ class ShopCommand : BrigadierCommand("shop", "Sends an image of today's item sho
 						rarity = item.defData.Rarity
 					}
 					if (!offer.displayAssetPath.isNullOrEmpty()) {
-						AssetManager.INSTANCE.provider.loadObject<FortMtxOfferData>(offer.displayAssetPath)?.let {
+						loadObject<FortMtxOfferData>(offer.displayAssetPath)?.let {
 							(it.DetailsImage?.ResourceObject?.value as? UTexture2D)?.run { image = toBufferedImage() }
 							it.DisplayName?.run { title = format() }
 						}
@@ -186,7 +187,7 @@ fun main() {
 
 fun generateShopImage() {
 	AssetManager.INSTANCE.loadPaks()
-	val rarityData = AssetManager.INSTANCE.provider.loadObject<FortRarityData>("/Game/Balance/RarityData.RarityData")!!
+	val rarityData = loadObject<FortRarityData>("/Game/Balance/RarityData.RarityData")!!
 	val store = FileReader("D:\\Downloads\\shop-25-12-2020-en.json").use { EpicApi.GSON.fromJson(it, CatalogDownload::class.java) }
 	val catalogManager = CatalogManager()
 	catalogManager.ensureCatalogData(EpicApi(OkHttpClient()))
@@ -231,7 +232,7 @@ fun generateShopImage() {
 		// medium is not implemented
 	)
 
-	val catalogMessages = AssetManager.INSTANCE.provider.loadObject<CatalogMessaging>("/Game/Athena/UI/Frontend/CatalogMessages.CatalogMessages")!!
+	val catalogMessages = loadObject<CatalogMessaging>("/Game/Athena/UI/Frontend/CatalogMessages.CatalogMessages")!!
 
 	for (section in sections) {
 		++sectionsNum

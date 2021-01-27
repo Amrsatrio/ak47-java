@@ -1,7 +1,6 @@
 package com.tb24.discordbot;
 
 import com.tb24.discordbot.commands.CommandSourceStack;
-import com.tb24.uasset.AssetManager;
 
 import java.util.Arrays;
 
@@ -15,10 +14,6 @@ public class Rune {
 			335937477997101056L, // potato
 			175279476245004288L // m4tonoob
 		).contains(source.getAuthor().getIdLong());
-	}
-
-	public static boolean hasAssetsLoaded(CommandSourceStack source) {
-		return !AssetManager.INSTANCE.provider.files().isEmpty();
 	}
 
 	public static boolean hasAccess(CommandSourceStack source) {

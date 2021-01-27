@@ -9,6 +9,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.uasset.AssetManager
 import com.tb24.uasset.JWPSerializer
+import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.ue4.assets.exports.USoundWave
 import me.fungames.jfortniteparse.ue4.assets.exports.UStaticMesh
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
@@ -49,7 +50,7 @@ class ExportObjectCommand : BrigadierCommand("export", "Export an object from th
 			.executes { c ->
 				val objectPath = getString(c, "object path")
 				c.source.loading("Processing object")
-				val obj = runCatching { AssetManager.INSTANCE.provider.loadObject(objectPath) }
+				val obj = runCatching { loadObject(objectPath) }
 					.getOrElse { throw SimpleCommandExceptionType(LiteralMessage("Failed to load package.\n```$it```")).create() }
 					?: throw SimpleCommandExceptionType(LiteralMessage("The package was loaded, but the object wasn't found.")).create()
 				if (obj.owner!!.name.endsWith("Apollo_ItemCollect_S15_Overlay")) {

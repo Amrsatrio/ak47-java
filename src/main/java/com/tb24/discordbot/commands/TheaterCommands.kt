@@ -12,8 +12,8 @@ import com.tb24.fn.model.assetdata.FortZoneTheme
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.attributes.CampaignProfileAttributes
 import com.tb24.fn.util.format
-import com.tb24.uasset.AssetManager
 import com.tb24.uasset.StructJson
+import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.objects.rows.GameDifficultyInfo
 import me.fungames.jfortniteparse.ue4.assets.exports.UObject
 
@@ -69,5 +69,5 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 	}
 
 	private inline fun <reified T : UObject> loadCDO(path: String) =
-		AssetManager.INSTANCE.provider.loadObject<T>(StringBuilder(path).insert(path.lastIndexOf('.') + 1, "Default__").toString())
+		loadObject<T>(StringBuilder(path).insert(path.lastIndexOf('.') + 1, "Default__").toString())
 }

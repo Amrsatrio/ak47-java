@@ -3,6 +3,7 @@ package com.tb24.discordbot
 import com.tb24.fn.EpicApi.GSON
 import com.tb24.fn.model.EpicError
 import com.tb24.uasset.AssetManager
+import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.ue4.assets.exports.USoundWave
 import me.fungames.jfortniteparse.ue4.assets.exports.UStaticMesh
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
@@ -62,7 +63,7 @@ fun main(args: Array<String>) {
 				return@get it.readBytes()
 			}
 		}*/
-		val obj = runCatching { AssetManager.INSTANCE.provider.loadObject(objectPath) }
+		val obj = runCatching { loadObject(objectPath) }
 			.getOrElse {
 				halt(500, createError(
 					"errors.com.tb24.asset_api.load_failed",

@@ -13,7 +13,7 @@ import com.tb24.discordbot.util.replyPaginated
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.util.Formatters
-import com.tb24.uasset.AssetManager
+import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.objects.rows.FortPhoenixLevelRewardData
 import me.fungames.jfortniteparse.ue4.assets.exports.UDataTable
 import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
@@ -21,7 +21,7 @@ import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 
 class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's venture level, xp, and how much is needed to level up.") {
-	private val phoenixLevelRewardsTable by lazy { AssetManager.INSTANCE.provider.loadObject<UDataTable>("/Game/Balance/DataTables/PhoenixLevelRewardsTable.PhoenixLevelRewardsTable") }
+	private val phoenixLevelRewardsTable by lazy { loadObject<UDataTable>("/Game/Balance/DataTables/PhoenixLevelRewardsTable.PhoenixLevelRewardsTable") }
 	private val noDataErr = SimpleCommandExceptionType(LiteralMessage("No data"))
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()

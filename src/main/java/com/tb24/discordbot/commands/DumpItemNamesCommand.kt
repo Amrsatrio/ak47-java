@@ -8,6 +8,7 @@ import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.util.format
 import com.tb24.uasset.AssetManager
+import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.exports.FortAlterationItemDefinition
 import me.fungames.jfortniteparse.fort.exports.FortItemDefinition
 import me.fungames.jfortniteparse.fort.exports.FortSchematicItemDefinition
@@ -20,7 +21,7 @@ class DumpItemNamesCommand : BrigadierCommand("dumpitemnames", "Gives you a JSON
 			source.loading("Loading objects")
 			val map = sortedMapOf<String, String>()
 			for ((templateId, objectPath) in AssetManager.INSTANCE.provider.assetManager.templateIdToObjectPathMap) {
-				val obj = AssetManager.INSTANCE.provider.loadObject(objectPath)
+				val obj = loadObject(objectPath)
 				val dn = when (obj) {
 					is FortAlterationItemDefinition -> obj.Description
 					is FortSchematicItemDefinition -> FortItemStack(templateId, 1).transformedDefData?.DisplayName

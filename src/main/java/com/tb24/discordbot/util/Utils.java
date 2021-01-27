@@ -18,7 +18,7 @@ import static com.tb24.fn.util.Utils.isNone;
 public class Utils {
 	public static final String LOADING_EMOJI = "<a:loading:740564597643149404>";
 	public static final long MTX_EMOJI_ID = 751101530626588713L;
-	public static final String MTX_EMOJI = ":vbucks:"; //"<:vbucks:" + MTX_EMOJI_ID + ">";
+	public static final String MTX_EMOJI = "<:vbucks:" + MTX_EMOJI_ID + ">";
 	private static final String[] ERROR_TITLES = new String[]{
 		"DRAT! WE'RE SORRY",
 		"NOT THE LLAMA YOU'RE LOOKING FOR",

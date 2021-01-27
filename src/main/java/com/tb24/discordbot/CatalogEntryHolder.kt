@@ -12,7 +12,7 @@ import com.tb24.fn.model.gamesubcatalog.ECatalogSaleType
 import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Utils
-import com.tb24.uasset.AssetManager
+import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.exports.FortMtxOfferData
 import java.util.*
 import kotlin.math.max
@@ -140,7 +140,7 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 		}
 	}
 
-	val displayAsset by lazy { if (!Utils.isNone(ce.displayAssetPath)) AssetManager.INSTANCE.provider.loadObject<FortMtxOfferData>(ce.displayAssetPath) else null }
+	val displayAsset by lazy { if (!Utils.isNone(ce.displayAssetPath)) loadObject<FortMtxOfferData>(ce.displayAssetPath) else null }
 
 	/*fun getDisplayPrice(qty: Int): String {
 		if (price == Price.NO_PRICE) {

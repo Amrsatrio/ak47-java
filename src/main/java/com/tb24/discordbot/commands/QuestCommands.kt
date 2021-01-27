@@ -11,7 +11,6 @@ import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.Rune
 import com.tb24.discordbot.commands.arguments.ItemArgument.Companion.getItem
 import com.tb24.discordbot.commands.arguments.ItemArgument.Companion.item
 import com.tb24.discordbot.util.*
@@ -53,7 +52,6 @@ import kotlin.system.exitProcess
 
 class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manages your active BR daily challenges.", arrayOf("dailychals", "brdailies")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires(Rune::hasAssetsLoaded)
 		.executes { c ->
 			val source = c.source
 			source.ensureSession()
@@ -89,7 +87,6 @@ class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manage
 
 class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active STW daily quests.", arrayOf("dailies", "stwdailies")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires(Rune::hasAssetsLoaded)
 		.withPublicProfile(::displayDailyQuests, "Getting quests")
 		.then(literal("replace")
 			.then(argument("daily quest #", integer())

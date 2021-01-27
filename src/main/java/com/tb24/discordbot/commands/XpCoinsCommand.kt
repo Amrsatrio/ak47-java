@@ -9,7 +9,6 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.MapImageGenerator
 import com.tb24.discordbot.MapProcessor
-import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.mcpprofile.attributes.AthenaProfileAttributes
@@ -17,6 +16,7 @@ import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.util.Formatters.num
 import com.tb24.uasset.AssetManager
 import com.tb24.uasset.JWPSerializer
+import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
 import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.ue4.objects.core.math.FVector2D
@@ -30,7 +30,6 @@ import javax.imageio.ImageIO
 
 class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't collected this season.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires(Rune::hasAssetsLoaded)
 		.executes { execute(it.source, true) }
 		.then(literal("nomap")
 			.executes { execute(it.source, false) }
@@ -110,7 +109,7 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 
 		source.loading("Generating and uploading map")
 		val minimapPath = "/Game/Athena/Apollo/Maps/UI/Apollo_Terrain_Minimap.Apollo_Terrain_Minimap"
-		val map = MapImageGenerator(AssetManager.INSTANCE.provider.loadObject<UTexture2D>(minimapPath)?.toBufferedImage())
+		val map = MapImageGenerator(loadObject<UTexture2D>(minimapPath)?.toBufferedImage())
 
 		if (!File("config/xp_coins_data.json").exists()) {
 			throw SimpleCommandExceptionType(LiteralMessage("We couldn't generate the map because the data does not exist.")).create()
@@ -153,7 +152,6 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 
 class GenXpCoinsDataCommand : BrigadierCommand("genxpcoinsdata", "Generate XP coins data based on the current loaded game files.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires { Rune.isBotDev(it) && Rune.hasAssetsLoaded(it) }
 		.executes { c ->
 			c.source.loading("Generating XP coins data")
 			val start = System.currentTimeMillis()
