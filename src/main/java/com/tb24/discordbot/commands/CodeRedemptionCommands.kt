@@ -11,6 +11,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.Session
 import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.format
+import com.tb24.fn.model.RedeemCodePayload
 import com.tb24.fn.util.EAuthClient
 
 class CheckCodeCommand : BrigadierCommand("checkcode", "Evaluates an Epic Games code.", arrayOf("evaluatecode")) {
@@ -62,7 +63,7 @@ class RedeemCodeCommand : BrigadierCommand("redeem", "Redeems an Epic Games code
 				if (lockCodeResponse.consumptionMetadata?.offerId == null) {
 					throw SimpleCommandExceptionType(LiteralMessage("Invalid code (offer ID unknown)")).create()
 				}
-				val redeemCodeResponse = session.api.fulfillmentService.redeemCode(session.api.currentLoggedIn.id, code, lockCodeResponse.codeUseId).exec().body()!!
+				val redeemCodeResponse = session.api.fulfillmentService.redeemCode(session.api.currentLoggedIn.id, code, lockCodeResponse.codeUseId, RedeemCodePayload().apply { fulfillmentSource = "DieselWebClient" }).exec().body()!!
 				val embed = source.createEmbed().setTitle("✅ Code redeemed").setFooter(code)
 				val codeInfo = runCatching { session.api.catalogService.queryOffersBulk(listOf(lockCodeResponse.consumptionMetadata.offerId), null, null, null).exec().body()!!.values.first() }.getOrNull()
 				if (codeInfo != null) {

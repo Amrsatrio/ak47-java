@@ -5,11 +5,14 @@ import com.mojang.brigadier.StringReader
 import com.mojang.brigadier.arguments.ArgumentType
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.HttpException
+import com.tb24.discordbot.L10N
 import com.tb24.discordbot.commands.CommandSourceStack
 import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.safeGetOneIndexed
 import com.tb24.discordbot.util.sortedFriends
+import com.tb24.fn.model.account.EExternalAuthType
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.friends.FriendV2
 import com.tb24.fn.util.Formatters
@@ -71,7 +74,7 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 			}
 		}
 		if (ids.size > max) {
-			throw SimpleCommandExceptionType(LiteralMessage("No more than ${Formatters.num.format(max)} recipients")).create()
+			throw SimpleCommandExceptionType(LiteralMessage("No more than ${Formatters.num.format(max)} users")).create()
 		}
 		return UserResult(ids)
 	}
@@ -93,29 +96,76 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 			val idsToQuery = mutableSetOf<String>()
 
 			// verify if recipients are account IDs and transforms non account IDs to account IDs using display name/email lookup
-			for (recipient in ids) {
-				if (recipient is FriendEntryQuery) {
-					val recipientN = recipient.index
+			for (query in ids) {
+				if (query is FriendEntryQuery) {
+					val recipientN = query.index
 					if (friends == null) {
 						friends = source.api.friendsService.queryFriends(source.api.currentLoggedIn.id, true).exec().body()!!.sortedFriends()
 					}
 					if (friends.isEmpty()) {
 						throw SimpleCommandExceptionType(LiteralMessage("No friends to choose from.")).create()
 					}
-					val friend = friends.safeGetOneIndexed(recipientN, recipient.reader, recipient.start)
+					val friend = friends.safeGetOneIndexed(recipientN, query.reader, query.start)
 					users[friend.accountId] = GameProfile(friend.accountId, friend.displayName)
-				} else if (recipient is String) {
+				} else if (query is String) {
 					when {
-						recipient.isEmpty() -> throw SimpleCommandExceptionType(LiteralMessage("A user cannot be empty.")).create()
-						recipient.length != 32 -> {
-							val response = (if (Utils.EMAIL_ADDRESS.matcher(recipient).matches()) {
-								source.api.accountService.getByEmail(recipient)
+						query.isEmpty() -> throw SimpleCommandExceptionType(LiteralMessage("A user cannot be empty.")).create()
+						query.length == 32 -> idsToQuery.add(query)
+						else -> {
+							val user = (if (Utils.EMAIL_ADDRESS.matcher(query).matches()) {
+								source.api.accountService.getByEmail(query).exec().body()!!
 							} else {
-								source.api.accountService.getByDisplayName(recipient)
-							}).exec().body()!!
-							users[response.id] = response
+								val colonIndex = query.indexOf(':')
+								var result: GameProfile? = null
+								var externalAuthType = EExternalAuthType.epic
+								var errorMessage: String? = null
+								if (colonIndex == -1) {
+									try {
+										result = source.api.accountService.getByDisplayName(query).exec().body()!!
+									} catch (e: HttpException) {
+										if (e.epicError.errorCode == "errors.com.epicgames.account.account_not_found") {
+											errorMessage = "We can't find an Epic account with name `$query`."
+										} else {
+											throw e
+										}
+									}
+								} else {
+									val externalAuthTypeStr = query.substring(0, colonIndex).toLowerCase()
+									if (externalAuthTypeStr != "psn" && externalAuthTypeStr != "xbl") {
+										throw SimpleCommandExceptionType(LiteralMessage("Must be either PSN or XBL.")).create()
+									}
+									externalAuthType = EExternalAuthType.valueOf(externalAuthTypeStr)
+									val externalNameQuery = query.substring(colonIndex + 1)
+									result = source.api.accountService.getExternalIdMappingsByDisplayName(externalAuthType, externalNameQuery, true).exec().body()!!.firstOrNull()
+									if (result == null) {
+										errorMessage = "We can't find an Epic account with ${L10N.format("account.ext.${externalAuthType.name}.name")} `$externalNameQuery`."
+									}
+								}
+								if (result == null) {
+									val sb = StringBuilder(errorMessage)
+									val searchResults = source.api.userSearchService.queryUsers(query, externalAuthType).exec().body()!!
+									if (searchResults.isNotEmpty()) {
+										sb.append("\nDo you mean:")
+										for (entry in searchResults) {
+											sb.append("\n\u2022 ")
+											entry.matches.firstOrNull()?.let {
+												if (it.platform != EExternalAuthType.epic) {
+													sb.append(it.platform.name).append(':')
+												}
+												sb.append(it.value).append(" - ")
+											}
+											sb.append('`').append(entry.accountId).append('`')
+											if (entry.epicMutuals > 0) {
+												sb.append(" (").append(Formatters.num.format(entry.epicMutuals)).append(" mutual)")
+											}
+										}
+									}
+									throw SimpleCommandExceptionType(LiteralMessage(sb.toString())).create()
+								}
+								result
+							})
+							users[user.id] = user
 						}
-						else -> idsToQuery.add(recipient)
 					}
 				}
 			}

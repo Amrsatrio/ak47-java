@@ -140,7 +140,7 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 		}
 	}
 
-	val displayAsset by lazy { if (!Utils.isNone(ce.displayAssetPath)) AssetManager.INSTANCE.provider.loadObject(ce.displayAssetPath) as? FortMtxOfferData else null }
+	val displayAsset by lazy { if (!Utils.isNone(ce.displayAssetPath)) AssetManager.INSTANCE.provider.loadObject<FortMtxOfferData>(ce.displayAssetPath) else null }
 
 	/*fun getDisplayPrice(qty: Int): String {
 		if (price == Price.NO_PRICE) {

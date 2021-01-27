@@ -33,7 +33,7 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 				"AthenaDance" to mutableSetOf(),
 				"AthenaItemWrap" to mutableSetOf(),
 				"AthenaMusicPack" to mutableSetOf(),
-				"AthenaLoadingScreen" to mutableSetOf()
+				//"AthenaLoadingScreen" to mutableSetOf()
 			)
 			for (item in athena.items.values) {
 				val ids = ctgs[item.primaryAssetType]
@@ -76,7 +76,7 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 				perform("Emotes", ctgs["AthenaDance"]),
 				perform("Wraps", ctgs["AthenaItemWrap"]),
 				perform("Musics", ctgs["AthenaMusicPack"]),
-				perform("Loading Screens", ctgs["AthenaLoadingScreen"])
+				//perform("Loading Screens", ctgs["AthenaLoadingScreen"])
 			).await()
 			source.complete("✅ All images have been sent successfully.")
 			Command.SINGLE_SUCCESS

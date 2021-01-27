@@ -92,6 +92,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(GrantRoledCommand())
 		register(HelpCommand())
 		register(HomebaseNameCommand())
+		register(InviteBotCommand())
 //		KickCommand.register(dispatcher)
 		register(LockerCommand())
 		register(LoginCommand())

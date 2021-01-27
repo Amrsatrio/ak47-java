@@ -73,7 +73,7 @@ class ShopCommand : BrigadierCommand("shop", "Sends an image of today's item sho
 					}
 					if (!offer.displayAssetPath.isNullOrEmpty()) {
 						AssetManager.INSTANCE.provider.loadObject<FortMtxOfferData>(offer.displayAssetPath)?.let {
-							(it.BackgroundImage?.ResourceObject?.value as? UTexture2D)?.run { image = toBufferedImage() }
+							(it.DetailsImage?.ResourceObject?.value as? UTexture2D)?.run { image = toBufferedImage() }
 							it.DisplayName?.run { title = format() }
 						}
 					}
