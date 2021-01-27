@@ -14,7 +14,6 @@ import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.mcpprofile.attributes.AthenaProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.util.Formatters.num
-import com.tb24.uasset.AssetManager
 import com.tb24.uasset.JWPSerializer
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
@@ -157,7 +156,7 @@ class GenXpCoinsDataCommand : BrigadierCommand("genxpcoinsdata", "Generate XP co
 			val start = System.currentTimeMillis()
 			var mapPath = "/Game/Athena/Apollo/Maps/Apollo_Terrain"
 			mapPath = "/BattlepassS15/Maps/Apollo_ItemCollect_S15_Overlay" // all s15 w7+ xp coins are contained in this map
-			val entries = MapProcessor(AssetManager.INSTANCE.provider).processMap(mapPath)
+			val entries = MapProcessor().processMap(mapPath)
 			FileWriter(File("./config/xp_coins_data.json").apply { parentFile.mkdirs() }).use {
 				JWPSerializer.GSON.toJson(entries, it)
 			}

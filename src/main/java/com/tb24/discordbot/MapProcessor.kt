@@ -3,7 +3,7 @@ package com.tb24.discordbot
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.tb24.uasset.JWPSerializer
-import com.tb24.uasset.MyFileProvider
+import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.exceptions.ParserException
 import me.fungames.jfortniteparse.fort.exports.actors.BuildingFoundation
 import me.fungames.jfortniteparse.ue4.assets.exports.UWorld
@@ -14,14 +14,14 @@ import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import me.fungames.jfortniteparse.ue4.objects.uobject.FSoftObjectPath
 
-class MapProcessor(val provider: MyFileProvider) {
+class MapProcessor {
 	val entries = JsonArray()
 
 	fun processMap(mapPath: String = "/Game/Athena/Apollo/Maps/Apollo_Terrain",
 				   parentLoc: FVector = FVector(0f, 0f, 0f),
 				   parentRot: FRotator = FRotator(0f, 0f, 0f),
 				   parentScale: FVector = FVector(1f, 1f, 1f)): JsonArray {
-		val world = provider.loadObject<UWorld>(mapPath)
+		val world = loadObject<UWorld>(mapPath)
 			?: throw ParserException("$mapPath is not a world")
 		val persistentLevel = world.persistentLevel?.value
 			?: throw ParserException("Persistent level can't be loaded")

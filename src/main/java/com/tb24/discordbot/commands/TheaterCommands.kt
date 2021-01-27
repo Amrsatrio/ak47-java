@@ -15,7 +15,10 @@ import com.tb24.fn.util.format
 import com.tb24.uasset.StructJson
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.objects.rows.GameDifficultyInfo
+import me.fungames.jfortniteparse.ue4.assets.exports.UClassReal
 import me.fungames.jfortniteparse.ue4.assets.exports.UObject
+import me.fungames.jfortniteparse.ue4.assets.objects.FPropertyTag
+import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
 
 class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks alerts.", arrayOf("va", "mtxalerts")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -37,8 +40,8 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 				missionAlert?.MissionAlertRewards?.items?.firstOrNull { it.itemType == "AccountResource:currency_mtxswap" }
 					?: continue
 				val difficulty = mission.MissionDifficultyInfo.getRowMapped<GameDifficultyInfo>()
-				val missionGenerator = loadCDO<FortMissionGenerator>(mission.MissionGenerator.toString())
-				val zoneTheme = loadCDO<FortZoneTheme>(tile.ZoneTheme.toString())
+				val missionGenerator = loadCDO(mission.MissionGenerator.toString(), FortMissionGenerator::class.java)
+				val zoneTheme = loadCDO(tile.ZoneTheme.toString(), FortZoneTheme::class.java)
 				val hasCompletedMissionAlert = attrs.mission_alert_redemption_record.claimData.any { it.missionAlertId == missionAlert.MissionAlertGuid }
 
 				val sb = StringBuilder()
@@ -68,6 +71,27 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 		return Command.SINGLE_SUCCESS
 	}
 
-	private inline fun <reified T : UObject> loadCDO(path: String) =
-		loadObject<T>(StringBuilder(path).insert(path.lastIndexOf('.') + 1, "Default__").toString())
+	private fun <T : UObject> loadCDO(path: String, clazz: Class<T>): T? {
+		val classObject = loadObject<UClassReal>(path)
+			?: return null
+		val cdo = classObject.classDefaultObject.load<UObject>()
+			?: return null
+		val props = mutableListOf<FPropertyTag>()
+		getAllProperties(cdo, props)
+		return mapToClass(props, clazz)
+	}
+
+	private fun getAllProperties(obj: UObject, props: MutableList<FPropertyTag>) {
+		obj.template?.value?.let {
+			getAllProperties(it, props)
+		}
+		for (prop in obj.properties) {
+			val existing = props.firstOrNull { it.name == prop.name && it.arrayIndex == prop.arrayIndex }
+			if (existing != null) {
+				existing.prop = prop.prop
+			} else {
+				props.add(prop)
+			}
+		}
+	}
 }

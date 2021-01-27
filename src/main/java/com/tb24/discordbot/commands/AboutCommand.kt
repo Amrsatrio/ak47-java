@@ -18,6 +18,7 @@ class AboutCommand : BrigadierCommand("about", "Shows credits of this bot.") {
 				.addField("Developers", "kemo\namrsatrio\nFunGames", false)
 				.addField("Third party libraries", arrayOf(
 					"Brigadier",
+					"ExpiringMap",
 					"Guava",
 					"GSON",
 					"JDA",
@@ -34,8 +35,8 @@ class AboutCommand : BrigadierCommand("about", "Shows credits of this bot.") {
 			if (message.awaitReactions({ _, _, _ -> true }, AwaitReactionsOptions().apply {
 					max = 1
 					time = 10000L
-				}).await().any()) {
-				message.editMessage(embed.addField("User agent", it.source.client.internalSession.api.okHttpClientInterceptor.userAgent, false).build()).queue()
+				}).await().isNotEmpty()) {
+				message.editMessage(embed.addField("User agent", it.source.client.internalSession.api.okHttpClientInterceptor.userAgent, false).build()).complete()
 			}
 			Command.SINGLE_SUCCESS
 		}

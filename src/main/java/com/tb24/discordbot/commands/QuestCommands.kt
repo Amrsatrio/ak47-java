@@ -81,7 +81,7 @@ class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manage
 
 	private fun getAthenaDailyQuests(athena: McpProfile) =
 		athena.items.values
-			.filter { it.primaryAssetType == "Quest" && it.defData is AthenaDailyQuestDefinition && it.attributes["quest_state"]?.asString == "Active" }
+			.filter { it.primaryAssetType == "Quest" && it.attributes["quest_state"]?.asString == "Active" && it.defData is AthenaDailyQuestDefinition }
 			.sortedBy { it.displayName }
 }
 
@@ -116,7 +116,7 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 
 	private fun getCampaignDailyQuests(campaign: McpProfile) =
 		campaign.items.values
-			.filter { it.primaryAssetType == "Quest" && (it.defData as? FortQuestItemDefinition)?.QuestType == EFortQuestType.DailyQuest && it.attributes["quest_state"]?.asString == "Active" }
+			.filter { it.primaryAssetType == "Quest" && it.attributes["quest_state"]?.asString == "Active" && (it.defData as? FortQuestItemDefinition)?.QuestType == EFortQuestType.DailyQuest }
 			.sortedBy { it.displayName }
 }
 
@@ -211,39 +211,50 @@ class QuestCommand : BrigadierCommand("quest", "Shows the details of a quest by 
 			.setColor(COLOR_SUCCESS)
 			.setAuthor(quest.DisplayName?.format(), null, Utils.benBotExportAsset(quest.LargePreviewImage?.toString()))
 			.setDescription(quest.Description?.format())
-		val objectives = quest.Objectives.filter { !it.bHidden }
+		val objectives = renderQuestObjectives(item)
 		if (objectives.isNotEmpty()) {
-			embed.addField("Objectives", objectives.joinToString("\n") {
-				val completion = Utils.getCompletion(it, item)
-				val objectiveCompleted = completion >= it.Count
-				val sb = StringBuilder(if (objectiveCompleted) "\\☑ ~~" else "☐ ")
-				sb.append(it.Description)
-				if (it.Count > 1) {
-					sb.append(" [%,d/%,d]".format(completion, it.Count))
-				}
-				if (objectiveCompleted) {
-					sb.append("~~")
-				}
-				sb.toString()
-			}, false)
+			embed.addField("Objectives", objectives, false)
 		}
-		val rewardLines = mutableListOf<String>()
-		quest.Rewards?.forEach { reward ->
-			if (reward.ItemPrimaryAssetId.PrimaryAssetType.Name.text != "Quest") {
-				rewardLines.add("\u2022 " + reward.render(1f, conditionalCondition))
-			}
-		}
-		quest.RewardsTable?.value?.rows
-			?.mapValues { it.value.mapToClass(FortQuestRewardTableRow::class.java) }
-			?.filter { it.value.QuestTemplateId == "*" || it.value.QuestTemplateId == item.templateId && !it.value.Hidden }
-			?.render("\u2022 ", "  ", 1f, false, conditionalCondition)
-			?.let { rewardLines.addAll(it) }
+		val rewardLines = renderQuestRewards(item, conditionalCondition)
 		if (rewardLines.isNotEmpty()) {
-			embed.addField("Rewards", rewardLines.joinToString("\n"), false)
+			embed.addField("Rewards", rewardLines, false)
 		}
 		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS
 	}
+}
+
+fun renderQuestObjectives(item: FortItemStack): String {
+	val objectives = (item.defData as FortQuestItemDefinition).Objectives.filter { !it.bHidden }
+	return objectives.joinToString("\n") {
+		val completion = Utils.getCompletion(it, item)
+		val objectiveCompleted = completion >= it.Count
+		val sb = StringBuilder(if (objectiveCompleted) "`☑` ~~" else "`☐` ")
+		sb.append(it.Description)
+		if (it.Count > 1) {
+			sb.append(" [%,d/%,d]".format(completion, it.Count))
+		}
+		if (objectiveCompleted) {
+			sb.append("~~")
+		}
+		sb.toString()
+	}
+}
+
+fun renderQuestRewards(item: FortItemStack, conditionalCondition: Boolean): String {
+	val quest = item.defData as FortQuestItemDefinition
+	val rewardLines = mutableListOf<String>()
+	quest.Rewards?.forEach { reward ->
+		if (reward.ItemPrimaryAssetId.PrimaryAssetType.Name.text != "Quest") {
+			rewardLines.add("\u2022 " + reward.render(1f, conditionalCondition))
+		}
+	}
+	quest.RewardsTable?.value?.rows
+		?.mapValues { it.value.mapToClass(FortQuestRewardTableRow::class.java) }
+		?.filter { it.value.QuestTemplateId == "*" || it.value.QuestTemplateId == item.templateId && !it.value.Hidden }
+		?.render("", "", 1f, false, conditionalCondition)
+		?.let { rewardLines.addAll(it) }
+	return rewardLines.joinToString("\n")
 }
 
 fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int, questsGetter: (McpProfile) -> List<FortItemStack>): Int {
