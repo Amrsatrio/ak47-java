@@ -78,7 +78,7 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 	fun ensureCompletedCampaignTutorial(campaign: McpProfile) {
 		val completedTutorial = campaign.items.values.firstOrNull { it.templateId == "Quest:homebaseonboarding" }?.attributes?.get("completion_hbonboarding_completezone")?.asInt ?: 0 > 0
 		if (!completedTutorial) {
-			throw SimpleCommandExceptionType(LiteralMessage("The account must own Save the World and completed the tutorial.")).create()
+			throw SimpleCommandExceptionType(LiteralMessage("To continue, the account must own Save the World and completed the tutorial.")).create()
 		}
 	}
 }

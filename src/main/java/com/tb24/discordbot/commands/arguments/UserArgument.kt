@@ -146,8 +146,12 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 									val searchResults = source.api.userSearchService.queryUsers(query, externalAuthType).exec().body()!!
 									if (searchResults.isNotEmpty()) {
 										sb.append("\nDo you mean:")
-										for (entry in searchResults) {
+										for ((i, entry) in searchResults.withIndex()) {
 											sb.append("\n\u2022 ")
+											if (i >= 20) {
+												sb.append("... and more ...")
+												break
+											}
 											entry.matches.firstOrNull()?.let {
 												if (it.platform != EExternalAuthType.epic) {
 													sb.append(it.platform.name).append(':')

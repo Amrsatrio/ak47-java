@@ -2,15 +2,12 @@ package com.tb24.discordbot.item
 
 import com.tb24.discordbot.L10N
 import com.tb24.fn.model.FortItemStack
+import com.tb24.fn.util.getPathName
 import com.tb24.fn.util.getStringOr
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.enums.EFortItemType
 import me.fungames.jfortniteparse.fort.exports.*
 import me.fungames.jfortniteparse.fort.objects.ItemCategory
-import me.fungames.jfortniteparse.ue4.assets.IoPackage
-import me.fungames.jfortniteparse.ue4.assets.IoPackage.ResolvedExportObject
-import me.fungames.jfortniteparse.ue4.assets.IoPackage.ResolvedObject
-import me.fungames.jfortniteparse.ue4.assets.exports.UObject
 import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText
 import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
 
@@ -124,25 +121,6 @@ class ItemTypeResolver {
 					rightImg = CategoryBrush.Brush_XL.ResourceObject.getPathName()
 				}
 			}
-		}
-
-		// Hacky solution to get the path name of an ObjectProperty in Lazy form without invoking the deserialization
-		// Only works with IoPackage though
-		private fun Lazy<UObject>.getPathName(): String {
-			val initializer = javaClass.getDeclaredField("initializer").apply { isAccessible = true }.get(this)
-				?: return value.getPathName()
-			val pkg = initializer.javaClass.getDeclaredField("this$0").apply { isAccessible = true }.get(initializer) as IoPackage
-			val export = initializer.javaClass.getDeclaredField("\$export").apply { isAccessible = true }.get(initializer)
-			val initial = ResolvedExportObject(pkg.exportMap.indexOf(export), pkg)
-			var current: ResolvedObject? = initial
-			val sb = StringBuilder()
-			while (current != null) {
-				val outer = current.getOuter()
-				sb.insert(0, (if (outer != null && outer.getOuter() == null) ':' else '.') + current.getName().text)
-				current = outer
-			}
-			sb.insert(0, pkg.name)
-			return sb.toString()
 		}
 	}
 }

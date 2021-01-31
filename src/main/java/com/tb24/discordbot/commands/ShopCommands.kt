@@ -5,6 +5,7 @@ import com.google.gson.JsonParser
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.GridSlot
 import com.tb24.discordbot.createAttachmentOfIcons
 import com.tb24.discordbot.managers.CatalogManager
@@ -145,6 +146,7 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 			profileManager.dispatchClientCommandRequest(QueryProfile(), "athena")
 		}
 	).await()
+	val showAccInfo = source.channel.idLong != DiscordBot.ITEM_SHOP_CHANNEL_ID && source.session.id != "__internal__"
 	val sections = if (subGame == ESubGame.Campaign) catalogManager.campaignSections else catalogManager.athenaSections.values
 	val contents = arrayOfNulls<List<String>>(sections.size)
 	val prices = mutableMapOf<String, CatalogItemPrice>()
@@ -156,7 +158,7 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 			}*/
 			if (catalogEntry.prices.isEmpty() || catalogEntry.prices.first().currencyType == EStoreCurrencyType.RealMoney) continue
 			val sd = catalogEntry.holder().apply { resolve(profileManager) }
-			lines.add("${(catalogEntry.__ak47_index + 1)}. ${sd.friendlyName}${if (sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit) " ✅" else ""}")
+			lines.add("${(catalogEntry.__ak47_index + 1)}. ${sd.friendlyName}${if (showAccInfo && (sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit)) " ✅" else ""}")
 			catalogEntry.prices.forEach { prices.putIfAbsent(it.currencyType.name + ' ' + it.currencySubType, it) }
 		}
 		contents[i] = lines
@@ -164,7 +166,7 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 	val embed = EmbedBuilder()
 		.setColor(0x0099FF)
 		.setTitle(if (subGame == ESubGame.Campaign) "⚡ " + "Save the World Item Shop" else "☂ " + "Battle Royale Item Shop")
-	if (source.session.id != "__internal__") {
+	if (showAccInfo) {
 		embed.setDescription("Use `${source.prefix}buy` or `${source.prefix}gift` to perform operations with these items.\n✅ = Owned/sold out")
 			.addField(if (prices.size == 1) "Balance" else "Balances", prices.values.joinToString(" \u00b7 ") { it.getAccountBalanceText(profileManager) }, false)
 	}
