@@ -3,6 +3,7 @@ package com.tb24.discordbot
 import com.mojang.brigadier.Command
 import com.tb24.discordbot.commands.CommandSourceStack
 import com.tb24.discordbot.commands.GrantType
+import com.tb24.discordbot.managers.ChannelsManager
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.event.ProfileUpdatedEvent

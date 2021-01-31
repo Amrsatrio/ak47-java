@@ -7,8 +7,15 @@ import com.rethinkdb.net.Connection;
 import com.rethinkdb.utils.Internals;
 import com.tb24.discordbot.commands.CommandManager;
 import com.tb24.discordbot.commands.GrantType;
+import com.tb24.discordbot.commands.OnlyChannelCommandSource;
+import com.tb24.discordbot.commands.ShopCommandsKt;
+import com.tb24.discordbot.managers.CatalogManager;
+import com.tb24.discordbot.managers.SavedLoginsManager;
+import com.tb24.discordbot.tasks.AutoLoginRewardTask;
+import com.tb24.discordbot.tasks.KeychainTask;
 import com.tb24.discordbot.util.Utils;
 import com.tb24.fn.model.account.DeviceAuth;
+import com.tb24.fn.model.assetdata.ESubGame;
 import com.tb24.fn.util.EAuthClient;
 import com.tb24.uasset.AssetManager;
 
@@ -32,7 +39,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.login.LoginException;
@@ -44,8 +51,8 @@ import okhttp3.OkHttpClient;
 import static com.rethinkdb.RethinkDB.r;
 
 public final class DiscordBot {
-	public static final String VERSION = "6.1.6";
-	private static final Logger LOGGER = LoggerFactory.getLogger("DiscordBot");
+	public static final String VERSION = "6.2.0";
+	public static final Logger LOGGER = LoggerFactory.getLogger("DiscordBot");
 	public static final CertificatePinner CERT_PINNER = new CertificatePinner.Builder()
 		.add("discordapp.com", "sha256/DACsWb3zfNT9ttV6g6o5wwpzvgKJ66CliW2GCh2m8LQ=")
 		.add("discordapp.com", "sha256/x9SZw6TwIqfmvrLZ/kz1o0Ossjmn728BnBKpUFqGNVM=")
@@ -53,6 +60,7 @@ public final class DiscordBot {
 		.build();
 	public static final boolean LOAD_PAKS = System.getProperty("loadPaks", "false").equals("true");
 	public static final String ENV = System.getProperty("env", "dev");
+	public static final long ITEM_SHOP_CHANNEL_ID = 702307657989619744L;
 	public static DiscordBot instance;
 	public OkHttpClient okHttpClient;
 	public JDA discord;
@@ -67,6 +75,7 @@ public final class DiscordBot {
 	public CommandManager commandManager;
 	public CatalogManager catalogManager;
 	public AutoLoginRewardTask autoLoginRewardTask = new AutoLoginRewardTask(this);
+	public KeychainTask keychainTask = new KeychainTask(this);
 
 	public static void main(String[] args) {
 		if (args.length < 1 || Utils.isEmpty(args[0])) {
@@ -75,10 +84,10 @@ public final class DiscordBot {
 			return;
 		}
 		LOGGER.info("Starting AK-47 Discord Bot...");
-		if (LOAD_PAKS) AssetManager.INSTANCE.loadPaks();
+		if (LOAD_PAKS) AssetManager.INSTANCE.loadPaks(false);
 		try {
 			instance = new DiscordBot(args[0]);
-		} catch (LoginException | InterruptedException e) {
+		} catch (Throwable e) {
 			LOGGER.error("Initialization failure", e);
 			System.exit(1);
 		}
@@ -94,6 +103,7 @@ public final class DiscordBot {
 			.certificatePinner(CERT_PINNER)
 			.build();
 		setupInternalSession();
+		keychainTask.run();
 		catalogManager = new CatalogManager();
 		LOGGER.info("Connecting to Discord...");
 		JDABuilder builder = JDABuilder.createDefault(token).setHttpClient(okHttpClient);
@@ -111,15 +121,28 @@ public final class DiscordBot {
 			discord.shutdown();
 		}));
 		discord.getPresence().setActivity(Activity.playing("Kotlin/JVM \u00b7 v" + VERSION));
-		scheduleUtcMidnightTask();
+		if (!ENV.equals("test")) {
+			scheduleUtcMidnightTask();
+			scheduleHourlyTask();
+		}
 	}
 
 	private void scheduleUtcMidnightTask() {
 		ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
 		ZonedDateTime nextRun = now.withHour(0).withMinute(0).withSecond(30);
-		if (now.compareTo(nextRun) > 0)
+		if (now.compareTo(nextRun) > 0) {
 			nextRun = nextRun.plusDays(1);
+		}
 		Runnable task = () -> {
+			try {
+				TextChannel itemShopChannel = discord.getTextChannelById(ITEM_SHOP_CHANNEL_ID);
+				if (itemShopChannel != null) {
+					ShopCommandsKt.executeShopText(new OnlyChannelCommandSource(this, itemShopChannel), ESubGame.Athena);
+					ShopCommandsKt.executeShopImage(new OnlyChannelCommandSource(this, itemShopChannel));
+				}
+			} catch (Throwable e) {
+				e.printStackTrace();
+			}
 			try {
 				autoLoginRewardTask.run();
 			} catch (Throwable e) {
@@ -127,16 +150,30 @@ public final class DiscordBot {
 				AutoLoginRewardTask.TASK_IS_RUNNING.set(false);
 			}
 		};
-		Executors.newScheduledThreadPool(1).scheduleAtFixedRate(
-			task,
-			Duration.between(now, nextRun).getSeconds(), // initial delay
-			TimeUnit.DAYS.toSeconds(1),
-			TimeUnit.SECONDS
-		);
+		new ScheduledThreadPoolExecutor(1).scheduleAtFixedRate(
+			task, Duration.between(now, nextRun).getSeconds(), 1, TimeUnit.DAYS);
 	}
 
-	private void setupInternalSession() {
-		internalSession = getSession("__internal__");
+	private void scheduleHourlyTask() {
+		ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+		ZonedDateTime nextRun = now.withMinute(0).withSecond(0);
+		if (now.compareTo(nextRun) > 0) {
+			nextRun = nextRun.plusHours(1);
+		}
+		new ScheduledThreadPoolExecutor(1).scheduleAtFixedRate(() -> {
+			try {
+				keychainTask.run();
+			} catch (Throwable e) {
+				dlog("__**Keychain task failure**__\n```\n" + Throwables.getStackTraceAsString(e) + "```", null);
+				AutoLoginRewardTask.TASK_IS_RUNNING.set(false);
+			}
+		}, Duration.between(now, nextRun).getSeconds(), 1, TimeUnit.HOURS);
+	}
+
+	public void setupInternalSession() {
+		if (internalSession == null) {
+			internalSession = getSession("__internal__");
+		}
 		DeviceAuth internalDeviceData = savedLoginsManager.getAll("__internal__").get(0);
 		try {
 			internalSession.login(null, GrantType.device_auth, ImmutableMap.of(

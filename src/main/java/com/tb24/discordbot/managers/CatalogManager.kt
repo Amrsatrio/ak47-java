@@ -1,7 +1,7 @@
-package com.tb24.discordbot
+package com.tb24.discordbot.managers
 
+import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.util.exec
-import com.tb24.discordbot.util.holder
 import com.tb24.discordbot.util.to
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortCmsData
@@ -31,13 +31,15 @@ class CatalogManager {
 				section.sectionData.sectionId to section
 			}
 			campaignSections.forEach { it.items.clear() }
-			for (storefront in catalogData!!.storefronts) { // iteration 1: BR shop
-				for (catalogEntry in storefront.catalogEntries) {
-					(athenaSections[catalogEntry.holder().getMeta("SectionId") ?: continue] ?: continue).items.add(catalogEntry)
+			for (storefront in catalogData!!.storefronts) {
+				for (offer in storefront.catalogEntries) {
+					offer.__ak47_storefront = storefront.name
+					offer.getMeta("EncryptionKey")?.let {
+						DiscordBot.LOGGER.info("[FortStorefront]: Adding key $it to keychain through store offer ${offer.offerId}")
+						DiscordBot.instance?.keychainTask?.handle(it)
+					}
+					(athenaSections[offer.getMeta("SectionId") ?: continue] ?: continue).items.add(offer)
 				}
-			}
-			for (storefront in catalogData!!.storefronts) { // iteration 2: STW shop
-				storefront.catalogEntries.onEach { it.__ak47_storefront = storefront.name }
 				when (storefront.name) {
 					"STWSpecialEventStorefront" -> stwEvent.items.addAll(storefront.catalogEntries)
 					"STWRotationalEventStorefront" -> stwWeekly.items.addAll(storefront.catalogEntries)

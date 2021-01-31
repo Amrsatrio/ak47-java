@@ -37,7 +37,9 @@ class ClaimMfaCommand : BrigadierCommand("claimmfa", "Claim 2FA reward (Boogie D
 		).await()
 		val attrs = source.api.profileManager.getProfileData(profileId).stats.attributes
 		val claimed = if (claimForStw) {
-			source.ensureCampaignAccess()
+			if (source.api.profileManager.getProfileData("common_core").items.values.none { it.templateId == "Token:campaignaccess" }) {
+				throw SimpleCommandExceptionType(LiteralMessage("You don't have access to Save the World.")).create()
+			}
 			(attrs as CampaignProfileAttributes).mfa_reward_claimed
 		} else {
 			(attrs as AthenaProfileAttributes).mfa_reward_claimed

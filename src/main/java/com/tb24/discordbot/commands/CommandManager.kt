@@ -36,33 +36,17 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 	private val threadPool = Executors.newCachedThreadPool()
 
 	init {
-		/*dispatcher.register(literal<CommandSourceStack>("magmareef")
-			.executes {
-				it.source.channel.sendMessage("<@363383512318869504>").queue()
-				Command.SINGLE_SUCCESS
-			}
-		)
-		dispatcher.register(literal<CommandSourceStack>("bruh")
-			.executes {
-				it.source.channel.sendMessage(Random().run {
-					Array(10) {
-						String(ByteArray(16).apply { nextBytes(this) }, Charset.defaultCharset())
-					}
-				}.joinToString("\n")).queue()
-				Command.SINGLE_SUCCESS
-			}
-		)*/
 		register(AboutCommand())
 		register(AccountCommand())
 		register(AffiliateNameCommand())
 		register(AthenaDailyChallengesCommand())
 		register(AthenaInventoryCommand())
+		register(AthenaLoadoutsCommand())
 		register(AthenaOverviewCommand())
 		register(AthenaQuestsCommand())
 		register(AutoDailyRewardsCommand())
 		register(AvatarCommand())
-//		BanCommand.register(dispatcher)
-		register(ResourcesCommand())
+		register(CampaignLoadoutsCommand())
 		register(CampaignShopCommand())
 		register(CharacterCollectionCommand())
 		register(CheckCodeCommand())
@@ -93,7 +77,6 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(HelpCommand())
 		register(HomebaseNameCommand())
 		register(InviteBotCommand())
-//		KickCommand.register(dispatcher)
 		register(LockerCommand())
 		register(LoginCommand())
 		register(LogoutCommand())
@@ -108,6 +91,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(QuestCommand())
 		register(ReceiptsCommand())
 		register(RedeemCodeCommand())
+		register(ResourcesCommand())
 		register(RevokeCommand())
 		register(SaveLoginCommand())
 		register(SchematicsCommand())
@@ -115,6 +99,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(ShopDumpCommand())
 		register(ShopTextCommand())
 		register(UndoCommand())
+		register(WorkersCommand())
 		register(XpCoinsCommand())
 		register(FortniteAndroidApkCommand())
 	}

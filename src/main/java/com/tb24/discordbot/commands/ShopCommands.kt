@@ -5,9 +5,9 @@ import com.google.gson.JsonParser
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.tb24.discordbot.CatalogManager
 import com.tb24.discordbot.GridSlot
 import com.tb24.discordbot.createAttachmentOfIcons
+import com.tb24.discordbot.managers.CatalogManager
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.EItemShopTileSize
@@ -49,51 +49,7 @@ import kotlin.system.exitProcess
 
 class ShopCommand : BrigadierCommand("shop", "Sends an image of today's item shop.", arrayOf("s")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { c ->
-			val source = c.source
-			if (isUserAnIdiot(source)) {
-				return@executes Command.SINGLE_SUCCESS
-			}
-			source.ensureSession()
-			source.loading("Getting the shop")
-			source.client.catalogManager.ensureCatalogData(source.api)
-			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
-			val slots = mutableListOf<GridSlot>()
-			for (section in source.client.catalogManager.athenaSections.values) {
-				for (offer in section.items) {
-					if (offer.prices.firstOrNull()?.currencyType == EStoreCurrencyType.RealMoney) {
-						continue
-					}
-					var image: BufferedImage? = null
-					var title: String? = null
-					var rarity: EFortRarity? = null
-					offer.itemGrants.firstOrNull()?.let { item ->
-						image = item.getPreviewImagePath()?.load<UTexture2D>()?.toBufferedImage()
-						title = item.displayName
-						rarity = item.defData.Rarity
-					}
-					if (!offer.displayAssetPath.isNullOrEmpty()) {
-						loadObject<FortMtxOfferData>(offer.displayAssetPath)?.let {
-							(it.DetailsImage?.ResourceObject?.value as? UTexture2D)?.run { image = toBufferedImage() }
-							it.DisplayName?.run { title = format() }
-						}
-					}
-					offer.title?.let { title = it }
-					slots.add(GridSlot(
-						image = image,
-						name = if (title.isNullOrEmpty()) offer.devName else title,
-						rarity = if (offer.getMeta("HideRarityBorder").equals("true", true)) null else rarity,
-						index = offer.__ak47_index
-					))
-				}
-			}
-			val tz = TimeZone.getTimeZone("UTC")
-			val now = Date()
-			val fileName = "shop-${SimpleDateFormat("dd-MM-yyyy").apply { timeZone = tz }.format(now)}.png"
-			source.channel.sendMessage("Battle Royale Item Shop (%s)".format(DateFormat.getDateInstance().apply { timeZone = tz }.format(now))).addFile(createAttachmentOfIcons(slots, "shop"), fileName).complete()
-			source.loadingMsg!!.delete().queue()
-			Command.SINGLE_SUCCESS
-		}
+		.executes { executeShopImage(it.source) }
 }
 
 class ShopTextCommand : BrigadierCommand("shoptext", "Sends the current item shop items as a text.", arrayOf("st")) {
@@ -118,9 +74,58 @@ class ShopDumpCommand : BrigadierCommand("shopdump", "Sends the current item sho
 				JsonParser.parseReader(it)
 			}
 			val df = SimpleDateFormat("dd-MM-yyyy").apply { timeZone = TimeZone.getTimeZone("UTC") }
-			source.channel.sendFile(GsonBuilder().setPrettyPrinting().create().toJson(data).toByteArray(), "shop-%s-%s.json".format(df.format(Date()), lang)).complete()
+			source.channel.sendFile(GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(data).toByteArray(), "shop-%s-%s.json".format(df.format(Date()), lang)).complete()
 			Command.SINGLE_SUCCESS
 		}
+}
+
+fun executeShopImage(source: CommandSourceStack): Int {
+	if (isUserAnIdiot(source)) {
+		return Command.SINGLE_SUCCESS
+	}
+	source.ensureSession()
+	source.loading("Getting the shop")
+	source.client.catalogManager.ensureCatalogData(source.api)
+	source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
+	val slots = mutableListOf<GridSlot>()
+	for (section in source.client.catalogManager.athenaSections.values) {
+		val sectionId = section.sectionData.sectionId
+		if (sectionId != null && sectionId.equals("battlepass", true)) {
+			continue
+		}
+		for (offer in section.items) {
+			if (offer.prices.firstOrNull()?.currencyType == EStoreCurrencyType.RealMoney) {
+				continue
+			}
+			var image: BufferedImage? = null
+			var title: String? = null
+			var rarity: EFortRarity? = null
+			offer.itemGrants.firstOrNull()?.let { item ->
+				image = item.getPreviewImagePath()?.load<UTexture2D>()?.toBufferedImage()
+				title = item.displayName
+				rarity = item.defData.Rarity
+			}
+			if (!offer.displayAssetPath.isNullOrEmpty()) {
+				loadObject<FortMtxOfferData>(offer.displayAssetPath)?.let {
+					(it.DetailsImage?.ResourceObject?.value as? UTexture2D)?.run { image = toBufferedImage() }
+					it.DisplayName?.run { title = format() }
+				}
+			}
+			offer.title?.let { title = it }
+			slots.add(GridSlot(
+				image = image,
+				name = if (title.isNullOrEmpty()) offer.devName else title,
+				rarity = if (offer.getMeta("HideRarityBorder").equals("true", true)) null else rarity,
+				index = offer.__ak47_index
+			))
+		}
+	}
+	val tz = TimeZone.getTimeZone("UTC")
+	val now = Date()
+	val fileName = "shop-${SimpleDateFormat("dd-MM-yyyy").apply { timeZone = tz }.format(now)}.png"
+	source.channel.sendMessage("**Battle Royale Item Shop (%s)**".format(DateFormat.getDateInstance().apply { timeZone = tz }.format(now))).addFile(createAttachmentOfIcons(slots, "shop"), fileName).complete()
+	source.loadingMsg!!.delete().queue()
+	return Command.SINGLE_SUCCESS
 }
 
 fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
@@ -151,7 +156,7 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 			}*/
 			if (catalogEntry.prices.isEmpty() || catalogEntry.prices.first().currencyType == EStoreCurrencyType.RealMoney) continue
 			val sd = catalogEntry.holder().apply { resolve(profileManager) }
-			lines.add("${(catalogEntry.__ak47_index + 1)}. ${sd.friendlyName}${if (sd.owned) " ✅" else ""}")
+			lines.add("${(catalogEntry.__ak47_index + 1)}. ${sd.friendlyName}${if (sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit) " ✅" else ""}")
 			catalogEntry.prices.forEach { prices.putIfAbsent(it.currencyType.name + ' ' + it.currencySubType, it) }
 		}
 		contents[i] = lines
@@ -160,11 +165,11 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 		.setColor(0x0099FF)
 		.setTitle(if (subGame == ESubGame.Campaign) "⚡ " + "Save the World Item Shop" else "☂ " + "Battle Royale Item Shop")
 	if (source.session.id != "__internal__") {
-		embed.setDescription("Use `${source.prefix}buy` or `${source.prefix}gift` to perform operations with these items.\n✅ = Owned")
+		embed.setDescription("Use `${source.prefix}buy` or `${source.prefix}gift` to perform operations with these items.\n✅ = Owned/sold out")
 			.addField(if (prices.size == 1) "Balance" else "Balances", prices.values.joinToString(" \u00b7 ") { it.getAccountBalanceText(profileManager) }, false)
 	}
 	for ((i, section) in sections.withIndex()) {
-		if (contents[i]!!.isEmpty()) {
+		if (contents[i].isNullOrEmpty()) {
 			continue
 		}
 		embed.addFieldSeparate(section.sectionData.sectionDisplayName ?: "", contents[i], 0)

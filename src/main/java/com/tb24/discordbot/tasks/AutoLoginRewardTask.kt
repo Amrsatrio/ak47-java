@@ -1,9 +1,12 @@
-package com.tb24.discordbot
+package com.tb24.discordbot.tasks
 
 import com.google.common.collect.ImmutableMap
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
+import com.tb24.discordbot.DiscordBot
+import com.tb24.discordbot.HttpException
+import com.tb24.discordbot.Session
 import com.tb24.discordbot.commands.CommandSourceStack
 import com.tb24.discordbot.commands.GrantType
 import com.tb24.discordbot.commands.PrivateChannelCommandSource

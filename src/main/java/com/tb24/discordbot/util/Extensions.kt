@@ -1,8 +1,10 @@
 package com.tb24.discordbot.util
 
+import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.StringReader
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.CommandSyntaxException
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
@@ -18,6 +20,7 @@ import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.model.mcpprofile.ProfileUpdate
 import com.tb24.fn.util.*
 import com.tb24.uasset.AssetManager
+import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.exports.FortWorkerType
 import me.fungames.jfortniteparse.fort.objects.FortItemQuantityPair
 import me.fungames.jfortniteparse.fort.objects.rows.FortQuestRewardTableRow
@@ -46,6 +49,13 @@ import kotlin.math.abs
 import kotlin.math.min
 
 val WHITELIST_ICON_EMOJI_ITEM_TYPES = arrayOf("AccountResource", "ConsumableAccountItem", "Currency", "Stat")
+val EMOJI_GUILDS = arrayOf(
+	805121146214940682L, // add ur emoji idc 2
+	805122305701314570L, // add ur emoji idc 3
+	677515124373979155L, // Epic Server Version Status
+	648556726672556048L, // AK Facility
+	612383214962606081L, // AS Development
+)
 
 @Throws(HttpException::class, IOException::class)
 fun ProfileManager.dispatchClientCommandRequest(payload: Any, profileId: String = "common_core"): CompletableFuture<ProfileUpdate> =
@@ -119,9 +129,10 @@ fun CatalogItemPrice.emote(): Emote? = when (currencyType) {
 }
 
 @Synchronized
-fun getItemIconEmoji(templateId: String, createIfNonexistent: Boolean = DiscordBot.ENV == "test"): Emote? {
+fun getItemIconEmoji(templateId: String): Emote? {
+	val client = DiscordBot.instance.discord
 	if (templateId.toLowerCase().contains(":mtx")) {
-		return DiscordBot.instance.discord.getEmoteById(Utils.MTX_EMOJI_ID)
+		return client.getEmoteById(Utils.MTX_EMOJI_ID)
 	}
 	val split = templateId.split(":")
 	val type = split[0]
@@ -129,19 +140,54 @@ fun getItemIconEmoji(templateId: String, createIfNonexistent: Boolean = DiscordB
 	if (type !in WHITELIST_ICON_EMOJI_ITEM_TYPES) {
 		return null
 	}
-	val existing = DiscordBot.instance.discord.getEmotesByName(name.run { substring(0, min(32, length)) }, true).firstOrNull()
-	if (existing != null) {
-		return existing
-	}
-	if (!createIfNonexistent) {
-		return null
-	}
+	getEmoteByName(name.run { substring(0, min(32, length)) })?.let { return it }
 	val item = FortItemStack(templateId, 1)
 	val defData = item.transformedDefData ?: return null
-	val icon = item.getPreviewImagePath(true)?.load<UTexture2D>()?.toBufferedImage()
-	val baos = ByteArrayOutputStream()
-	ImageIO.write(icon, "png", baos)
-	return DiscordBot.instance.discord.getGuildById(648556726672556048L)?.createEmote(defData.name.run { substring(0, min(32, length)) }, Icon.from(baos.toByteArray(), Icon.IconType.PNG))?.complete()
+	val icon = item.getPreviewImagePath(true)?.load<UTexture2D>()?.toBufferedImage() ?: return null
+	return createEmote(defData.name.run { substring(0, min(32, length)) }, icon)
+}
+
+fun textureEmote(texturePath: String?): Emote? {
+	if (texturePath == null || texturePath == "None") {
+		return null
+	}
+	var name = texturePath.substringAfterLast('.').replace('-', '_')
+	if (name.startsWith("T_", true)) {
+		name = name.substring(2)
+	}
+	if (name.startsWith("Icon_", true)) {
+		name = name.substring(5)
+	}
+	name = name.substring(0, min(32, name.length))
+	getEmoteByName(name)?.let { return it }
+	return loadObject<UTexture2D>(texturePath)?.toBufferedImage()?.let { createEmote(name, it) }
+}
+
+fun getEmoteByName(name: String): Emote? {
+	val client = DiscordBot.instance.discord
+	var existing: Emote? = null
+	for (guildId in EMOJI_GUILDS) {
+		val guild = client.getGuildById(guildId) ?: continue
+		existing = guild.getEmotesByName(name, true).firstOrNull()
+		if (existing != null) {
+			break
+		}
+	}
+	return existing
+}
+
+private fun createEmote(name: String, icon: BufferedImage): Emote? {
+	val client = DiscordBot.instance.discord
+	for (guildId in EMOJI_GUILDS) {
+		val guild = client.getGuildById(guildId)
+		if (guild == null || guild.emotes.size > 50) { // server boosts can expire, hardcode it to 50 which is the regular limit
+			continue
+		}
+		val baos = ByteArrayOutputStream()
+		ImageIO.write(icon, "png", baos)
+		return guild.createEmote(name, Icon.from(baos.toByteArray(), Icon.IconType.PNG)).complete()
+	}
+	throw SimpleCommandExceptionType(LiteralMessage("Failed to find a server with free emoji slots.")).create()
 }
 
 fun CatalogItemPrice.render(quantity: Int = 1) = icon() + ' ' + Formatters.num.format(quantity * basePrice) + if (saleType != ECatalogSaleType.NotOnSale) " ~~${Formatters.num.format(quantity * regularPrice)}~~" else ""

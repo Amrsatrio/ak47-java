@@ -12,6 +12,7 @@ import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.cat
 import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.getCatalogEntry
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
+import com.tb24.fn.model.gamesubcatalog.EAppStore
 import com.tb24.fn.model.gamesubcatalog.ECatalogOfferType
 import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
@@ -75,11 +76,20 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 		}
 		val sd = offer.holder().apply { resolve(profileManager, priceIndex) }
 		val price = sd.price
+		if (sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit) {
+			throw SimpleCommandExceptionType(LiteralMessage("${sd.friendlyName} is sold out.")).create()
+		}
 		if (sd.owned) {
 			throw SimpleCommandExceptionType(LiteralMessage(L10N.format("purchase.failed.owned", sd.friendlyName))).create()
 		}
 		if (price.currencyType == EStoreCurrencyType.RealMoney) {
-			throw SimpleCommandExceptionType(LiteralMessage("${sd.friendlyName} is a Real Money offer. Support for Real Money offers will be added in a future update.")).create()
+			if (sd.getMeta("IsSubscription").equals("true", true)) {
+				throw SimpleCommandExceptionType(LiteralMessage("${sd.friendlyName} is a subscription offer. Support for subscription offers will be added in a future update.")).create()
+			}
+			val epicAppStoreId = offer.appStoreId?.getOrNull(EAppStore.EpicPurchasingService.ordinal)
+				?: throw SimpleCommandExceptionType(LiteralMessage("${sd.friendlyName} can't be purchased using Epic Direct Payment, which is the only payment method supported by ${source.client.discord.selfUser.name}.")).create()
+			source.complete("Visit the link below to complete your purchase of %s:\nhttps://launcher-website-prod07.ol.epicgames.com/purchase?namespace=fn&offers=%s".format(sd.friendlyName, epicAppStoreId))
+			return Command.SINGLE_SUCCESS
 		}
 		val accountBalance = price.getAccountBalance(profileManager)
 		if (accountBalance < price.basePrice) {

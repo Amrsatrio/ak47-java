@@ -10,19 +10,20 @@ import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.util.format
 import net.dv8tion.jda.api.MessageBuilder
 
-class SchematicsCommand : BrigadierCommand("schematics", "Lists the given user's schematics.", arrayOf("schems")) {
+class SchematicsCommand : BrigadierCommand("schematics", "Lists your or a given user's schematics.", arrayOf("schems")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.withPublicProfile(::display, "Getting schematics")
 
 	private fun display(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
 		val source = c.source
+		source.ensureCompletedCampaignTutorial(campaign)
 		val schems = campaign.items.values.filter { it.primaryAssetType.equals("Schematic", true) }.sortedWith { a, b ->
-			val levelA = a.attributes["level"]?.asInt ?: 0
-			val levelB = b.attributes["level"]?.asInt ?: 0
-			if (levelA == levelB) {
+			val rating1 = a.powerLevel
+			val rating2 = b.powerLevel
+			if (rating1 == rating2) {
 				a.displayName.compareTo(b.displayName)
 			} else {
-				levelB - levelA
+				rating2.compareTo(rating1)
 			}
 		}
 		source.message.replyPaginated(schems, 6, source.loadingMsg) { content, page, pageCount ->

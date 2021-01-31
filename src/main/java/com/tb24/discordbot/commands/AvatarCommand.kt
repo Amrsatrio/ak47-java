@@ -3,8 +3,8 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.tb24.discordbot.ChannelsManager
-import com.tb24.discordbot.ChannelsManager.AvatarColor
+import com.tb24.discordbot.managers.ChannelsManager
+import com.tb24.discordbot.managers.ChannelsManager.AvatarColor
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.UserSetting
 import net.dv8tion.jda.api.EmbedBuilder

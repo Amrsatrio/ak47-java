@@ -1,4 +1,4 @@
-package com.tb24.discordbot
+package com.tb24.discordbot.managers
 
 import com.rethinkdb.RethinkDB.r
 import com.rethinkdb.net.Connection

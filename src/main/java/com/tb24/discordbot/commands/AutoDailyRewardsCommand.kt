@@ -6,9 +6,9 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
-import com.tb24.discordbot.AutoClaimEntry
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
+import com.tb24.discordbot.tasks.AutoClaimEntry
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryPublicProfile
@@ -76,10 +76,7 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 			}
 			source.api.profileManager.dispatchPublicCommandRequest(user, QueryPublicProfile(), "campaign").await()
 			val campaign = source.api.profileManager.getProfileData(user.id, "campaign")
-			val completedTutorial = campaign.items.values.firstOrNull { it.templateId == "Quest:homebaseonboarding" }?.attributes?.get("completion_hbonboarding_completezone")?.asInt ?: 0 > 0
-			if (!completedTutorial) {
-				throw SimpleCommandExceptionType(LiteralMessage("The account must own Save the World and completed the tutorial in order to start receiving daily rewards.")).create()
-			}
+			source.ensureCompletedCampaignTutorial(campaign)
 			r.table("auto_claim").insert(AutoClaimEntry(accountId, discordId)).run(source.client.dbConn)
 			val millisInDay = 24L * 60L * 60L * 1000L
 			val nextUtcMidnight = (System.currentTimeMillis() / millisInDay + 1) * millisInDay

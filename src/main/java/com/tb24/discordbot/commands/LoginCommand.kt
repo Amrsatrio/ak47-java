@@ -86,6 +86,9 @@ fun doLogin(source: CommandSourceStack, grantType: GrantType, params: String, au
 			}
 			source.session.login(source, grantType, ImmutableMap.of("exchange_code", params, "token_type", "eg1"), authClient ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT)
 		}
+		GrantType.token_to_token -> {
+			source.session.login(source, grantType, ImmutableMap.of("access_token", params, "token_type", "eg1"), authClient ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT)
+		}
 		else -> throw SimpleCommandExceptionType(LiteralMessage("Unsupported grant type $grantType")).create()
 	}
 }

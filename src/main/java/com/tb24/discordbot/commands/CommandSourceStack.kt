@@ -9,6 +9,7 @@ import com.tb24.discordbot.Session
 import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.exec
 import com.tb24.fn.model.account.GameProfile
+import com.tb24.fn.model.mcpprofile.McpProfile
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.*
@@ -66,13 +67,18 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 	fun queryUsers(ids: Iterable<String>) = session.queryUsers(ids)
 
 	@Throws(HttpException::class)
-	fun generateUrl(url: String) =
-		"https://www.epicgames.com/id/exchange?exchangeCode=${api.accountService.exchangeCode.exec().body()!!.code}&redirectUrl=${URLEncoder.encode(url, "UTF-8")}"
+	fun generateUrl(url: String): String {
+		if (!isFromType(ChannelType.PRIVATE)) {
+			throw SimpleCommandExceptionType(LiteralMessage("Please invoke the command again in DMs, as we have to send you a link that takes you to the account page.")).create()
+		}
+		return "https://www.epicgames.com/id/exchange?exchangeCode=${api.accountService.exchangeCode.exec().body()!!.code}&redirectUrl=${URLEncoder.encode(url, "UTF-8")}"
+	}
 
 	@Throws(CommandSyntaxException::class)
-	fun ensureCampaignAccess() {
-		if (api.profileManager.getProfileData("common_core").items.values.none { it.templateId == "Token:campaignaccess" }) {
-			throw SimpleCommandExceptionType(LiteralMessage("You don't have access to Save the World.")).create()
+	fun ensureCompletedCampaignTutorial(campaign: McpProfile) {
+		val completedTutorial = campaign.items.values.firstOrNull { it.templateId == "Quest:homebaseonboarding" }?.attributes?.get("completion_hbonboarding_completezone")?.asInt ?: 0 > 0
+		if (!completedTutorial) {
+			throw SimpleCommandExceptionType(LiteralMessage("The account must own Save the World and completed the tutorial.")).create()
 		}
 	}
 }

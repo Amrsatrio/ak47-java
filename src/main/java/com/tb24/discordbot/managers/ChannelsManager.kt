@@ -1,8 +1,9 @@
-package com.tb24.discordbot
+package com.tb24.discordbot.managers
 
+import com.google.gson.JsonParser
+import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.util.exec
 import com.tb24.fn.EpicApi
-import com.tb24.fn.util.Utils
 import java.io.IOException
 import java.util.*
 
@@ -48,10 +49,10 @@ class ChannelsManager(private val client: EpicApi) {
 		}
 
 		constructor(jsonArray: String) {
-			val list = Utils.DEFAULT_GSON.fromJson(jsonArray, Array<String>::class.java)
-			light = Integer.parseInt(list[0].substring(2), 16)
-			dark = Integer.parseInt(list[1].substring(2), 16)
-			shade = Integer.parseInt(list[2].substring(2), 16)
+			val list = JsonParser.parseString(jsonArray).asJsonArray
+			light = Integer.parseInt(list[0].asString.substring(2), 16)
+			dark = Integer.parseInt(list[1].asString.substring(2), 16)
+			shade = Integer.parseInt(list[2].asString.substring(2), 16)
 			name = null
 		}
 

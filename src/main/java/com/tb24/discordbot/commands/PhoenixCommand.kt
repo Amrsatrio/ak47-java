@@ -50,6 +50,7 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 
 	private fun display(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
 		val source = c.source
+		source.ensureCompletedCampaignTutorial(campaign)
 		val xpQuantity = campaign.items.values.firstOrNull { it.templateId == "AccountResource:phoenixxp" }?.quantity
 			?: 0
 		val currentEvent = ObjectRef<EventRecord>()
@@ -108,7 +109,7 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 			item.primaryAssetName.substringAfterLast('_').toIntOrNull()?.let {
 				title += " (${Formatters.num.format(it)}/12)"
 			}
-			val objectives = renderQuestObjectives(item)
+			val objectives = renderQuestObjectives(item, true)
 			val rewards = renderQuestRewards(item, false)
 			embed.addField(title, objectives + '\n' + rewards, false)
 		}

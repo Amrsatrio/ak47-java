@@ -96,6 +96,7 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 
 	private fun displayDailyQuests(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
 		val source = c.source
+		source.ensureCompletedCampaignTutorial(campaign)
 		val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
 		val numRerolls = (campaign.stats.attributes as IQuestManager).questManager?.dailyQuestRerolls ?: 0
 		var description = getCampaignDailyQuests(campaign)
@@ -224,13 +225,13 @@ class QuestCommand : BrigadierCommand("quest", "Shows the details of a quest by 
 	}
 }
 
-fun renderQuestObjectives(item: FortItemStack): String {
+fun renderQuestObjectives(item: FortItemStack, short: Boolean = false): String {
 	val objectives = (item.defData as FortQuestItemDefinition).Objectives.filter { !it.bHidden }
 	return objectives.joinToString("\n") {
 		val completion = Utils.getCompletion(it, item)
 		val objectiveCompleted = completion >= it.Count
 		val sb = StringBuilder(if (objectiveCompleted) "`☑` ~~" else "`☐` ")
-		sb.append(it.Description)
+		sb.append(if (short) it.HudShortDescription else it.Description)
 		if (it.Count > 1) {
 			sb.append(" [%,d/%,d]".format(completion, it.Count))
 		}

@@ -33,12 +33,13 @@ class ComposeMcpCommand : BrigadierCommand("composemcp", "Perform an arbitrary M
 	fun exec(source: CommandSourceStack, command: String, profileId: String = "common_core", bodyRaw: String = "{}"): Int {
 		source.loading(L10N.format("generic.loading"))
 		val profileManager = source.api.profileManager
-		val body = RequestBody.create(MediaType.get("text/plain"), bodyRaw)
 		val isQueryProfile = command.equals("QueryProfile", true)
 		if (isQueryProfile) {
 			profileManager.localProfileGroup.profileRevisions.remove(profileId)
+			profileManager.localProfileGroup.profileCommandRevisions[profileId] = -1
 		}
-		val data = source.api.okHttpClient.newCall(profileManager.makeClientCommandCall(command, profileId, body).request()).exec().body()!!.charStream().use {
+		val body = RequestBody.create(MediaType.get("application/json"), bodyRaw)
+		val data = source.api.okHttpClient.newCall(profileManager.makeClientCommandCall(command, profileId, null).request().newBuilder().post(body).build()).exec().body()!!.charStream().use {
 			JsonParser.parseReader(it)
 		}
 		val profileUpdate = EpicApi.GSON.fromJson(data, ProfileUpdate::class.java)

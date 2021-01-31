@@ -15,6 +15,7 @@ class ResourcesCommand : BrigadierCommand("resources", "Displays a given user's 
 
 	fun execute(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
 		val source = c.source
+		source.ensureCompletedCampaignTutorial(campaign)
 		val embed = source.createEmbed(campaign.owner)
 		for ((categoryName, categoryItemTypes) in mapOf(
 			"Perk-UP" to listOf(

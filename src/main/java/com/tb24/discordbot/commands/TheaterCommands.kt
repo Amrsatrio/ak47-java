@@ -26,10 +26,12 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 
 	fun execute(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
 		val source = c.source
+		source.ensureCompletedCampaignTutorial(campaign)
 		val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
 		val attrs = campaign.stats.attributes as CampaignProfileAttributes
 		val response = source.api.fortniteService.queryTheaterList("en").exec().body()!!.charStream()
 			.use { StructJson.GSON.fromJson(it, FortActiveTheaterInfo::class.java) }
+		var totalMtx = 0
 		val lines = mutableListOf<String>()
 		for (theater in response.Theaters) {
 			val missions = response.getAvailableMissions(theater)
@@ -37,8 +39,9 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 			for (mission in missions.AvailableMissions) {
 				val missionAlert = missionAlerts.getMissionAlert(mission)
 				val tile = theater.Tiles[mission.TileIndex]
-				missionAlert?.MissionAlertRewards?.items?.firstOrNull { it.itemType == "AccountResource:currency_mtxswap" }
+				val mtxLoot = missionAlert?.MissionAlertRewards?.items?.firstOrNull { it.itemType == "AccountResource:currency_mtxswap" }
 					?: continue
+				totalMtx += mtxLoot.quantity
 				val difficulty = mission.MissionDifficultyInfo.getRowMapped<GameDifficultyInfo>()
 				val missionGenerator = loadCDO(mission.MissionGenerator.toString(), FortMissionGenerator::class.java)
 				val zoneTheme = loadCDO(tile.ZoneTheme.toString(), FortZoneTheme::class.java)
@@ -58,7 +61,7 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 				//if (missionAlert != null) {
 				//sb.append('\n').append("__Mission alert rewards__")
 				missionAlert.MissionAlertRewards.items.forEach {
-					sb.append("\n\u2022 ").append(it.asItemStack().apply { setConditionForConditionalItem(canReceiveMtxCurrency) }.renderWithIcon())
+					sb.append('\n').append(it.asItemStack().apply { setConditionForConditionalItem(canReceiveMtxCurrency) }.renderWithIcon())
 				}
 				//}
 				lines.add(sb.toString())
@@ -67,6 +70,7 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 		source.complete(null, source.createEmbed(campaign.owner)
 			//.setTitle("Today's V-Bucks alerts")
 			.setDescription(if (lines.isNotEmpty()) lines.joinToString("\n\n") else "There are no V-Bucks mission alerts today :(")
+			.setFooter(if (lines.isNotEmpty()) "%,d V-Bucks today".format(totalMtx) else null)
 			.build())
 		return Command.SINGLE_SUCCESS
 	}

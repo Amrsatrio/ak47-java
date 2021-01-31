@@ -46,6 +46,7 @@ public class L10N {
 	public static final FText MESSAGE_BOX_HINT = new FText("", "4143C990448BE6E2F58347923C1CED11", "Enter a message for the gift's recipient!");
 	public static final FText MESSAGE_BOX_DEFAULT_MSG = new FText("", "C4562D2A4C4F7939FBA8A8B2311A257E", "Hope you like this gift. Good luck; have fun!");
 	public static final FText CANT_BE_REFUNDED = new FText("", "2CD2F0D84F6F6F3518D241989F8A2614", "*Note: Gifts cannot be refunded");
+	public static final FText Manager = new FText("FortWorkerType", "Manager", "Lead Survivor");
 	private static final Map<String, String> locData;
 
 	static {
