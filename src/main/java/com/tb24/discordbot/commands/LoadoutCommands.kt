@@ -13,12 +13,12 @@ import com.tb24.fn.model.mcpprofile.attributes.AthenaProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.item.CosmeticLockerAttributes
 
-class AthenaLoadoutsCommand : BrigadierCommand("presets", "Shows your BR presets.", arrayOf("loadouts")) {
+class AthenaLoadoutsCommand : BrigadierCommand("presets", "Shows your BR locker presets.", arrayOf("loadouts")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { details(it.source, "athena") }
 }
 
-class CampaignLoadoutsCommand : BrigadierCommand("stwpresets", "Shows your STW presets.", arrayOf("stwloadouts")) {
+class CampaignLoadoutsCommand : BrigadierCommand("stwpresets", "Shows your STW locker presets.", arrayOf("stwloadouts")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { details(it.source, "campaign") }
 }
@@ -31,7 +31,7 @@ private fun details(source: CommandSourceStack, profileId: String): Int {
 	val attrs = profile.stats.attributes as AthenaProfileAttributes
 	val loadoutAttrs = attrs.loadouts.getOrNull(attrs.active_loadout_index)?.let { profile.items[it] }?.getAttributes(CosmeticLockerAttributes::class.java)
 		?: throw SimpleCommandExceptionType(LiteralMessage("Preset not found. A bug maybe?")).create()
-	val embed = source.createEmbed().setTitle("Presets / #%,d: %s".format(attrs.active_loadout_index, loadoutAttrs.locker_name ?: "Unnamed Preset"))
+	val embed = source.createEmbed().setTitle("Presets / #%,d: %s".format(attrs.active_loadout_index, if (loadoutAttrs.locker_name.isNullOrEmpty()) "Unnamed Preset" else loadoutAttrs.locker_name))
 	for (type in arrayOf(Character, Backpack, Pickaxe, Glider, SkyDiveContrail, Dance, ItemWrap, MusicPack, LoadingScreen)) {
 		val items = loadoutAttrs.locker_slots_data.getSlotItems(type)
 		embed.addField(type.name, items.joinToString(" - ") {

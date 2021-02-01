@@ -76,6 +76,7 @@ public final class DiscordBot {
 	public CatalogManager catalogManager;
 	public AutoLoginRewardTask autoLoginRewardTask = new AutoLoginRewardTask(this);
 	public KeychainTask keychainTask = new KeychainTask(this);
+	private final ScheduledThreadPoolExecutor scheduledExecutor = new ScheduledThreadPoolExecutor(2);
 
 	public static void main(String[] args) {
 		if (args.length < 1 || Utils.isEmpty(args[0])) {
@@ -121,9 +122,9 @@ public final class DiscordBot {
 			discord.shutdown();
 		}));
 		discord.getPresence().setActivity(Activity.playing("Kotlin/JVM \u00b7 v" + VERSION));
-		if (!ENV.equals("test")) {
+		if (!ENV.equals("dev")) {
 			scheduleUtcMidnightTask();
-			scheduleHourlyTask();
+			scheduleKeychainTask();
 		}
 	}
 
@@ -150,24 +151,20 @@ public final class DiscordBot {
 				AutoLoginRewardTask.TASK_IS_RUNNING.set(false);
 			}
 		};
-		new ScheduledThreadPoolExecutor(1).scheduleAtFixedRate(
-			task, Duration.between(now, nextRun).getSeconds(), 1, TimeUnit.DAYS);
+		scheduledExecutor.scheduleAtFixedRate(task, Duration.between(now, nextRun).getSeconds(), TimeUnit.DAYS.toSeconds(1), TimeUnit.SECONDS);
 	}
 
-	private void scheduleHourlyTask() {
-		ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
-		ZonedDateTime nextRun = now.withMinute(0).withSecond(0);
-		if (now.compareTo(nextRun) > 0) {
-			nextRun = nextRun.plusHours(1);
-		}
-		new ScheduledThreadPoolExecutor(1).scheduleAtFixedRate(() -> {
+	private void scheduleKeychainTask() {
+		long interval = 15L * 60L * 1000L;
+		long timeUntilNext = interval - (System.currentTimeMillis() % interval);
+		scheduledExecutor.scheduleAtFixedRate(() -> {
 			try {
 				keychainTask.run();
 			} catch (Throwable e) {
 				dlog("__**Keychain task failure**__\n```\n" + Throwables.getStackTraceAsString(e) + "```", null);
 				AutoLoginRewardTask.TASK_IS_RUNNING.set(false);
 			}
-		}, Duration.between(now, nextRun).getSeconds(), 1, TimeUnit.HOURS);
+		}, timeUntilNext, interval, TimeUnit.MILLISECONDS);
 	}
 
 	public void setupInternalSession() {
