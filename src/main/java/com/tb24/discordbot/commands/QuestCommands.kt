@@ -75,7 +75,7 @@ class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manage
 		}
 		.then(literal("replace")
 			.then(argument("quick challenge #", integer())
-				.executes { c -> replaceQuest(c.source, "athena", getInteger(c, "quick challenge #")) { getAthenaDailyQuests(it) } }
+				.executes { replaceQuest(it.source, "athena", getInteger(it, "quick challenge #"), ::getAthenaDailyQuests) }
 			)
 		)
 
@@ -90,7 +90,7 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 		.withPublicProfile(::displayDailyQuests, "Getting quests")
 		.then(literal("replace")
 			.then(argument("daily quest #", integer())
-				.executes { c -> replaceQuest(c.source, "campaign", getInteger(c, "daily quest #")) { getCampaignDailyQuests(it) } }
+				.executes { replaceQuest(it.source, "campaign", getInteger(it, "daily quest #"), ::getCampaignDailyQuests) }
 			)
 		)
 
@@ -254,7 +254,7 @@ fun renderQuestRewards(item: FortItemStack, conditionalCondition: Boolean): Stri
 		?.mapValues { it.value.mapToClass(FortQuestRewardTableRow::class.java) }
 		?.filter { it.value.QuestTemplateId == "*" || it.value.QuestTemplateId == item.templateId && !it.value.Hidden }
 		?.render("", "", 1f, false, conditionalCondition)
-		?.let { rewardLines.addAll(it) }
+		?.let(rewardLines::addAll)
 	return rewardLines.joinToString("\n")
 }
 
@@ -315,7 +315,7 @@ fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: Str
 		?.mapValues { it.value.mapToClass(FortQuestRewardTableRow::class.java) }
 		?.filter { it.value.QuestTemplateId == "*" || it.value.QuestTemplateId == item.templateId && !it.value.Hidden }
 		?.render(rewardsPrefix, rewardsPrefix, xpRewardScalar, bold, conditionalCondition)
-		?.forEach { sb.append('\n').append(it) }
+		?.forEach(sb.append('\n')::append)
 	return sb.toString()
 }
 

@@ -59,7 +59,7 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 		val discordId = entry.registrantId
 		var source: CommandSourceStack? = null
 		try {
-			val displayName = client.internalSession.queryUsers(setOf(epicId)).first().displayName // TODO what if the account is deleted
+			val displayName = client.internalSession.queryUsers(Collections.singleton(epicId)).first().displayName // TODO what if the account is deleted
 			val user = client.discord.getUserById(discordId) ?: client.discord.retrieveUserById(discordId).complete()
 			val channel = (user as UserImpl).privateChannel ?: user.openPrivateChannel().complete()
 			source = PrivateChannelCommandSource(client, channel)
@@ -85,7 +85,7 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 					source.complete("We attempted to automatically claim the daily rewards of `$displayName` but we couldn't find a saved login. As a result, we've unregistered that account from the list.")
 					return true
 				}
-				session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", savedDevice.accountId, "device_id", savedDevice.deviceId, "secret", savedDevice.secret, "token_type", "eg1"), savedDevice.clientId?.let { EAuthClient.getByClientId(it) } ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT, false)
+				session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", savedDevice.accountId, "device_id", savedDevice.deviceId, "secret", savedDevice.secret, "token_type", "eg1"), savedDevice.clientId?.let(EAuthClient::getByClientId) ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT, false)
 			}
 			session.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "campaign").await()
 			val dailyRewardStat = (source.api.profileManager.getProfileData("campaign").stats.attributes as CampaignProfileAttributes).daily_rewards

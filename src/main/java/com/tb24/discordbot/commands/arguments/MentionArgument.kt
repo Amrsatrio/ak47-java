@@ -30,17 +30,17 @@ class MentionArgument private constructor(private val mentionType: MentionType) 
 			if (id != null) {
 				return when (mentionType) {
 					MentionType.USER -> setOf(message.jda.getUserById(id) ?: message.jda.retrieveUserById(id).complete())
-					MentionType.ROLE -> (if (message.channelType.isGuild) message.guild.getRoleById(id) else message.jda.getRoleById(id))?.let { setOf(it) }
-					MentionType.CHANNEL -> message.jda.getTextChannelById(id)?.let { setOf(it) }
-					MentionType.EMOTE -> message.jda.getEmoteById(id)?.let { setOf(it) }
+					MentionType.ROLE -> (if (message.channelType.isGuild) message.guild.getRoleById(id) else message.jda.getRoleById(id))?.let(Collections::singleton)
+					MentionType.CHANNEL -> message.jda.getTextChannelById(id)?.let(Collections::singleton)
+					MentionType.EMOTE -> message.jda.getEmoteById(id)?.let(Collections::singleton)
 					else -> null
 				} ?: emptySet()
 			}
 			return when (mentionType) {
-				MentionType.USER -> processMentions(input, HashSet(), true) { matchUser(it) }
-				MentionType.ROLE -> processMentions(input, HashSet(), true) { matchRole(it) }
-				MentionType.CHANNEL -> processMentions(input, HashSet(), true) { matchTextChannel(it) }
-				MentionType.EMOTE -> processMentions(input, HashSet(), true) { matchEmote(it) }
+				MentionType.USER -> processMentions(input, HashSet(), true, ::matchUser)
+				MentionType.ROLE -> processMentions(input, HashSet(), true, ::matchRole)
+				MentionType.CHANNEL -> processMentions(input, HashSet(), true, ::matchTextChannel)
+				MentionType.EMOTE -> processMentions(input, HashSet(), true, ::matchEmote)
 				else -> emptySet()
 			}
 		}

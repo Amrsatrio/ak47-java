@@ -331,7 +331,7 @@ fun main() {
 	val tandems = INSTANCE.provider.loadObject<FortCollectionDataCharacter>("/BattlepassS15/SeasonData/CollectionDataCharacter")!!.Entries.map { (it.value as FortCollectionDataEntryCharacter).CharacterData.load<FortTandemCharacterData>()!! }
 	val world = INSTANCE.provider.loadObject<UWorld>("/BattlepassS15/Maps/Apollo_Terrain_LevelOverlay_Islanders")!!
 	val persistentLevel = world.persistentLevel!!.value
-	val map = MapImageGenerator(INSTANCE.provider.loadObject<UTexture2D>("/Game/Athena/Apollo/Maps/UI/Apollo_Terrain_Minimap.Apollo_Terrain_Minimap")?.toBufferedImage())
+	val map = MapImageGenerator()
 	val f = Font.createFont(Font.TRUETYPE_FONT, File("C:\\Users\\satri\\AppData\\Local\\Microsoft\\Windows\\Fonts\\zh-cn.ttf")).deriveFont(26f)
 	val noTagsPatrolPaths = mutableMapOf<String, FortAthenaPatrolPath>()
 	val patrolPathsWithTagsFromOtherObject = mutableMapOf<String, FortAthenaPatrolPath>()

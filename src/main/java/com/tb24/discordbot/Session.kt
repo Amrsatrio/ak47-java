@@ -130,7 +130,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 				for (item in profile.items.values) {
 					if (item.primaryAssetType == "GiftBox") {
 						val attrs = item.getAttributes(GiftBoxAttributes::class.java)
-						val fromAccount = attrs.fromAccountId?.run { queryUsers(setOf(attrs.fromAccountId)).firstOrNull() }
+						val fromAccount = attrs.fromAccountId?.run { queryUsers(Collections.singleton(attrs.fromAccountId)).firstOrNull() }
 						var icon: String? = null
 						var title: String
 						var line1 = ""

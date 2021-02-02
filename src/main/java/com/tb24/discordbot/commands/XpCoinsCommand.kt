@@ -15,15 +15,13 @@ import com.tb24.fn.model.mcpprofile.attributes.AthenaProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.util.Formatters.num
 import com.tb24.uasset.JWPSerializer
-import com.tb24.uasset.loadObject
-import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
-import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.ue4.objects.core.math.FVector2D
 import me.fungames.jfortniteparse.util.toPngArray
 import java.awt.AlphaComposite
 import java.io.File
 import java.io.FileReader
 import java.io.FileWriter
+import java.util.*
 import java.util.regex.Pattern
 import javax.imageio.ImageIO
 
@@ -39,7 +37,7 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 		source.loading("Getting XP coins data")
 		source.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "athena").await()
 		val athena = source.api.profileManager.getProfileData("athena")
-		val processed = sortedMapOf<Int, MutableMap<String, MutableMap<Int, Int>>>()
+		val processed = TreeMap<Int, MutableMap<String, MutableMap<Int, Int>>>()
 		val uncollected = mutableListOf<String>()
 
 		for (item in athena.items.values) {
@@ -50,7 +48,7 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 			val week = tidMatch.group(2).toInt() - 1
 			val type = tidMatch.group(3)
 
-			val weekData = processed.getOrPut(week) { mutableMapOf("green" to sortedMapOf(), "blue" to sortedMapOf(), "purple" to sortedMapOf(), "gold" to sortedMapOf()) }
+			val weekData = processed.getOrPut(week) { mutableMapOf("green" to TreeMap(), "blue" to TreeMap(), "purple" to TreeMap(), "gold" to TreeMap()) }
 			val prefix = "completion_" + item.primaryAssetName + "_obj"
 
 			for (entry in item.attributes.entrySet()) {
@@ -107,10 +105,9 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 		}
 
 		source.loading("Generating and uploading map")
-		val minimapPath = "/Game/Athena/Apollo/Maps/UI/Apollo_Terrain_Minimap.Apollo_Terrain_Minimap"
-		val map = MapImageGenerator(loadObject<UTexture2D>(minimapPath)?.toBufferedImage())
-
-		if (!File("config/xp_coins_data.json").exists()) {
+		val map = MapImageGenerator()
+		val dataFile = File("config/xp_coins_data.json")
+		if (!dataFile.exists()) {
 			throw SimpleCommandExceptionType(LiteralMessage("We couldn't generate the map because the data does not exist.")).create()
 		}
 
@@ -119,10 +116,10 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 		val icPurple = ImageIO.read(File("canvas/203.png"))
 		val icGold = ImageIO.read(File("canvas/204.png"))
 
-		for (xpCoin_ in FileReader("config/xp_coins_data.json").use { JsonParser.parseReader(it) }.asJsonArray) {
+		for (xpCoin_ in FileReader(dataFile).use(JsonParser::parseReader).asJsonArray) {
 			val xpCoin = xpCoin_.asJsonObject
 			val hasCollected = uncollected.indexOf(xpCoin["questBackendName"].asString) == -1
-			if (hasCollected) continue
+			//if (hasCollected) continue
 
 			map.markers.add(MapImageGenerator.MapMarker(xpCoin["loc"].asJsonObject.run { FVector2D(get("x").asFloat, get("y").asFloat) }) { ctx, x, y ->
 				val firstTag = xpCoin["objStatTag"].asJsonArray[0].asString
@@ -143,7 +140,7 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 			})
 		}
 
-		source.channel.sendFile(map.draw().toPngArray(), "unknown.png").complete()
+		source.channel.sendFile(map.draw().toPngArray(), "XpCoins-${source.api.currentLoggedIn.displayName}-${athena.rvn}.png").complete()
 		source.loadingMsg!!.delete().queue()
 		return Command.SINGLE_SUCCESS
 	}

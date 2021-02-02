@@ -229,7 +229,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				source.api.userToken = null
 				if (savedDevice != null) {
 					try {
-						source.session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", savedDevice.accountId, "device_id", savedDevice.deviceId, "secret", savedDevice.secret, "token_type", "eg1"), savedDevice.clientId?.let { EAuthClient.getByClientId(it) } ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT, false)
+						source.session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", savedDevice.accountId, "device_id", savedDevice.deviceId, "secret", savedDevice.secret, "token_type", "eg1"), savedDevice.clientId?.let(EAuthClient::getByClientId) ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT, false)
 						source.session = source.initialSession
 						return true
 					} catch (e: HttpException) {

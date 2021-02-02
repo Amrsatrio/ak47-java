@@ -12,7 +12,7 @@ import java.nio.charset.StandardCharsets
 object SessionPersister {
 	private val file = File("config/sessions2.json")
 	private val sessions: JsonObject = try {
-		JsonParser.parseReader(file.reader()).asJsonObject
+		FileReader(file).use(JsonParser::parseReader).asJsonObject
 	} catch (e: FileNotFoundException) {
 		JsonObject()
 	} catch (e: JsonSyntaxException) {

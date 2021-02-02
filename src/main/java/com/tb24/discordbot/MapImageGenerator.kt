@@ -2,6 +2,9 @@ package com.tb24.discordbot
 
 import com.tb24.discordbot.util.createAndDrawCanvas
 import com.tb24.discordbot.util.exec
+import com.tb24.uasset.loadObject
+import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
+import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.ue4.objects.core.math.FVector2D
 import okhttp3.Request
 import java.awt.AlphaComposite
@@ -11,13 +14,13 @@ import java.awt.geom.GeneralPath
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
 
-class MapImageGenerator(var background: BufferedImage?) {
+class MapImageGenerator(var background: BufferedImage?, var backgroundMask: BufferedImage?) {
 	companion object {
 		val watermark by lazy {
 			val client = DiscordBot.instance
 			val avatarUrl = client.discord.selfUser.avatarUrl
 				?: return@lazy null
-			client.okHttpClient.newCall(Request.Builder().url(avatarUrl).build()).exec().body()!!.byteStream().use { ImageIO.read(it) }
+			client.okHttpClient.newCall(Request.Builder().url(avatarUrl).build()).exec().body()!!.byteStream().use(ImageIO::read)
 		}
 	}
 
@@ -27,8 +30,23 @@ class MapImageGenerator(var background: BufferedImage?) {
 	var markers = mutableListOf<MapMarker>()
 	var paths = mutableListOf<MapPath>()
 
+	constructor() : this(
+		loadObject<UTexture2D>("/Game/Athena/Apollo/Maps/UI/Apollo_Terrain_Minimap.Apollo_Terrain_Minimap")?.toBufferedImage(),
+		null //loadObject<UTexture2D>("/Game/Athena/Apollo/Maps/UI/T_MiniMap_Mask.T_MiniMap_Mask")?.toBufferedImage() +1mb size, not worth it
+	)
+
 	fun draw() = createAndDrawCanvas(w, h) { ctx ->
-		background?.let { ctx.drawImage(background, 0, 0, w, h, null) }
+		background?.let {
+			if (backgroundMask != null) {
+				val originalComposite = ctx.composite
+				ctx.drawImage(backgroundMask, 0, 0, w, h, null)
+				ctx.composite = AlphaComposite.SrcIn
+				ctx.drawImage(background, 0, 0, w, h, null)
+				ctx.composite = originalComposite
+			} else {
+				ctx.drawImage(background, 0, 0, w, h, null)
+			}
+		}
 		paths.forEach {
 			it.preDraw(ctx)
 			val path = it.getPath(this)

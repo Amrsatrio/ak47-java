@@ -143,7 +143,7 @@ private fun accountPicker(source: CommandSourceStack): Int {
 			throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
 		}
 		val deviceData = devices[choiceIndex]
-		val auth = deviceData.clientId?.let { EAuthClient.getByClientId(it) } ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT
+		val auth = deviceData.clientId?.let(EAuthClient::getByClientId) ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT
 		try {
 			source.session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", deviceData.accountId, "device_id", deviceData.deviceId, "secret", deviceData.secret, "token_type", "eg1"), auth)
 		} catch (e: HttpException) {
