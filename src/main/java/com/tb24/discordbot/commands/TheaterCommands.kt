@@ -45,7 +45,7 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 				val difficulty = mission.MissionDifficultyInfo.getRowMapped<GameDifficultyInfo>()
 				val missionGenerator = loadCDO(mission.MissionGenerator.toString(), FortMissionGenerator::class.java)
 				val zoneTheme = loadCDO(tile.ZoneTheme.toString(), FortZoneTheme::class.java)
-				val hasCompletedMissionAlert = attrs.mission_alert_redemption_record.claimData.any { it.missionAlertId == missionAlert.MissionAlertGuid }
+				val hasCompletedMissionAlert = attrs.mission_alert_redemption_record?.claimData?.any { it.missionAlertId == missionAlert.MissionAlertGuid } == true
 
 				val sb = StringBuilder()
 				val strike = if (hasCompletedMissionAlert) "~~" else ""

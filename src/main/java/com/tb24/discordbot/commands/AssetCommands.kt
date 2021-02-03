@@ -28,10 +28,11 @@ class DumpAssetCommand : BrigadierCommand("dump", "Dump a package from the game 
 				if (packagePath.contains('.')) {
 					throw SimpleCommandExceptionType(LiteralMessage("Not a valid package path. It should not contain extensions or object names.")).create()
 				}
-				val pkg = runCatching { AssetManager.INSTANCE.provider.loadGameFile(packagePath)!! }
+				val pkg = runCatching { AssetManager.INSTANCE.provider.loadGameFile(packagePath) }
 					.getOrElse { throw SimpleCommandExceptionType(LiteralMessage("Failed to load package.\n```$it```")).create() }
+					?: throw SimpleCommandExceptionType(LiteralMessage("The package to load does not exist on disk or in the loader")).create()
 				if (pkg.name.endsWith("Apollo_ItemCollect_S15_Overlay")) {
-					throw NullPointerException()
+					throw SimpleCommandExceptionType(LiteralMessage("The package to load does not exist on disk or in the loader")).create()
 				}
 				val s = JWPSerializer.GSON.newBuilder().setPrettyPrinting().create().toJson(pkg.exports)
 				if (("```json\n\n```".length + s.length) > Message.MAX_CONTENT_LENGTH) {

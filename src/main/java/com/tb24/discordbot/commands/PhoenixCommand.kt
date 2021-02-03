@@ -24,7 +24,7 @@ import net.dv8tion.jda.api.entities.Message
 import kotlin.jvm.internal.Ref.ObjectRef
 
 class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's venture level, xp, and how much is needed to level up.", arrayOf("vt")) {
-	private val phoenixLevelRewardsTable by lazy { loadObject<UDataTable>("/Game/Balance/DataTables/PhoenixLevelRewardsTable.PhoenixLevelRewardsTable")?.rows?.values?.map { it.mapToClass<FortPhoenixLevelRewardData>() } }
+	private val phoenixLevelRewardsTable by lazy { loadObject<UDataTable>("/SaveTheWorld/Balance/DataTables/PhoenixLevelRewardsTable.PhoenixLevelRewardsTable")?.rows?.values?.map { it.mapToClass<FortPhoenixLevelRewardData>() } }
 	private val noDataErr = SimpleCommandExceptionType(LiteralMessage("No data"))
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
