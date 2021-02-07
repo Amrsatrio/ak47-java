@@ -34,7 +34,6 @@ class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the
 				.setTitle(Formatters.num.format(CatalogHelper.countMtxCurrency(commonCore)) + " V-Bucks")
 				.addField("Breakdown", if (breakdown.isEmpty()) "You have no V-Bucks." else breakdown.joinToString("\n"), false)
 				.setFooter("V-Bucks platform: " + current + " (" + source.prefix + "vbucksplatform to change)")
-				.setThumbnail("https://cdn.discordapp.com/emojis/751101530626588713.png?v=1") // TODO delete this line and uncomment the line below once BenBot is back up
 				.setThumbnail(Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Items/T-Items-MTX-L.T-Items-MTX-L"))
 				.build())
 			Command.SINGLE_SUCCESS

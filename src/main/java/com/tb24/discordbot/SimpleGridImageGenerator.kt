@@ -19,7 +19,7 @@ fun createAttachmentOfIcons(slots: List<GridSlot>, type: String, scale: Float = 
 	val tileSize = (200 * scale).toInt()
 	return createAndDrawCanvas(COLUMNS * tileSize, ceil(slots.size.toDouble() / COLUMNS.toDouble()).toInt() * tileSize) { ctx ->
 		ctx.font = ResourcesContext.burbankBigCondensedBlack.deriveFont(Font.PLAIN, 25f * scale)
-		val bgImg = ImageIO.read(File("./canvas/base.png"))
+		val bgImg = ImageIO.read(File("canvas/base.png"))
 
 		for (i in slots.indices) {
 			val slot = slots[i]
@@ -37,8 +37,8 @@ fun createAttachmentOfIcons(slots: List<GridSlot>, type: String, scale: Float = 
 				TODO() //ctx.drawImage(ImageIO.read(File(slot.url)), x, y, TILE_SIZE, TILE_SIZE, null) // icon
 			}
 
-			if (slot.rarity != null && File("./canvas/${slot.rarity.name.toLowerCase()}.png").exists()) {
-				ctx.drawImage(ImageIO.read(File("./canvas/${slot.rarity.name.toLowerCase()}.png")), x, y, tileSize, tileSize, null)
+			if (slot.rarity != null && File("canvas/${slot.rarity.name.toLowerCase()}.png").exists()) {
+				ctx.drawImage(ImageIO.read(File("canvas/${slot.rarity.name.toLowerCase()}.png")), x, y, tileSize, tileSize, null)
 			}
 
 			if (slot.name != null) {

@@ -154,7 +154,7 @@ class GenXpCoinsDataCommand : BrigadierCommand("genxpcoinsdata", "Generate XP co
 			var mapPath = "/Game/Athena/Apollo/Maps/Apollo_Terrain"
 			mapPath = "/BattlepassS15/Maps/Apollo_ItemCollect_S15_Overlay" // all s15 w7+ xp coins are contained in this map
 			val entries = MapProcessor().processMap(mapPath)
-			FileWriter(File("./config/xp_coins_data.json").apply { parentFile.mkdirs() }).use {
+			FileWriter(File("config/xp_coins_data.json").apply { parentFile.mkdirs() }).use {
 				JWPSerializer.GSON.toJson(entries, it)
 			}
 			c.source.complete("✅ XP coins data has been successfully generated in `${num.format(System.currentTimeMillis() - start)}ms`. Enjoy :)")

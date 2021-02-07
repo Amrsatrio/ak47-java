@@ -315,7 +315,7 @@ fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: Str
 		?.mapValues { it.value.mapToClass(FortQuestRewardTableRow::class.java) }
 		?.filter { it.value.QuestTemplateId == "*" || it.value.QuestTemplateId == item.templateId && !it.value.Hidden }
 		?.render(rewardsPrefix, rewardsPrefix, xpRewardScalar, bold, conditionalCondition)
-		?.forEach(sb.append('\n')::append)
+		?.forEach { sb.append('\n').append(it) }
 	return sb.toString()
 }
 

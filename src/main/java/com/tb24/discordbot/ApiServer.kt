@@ -1,5 +1,6 @@
 package com.tb24.discordbot
 
+import com.rethinkdb.RethinkDB.r
 import com.tb24.fn.EpicApi.GSON
 import com.tb24.fn.model.EpicError
 import com.tb24.uasset.AssetManager
@@ -18,7 +19,9 @@ import java.io.File
 import java.util.*
 
 fun main(args: Array<String>) {
-	AssetManager.INSTANCE.loadPaks()
+	if (AssetManager.INSTANCE.provider.mountedPaks().isEmpty()) {
+		AssetManager.INSTANCE.loadPaks()
+	}
 	val app = ignite()
 	val ipArg = args.getOrNull(0)
 	if (!ipArg.isNullOrEmpty()) {
@@ -28,6 +31,7 @@ fun main(args: Array<String>) {
 	if (portArg != null) {
 		app.port(portArg)
 	}
+	println("Starting API server on $portArg...")
 	app.get("/api/assets/export") {
 		val objectPath = request.queryParams("path") ?: halt(400, createError(
 			"errors.com.tb24.asset_api.invalid_request",
@@ -56,13 +60,13 @@ fun main(args: Array<String>) {
 			packagePath
 		}
 		val cacheDir = File("ExportCache", dir)
-		/*cacheDir.listFiles()?.forEach {
+		cacheDir.listFiles()?.forEach {
 			if (it.nameWithoutExtension.equals(objectName, false)) {
 				response.header("Content-Disposition", "inline; filename=\"${it.name}\"")
 				response.type(MimeTypes.getDefaultMimeByExtension(it.name))
 				return@get it.readBytes()
 			}
-		}*/
+		}
 		val obj = runCatching { loadObject(objectPath) }
 			.getOrElse {
 				halt(500, createError(
@@ -107,6 +111,21 @@ fun main(args: Array<String>) {
 	}
 	app.get("/api/assets/dump") {
 		"\"u suc\""
+	}
+	app.get("/api/data/users") {
+		val conn = DiscordBot.instance?.dbConn
+			?: halt(403, createError(
+				"errors.com.tb24.discordbot.not_initialized",
+				"Discord Bot is not initialized"
+			))
+		response.type("text/plain")
+		r.table("members").run(conn).joinToString("\n") {
+			@Suppress("UNCHECKED_CAST")
+			(it as Map<String, String>)["id"]!!
+		}
+	}
+	app.get("/api/xpcoins") {
+		File("config/xp_coins_data.json").readBytes()
 	}
 	app.before {
 		val corrId = request.headers("X-Epic-Correlation-ID") ?: UUID.randomUUID().toString()
