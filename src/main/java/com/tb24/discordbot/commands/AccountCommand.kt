@@ -8,6 +8,7 @@ import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.Rune
 import com.tb24.discordbot.managers.ChannelsManager
 import com.tb24.discordbot.managers.ChannelsManager.AvatarColor
 import com.tb24.discordbot.util.*
@@ -19,6 +20,7 @@ import net.dv8tion.jda.api.EmbedBuilder
 
 class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf("a")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.requires(Rune::hasPremium)
 		.executes(::displaySummary)
 		.then(literal("displayname")
 			.then(argument("new name", greedyString())
@@ -40,7 +42,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 			)
 		)
 
-	private fun displaySummary(c: CommandContext<CommandSourceStack>): Int {
+	private inline fun displaySummary(c: CommandContext<CommandSourceStack>): Int {
 		val source = c.source
 		source.ensureSession()
 		if (!source.complete(null, source.createEmbed()
@@ -110,12 +112,12 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		return Command.SINGLE_SUCCESS
 	}
 
-	private fun changePasswordFlow(c: CommandContext<CommandSourceStack>): Int {
+	private inline fun changePasswordFlow(c: CommandContext<CommandSourceStack>): Int {
 		// PLEASE don't let me do this for real
 		throw SimpleCommandExceptionType(LiteralMessage("oh, so you want to change your password through the bot directly? well it is illegal so go to the account page yourself.")).create()
 	}
 
-	private fun displayBackupCodes(c: CommandContext<CommandSourceStack>): Int {
+	private inline fun displayBackupCodes(c: CommandContext<CommandSourceStack>): Int {
 		val source = c.source
 		source.ensureSession()
 		source.loading("Getting backup codes")
@@ -132,7 +134,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		return Command.SINGLE_SUCCESS
 	}
 
-	private fun generateBackupCodes(c: CommandContext<CommandSourceStack>): Int {
+	private inline fun generateBackupCodes(c: CommandContext<CommandSourceStack>): Int {
 		val source = c.source
 		source.ensureSession()
 		source.loading("Generating backup codes")
@@ -157,7 +159,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		}
 	}.toString()
 
-	private fun unlink(source: CommandSourceStack, externalAuthType: String): Int {
+	private inline fun unlink(source: CommandSourceStack, externalAuthType: String): Int {
 		source.ensureSession()
 		source.loading("Getting linked accounts")
 		val externalAuth = runCatching { source.api.accountService.getExternalAuth(source.api.currentLoggedIn.id, externalAuthType).exec() }.getOrNull()?.body()

@@ -7,6 +7,7 @@ import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.word
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.EFortMtxPlatform
@@ -17,6 +18,7 @@ import com.tb24.fn.util.Formatters
 
 class MtxPlatformCommand : BrigadierCommand("vbucksplatform", "Changes the V-Bucks platform.", arrayOf("vp", "mtxplatform")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.requires(Rune::hasPremium)
 		.then(argument("platform", word())
 			.suggests { _, b -> EFortMtxPlatform.values().fold(b) { acc, it -> acc.suggest(it.name) }.buildFuture() }
 			.executes { c ->

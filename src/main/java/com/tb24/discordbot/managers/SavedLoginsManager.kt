@@ -5,10 +5,6 @@ import com.rethinkdb.net.Connection
 import com.tb24.fn.model.account.DeviceAuth
 
 class SavedLoginsManager(private val conn: Connection) {
-	companion object {
-		private val GODS = arrayOf("624299014388711455") //require("./Gods.json");
-	}
-
 	fun getAll(sessionId: String) =
 		r.table("devices").get(sessionId).run(conn, Entry::class.java).first()?.devices ?: emptyList()
 
@@ -51,8 +47,6 @@ class SavedLoginsManager(private val conn: Connection) {
 			false
 		}
 	}
-
-	fun getLimit(sessionId: String) = if (GODS.contains(sessionId)) 10 else 7
 
 	class Entry {
 		@JvmField var id: String? = null

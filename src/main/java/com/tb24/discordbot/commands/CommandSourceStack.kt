@@ -3,6 +3,7 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.rethinkdb.RethinkDB.r
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.Session
@@ -80,6 +81,10 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 		if (!completedTutorial) {
 			throw SimpleCommandExceptionType(LiteralMessage("To continue, the account must own Save the World and completed the tutorial.")).create()
 		}
+	}
+
+	fun hasPremium(): Boolean {
+		return r.table("members").get(author.id).run(client.dbConn).first() != null
 	}
 }
 

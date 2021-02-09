@@ -26,7 +26,7 @@ import kotlin.concurrent.schedule
 
 class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", arrayOf("i", "signin")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires(Rune::hasAccess)
+		.requires(Rune::hasPremium)
 		.executes { accountPicker(it.source) }
 		.then(argument("authorization code", greedyString())
 			.executes {
@@ -37,6 +37,7 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 					val devices = source.client.savedLoginsManager.getAll(source.author.id)
 					val deviceData = devices.getOrNull(accountIndex - 1)
 						?: throw SimpleCommandExceptionType(LiteralMessage("Invalid account number.")).create()
+					source.session = source.client.internalSession
 					doDeviceAuthLogin(source, deviceData, source.queryUsers(Collections.singleton(deviceData.accountId)))
 				} else {
 					doLogin(source, GrantType.authorization_code, arg, EAuthClient.FORTNITE_IOS_GAME_CLIENT)
@@ -47,7 +48,7 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 
 class ExtendedLoginCommand : BrigadierCommand("loginx", "Login with arbitrary parameters.", arrayOf("lx")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires(Rune::hasAccess)
+		.requires(Rune::hasPremium)
 		.executes { extendedLogin(it.source) }
 		.then(argument("method", word())
 			.executes { extendedLogin(it.source, getString(it, "method")) }

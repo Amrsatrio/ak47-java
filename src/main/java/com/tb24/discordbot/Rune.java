@@ -4,8 +4,6 @@ import com.tb24.discordbot.commands.CommandSourceStack;
 
 import java.util.Arrays;
 
-import static com.rethinkdb.RethinkDB.r;
-
 public class Rune {
 	public static boolean isBotDev(CommandSourceStack source) {
 		return Arrays.asList(
@@ -16,7 +14,7 @@ public class Rune {
 		).contains(source.getAuthor().getIdLong());
 	}
 
-	public static boolean hasAccess(CommandSourceStack source) {
-		return r.table("members").get(source.getAuthor().getId()).run(source.getClient().dbConn).first() != null;
+	public static boolean hasPremium(CommandSourceStack source) {
+		return source.hasPremium();
 	}
 }

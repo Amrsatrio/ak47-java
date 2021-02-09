@@ -53,7 +53,7 @@ class ExportObjectCommand : BrigadierCommand("export", "Export an object from th
 				c.source.loading("Processing object")
 				val obj = runCatching { loadObject(objectPath) }
 					.getOrElse { throw SimpleCommandExceptionType(LiteralMessage("Failed to load package.\n```$it```")).create() }
-					?: throw SimpleCommandExceptionType(LiteralMessage("The package was loaded, but the object wasn't found.")).create()
+					?: throw SimpleCommandExceptionType(LiteralMessage("Object not found.")).create()
 				if (obj.owner!!.name.endsWith("Apollo_ItemCollect_S15_Overlay")) {
 					throw SimpleCommandExceptionType(LiteralMessage("The package to load does not exist on disk or in the loader")).create()
 				}

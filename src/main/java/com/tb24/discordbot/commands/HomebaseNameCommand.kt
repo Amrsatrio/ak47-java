@@ -8,6 +8,7 @@ import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.commandName
 import com.tb24.discordbot.util.dispatchClientCommandRequest
@@ -18,6 +19,7 @@ import java.text.SimpleDateFormat
 
 class HomebaseNameCommand : BrigadierCommand("homebasename", "Displays or changes the homebase name. (STW owning accounts only)") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.requires(Rune::hasPremium)
 		.executes { execute(it, null) }
 		.then(argument("new name", greedyString())
 			.executes { execute(it, getString(it, "new name")) }

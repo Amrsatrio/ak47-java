@@ -77,7 +77,7 @@ fun main(args: Array<String>) {
 			}
 			?: halt(400, createError(
 				"errors.com.tb24.asset_api.load_failed",
-				"The package was loaded, but the object wasn't found"
+				"Object not found"
 			))
 		val data: ByteArray
 		val fileName: String

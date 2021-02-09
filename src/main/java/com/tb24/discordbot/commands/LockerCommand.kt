@@ -4,6 +4,7 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.tb24.discordbot.GridSlot
+import com.tb24.discordbot.Rune
 import com.tb24.discordbot.createAttachmentOfIcons
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
@@ -18,6 +19,7 @@ import java.util.concurrent.CompletableFuture
 
 class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form of an image.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.requires(Rune::hasPremium)
 		.executes { c ->
 			val source = c.source
 			source.ensureSession()
