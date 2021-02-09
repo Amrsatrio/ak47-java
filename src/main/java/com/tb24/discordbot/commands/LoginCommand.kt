@@ -10,6 +10,8 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.*
+import com.tb24.fn.model.account.DeviceAuth
+import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.account.PinGrantInfo
 import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.EmbedBuilder
@@ -27,7 +29,19 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 		.requires(Rune::hasAccess)
 		.executes { accountPicker(it.source) }
 		.then(argument("authorization code", greedyString())
-			.executes { doLogin(it.source, GrantType.authorization_code, getString(it, "authorization code"), EAuthClient.FORTNITE_IOS_GAME_CLIENT) }
+			.executes {
+				val source = it.source
+				val arg = getString(it, "authorization code")
+				val accountIndex = arg.toIntOrNull()
+				if (accountIndex != null) {
+					val devices = source.client.savedLoginsManager.getAll(source.author.id)
+					val deviceData = devices.getOrNull(accountIndex - 1)
+						?: throw SimpleCommandExceptionType(LiteralMessage("Invalid account number.")).create()
+					doDeviceAuthLogin(source, deviceData, source.queryUsers(Collections.singleton(deviceData.accountId)))
+				} else {
+					doLogin(source, GrantType.authorization_code, arg, EAuthClient.FORTNITE_IOS_GAME_CLIENT)
+				}
+			}
 		)
 }
 
@@ -89,11 +103,10 @@ fun doLogin(source: CommandSourceStack, grantType: GrantType, params: String, au
 		GrantType.token_to_token -> {
 			source.session.login(source, grantType, ImmutableMap.of("access_token", params, "token_type", "eg1"), authClient ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT)
 		}
-		else -> throw SimpleCommandExceptionType(LiteralMessage("Unsupported grant type $grantType")).create()
 	}
 }
 
-private fun accountPicker(source: CommandSourceStack): Int {
+private inline fun accountPicker(source: CommandSourceStack): Int {
 	val devices = source.client.savedLoginsManager.getAll(source.author.id)
 	if (devices.isEmpty()) {
 		return startDefaultLoginFlow(source)
@@ -142,18 +155,21 @@ private fun accountPicker(source: CommandSourceStack): Int {
 		if (!numberEmojis.indices.contains(choiceIndex)) {
 			throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
 		}
-		val deviceData = devices[choiceIndex]
-		val auth = deviceData.clientId?.let(EAuthClient::getByClientId) ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT
-		try {
-			source.session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", deviceData.accountId, "device_id", deviceData.deviceId, "secret", deviceData.secret, "token_type", "eg1"), auth)
-		} catch (e: HttpException) {
-			if (e.epicError.errorCode == "errors.com.epicgames.account.invalid_account_credentials" || e.epicError.errorCode == "errors.com.epicgames.account.account_not_active") {
-				val accountId = deviceData.accountId
-				source.client.savedLoginsManager.remove(source.session.id, accountId)
-				throw SimpleCommandExceptionType(LiteralMessage("The saved login for **${users.firstOrNull { it.id == accountId }?.displayName ?: accountId}** is no longer valid.\nError: ${e.epicError.displayText}")).create()
-			}
-			throw e
+		doDeviceAuthLogin(source, devices[choiceIndex], users)
+	}
+}
+
+private fun doDeviceAuthLogin(source: CommandSourceStack, deviceData: DeviceAuth, users: List<GameProfile>): Int {
+	val auth = deviceData.clientId?.let(EAuthClient::getByClientId) ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT
+	try {
+		return source.session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", deviceData.accountId, "device_id", deviceData.deviceId, "secret", deviceData.secret, "token_type", "eg1"), auth)
+	} catch (e: HttpException) {
+		if (e.epicError.errorCode == "errors.com.epicgames.account.invalid_account_credentials" || e.epicError.errorCode == "errors.com.epicgames.account.account_not_active") {
+			val accountId = deviceData.accountId
+			source.client.savedLoginsManager.remove(source.session.id, accountId)
+			throw SimpleCommandExceptionType(LiteralMessage("The saved login for **${users.firstOrNull { it.id == accountId }?.displayName ?: accountId}** is no longer valid.\nError: ${e.epicError.displayText}")).create()
 		}
+		throw e
 	}
 }
 
