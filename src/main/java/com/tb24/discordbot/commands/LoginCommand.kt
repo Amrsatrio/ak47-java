@@ -37,8 +37,7 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 					val devices = source.client.savedLoginsManager.getAll(source.author.id)
 					val deviceData = devices.getOrNull(accountIndex - 1)
 						?: throw SimpleCommandExceptionType(LiteralMessage("Invalid account number.")).create()
-					source.session = source.client.internalSession
-					doDeviceAuthLogin(source, deviceData, source.queryUsers(Collections.singleton(deviceData.accountId)))
+					doDeviceAuthLogin(source, deviceData, lazy { source.client.internalSession.queryUsers(Collections.singleton(deviceData.accountId)) })
 				} else {
 					doLogin(source, GrantType.authorization_code, arg, EAuthClient.FORTNITE_IOS_GAME_CLIENT)
 				}
@@ -115,8 +114,7 @@ private inline fun accountPicker(source: CommandSourceStack): Int {
 	val numberEmojis = arrayOf("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "0️⃣")
 	check(devices.size <= numberEmojis.size)
 	source.loading("Preparing your login")
-	source.session = source.client.internalSession
-	val users = source.queryUsers(devices.map { it.accountId })
+	val users = source.client.internalSession.queryUsers(devices.map { it.accountId })
 	val description = mutableListOf<String>().apply {
 		for (i in devices.indices) {
 			val accountId = devices[i].accountId
@@ -148,7 +146,6 @@ private inline fun accountPicker(source: CommandSourceStack): Int {
 		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
 	}).await().first().reactionEmote.name
 	shouldStop.set(true)
-	source.session = source.initialSession
 	return if (choice == "✨") {
 		startDefaultLoginFlow(source)
 	} else {
@@ -156,11 +153,11 @@ private inline fun accountPicker(source: CommandSourceStack): Int {
 		if (!numberEmojis.indices.contains(choiceIndex)) {
 			throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
 		}
-		doDeviceAuthLogin(source, devices[choiceIndex], users)
+		doDeviceAuthLogin(source, devices[choiceIndex], lazy { users })
 	}
 }
 
-private fun doDeviceAuthLogin(source: CommandSourceStack, deviceData: DeviceAuth, users: List<GameProfile>): Int {
+private fun doDeviceAuthLogin(source: CommandSourceStack, deviceData: DeviceAuth, users: Lazy<List<GameProfile>>): Int {
 	val auth = deviceData.clientId?.let(EAuthClient::getByClientId) ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT
 	try {
 		return source.session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", deviceData.accountId, "device_id", deviceData.deviceId, "secret", deviceData.secret, "token_type", "eg1"), auth)
@@ -168,7 +165,7 @@ private fun doDeviceAuthLogin(source: CommandSourceStack, deviceData: DeviceAuth
 		if (e.epicError.errorCode == "errors.com.epicgames.account.invalid_account_credentials" || e.epicError.errorCode == "errors.com.epicgames.account.account_not_active") {
 			val accountId = deviceData.accountId
 			source.client.savedLoginsManager.remove(source.session.id, accountId)
-			throw SimpleCommandExceptionType(LiteralMessage("The saved login for **${users.firstOrNull { it.id == accountId }?.displayName ?: accountId}** is no longer valid.\nError: ${e.epicError.displayText}")).create()
+			throw SimpleCommandExceptionType(LiteralMessage("The saved login for **${users.value.firstOrNull { it.id == accountId }?.displayName ?: accountId}** is no longer valid.\nError: ${e.epicError.displayText}")).create()
 		}
 		throw e
 	}
@@ -184,7 +181,7 @@ fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 		source.session.logout(source.message)
 	}
 	source.loading("Preparing your login")
-	val ccLoginResponse = source.api.accountService.getAccessToken(authClient.asBasicAuthString(), "client_credentials", emptyMap(), null).exec().body()!!
+	val ccLoginResponse = source.api.accountService.getAccessToken(authClient.asBasicAuthString(), "client_credentials", ImmutableMap.of("token_type", "eg1"), null).exec().body()!!
 	val deviceCodeResponse = source.client.okHttpClient.newCall(source.api.accountService.initiatePinAuth("login")
 		.request().newBuilder()
 		.header("Authorization", ccLoginResponse.token_type + ' ' + ccLoginResponse.access_token)

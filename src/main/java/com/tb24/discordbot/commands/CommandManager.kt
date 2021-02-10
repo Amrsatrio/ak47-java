@@ -23,7 +23,6 @@ import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
 import net.dv8tion.jda.internal.utils.Helpers
-import java.io.IOException
 import java.net.HttpURLConnection
 import java.util.concurrent.Executors
 import kotlin.math.max
@@ -222,24 +221,25 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 	 * @return true if the action should be executed again
 	 */
 	fun httpError(source: CommandSourceStack, e: HttpException, errorTitle: String = source.errorTitle!!): Boolean {
-		var description: String? = null
+		val description: String?
 		var footer = ""
 		val host: String = e.response.request().url().host()
 		val isEpicGames = host.endsWith("epicgames.com") || host.endsWith("fortnite.qq.com")
 		if (isEpicGames) {
-			if ((e.code() == HttpURLConnection.HTTP_UNAUTHORIZED || (e.code() == HttpURLConnection.HTTP_FORBIDDEN && e.epicError.errorCode == "com.epicgames.common.token_verify_failed") /*special case for events service*/) && source.api.userToken?.account_id != null) {
-				val savedDevice = client.savedLoginsManager.get(source.session.id, source.api.userToken.account_id)
-				source.api.userToken = null
+			val session = source.session
+			if ((e.code() == HttpURLConnection.HTTP_UNAUTHORIZED || (e.code() == HttpURLConnection.HTTP_FORBIDDEN && e.epicError.errorCode == "com.epicgames.common.token_verify_failed") /*special case for events service*/) && session.api.userToken?.account_id != null) {
+				val savedDevice = client.savedLoginsManager.get(session.id, session.api.userToken.account_id)
+				session.api.userToken = null
 				if (savedDevice != null) {
 					try {
-						source.session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", savedDevice.accountId, "device_id", savedDevice.deviceId, "secret", savedDevice.secret, "token_type", "eg1"), savedDevice.clientId?.let(EAuthClient::getByClientId) ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT, false)
+						session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", savedDevice.accountId, "device_id", savedDevice.deviceId, "secret", savedDevice.secret, "token_type", "eg1"), savedDevice.clientId?.let(EAuthClient::getByClientId) ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT, false)
 						source.session = source.initialSession
 						return true
 					} catch (e: HttpException) {
 						httpError(source, e, "Login Failed")
 					}
 				}
-				source.session.clear()
+				session.clear()
 				source.complete(null, EmbedBuilder()
 					.setTitle("🚫 Logged out")
 					.setDescription("You have been logged out due to one of the following reasons:\n\u2022 Account logged in elsewhere.\n\u2022 Been more than 8 hours since login.\n\u2022 Logged in using exchange code or authorization code but the originating session has been logged out.\n\u2022 Logged in using a saved login but got it removed.\n\u2022 Account's password changed.\n\u2022 Password reset initiated by Epic Games.\n\nYou don't have a saved login for this account, so we cannot log you back in automatically.")
@@ -251,10 +251,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 			description = error.displayText
 			footer = (if (error.numericErrorCode != null) "/" + error.numericErrorCode else "") + (if (error.errorCode != null) "/" + error.errorCode else "")
 		} else {
-			try {
-				description = e.responseStr
-			} catch (ignored: IOException) {
-			}
+			description = e.responseStr
 		}
 		source.complete(null, EmbedBuilder()
 			.setTitle("⚠ $errorTitle")

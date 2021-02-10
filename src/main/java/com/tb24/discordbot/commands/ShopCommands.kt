@@ -16,6 +16,7 @@ import com.tb24.fn.model.EItemShopTileSize.*
 import com.tb24.fn.model.assetdata.ESubGame
 import com.tb24.fn.model.gamesubcatalog.CatalogDownload
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer.CatalogItemPrice
+import com.tb24.fn.model.gamesubcatalog.ECatalogOfferType
 import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.campaign.PopulatePrerolledOffers
@@ -154,7 +155,7 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 /*			if (catalogEntry.shouldBeSkipped(commonCore)) {
 				continue
 			}*/
-			if (catalogEntry.prices.isEmpty() || catalogEntry.prices.first().currencyType == EStoreCurrencyType.RealMoney) continue
+			if (catalogEntry.offerType == ECatalogOfferType.StaticPrice && (catalogEntry.prices.isEmpty() || catalogEntry.prices.first().currencyType == EStoreCurrencyType.RealMoney)) continue
 			val sd = catalogEntry.holder().apply { resolve(profileManager) }
 			lines.add("${(catalogEntry.__ak47_index + 1)}. ${sd.friendlyName}${if (showAccInfo && (sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit)) " ✅" else ""}")
 			catalogEntry.prices.forEach { prices.putIfAbsent(it.currencyType.name + ' ' + it.currencySubType, it) }

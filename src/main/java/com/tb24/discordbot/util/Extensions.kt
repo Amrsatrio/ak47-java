@@ -91,7 +91,7 @@ fun okhttp3.Call.exec(): okhttp3.Response = execute().apply {
 		throw HttpException(this)
 }
 
-inline fun <reified T> okhttp3.Response.to(): T = body()!!.run { EpicApi.GSON.fromJson(charStream(), T::class.java) }.apply { close() }
+inline fun <reified T> okhttp3.Response.to(): T = body()!!.charStream().use { EpicApi.GSON.fromJson(it, T::class.java) }
 
 val CommandContext<*>.commandName: String get() = nodes.first().node.name
 
