@@ -176,7 +176,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 			return Command.SINGLE_SUCCESS
 		}
 		source.loading("Unlinking $externalAuthType")
-		source.api.accountService.removeExternalAuth(source.api.currentLoggedIn.id, externalAuthType)
+		source.api.accountService.removeExternalAuth(source.api.currentLoggedIn.id, externalAuthType).exec()
 		source.complete(null, source.createEmbed()
 			.setTitle("✅ Successfully unlinked $externalAuthType")
 			.setColor(0xFFF300)
