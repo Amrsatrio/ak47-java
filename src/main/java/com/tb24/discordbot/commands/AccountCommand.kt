@@ -14,7 +14,6 @@ import com.tb24.discordbot.managers.ChannelsManager.AvatarColor
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.AccountMutationPayload
 import com.tb24.fn.model.account.BackupCodesResponse
-import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
 
@@ -41,6 +40,40 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 				.executes { unlink(it.source, getString(it, "external auth type").toLowerCase()) }
 			)
 		)
+		/*.then(literal("create")
+			.then(argument("country", string())
+				.then(argument("first name", string())
+					.then(argument("last name", string())
+						.then(argument("display name", string())
+							.then(argument("email", string())
+								.then(argument("password", greedyString())
+									.executes {
+										val country = getString(it, "country")
+										val firstName = getString(it, "first name")
+										val lastName = getString(it, "last name")
+										val displayName = getString(it, "display name")
+										val email = getString(it, "email")
+										val password = getString(it, "password")
+										val source = it.source
+										val payload = AccountMutationPayload()
+										payload.country = country
+										payload.name = firstName
+										payload.lastName = lastName
+										payload.displayName = displayName
+										payload.email = email
+										payload.password = password
+										payload.preferredLanguage = "en"
+										val response = source.api.accountService.createAccount(true, "eg1", true, payload).exec().body()!!
+										source.session.handleAccountMutation(response)
+										Command.SINGLE_SUCCESS
+									}
+								)
+							)
+						)
+					)
+				)
+			)
+		)*/
 
 	private inline fun displaySummary(c: CommandContext<CommandSourceStack>): Int {
 		val source = c.source
@@ -97,11 +130,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		val response = source.api.accountService.editAccountDetails(source.api.currentLoggedIn.id, AccountMutationPayload().apply {
 			displayName = newName
 		}).exec().body()!!
-		source.api.currentLoggedIn = response.accountInfo.run { GameProfile(id, epicDisplayName) }
-		if (response.oauthSession != null) {
-			source.api.userToken = response.oauthSession
-			source.session.save()
-		}
+		source.session.handleAccountMutation(response)
 		source.complete(null, source.createEmbed()
 			.setTitle("✅ Updated the Epic display name")
 			.addField("Old name", oldName.orDash(), true)

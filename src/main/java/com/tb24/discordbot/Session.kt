@@ -7,6 +7,8 @@ import com.tb24.discordbot.managers.ChannelsManager
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.event.ProfileUpdatedEvent
+import com.tb24.fn.model.account.AccountMutationResponse
+import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.McpLootEntry
 import com.tb24.fn.model.mcpprofile.item.GiftBoxAttributes
 import com.tb24.fn.util.EAuthClient
@@ -61,23 +63,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		api.currentLoggedIn = accountData
 		save()
 		if (source != null && sendMessages) {
-			val avatarKeys = channelsManager.getUserSettings(token.account_id, ChannelsManager.KEY_AVATAR, ChannelsManager.KEY_AVATAR_BACKGROUND)
-			val embed = EmbedBuilder()
-				.setTitle("👋 Welcome, %s!".format(accountData?.displayName ?: "Unknown"))
-				.addField("Account ID", token.account_id, false)
-				.setThumbnail("https://cdn2.unrealengine.com/Kairos/portraits/${avatarKeys[0]}.png?preview=1")
-				.setColor(Color.decode(DEFAULT_GSON.fromJson(avatarKeys[1], Array<String>::class.java)[1]))
-
-			if (accountData?.externalAuths != null) {
-				for (externalAuth in accountData.externalAuths.values) {
-					if (externalAuth.type == "psn" || externalAuth.type == "xbl" || externalAuth.type == "nintendo") {
-						embed.addField(L10N.format("account.ext.${externalAuth.type}.name"), externalAuth.externalDisplayName
-							?: "\u2014", true)
-					}
-				}
-			}
-
-			source.complete(null, embed.build())
+			sendLoginMessage(source)
 		}
 		return Command.SINGLE_SUCCESS
 	}
@@ -109,6 +95,34 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 	fun clear() {
 		api.clear()
 		if (persistent) SessionPersister.remove(id)
+	}
+
+	fun sendLoginMessage(source: CommandSourceStack, user: GameProfile? = api.currentLoggedIn) {
+		if (user == null) {
+			return
+		}
+		val avatarKeys = channelsManager.getUserSettings(user.id, ChannelsManager.KEY_AVATAR, ChannelsManager.KEY_AVATAR_BACKGROUND)
+		val embed = EmbedBuilder()
+			.setTitle("👋 Welcome, %s!".format(user.displayName ?: "Unknown"))
+			.addField("Account ID", user.id, false)
+			.setThumbnail("https://cdn2.unrealengine.com/Kairos/portraits/${avatarKeys[0]}.png?preview=1")
+			.setColor(Color.decode(DEFAULT_GSON.fromJson(avatarKeys[1], Array<String>::class.java)[1]))
+		user.externalAuths?.run {
+			values.forEach {
+				if (it.type == "psn" || it.type == "xbl" || it.type == "nintendo") {
+					embed.addField(L10N.format("account.ext.${it.type}.name"), it.externalDisplayName.orDash(), true)
+				}
+			}
+		}
+		source.complete(null, embed.build())
+	}
+
+	fun handleAccountMutation(response: AccountMutationResponse) {
+		api.currentLoggedIn = response.accountInfo.run { GameProfile(id, epicDisplayName) }
+		if (response.oauthSession != null) {
+			api.userToken = response.oauthSession
+		}
+		save()
 	}
 
 	@Throws(HttpException::class)

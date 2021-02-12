@@ -26,7 +26,7 @@ import kotlin.concurrent.schedule
 
 class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", arrayOf("i", "signin")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires(Rune::hasPremium)
+		.requires { System.getProperty("freeTierEnabled") == "true" || Rune.hasPremium(it) }
 		.executes { accountPicker(it.source) }
 		.then(argument("authorization code", greedyString())
 			.executes {
@@ -35,9 +35,11 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 				val accountIndex = arg.toIntOrNull()
 				if (accountIndex != null) {
 					val devices = source.client.savedLoginsManager.getAll(source.author.id)
-					val deviceData = devices.getOrNull(accountIndex - 1)
-						?: throw SimpleCommandExceptionType(LiteralMessage("Invalid account number.")).create()
-					doDeviceAuthLogin(source, deviceData, lazy { source.client.internalSession.queryUsers(Collections.singleton(deviceData.accountId)) })
+					val deviceData = devices.safeGetOneIndexed(accountIndex)
+					doDeviceAuthLogin(source, deviceData, lazy {
+						source.session = source.client.internalSession
+						source.queryUsers(Collections.singleton(deviceData.accountId))
+					})
 				} else {
 					doLogin(source, GrantType.authorization_code, arg, EAuthClient.FORTNITE_IOS_GAME_CLIENT)
 				}
@@ -114,7 +116,8 @@ private inline fun accountPicker(source: CommandSourceStack): Int {
 	val numberEmojis = arrayOf("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "0️⃣")
 	check(devices.size <= numberEmojis.size)
 	source.loading("Preparing your login")
-	val users = source.client.internalSession.queryUsers(devices.map { it.accountId })
+	source.session = source.client.internalSession
+	val users = source.queryUsers(devices.map { it.accountId })
 	val description = mutableListOf<String>().apply {
 		for (i in devices.indices) {
 			val accountId = devices[i].accountId
@@ -146,6 +149,7 @@ private inline fun accountPicker(source: CommandSourceStack): Int {
 		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
 	}).await().first().reactionEmote.name
 	shouldStop.set(true)
+	source.session = source.initialSession
 	return if (choice == "✨") {
 		startDefaultLoginFlow(source)
 	} else {

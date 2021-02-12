@@ -20,23 +20,29 @@ import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.util.toPngArray
 import net.dv8tion.jda.api.entities.Message
 
-class DumpAssetCommand : BrigadierCommand("dump", "Dump a package from the game files.") {
+class DumpAssetCommand : BrigadierCommand("dump", "Shows the properties of an object/package's objects from the game files.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.then(argument("package path", greedyString())
+		.then(argument("path", greedyString())
 			.executes { c ->
-				val packagePath = getString(c, "package path")
-				if (packagePath.contains('.')) {
-					throw SimpleCommandExceptionType(LiteralMessage("Not a valid package path. It should not contain extensions or object names.")).create()
+				val path = getString(c, "path")
+				val toConvert: Any
+				val fileName: String
+				if (path.contains('.')) {
+					val obj = runCatching { loadObject(path) }
+						.getOrElse { throw SimpleCommandExceptionType(LiteralMessage("Failed to load object.\n```$it```")).create() }
+						?: throw SimpleCommandExceptionType(LiteralMessage("Object not found.")).create()
+					toConvert = obj
+					fileName = obj.name
+				} else {
+					val pkg = runCatching { AssetManager.INSTANCE.provider.loadGameFile(path) }
+						.getOrElse { throw SimpleCommandExceptionType(LiteralMessage("Failed to load package.\n```$it```")).create() }
+						?: throw SimpleCommandExceptionType(LiteralMessage("The package to load does not exist on disk or in the loader.")).create()
+					toConvert = pkg.exports
+					fileName = pkg.name.substringAfterLast('/').substringBeforeLast('.')
 				}
-				val pkg = runCatching { AssetManager.INSTANCE.provider.loadGameFile(packagePath) }
-					.getOrElse { throw SimpleCommandExceptionType(LiteralMessage("Failed to load package.\n```$it```")).create() }
-					?: throw SimpleCommandExceptionType(LiteralMessage("The package to load does not exist on disk or in the loader")).create()
-				if (pkg.name.endsWith("Apollo_ItemCollect_S15_Overlay")) {
-					throw SimpleCommandExceptionType(LiteralMessage("The package to load does not exist on disk or in the loader")).create()
-				}
-				val s = JWPSerializer.GSON.newBuilder().setPrettyPrinting().create().toJson(pkg.exports)
+				val s = JWPSerializer.GSON.newBuilder().setPrettyPrinting().create().toJson(toConvert)
 				if (("```json\n\n```".length + s.length) > Message.MAX_CONTENT_LENGTH) {
-					c.source.channel.sendFile(s.toByteArray(), pkg.fileName.substringAfterLast('/') + ".json").complete()
+					c.source.channel.sendFile(s.toByteArray(), "$fileName.json").complete()
 				} else {
 					c.source.complete("```json\n$s\n```")
 				}
@@ -54,9 +60,6 @@ class ExportObjectCommand : BrigadierCommand("export", "Export an object from th
 				val obj = runCatching { loadObject(objectPath) }
 					.getOrElse { throw SimpleCommandExceptionType(LiteralMessage("Failed to load package.\n```$it```")).create() }
 					?: throw SimpleCommandExceptionType(LiteralMessage("Object not found.")).create()
-				if (obj.owner!!.name.endsWith("Apollo_ItemCollect_S15_Overlay")) {
-					throw SimpleCommandExceptionType(LiteralMessage("The package to load does not exist on disk or in the loader")).create()
-				}
 				val data: ByteArray
 				val fileName: String
 				when (obj) {
