@@ -243,7 +243,7 @@ fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 		override fun onDispose(item: MessageReaction, user: User?) {}
 
 		override fun onEnd(collected: Map<Any, MessageReaction>, reason: CollectorEndReason) {
-			if (waitingMsg.member != null && waitingMsg.member!!.hasPermission(Permission.MESSAGE_MANAGE)) {
+			if (waitingMsg.member?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
 				waitingMsg.clearReactions().queue()
 			}
 		}

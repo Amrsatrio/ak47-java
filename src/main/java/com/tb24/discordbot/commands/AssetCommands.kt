@@ -10,6 +10,8 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.uasset.AssetManager
 import com.tb24.uasset.JWPSerializer
 import com.tb24.uasset.loadObject
+import me.fungames.jfortniteparse.fort.converters.createContainer
+import me.fungames.jfortniteparse.fort.exports.FortItemDefinition
 import me.fungames.jfortniteparse.ue4.assets.exports.USoundWave
 import me.fungames.jfortniteparse.ue4.assets.exports.UStaticMesh
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
@@ -77,9 +79,13 @@ class ExportObjectCommand : BrigadierCommand("export", "Export an object from th
 						data = obj.toBufferedImage().toPngArray()
 						fileName = obj.name + ".png"
 					}
+					is FortItemDefinition -> {
+						data = obj.createContainer().getImage(AssetManager.INSTANCE.locres).toPngArray()
+						fileName = obj.name + ".png"
+					}
 					else -> throw SimpleCommandExceptionType(LiteralMessage("${obj.exportType} is not an exportable type.")).create()
 				}
-				c.source.channel.sendMessage("`${obj.exportType}'${obj.owner!!.fileName}.${obj.name}'`").addFile(data, fileName).complete()
+				c.source.channel.sendMessage("`${obj.exportType}'${obj.getPathName(null)}'`").addFile(data, fileName).complete()
 				c.source.loadingMsg?.delete()?.complete()
 				Command.SINGLE_SUCCESS
 			}

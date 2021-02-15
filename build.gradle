@@ -48,6 +48,7 @@ dependencies {
 	implementation 'com.google.code.gson:gson:2.8.6'
 	implementation 'com.google.guava:guava:28.2-jre'
 	implementation 'com.mojang:brigadier:1.0.17'
+	implementation 'com.mojang:datafixerupper:4.0.26'
 	implementation 'com.rethinkdb:rethinkdb-driver:2.4.4'
 	implementation 'com.sparkjava:spark-kotlin:1.0.0-alpha'
 	implementation 'com.squareup.okhttp3:okhttp:3.14.9'

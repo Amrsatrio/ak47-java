@@ -18,7 +18,7 @@ import com.tb24.fn.model.account.DeviceAuth;
 import com.tb24.fn.model.assetdata.ESubGame;
 import com.tb24.fn.util.EAuthClient;
 import com.tb24.uasset.AssetManager;
-
+import kotlin.collections.MapsKt;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.MessageBuilder;
@@ -29,10 +29,12 @@ import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.jodah.expiringmap.ExpirationPolicy;
 import net.jodah.expiringmap.ExpiringMap;
-
+import okhttp3.CertificatePinner;
+import okhttp3.OkHttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.security.auth.login.LoginException;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.ZoneOffset;
@@ -42,16 +44,10 @@ import java.util.Map;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import javax.security.auth.login.LoginException;
-
-import kotlin.collections.MapsKt;
-import okhttp3.CertificatePinner;
-import okhttp3.OkHttpClient;
-
 import static com.rethinkdb.RethinkDB.r;
 
 public final class DiscordBot {
-	public static final String VERSION = "6.2.4";
+	public static final String VERSION = "6.2.5";
 	public static final Logger LOGGER = LoggerFactory.getLogger("DiscordBot");
 	public static final CertificatePinner CERT_PINNER = new CertificatePinner.Builder()
 		.add("discordapp.com", "sha256/DACsWb3zfNT9ttV6g6o5wwpzvgKJ66CliW2GCh2m8LQ=")

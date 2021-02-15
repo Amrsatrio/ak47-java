@@ -42,8 +42,8 @@ fun <T> Message.replyPaginated(all: List<T>,
 				}
 			}
 
-			if (msg.member != null && msg.member!!.hasPermission(Permission.MESSAGE_MANAGE)) {
-				msg.removeReaction(item.reactionEmote.name, user!!).queue()
+			if (msg.member?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
+				item.removeReaction(user!!).queue()
 			}
 
 			if (page != oldPage) {
@@ -58,7 +58,7 @@ fun <T> Message.replyPaginated(all: List<T>,
 		override fun onDispose(item: MessageReaction, user: User?) {}
 
 		override fun onEnd(collected: Map<Any, MessageReaction>, reason: CollectorEndReason) {
-			if (reason == CollectorEndReason.IDLE && msg.member != null && msg.member!!.hasPermission(Permission.MESSAGE_MANAGE)) {
+			if (reason == CollectorEndReason.IDLE && msg.member?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
 				msg.clearReactions().queue()
 			}
 		}
