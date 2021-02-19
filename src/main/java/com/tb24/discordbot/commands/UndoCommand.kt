@@ -56,7 +56,7 @@ class UndoCommand : BrigadierCommand("undo", "Cancel your last purchase.", array
 					purchaseId = purchase.purchaseId
 					quickReturn = true
 				}).await()
-				source.complete("✅ Purchase successfully canceled. Now you have ${Utils.MTX_EMOJI} ${Formatters.num.format(CatalogHelper.countMtxCurrency(profileManager.getProfileData("common_core")))}.")
+				source.complete("✅ Purchase canceled. Now you have ${Utils.MTX_EMOJI} ${Formatters.num.format(CatalogHelper.countMtxCurrency(profileManager.getProfileData("common_core")))}.")
 				Command.SINGLE_SUCCESS
 			} else {
 				throw SimpleCommandExceptionType(LiteralMessage("Purchase cancellation canceled.")).create()

@@ -3,7 +3,7 @@ package com.tb24.discordbot.item
 import com.tb24.discordbot.L10N
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.util.getPathName
-import com.tb24.fn.util.getStringOr
+import com.tb24.fn.util.getString
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.enums.EFortItemType
 import me.fungames.jfortniteparse.fort.exports.*
@@ -108,10 +108,10 @@ class ItemTypeResolver {
 				} else {
 					key = "set_bonus"
 				}
-				secondaryCategory = matchCategory(item.attributes.getStringOr("personality", null))?.apply {
+				secondaryCategory = matchCategory(item.attributes.getString("personality", null))?.apply {
 					middleImg = CategoryBrush.Brush_XL.ResourceObject.getPathName()
 				}
-				tertiaryCategory = matchCategory(item.attributes.getStringOr(key, null), true)?.apply {
+				tertiaryCategory = matchCategory(item.attributes.getString(key, null), true)?.apply {
 					rightImg = CategoryBrush.Brush_XL.ResourceObject.getPathName()
 				}
 			} else if (originalDefinition is FortDefenderItemDefinition) {

@@ -13,10 +13,10 @@ class ResourcesCommand : BrigadierCommand("resources", "Displays a given user's 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.withPublicProfile(::execute, "Getting resources data")
 
-	fun execute(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
+	private fun execute(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
 		val source = c.source
 		source.ensureCompletedCampaignTutorial(campaign)
-		val embed = source.createEmbed(campaign.owner)
+		val embed = source.createEmbed(campaign.owner).setFooter("Design by a.bakedpotato")
 		for ((categoryName, categoryItemTypes) in mapOf(
 			"Perk-UP" to listOf(
 				"AccountResource:reagent_alteration_upgrade_sr",

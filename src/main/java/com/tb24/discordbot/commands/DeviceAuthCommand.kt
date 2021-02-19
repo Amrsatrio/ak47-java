@@ -114,10 +114,18 @@ private fun create(c: CommandContext<CommandSourceStack>): Int {
 	val limit = when {
 		Rune.isBotDev(source) -> 10
 		source.hasPremium() -> 7
-		else -> 2
+		else -> {
+			val timeCreated = source.author.timeCreated.toEpochSecond()
+			val accountAge = System.currentTimeMillis() / 1000 - timeCreated
+			if (accountAge < 180 * 24 * 60 * 60) 0 else 2
+		}
 	}
 	if (dbDevices.size >= limit) {
-		throw SimpleCommandExceptionType(LiteralMessage("Maximum number of saved logins has been reached.")).create()
+		if (dbDevices.isEmpty() && limit == 0) {
+			throw SimpleCommandExceptionType(LiteralMessage("Your Discord account must be older than 180 days in order to have 2 complimentary saved logins.\nAlternatively, you can buy premium from us to get 7 saved logins regardless of account age.")).create()
+		} else {
+			throw SimpleCommandExceptionType(LiteralMessage("Maximum number of saved logins has been reached.")).create()
+		}
 	}
 	if (System.getProperty("disallowDeviceAuthCreation") == "true") {
 		throw SimpleCommandExceptionType(LiteralMessage("The current instance of the bot does not allow saving logins.")).create()

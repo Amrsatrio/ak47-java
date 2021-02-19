@@ -16,7 +16,7 @@ import com.tb24.fn.model.mcpprofile.attributes.ILoadoutData
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.item.CosmeticLockerAttributes
 import com.tb24.fn.util.Formatters
-import com.tb24.fn.util.getStringOr
+import com.tb24.fn.util.getString
 import net.dv8tion.jda.api.EmbedBuilder
 
 class AthenaLoadoutsCommand : BrigadierCommand("presets", "Shows your BR locker presets.", arrayOf("loadouts", "brpresets", "brloadouts")) {
@@ -50,7 +50,7 @@ private fun summary(source: CommandSourceStack, profileId: String): Int {
 	for (i in 1 until attrs.loadouts.size) {
 		val loadoutId = attrs.loadouts[i] ?: continue
 		val loadoutItem = profile.items[loadoutId] ?: continue
-		val lockerName = loadoutItem.attributes.getStringOr("locker_name", "")
+		val lockerName = loadoutItem.attributes.getString("locker_name", "")
 		loadoutLines.add("#%,d: %s".format(i, if (lockerName.isNotEmpty()) lockerName else "Unnamed Preset"))
 	}
 	if (loadoutLines.isNotEmpty()) {

@@ -47,9 +47,9 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 	}
 	var purchaseLimit = 0
 	var purchasesCount = 0
-	private val metaInfo by lazy { ce.metaInfo?.associate { it.key?.toLowerCase(Locale.ENGLISH) to it.value } ?: emptyMap() }
+	private val metaInfo by lazy { ce.metaInfo?.associate { it.key?.toLowerCase(Locale.ROOT) to it.value } ?: emptyMap() }
 
-	fun getMeta(key: String) = metaInfo[key.toLowerCase(Locale.ENGLISH)]
+	fun getMeta(key: String) = metaInfo[key.toLowerCase(Locale.ROOT)]
 
 	@Throws(CommandSyntaxException::class)
 	fun resolve(profileManager: ProfileManager, priceIndex: Int = 0) {

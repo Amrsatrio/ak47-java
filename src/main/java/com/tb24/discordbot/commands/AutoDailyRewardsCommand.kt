@@ -83,7 +83,7 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 			val millisInDay = 24L * 60L * 60L * 1000L
 			val nextUtcMidnight = (System.currentTimeMillis() / millisInDay + 1) * millisInDay
 			source.complete(null, EmbedBuilder()
-				.setTitle("✅ Successfully enrolled auto daily rewards claiming for account `${user.displayName ?: accountId}`")
+				.setTitle("✅ Enrolled auto daily rewards claiming for account `${user.displayName ?: accountId}`")
 				.setDescription("${source.message.jda.selfUser.name} will automatically claim it after UTC midnight.")
 				.addField("Next claim", nextUtcMidnight.relativeFromNow(), false)
 				.setColor(COLOR_SUCCESS)
@@ -94,7 +94,7 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 			}
 			r.table("auto_claim").get(accountId).delete().run(source.client.dbConn)
 			source.complete(null, EmbedBuilder()
-				.setTitle("✅ Successfully unenrolled auto daily rewards claiming for account `${user.displayName ?: accountId}`.")
+				.setTitle("✅ Unenrolled auto daily rewards claiming for account `${user.displayName ?: accountId}`.")
 				.setDescription("${source.message.jda.selfUser.name} will no longer automatically claim the daily rewards of that account.")
 				.setColor(COLOR_SUCCESS)
 				.build())

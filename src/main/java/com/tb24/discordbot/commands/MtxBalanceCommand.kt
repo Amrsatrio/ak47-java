@@ -10,7 +10,7 @@ import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Formatters
-import com.tb24.fn.util.getStringOr
+import com.tb24.fn.util.getString
 
 class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the account owns on all platforms.", arrayOf("bal", "balance", "mtx", "v", "vbucksbalance")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -25,7 +25,7 @@ class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the
 			var i = 0
 			for (item in commonCore.items.values) {
 				if (item.primaryAssetType == "Currency") {
-					val platform = item.attributes.getStringOr("platform", "Shared")
+					val platform = item.attributes.getString("platform", "Shared")
 					val entryStr = String.format("%,d. %,d \u00d7 %s %s", ++i, item.quantity, platform, item.templateId.replace("Currency:Mtx", ""))
 					breakdown.add(if (CatalogHelper.applicable(current, platform)) "**$entryStr**" else entryStr)
 				}

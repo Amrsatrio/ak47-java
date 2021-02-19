@@ -14,6 +14,7 @@ import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.mcpprofile.attributes.AthenaProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.util.Formatters.num
+import com.tb24.uasset.AssetManager
 import com.tb24.uasset.JWPSerializer
 import me.fungames.jfortniteparse.ue4.objects.core.math.FVector2D
 import me.fungames.jfortniteparse.util.toPngArray
@@ -24,6 +25,7 @@ import java.io.FileWriter
 import java.util.*
 import java.util.regex.Pattern
 import javax.imageio.ImageIO
+import kotlin.system.exitProcess
 
 class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't collected this season.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -157,7 +159,39 @@ class GenXpCoinsDataCommand : BrigadierCommand("genxpcoinsdata", "Generate XP co
 			FileWriter(File("config/xp_coins_data.json").apply { parentFile.mkdirs() }).use {
 				JWPSerializer.GSON.toJson(entries, it)
 			}
-			c.source.complete("✅ XP coins data has been successfully generated in `${num.format(System.currentTimeMillis() - start)}ms`. Enjoy :)")
+			c.source.complete("✅ XP coins data has been generated in `${num.format(System.currentTimeMillis() - start)}ms`. Enjoy :)")
 			Command.SINGLE_SUCCESS
 		}
+}
+
+fun main() {
+	AssetManager.INSTANCE.loadPaks()
+	val dataFile = File("config/xp_coins_data.json")
+	arrayOf(12, 13, 14, 15, 16).forEach { n ->
+		val map = MapImageGenerator()
+		val icGreen = ImageIO.read(File("canvas/201.png"))
+		val icBlue = ImageIO.read(File("canvas/202.png"))
+		val icPurple = ImageIO.read(File("canvas/203.png"))
+		val icGold = ImageIO.read(File("canvas/204.png"))
+
+		for (xpCoin_ in FileReader(dataFile).use(JsonParser::parseReader).asJsonArray) {
+			val xpCoin = xpCoin_.asJsonObject
+			if (!xpCoin["questBackendName"].asString.contains("w%02d".format(n))) continue
+
+			map.markers.add(MapImageGenerator.MapMarker(xpCoin["loc"].asJsonObject.run { FVector2D(get("x").asFloat, get("y").asFloat) }) { ctx, x, y ->
+				val firstTag = xpCoin["objStatTag"].asJsonArray[0].asString
+				val ic = when {
+					firstTag.startsWith("Athena.Quests.ItemCollect.XPCoin.Green") -> icGreen
+					firstTag.startsWith("Athena.Quests.ItemCollect.XPCoin.Blue") -> icBlue
+					firstTag.startsWith("Athena.Quests.ItemCollect.XPCoin.Purple") -> icPurple
+					firstTag.startsWith("Athena.Quests.ItemCollect.XPCoin.Gold") -> icGold
+					else -> icGreen
+				}
+				val s = 56
+				ctx.drawImage(ic, x - s / 2, y - s / 2, s, s, null)
+			})
+		}
+		File("xp_coins_w$n.png").writeBytes(map.draw().toPngArray())
+	}
+	exitProcess(0)
 }

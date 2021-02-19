@@ -4,6 +4,7 @@ import com.mojang.brigadier.Command
 import com.tb24.discordbot.commands.CommandSourceStack
 import com.tb24.discordbot.commands.GrantType
 import com.tb24.discordbot.managers.ChannelsManager
+import com.tb24.discordbot.managers.HomebaseManager
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.event.ProfileUpdatedEvent
@@ -25,9 +26,13 @@ import java.util.*
 import java.util.concurrent.CompletableFuture
 
 class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, private var persistent: Boolean = true) {
-	val LOGGER = LoggerFactory.getLogger("Session")
+	companion object {
+		val LOGGER = LoggerFactory.getLogger("Session")
+	}
+
 	val api = EpicApi(client.okHttpClient)
 	var channelsManager = ChannelsManager(api)
+	val homebaseManagers = hashMapOf<String, HomebaseManager>()
 
 	init {
 		if (persistent) SessionPersister.get(id)?.apply {
@@ -131,6 +136,15 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		.map { api.accountService.findAccountsByIds(it).future() }
 		.apply { CompletableFuture.allOf(*toTypedArray()).await() }
 		.flatMap { it.get().body()!!.toList() }
+
+	fun getHomebase(accountId: String) = homebaseManagers.getOrPut(accountId) {
+		val hb = HomebaseManager(accountId, api)
+		val campaign = api.profileManager.getProfileData(accountId, "campaign")
+		if (campaign != null) {
+			hb.updated(ProfileUpdatedEvent("campaign", campaign, null))
+		}
+		hb
+	}
 
 	@Subscribe(threadMode = ThreadMode.ASYNC)
 	fun onProfileUpdated(event: ProfileUpdatedEvent) {

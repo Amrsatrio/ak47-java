@@ -3,6 +3,7 @@ package com.tb24.discordbot.util;
 import com.google.gson.JsonElement;
 import com.tb24.fn.model.FortItemStack;
 import com.tb24.fn.util.EAuthClient;
+import me.fungames.jfortniteparse.fort.objects.FortMcpQuestObjectiveInfo;
 
 import java.net.URLEncoder;
 import java.util.HashMap;
@@ -10,8 +11,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.regex.Pattern;
-
-import me.fungames.jfortniteparse.fort.objects.FortMcpQuestObjectiveInfo;
 
 import static com.tb24.fn.util.Utils.isNone;
 
@@ -74,7 +73,7 @@ public class Utils {
 			return -1;
 		}
 
-		String backendName = "completion_" + objective.BackendName.toString().toLowerCase(Locale.ENGLISH);
+		String backendName = "completion_" + objective.BackendName.toString().toLowerCase(Locale.ROOT);
 		JsonElement element = item.attributes.get(backendName);
 		return element.isJsonPrimitive() ? element.getAsInt() : -1;
 	}

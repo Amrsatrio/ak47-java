@@ -74,20 +74,20 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 			nextMajorIdx = findMajor(nextMajorIdx + 1, levels)
 		}
 		val nextMajorData = levels.getOrNull(nextMajorIdx)
-		val embed = source.createEmbed(campaign.owner)
+		val embed = source.createEmbed(campaign.owner, true)
 			.setTitle("Ventures: ${currentEvent.element.eventType.substringAfterLast('.')}")
-			.setDescription("**Level ${Formatters.num.format(levelIdx + 1)}** - ${(getItemIconEmoji("AccountResource:phoenixxp")?.run { "$asMention " } ?: "")}${Formatters.num.format(xpQuantity)}\n" + if (nextLevelData != null) {
+			.setDescription("**Level %,d** - %s%,d\n%s".format(levelIdx + 1, getItemIconEmoji("AccountResource:phoenixxp")?.run { "$asMention " } ?: "", xpQuantity, if (nextLevelData != null) {
 				val current = xpQuantity - levelData.TotalRequiredXP
 				val delta = nextLevelData.TotalRequiredXP - levelData.TotalRequiredXP
 				val lastLevel = levels.last()
-				"`%s`\n%,d / %,d\n\n%,d XP to next level.\n%,d XP to level %,d.".format(
+				"`%s`\n%,d / %,d\n%,d XP to level %,d.".format(
 					Utils.progress(current, delta, 32),
 					current, delta,
-					nextLevelData.TotalRequiredXP - xpQuantity,
+					//nextLevelData.TotalRequiredXP - xpQuantity,
 					lastLevel.TotalRequiredXP - xpQuantity,
 					levels.size
 				)
-			} else "Max level.")
+			} else "Max level."))
 		if (nextLevelData != null) {
 			embed.addField("Rewards for level ${Formatters.num.format(levelIdx + /*next level*/1 + /*index offset*/1)}", nextLevelData.VisibleReward.joinToString("\n") { FortItemStack(it.TemplateId, it.Quantity).renderWithIcon() }, true)
 		}

@@ -319,7 +319,7 @@ fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: Str
 	return sb.toString()
 }
 
-private fun getQuestCompletion(item: FortItemStack): Pair<Int, Int> {
+fun getQuestCompletion(item: FortItemStack): Pair<Int, Int> {
 	val quest = item.defData as FortQuestItemDefinition
 	var completion = 0
 	var max = 0

@@ -3,7 +3,7 @@ package com.tb24.discordbot.util
 import com.google.common.collect.ComparisonChain
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.util.format
-import com.tb24.fn.util.getBooleanOr
+import com.tb24.fn.util.getBoolean
 
 class SimpleAthenaLockerItemComparator : Comparator<FortItemStack> {
 	@JvmField var bPrioritizeFavorites = true
@@ -12,8 +12,8 @@ class SimpleAthenaLockerItemComparator : Comparator<FortItemStack> {
 		.run {
 			if (bPrioritizeFavorites) {
 				compareTrueFirst(
-					o1.attributes.getBooleanOr("favorite", false),
-					o2.attributes.getBooleanOr("favorite", false)
+					o1.attributes.getBoolean("favorite", false),
+					o2.attributes.getBoolean("favorite", false)
 				)
 			} else this
 		}

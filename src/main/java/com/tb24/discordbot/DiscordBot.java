@@ -18,7 +18,6 @@ import com.tb24.fn.model.account.DeviceAuth;
 import com.tb24.fn.model.assetdata.ESubGame;
 import com.tb24.fn.util.EAuthClient;
 import com.tb24.uasset.AssetManager;
-import kotlin.collections.MapsKt;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.MessageBuilder;
@@ -29,7 +28,6 @@ import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.jodah.expiringmap.ExpirationPolicy;
 import net.jodah.expiringmap.ExpiringMap;
-import okhttp3.CertificatePinner;
 import okhttp3.OkHttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,13 +45,8 @@ import java.util.concurrent.TimeUnit;
 import static com.rethinkdb.RethinkDB.r;
 
 public final class DiscordBot {
-	public static final String VERSION = "6.2.5";
+	public static final String VERSION = "6.2.6";
 	public static final Logger LOGGER = LoggerFactory.getLogger("DiscordBot");
-	public static final CertificatePinner CERT_PINNER = new CertificatePinner.Builder()
-		.add("discordapp.com", "sha256/DACsWb3zfNT9ttV6g6o5wwpzvgKJ66CliW2GCh2m8LQ=")
-		.add("discordapp.com", "sha256/x9SZw6TwIqfmvrLZ/kz1o0Ossjmn728BnBKpUFqGNVM=")
-		.add("discordapp.com", "sha256/58qRu/uxh4gFezqAcERupSkRYBlBAvfcw7mEjGPLnNU=")
-		.build();
 	public static final boolean LOAD_PAKS = System.getProperty("loadPaks", "false").equals("true");
 	public static final String ENV = System.getProperty("env", "dev");
 	public static final long ITEM_SHOP_CHANNEL_ID = 702307657989619744L;
@@ -64,7 +57,7 @@ public final class DiscordBot {
 	public SavedLoginsManager savedLoginsManager;
 	public Map<Long, PrefixConfig> prefixMap = new HashMap<>();
 	public Map<String, Session> sessions = ExpiringMap.builder()
-		.expiration(1, TimeUnit.HOURS)
+		.expiration(40, TimeUnit.MINUTES)
 		.expirationPolicy(ExpirationPolicy.ACCESSED)
 		.build();
 	public Session internalSession;
@@ -100,9 +93,7 @@ public final class DiscordBot {
 		if (port != null) {
 			ApiServerKt.main(new String[]{"", port});
 		}
-		okHttpClient = new OkHttpClient.Builder()
-			.certificatePinner(CERT_PINNER)
-			.build();
+		okHttpClient = new OkHttpClient();
 		setupInternalSession();
 		keychainTask.run();
 		catalogManager = new CatalogManager();
@@ -121,7 +112,7 @@ public final class DiscordBot {
 			internalSession.logout(null);
 			discord.shutdown();
 		}));
-		discord.getPresence().setActivity(Activity.playing("Kotlin/JVM \u00b7 v" + VERSION));
+		discord.getPresence().setActivity(Activity.playing(".help \u00b7 v" + VERSION));
 		if (!ENV.equals("dev")) {
 			scheduleUtcMidnightTask();
 			scheduleKeychainTask();
@@ -195,15 +186,22 @@ public final class DiscordBot {
 		if (!message.isFromGuild()) {
 			return getDefaultPrefix();
 		}
-		PrefixConfig dbEntry = MapsKt.getOrPut(prefixMap, message.getGuild().getIdLong(), () -> r.table("prefix").get(message.getGuild().getIdLong()).run(dbConn, PrefixConfig.class).first());
-		if (dbEntry != null) {
-			return dbEntry.prefix;
-		} else {
-			return getDefaultPrefix();
+		long guildId = message.getGuild().getIdLong();
+		PrefixConfig dbEntry = prefixMap.get(guildId);
+		if (dbEntry == null) {
+			String guildIdString = Long.toUnsignedString(guildId);
+			dbEntry = r.table("prefix").get(guildIdString).run(dbConn, PrefixConfig.class).first();
+			if (dbEntry == null) {
+				dbEntry = new PrefixConfig();
+				dbEntry.server = guildIdString;
+				dbEntry.prefix = getDefaultPrefix();
+			}
+			prefixMap.put(guildId, dbEntry);
 		}
+		return dbEntry.prefix;
 	}
 
-	private String getDefaultPrefix() {
+	public String getDefaultPrefix() {
 		return ENV.equals("prod") ? "+" : ENV.equals("stage") ? "." : ",";
 	}
 
@@ -215,7 +213,7 @@ public final class DiscordBot {
 	}
 
 	public static class PrefixConfig {
-		public String id;
+		public String server;
 		public String prefix;
 	}
 }

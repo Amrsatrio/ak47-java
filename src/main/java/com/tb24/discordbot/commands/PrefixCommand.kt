@@ -25,22 +25,24 @@ class PrefixCommand : BrigadierCommand("prefix", "Change prefix for the server/u
 				if (!StandardCharsets.US_ASCII.newEncoder().canEncode(newPrefix)) {
 					throw SimpleCommandExceptionType(LiteralMessage("No special characters allowed.")).create()
 				}
-				val prefixId = it.source.guild.idLong
-				val currentPrefix = it.source.client.prefixMap[prefixId]
-				if (newPrefix == currentPrefix?.prefix) {
+				val source = it.source
+				val guildId = source.guild.idLong
+				val defaultPrefix = source.client.defaultPrefix
+				val currentPrefix = source.client.prefixMap[guildId]?.prefix ?: defaultPrefix
+				if (newPrefix == currentPrefix) {
 					throw SimpleCommandExceptionType(LiteralMessage("The prefix is already $newPrefix.")).create()
 				}
 				val newPrefixObj = DiscordBot.PrefixConfig().apply {
-					id = it.source.guild.id
+					server = source.guild.id
 					prefix = newPrefix
 				}
-				it.source.client.prefixMap[prefixId] = newPrefixObj
+				source.client.prefixMap[guildId] = newPrefixObj
 				if (currentPrefix != null) {
 					r.table("prefix").update(newPrefixObj)
 				} else {
 					r.table("prefix").insert(newPrefixObj)
-				}.run(it.source.client.dbConn)
-				it.source.channel.sendMessage("✅ Prefix changed to `$newPrefix`").queue()
+				}.run(source.client.dbConn)
+				source.channel.sendMessage("✅ Prefix changed to `$newPrefix`").queue()
 				Command.SINGLE_SUCCESS
 			}
 		)
