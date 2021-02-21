@@ -34,40 +34,38 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 			}
 			source.client.catalogManager.ensureCatalogData(source.api)
 			val within24h = CatalogHelper.getSentGiftsWithin24H(giftHistory)
-			val embed = source.createEmbed()
-				.setTitle("Gift History")
-				.setDescription("${
-					if (within24h.size < 5) {
-						"**${Formatters.num.format(5 - within24h.size)}** daily gifts remaining."
-					} else {
-						val date = Date(within24h.first().date.time + 24L * 60L * 60L * 1000L)
-						"Daily gifts limit reached. You'll be able to gift again in ${StringUtil.formatElapsedTime(date.time - System.currentTimeMillis(), false)} (${date.format()})."
-					}
-				}\nTotal sent: **${giftHistory.num_sent}**\nTotal received: **${giftHistory.num_received}**\nThe data below are partial.")
-				.setFooter("Server time: ${Date().format()}")
-			embed.addField("Sent (${Formatters.num.format(sentTo.size)})", summary(sentTo, localUserMap, source.prefix + c.commandName + " sent"), false)
-			embed.addField("Received (${Formatters.num.format(receivedFrom.size)})", summary(receivedFrom, localUserMap, source.prefix + c.commandName + " received"), false)
-			embed.addFieldSeparate("Recent gifts (${Formatters.num.format(gifts.size)})", gifts.toList()) { e ->
-				val catalogEntry = source.client.catalogManager.purchasableCatalogEntries.firstOrNull { it.offerId == e.offerId }
-				"${catalogEntry?.holder()?.friendlyName ?: "<Item outside of current shop>"} to ${localUserMap[e.toAccountId]?.displayName ?: e.toAccountId} on ${e.date.format()}"
+			val sb = StringBuilder(if (within24h.size < 5) {
+				"**%,d** daily gifts remaining.".format(5 - within24h.size)
+			} else {
+				"Daily gifts limit reached."
+			})
+			if (within24h.isNotEmpty()) {
+				sb.append("\n**Next free slots:** ")
+				within24h.joinTo(sb) { Date(it.date.time + 24L * 60L * 60L * 1000L).relativeFromNow() }
 			}
-			source.complete(null, embed.build())
+			sb.append("\n**Total sent:** %,d\n**Total received:** %,d\nThe data below are partial.".format(giftHistory.num_sent, giftHistory.num_received))
+			source.complete(null, source.createEmbed()
+				.setTitle("Gift History")
+				.setDescription(sb.toString())
+				.addField("Sent (${Formatters.num.format(sentTo.size)})", summary(sentTo, localUserMap, source.prefix + c.commandName + " sent"), false)
+				.addField("Received (${Formatters.num.format(receivedFrom.size)})", summary(receivedFrom, localUserMap, source.prefix + c.commandName + " received"), false)
+				.addFieldSeparate("Recent gifts (${Formatters.num.format(gifts.size)})", gifts.toList()) { e ->
+					val catalogEntry = source.client.catalogManager.purchasableCatalogEntries.firstOrNull { it.offerId == e.offerId }
+					"${catalogEntry?.holder()?.friendlyName ?: "<Item outside of current shop>"} to ${localUserMap[e.toAccountId]?.displayName ?: e.toAccountId} on ${e.date.format()}"
+				}
+				.setFooter("Server time: ${Date().format()}")
+				.build())
 			Command.SINGLE_SUCCESS
 		}
-		.then(literal("sent")
-			.executes { detail(it.source, false) }
-		)
-		.then(literal("received")
-			.executes { detail(it.source, true) }
-		)
+		.then(literal("sent").executes { detail(it.source, false) })
+		.then(literal("received").executes { detail(it.source, true) })
 
-	private fun summary(map: Map<String, Date>, localUserMap: MutableMap<String, GameProfile>, commandHint: String, limit: Int = 10): String {
+	private fun summary(data: Map<String, Date>, localUserMap: MutableMap<String, GameProfile>, commandHint: String, limit: Int = 10): String {
 		val lines = mutableListOf<String>()
-		var i = 0
-		for (o in map) {
+		for ((i, o) in data.entries.sortedByDescending { it.value }.withIndex()) {
 			lines.add(renderUserDate(o, localUserMap))
-			if (++i == limit) {
-				lines.add("... ${Formatters.num.format(map.size - limit)} more, `$commandHint` to show more")
+			if (i >= limit - 1) {
+				lines.add("... ${Formatters.num.format(data.size - limit)} more, `$commandHint` to show more")
 				break
 			}
 		}
@@ -87,7 +85,7 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 		if (idsToQuery.size > 0) {
 			source.queryUsers(idsToQuery).forEach { localUserMap[it.id] = it }
 		}
-		source.message.replyPaginated(data.entries.sortedBy { it.value }, 20, source.loadingMsg) { content, page, pageCount ->
+		source.message.replyPaginated(data.entries.sortedByDescending { it.value }, 20, source.loadingMsg) { content, page, pageCount ->
 			MessageBuilder(source.createEmbed()
 				.setTitle("Gift History / ${if (isReceive) "Received" else "Sent"}")
 				.setDescription("Showing ${page * 20 + 1} to ${page * 20 + content.size} of ${data.size} entries" + "\n\n" + content.sortedBy { it.value }.joinToString("\n") { "\u00b7 ${renderUserDate(it, localUserMap)}" })
@@ -98,7 +96,6 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 	}
 
 	private fun renderUserDate(o: Map.Entry<String, Date>, localUserMap: MutableMap<String, GameProfile>): String {
-		//val dn = localUserMap[o.key]?.displayName?.replace("*", "\\*")?.replace("_", "\\_")?.replace("~", "\\~") ?: o.key
 		val dn = localUserMap[o.key]?.displayName ?: o.key
 		return "${o.value.format()}: `$dn`"
 	}

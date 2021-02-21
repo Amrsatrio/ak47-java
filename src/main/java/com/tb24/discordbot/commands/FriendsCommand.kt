@@ -3,6 +3,8 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
+import com.mojang.brigadier.arguments.BoolArgumentType.bool
+import com.mojang.brigadier.arguments.BoolArgumentType.getBool
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.HttpException
@@ -13,6 +15,7 @@ import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.friends.FriendV2
+import com.tb24.fn.model.friends.FriendsSettings
 import com.tb24.fn.model.friends.FriendsSummary
 import com.tb24.fn.network.FriendsService
 import com.tb24.fn.util.Formatters
@@ -51,6 +54,12 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			source.channel.sendFile(ids.toByteArray(), "avatar_ids_${source.api.currentLoggedIn.displayName}.txt").complete()
 			Command.SINGLE_SUCCESS
 		})
+		.then(literal("allowrequests")
+			.executes { updateAcceptInvites(it.source) }
+			.then(argument("can receive requests?", bool())
+				.executes { updateAcceptInvites(it.source, getBool(it, "can receive requests?")) }
+			)
+		)
 		.then(argument("user", users())
 			.executes { c ->
 				c.source.ensureSession()
@@ -343,6 +352,32 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		}
 		source.complete(null, source.createEmbed()
 			.setTitle("✅ " + L10N.format("friends.$type.bulk.done", Formatters.num.format(success)))
+			.build())
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun updateAcceptInvites(source: CommandSourceStack, preferredState: Boolean? = null): Int {
+		source.loading(if (preferredState != null)
+			"Changing your friend request allowance"
+		else
+			"Toggling your friend request allowance")
+		val currentState = source.api.friendsService.queryFriendSettings(source.api.currentLoggedIn.id).exec().body()!!.acceptInvites.equals("public", true)
+		val newState = preferredState ?: !currentState
+		if (newState == currentState) {
+			throw SimpleCommandExceptionType(LiteralMessage(if (currentState)
+				"Your account is already configured to **allow** friend requests."
+			else
+				"Your account is already configured to **disallow** friend requests.")).create()
+		}
+		source.api.friendsService.setFriendSettings(source.api.currentLoggedIn.id, FriendsSettings().apply {
+			acceptInvites = if (newState) "PUBLIC" else "PRIVATE"
+		}).exec()
+		source.complete(null, source.createEmbed()
+			.setDescription("✅ " + if (newState)
+				"Configured your account to **allow** friend requests."
+			else
+				"Configured your account to **disallow** friend requests.")
+			.setColor(0x4BDA74)
 			.build())
 		return Command.SINGLE_SUCCESS
 	}

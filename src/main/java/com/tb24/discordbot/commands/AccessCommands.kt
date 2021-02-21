@@ -19,8 +19,10 @@ class GrantCommand : BrigadierCommand("grant", "Grants a user premium access.", 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires { r.table("admins").get(it.author.id).run(it.client.dbConn).first() != null }
 		.then(argument("target", mention(Message.MentionType.USER))
-			.executes { premium(it.source, (getMention(it, "target").firstOrNull()
-				?: throw SimpleCommandExceptionType(LiteralMessage("No users found.")).create()) as User, false) }
+			.executes {
+				premium(it.source, (getMention(it, "target").firstOrNull()
+					?: throw SimpleCommandExceptionType(LiteralMessage("No users found.")).create()) as User, false)
+			}
 		)
 }
 
@@ -28,8 +30,10 @@ class RevokeCommand : BrigadierCommand("revoke", "Revokes a user's premium acces
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires { r.table("admins").get(it.author.id).run(it.client.dbConn).first() != null }
 		.then(argument("target", mention(Message.MentionType.USER))
-			.executes { premium(it.source, (getMention(it, "target").firstOrNull()
-				?: throw SimpleCommandExceptionType(LiteralMessage("No users found.")).create()) as User, true) }
+			.executes {
+				premium(it.source, (getMention(it, "target").firstOrNull()
+					?: throw SimpleCommandExceptionType(LiteralMessage("No users found.")).create()) as User, true)
+			}
 		)
 }
 
@@ -81,13 +85,13 @@ fun premium(source: CommandSourceStack, target: User, remove: Boolean/*, secret:
 		.build())
 	source.client.discord.getGuildById(648556726672556048L)?.let { homebaseGuild ->
 		val guildMember = homebaseGuild.getMember(target)
-		val role = homebaseGuild.getRolesByName("premium", false).firstOrNull()
+		val role = homebaseGuild.getRolesByName("premium", true).firstOrNull()
 		if (guildMember != null && role != null) {
 			if (remove) {
 				homebaseGuild.removeRoleFromMember(guildMember, role)
 			} else {
 				homebaseGuild.addRoleToMember(guildMember, role)
-			}
+			}.complete()
 		}
 	}
 	return Command.SINGLE_SUCCESS

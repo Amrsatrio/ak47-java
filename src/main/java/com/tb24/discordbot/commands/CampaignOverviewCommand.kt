@@ -71,7 +71,7 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 			df.format(campaign.created),
 			df.format(campaign.updated)
 		), true)
-		embed.addField("Miscellaneous", "**Mythic Schematics:** %,d\n**Revisions:** %,d\n**Zones completed:** %,d".format(
+		embed.addField("Miscellaneous", "**Mythic Schematics:** %,d\n**Revisions:** %,d\n**Zones Completed:** %,d".format(
 			mythicSchematics.size,
 			campaign.rvn,
 			attrs.gameplay_stats?.firstOrNull { it.statName == "zonescompleted" }?.statValue?.toIntOrNull() ?: 0
