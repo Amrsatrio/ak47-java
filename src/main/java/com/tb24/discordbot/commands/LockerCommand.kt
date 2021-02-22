@@ -4,7 +4,6 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.tb24.discordbot.GridSlot
-import com.tb24.discordbot.Rune
 import com.tb24.discordbot.createAttachmentOfIcons
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
@@ -14,12 +13,12 @@ import com.tb24.fn.util.getPreviewImagePath
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
 import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import net.dv8tion.jda.api.entities.Message
+import okhttp3.Request
 import java.util.*
 import java.util.concurrent.CompletableFuture
 
 class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form of an image.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires(Rune::hasPremium)
 		.executes { c ->
 			val source = c.source
 			source.ensureSession()
@@ -43,44 +42,62 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 					ids.add(item)
 				}
 			}
-
-			fun perform(name: String, ids: Collection<FortItemStack>?) = CompletableFuture.supplyAsync {
-				if (ids == null || ids.isEmpty()) {
-					return@supplyAsync null
-				}
-				val slots = mutableListOf<GridSlot>()
-				for (item in ids.sortedWith(SimpleAthenaLockerItemComparator())) {
-					val itemData = item.defData ?: return@supplyAsync null
-					slots.add(GridSlot(
-						image = item.getPreviewImagePath()?.load<UTexture2D>()?.toBufferedImage(),
-						name = item.displayName,
-						rarity = itemData.Rarity
-					))
-				}
-				var png: ByteArray
-				var scale = 1f
-				do {
-					png = createAttachmentOfIcons(slots, "locker", scale)
-					//println("png size ${png.size} scale $scale")
-					scale -= 0.2f
-				} while (png.size > Message.MAX_FILE_SIZE && scale >= 0.2f)
-				source.channel.sendMessage("**$name** (${Formatters.num.format(ids.size)})")
-					.addFile(png, "$name-${source.api.currentLoggedIn.id}.png").complete()
-			}
-
 			source.loading("Generating and uploading images")
 			CompletableFuture.allOf(
-				perform("Outfits", ctgs["AthenaCharacter"]),
-				perform("Back Blings", ctgs["AthenaBackpack"]),
-				perform("Harvesting Tools", ctgs["AthenaPickaxe"]),
-				perform("Gliders", ctgs["AthenaGlider"]),
-				perform("Contrails", ctgs["AthenaSkyDiveContrail"]),
-				perform("Emotes", ctgs["AthenaDance"]),
-				perform("Wraps", ctgs["AthenaItemWrap"]),
-				perform("Musics", ctgs["AthenaMusicPack"]),
-				//perform("Loading Screens", ctgs["AthenaLoadingScreen"])
+				perform(source, "Outfits", ctgs["AthenaCharacter"]),
+				perform(source, "Back Blings", ctgs["AthenaBackpack"]),
+				perform(source, "Harvesting Tools", ctgs["AthenaPickaxe"]),
+				perform(source, "Gliders", ctgs["AthenaGlider"]),
+				perform(source, "Contrails", ctgs["AthenaSkyDiveContrail"]),
+				perform(source, "Emotes", ctgs["AthenaDance"]),
+				perform(source, "Wraps", ctgs["AthenaItemWrap"]),
+				perform(source, "Musics", ctgs["AthenaMusicPack"]),
+				//perform(source, "Loading Screens", ctgs["AthenaLoadingScreen"])
 			).await()
 			source.complete("✅ All images have been sent successfully.")
 			Command.SINGLE_SUCCESS
 		}
+}
+
+class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive cosmetics in an image.") {
+	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.executes { c ->
+			val source = c.source
+			source.ensureSession()
+			source.loading("Getting cosmetics")
+			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+			val athena = source.api.profileManager.getProfileData("athena")
+			val exclusiveTemplateIds = mutableListOf<String>()
+			source.client.okHttpClient.newCall(Request.Builder().url("https://fort-api.com/exclusives/list").build()).exec().body()!!.charStream().forEachLine {
+				exclusiveTemplateIds.add(it)
+			}
+			val items = athena.items.values.filter { item -> exclusiveTemplateIds.any { it.equals(item.templateId, true) } }
+			perform(source, "Exclusives", items).await()
+			source.loadingMsg!!.delete().queue()
+			Command.SINGLE_SUCCESS
+		}
+}
+
+private fun perform(source: CommandSourceStack, name: String, ids: Collection<FortItemStack>?) = CompletableFuture.supplyAsync {
+	if (ids.isNullOrEmpty()) {
+		return@supplyAsync null
+	}
+	val slots = mutableListOf<GridSlot>()
+	for (item in ids.sortedWith(SimpleAthenaLockerItemComparator())) {
+		val itemData = item.defData ?: return@supplyAsync null
+		slots.add(GridSlot(
+			image = item.getPreviewImagePath()?.load<UTexture2D>()?.toBufferedImage(),
+			name = item.displayName,
+			rarity = itemData.Rarity
+		))
+	}
+	var png: ByteArray
+	var scale = 1f
+	do {
+		png = createAttachmentOfIcons(slots, "locker", scale)
+		//println("png size ${png.size} scale $scale")
+		scale -= 0.2f
+	} while (png.size > Message.MAX_FILE_SIZE && scale >= 0.2f)
+	source.channel.sendMessage("**$name** (${Formatters.num.format(ids.size)})")
+		.addFile(png, "$name-${source.api.currentLoggedIn.id}.png").complete()
 }

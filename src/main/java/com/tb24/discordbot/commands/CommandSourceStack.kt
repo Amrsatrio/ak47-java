@@ -60,7 +60,7 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 	@Throws(HttpException::class)
 	fun createEmbed(user: GameProfile = api.currentLoggedIn, phoenixRating: Boolean = false): EmbedBuilder {
 		val hasCampaign = session.api.profileManager.hasProfileData(user.id, "campaign")
-		val authorName = if (hasCampaign) "[%,.0f] %s".format(session.getHomebase(user.id).calcEnergyByFORT(phoenixRating), user.displayName) else user.displayName
+		val authorName = if (hasCampaign) "[%,d] %s".format(session.getHomebase(user.id).calcEnergyByFORT(phoenixRating).toInt(), user.displayName) else user.displayName
 		return EmbedBuilder().setAuthor(
 			authorName, null,
 			session.channelsManager.getUserSettings(user.id, "avatar")

@@ -25,40 +25,44 @@ class CatalogManager {
 		if (force || catalogData == null || System.currentTimeMillis() >= catalogData!!.expiration.time) {
 			catalogData = api.fortniteService.storefrontCatalog("en").exec().body()
 			sectionsData = api.okHttpClient.newCall(Request.Builder().url("https://fortnitecontent-website-prod07.ol.epicgames.com/content/api/pages/fortnite-game/shop-sections").build()).exec().to<ShopSectionsData>()
-			athenaSections.clear()
-			sectionsData!!.sectionList.sections.associateTo(athenaSections) {
-				val section = ShopSection(it)
-				section.sectionData.sectionId to section
-			}
-			campaignSections.forEach { it.items.clear() }
-			for (storefront in catalogData!!.storefronts) {
-				for (offer in storefront.catalogEntries) {
-					offer.__ak47_storefront = storefront.name
-					offer.getMeta("EncryptionKey")?.let {
-						DiscordBot.LOGGER.info("[FortStorefront]: Adding key $it to keychain through store offer ${offer.offerId}")
-						DiscordBot.instance?.keychainTask?.handle(it)
-					}
-					(athenaSections[offer.getMeta("SectionId") ?: continue] ?: continue).items.add(offer)
-				}
-				when (storefront.name) {
-					"STWSpecialEventStorefront" -> stwEvent.items.addAll(storefront.catalogEntries)
-					"STWRotationalEventStorefront" -> stwWeekly.items.addAll(storefront.catalogEntries)
-					"CardPackStorePreroll",
-					"CardPackStoreGameplay" -> llamas.items.addAll(storefront.catalogEntries)
-				}
-			}
-			purchasableCatalogEntries.clear()
-			athenaSections.values.forEach { section ->
-				section.items.sortByDescending { it.sortPriority ?: 0 }
-				purchasableCatalogEntries.addAll(section.items)
-			}
-			campaignSections.forEach { purchasableCatalogEntries.addAll(it.items) }
-			for (i in purchasableCatalogEntries.indices) { // assign indices
-				purchasableCatalogEntries[i].__ak47_index = i
-			}
+			validate()
 			return true
 		}
 		return false
+	}
+
+	fun validate() {
+		athenaSections.clear()
+		sectionsData!!.sectionList.sections.associateTo(athenaSections) {
+			val section = ShopSection(it)
+			section.sectionData.sectionId to section
+		}
+		campaignSections.forEach { it.items.clear() }
+		for (storefront in catalogData!!.storefronts) {
+			for (offer in storefront.catalogEntries) {
+				offer.__ak47_storefront = storefront.name
+				offer.getMeta("EncryptionKey")?.let {
+					DiscordBot.LOGGER.info("[FortStorefront]: Adding key $it to keychain through store offer ${offer.offerId}")
+					DiscordBot.instance?.keychainTask?.handle(it)
+				}
+				(athenaSections[offer.getMeta("SectionId") ?: continue] ?: continue).items.add(offer)
+			}
+			when (storefront.name) {
+				"STWSpecialEventStorefront" -> stwEvent.items.addAll(storefront.catalogEntries)
+				"STWRotationalEventStorefront" -> stwWeekly.items.addAll(storefront.catalogEntries)
+				"CardPackStorePreroll",
+				"CardPackStoreGameplay" -> llamas.items.addAll(storefront.catalogEntries)
+			}
+		}
+		purchasableCatalogEntries.clear()
+		athenaSections.values.forEach { section ->
+			section.items.sortByDescending { it.sortPriority ?: 0 }
+			purchasableCatalogEntries.addAll(section.items)
+		}
+		campaignSections.forEach { purchasableCatalogEntries.addAll(it.items) }
+		for (i in purchasableCatalogEntries.indices) { // assign indices
+			purchasableCatalogEntries[i].__ak47_index = i
+		}
 	}
 
 	class ShopSection(val sectionData: FortCmsData.ShopSection) {

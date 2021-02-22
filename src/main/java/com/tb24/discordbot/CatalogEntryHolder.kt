@@ -52,9 +52,7 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 	fun getMeta(key: String) = metaInfo[key.toLowerCase(Locale.ROOT)]
 
 	@Throws(CommandSyntaxException::class)
-	fun resolve(profileManager: ProfileManager, priceIndex: Int = 0) {
-		val commonCore = profileManager.getProfileData("common_core")
-		val attrs = commonCore.stats.attributes as CommonCoreProfileAttributes
+	fun resolve(profileManager: ProfileManager? = null, priceIndex: Int = 0) {
 		owned = false
 		ownedItems = hashSetOf()
 		price = CatalogItemPrice.NO_PRICE
@@ -62,7 +60,7 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 			if (ce.prices.isNotEmpty()) {
 				price = ce.prices.safeGetOneIndexed(priceIndex + 1)
 			}
-			owned = CatalogHelper.isStaticPriceCtlgEntryOwned(profileManager, ce)
+			owned = if (profileManager != null) CatalogHelper.isStaticPriceCtlgEntryOwned(profileManager, ce) else false
 		} else if (ce.offerType == ECatalogOfferType.DynamicBundle) {
 			price = CatalogItemPrice()
 			price.regularPrice = ce.dynamicBundleInfo.regularBasePrice
@@ -72,7 +70,7 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 			for (bundleItem in ce.dynamicBundleInfo.bundleItems) {
 				price.regularPrice += bundleItem.regularPrice
 				price.basePrice += bundleItem.discountedPrice
-				if (CatalogHelper.isItemOwned(profileManager, bundleItem.item.templateId, bundleItem.item.quantity)) {
+				if (profileManager != null && CatalogHelper.isItemOwned(profileManager, bundleItem.item.templateId, bundleItem.item.quantity)) {
 					ownedItems!!.add(bundleItem.item.templateId)
 					price.regularPrice -= bundleItem.alreadyOwnedPriceReduction // TODO maybe this is wrong, additional research is required
 					price.basePrice -= bundleItem.alreadyOwnedPriceReduction
@@ -94,6 +92,11 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 			} catch (ignored: NumberFormatException) {
 			}
 		}
+		if (profileManager == null) {
+			return
+		}
+		val commonCore = profileManager.getProfileData("common_core")
+		val attrs = commonCore.stats.attributes as CommonCoreProfileAttributes
 		try {
 			if (purchaseLimit >= 0) {
 				val purchaseLimitingEventId = getMeta("PurchaseLimitingEventId")

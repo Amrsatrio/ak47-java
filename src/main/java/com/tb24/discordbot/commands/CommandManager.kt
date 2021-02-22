@@ -64,6 +64,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(DumpItemNamesCommand())
 		register(EvalCommand())
 		register(ExchangeCommand())
+		register(ExclusivesCommand())
 		register(ExecAutoDailyRewardsCommand())
 		register(ExportObjectCommand())
 		register(ExtendedLoginCommand())
@@ -132,7 +133,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 	override fun onMessageReceived(event: MessageReceivedEvent) {
 		threadPool.submit {
 			val prefix = client.getCommandPrefix(event.message)
-			if (event.author === client.discord.selfUser || !event.message.contentRaw.startsWith(prefix))
+			if (event.author === client.discord.selfUser || event.author.isBot || !event.message.contentRaw.startsWith(prefix))
 				return@submit
 
 			handleCommand(event.message.contentRaw, CommandSourceStack(client, event.message, event.author.id), prefix)

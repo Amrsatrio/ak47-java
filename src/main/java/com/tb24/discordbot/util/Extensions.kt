@@ -180,7 +180,7 @@ private fun createEmote(name: String, icon: BufferedImage): Emote? {
 	val client = DiscordBot.instance.discord
 	for (guildId in EMOJI_GUILDS) {
 		val guild = client.getGuildById(guildId)
-		if (guild == null || guild.emotes.size > 50) { // server boosts can expire, hardcode it to 50 which is the regular limit
+		if (guild == null || guild.emotes.size >= 50) { // server boosts can expire, hardcode it to 50 which is the regular limit
 			continue
 		}
 		val baos = ByteArrayOutputStream()
@@ -300,7 +300,7 @@ fun <T> EmbedBuilder.addFieldSeparate(title: String, entries: Collection<T>?, bu
 	return this
 }
 
-fun String.escapeMarkdown() = replace("\\", "\\\\").replace("*", "\\*").replace("_", "\\_").replace("~", "\\~")
+fun String?.escapeMarkdown() = if (this == null) null else replace("\\", "\\\\").replace("*", "\\*").replace("_", "\\_").replace("~", "\\~")
 
 fun Array<FriendV2>.sortedFriends() = sortedBy { (if (!it.alias.isNullOrEmpty()) it.alias else if (!it.displayName.isNullOrEmpty()) it.displayName else it.accountId).toLowerCase() }
 
