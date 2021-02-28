@@ -40,40 +40,6 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 				.executes { unlink(it.source, getString(it, "external auth type").toLowerCase()) }
 			)
 		)
-		/*.then(literal("create")
-			.then(argument("country", string())
-				.then(argument("first name", string())
-					.then(argument("last name", string())
-						.then(argument("display name", string())
-							.then(argument("email", string())
-								.then(argument("password", greedyString())
-									.executes {
-										val country = getString(it, "country")
-										val firstName = getString(it, "first name")
-										val lastName = getString(it, "last name")
-										val displayName = getString(it, "display name")
-										val email = getString(it, "email")
-										val password = getString(it, "password")
-										val source = it.source
-										val payload = AccountMutationPayload()
-										payload.country = country
-										payload.name = firstName
-										payload.lastName = lastName
-										payload.displayName = displayName
-										payload.email = email
-										payload.password = password
-										payload.preferredLanguage = "en"
-										val response = source.api.accountService.createAccount(true, "eg1", true, payload).exec().body()!!
-										source.session.handleAccountMutation(response)
-										Command.SINGLE_SUCCESS
-									}
-								)
-							)
-						)
-					)
-				)
-			)
-		)*/
 
 	private inline fun displaySummary(c: CommandContext<CommandSourceStack>): Int {
 		val source = c.source
@@ -89,7 +55,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		source.loading("Getting account data")
 		val avatarKeys = source.session.channelsManager.getUserSettings(source.api.currentLoggedIn.id, ChannelsManager.KEY_AVATAR, ChannelsManager.KEY_AVATAR_BACKGROUND)
 		val data = source.api.accountService.getById(source.api.currentLoggedIn.id).exec().body()!!
-		source.complete(null, EmbedBuilder()
+		val message = source.complete(null, EmbedBuilder()
 			.setTitle("Epic Account Summary")
 			.addField("Account ID", "||${data.id}||", false)
 			.addField("Name", "||${data.name} ${data.lastName}||", true)
@@ -105,9 +71,16 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 			.addField("Linked Accounts", source.api.accountService.getExternalAuths(source.api.currentLoggedIn.id).exec().body()!!.takeIf { it.isNotEmpty() }?.joinToString("\n\n") {
 				"__${it.type}: ||**${it.externalDisplayName.orDash()}**||__\nAdded: ${it.dateAdded?.run { renderWithRelative() } ?: "\u2014"}"
 			} ?: "No linked accounts", false)
+			.setFooter("React with anything within 2 minutes to remove this embed")
 			.setThumbnail("https://cdn2.unrealengine.com/Kairos/portraits/${avatarKeys[0]}.png?preview=1")
 			.setColor(AvatarColor(avatarKeys[1]!!).dark)
 			.build())
+		if (message.awaitReactions({ _, _, _ -> true }, AwaitReactionsOptions().apply {
+				max = 1
+				time = 120000L
+			}).await().isNotEmpty()) {
+			message.delete().complete()
+		}
 		return Command.SINGLE_SUCCESS
 	}
 

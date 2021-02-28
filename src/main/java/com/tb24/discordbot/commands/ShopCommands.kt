@@ -5,21 +5,25 @@ import com.google.gson.JsonParser
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.tb24.discordbot.DiscordBot
-import com.tb24.discordbot.GridSlot
-import com.tb24.discordbot.createAttachmentOfIcons
+import com.tb24.discordbot.*
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.assetdata.ESubGame
+import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer.CatalogItemPrice
 import com.tb24.fn.model.gamesubcatalog.ECatalogOfferType
 import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.campaign.PopulatePrerolledOffers
+import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
+import com.tb24.fn.util.getPathName
 import com.tb24.fn.util.getPreviewImagePath
 import com.tb24.uasset.loadObject
-import me.fungames.jfortniteparse.fort.enums.EFortRarity
 import me.fungames.jfortniteparse.fort.exports.FortMtxOfferData
+import me.fungames.jfortniteparse.fort.exports.FortRarityData
+import me.fungames.jfortniteparse.fort.exports.FortShopOfferDisplayData
+import me.fungames.jfortniteparse.fort.objects.FortColorPalette
+import me.fungames.jfortniteparse.ue4.assets.exports.mats.UMaterialInstance
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
 import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import net.dv8tion.jda.api.EmbedBuilder
@@ -77,25 +81,11 @@ fun executeShopImage(source: CommandSourceStack): Int {
 			if (offer.prices.firstOrNull()?.currencyType == EStoreCurrencyType.RealMoney) {
 				continue
 			}
-			var image: BufferedImage? = null
-			var title: String? = null
-			var rarity: EFortRarity? = null
-			offer.itemGrants.firstOrNull()?.let { item ->
-				image = item.getPreviewImagePath()?.load<UTexture2D>()?.toBufferedImage()
-				title = item.displayName
-				rarity = item.defData.Rarity
-			}
-			if (!offer.displayAssetPath.isNullOrEmpty()) {
-				loadObject<FortMtxOfferData>(offer.displayAssetPath)?.let {
-					(it.DetailsImage?.ResourceObject?.value as? UTexture2D)?.run { image = toBufferedImage() }
-					it.DisplayName?.run { title = format() }
-				}
-			}
-			offer.title?.let { title = it }
+			val displayData = OfferDisplayData(offer, true)
 			slots.add(GridSlot(
-				image = image,
-				name = if (title.isNullOrEmpty()) offer.devName else title,
-				rarity = if (offer.getMeta("HideRarityBorder").equals("true", true)) null else rarity,
+				image = displayData.image,
+				name = if (displayData.title.isNullOrEmpty()) offer.devName else displayData.title,
+				rarity = if (offer.getMeta("HideRarityBorder").equals("true", true)) null else offer.itemGrants.firstOrNull()?.rarity,
 				index = offer.__ak47_index
 			))
 		}
@@ -165,4 +155,55 @@ private fun isUserAnIdiot(source: CommandSourceStack): Boolean {
 		return true
 	}
 	return false
+}
+
+val rarityData by lazy { loadObject<FortRarityData>("/Game/Balance/RarityData.RarityData")!! }
+
+class OfferDisplayData(offer: CatalogOffer, loadImage: Boolean = false) {
+	var banner: String? = null
+	var image: BufferedImage? = null
+	var imagePath: String? = null
+	var presentationParams: FMergedMaterialParams? = null
+	var title: String? = null
+	var subtitle: String? = null
+	var palette: FortColorPalette? = null
+
+	init {
+		val firstGrant = offer.itemGrants.firstOrNull()
+		title = offer.title
+		subtitle = offer.shortDescription
+		if (!offer.displayAssetPath.isNullOrEmpty()) {
+			loadObject<FortMtxOfferData>(offer.displayAssetPath)?.also {
+				if (title == null) it.DisplayName?.run { title = format() }
+			}
+		}
+		if (offer.offerType == ECatalogOfferType.DynamicBundle) {
+			if (subtitle == null) subtitle = L10N.TOTAL_BUNDLE_ITEMS.format()?.replace("{total bundle items}", Formatters.num.format(offer.dynamicBundleInfo.bundleItems.size))
+		}
+		firstGrant?.also { item ->
+			val softPath = item.getPreviewImagePath(true)
+			if (loadImage) image = softPath?.load<UTexture2D>()?.toBufferedImage()
+			imagePath = softPath.toString()
+			if (title == null) title = item.displayName
+			if (subtitle == null) subtitle = item.defData.ShortDescription?.format()
+			palette = rarityData.forRarity(item.rarity)
+			item.defData.Series?.value?.also {
+				palette = it.Colors
+			}
+		}
+		val newDisplayAssetPath = offer.getMeta("NewDisplayAssetPath")
+		if (newDisplayAssetPath != null) {
+			val newDisplayAsset = loadObject<FortShopOfferDisplayData>(newDisplayAssetPath)
+			if (newDisplayAsset != null) {
+				val firstPresentation = newDisplayAsset.Presentations.first().value as? UMaterialInstance
+				if (firstPresentation != null) {
+					presentationParams = FMergedMaterialParams(firstPresentation)
+					val tex = presentationParams!!.texture["OfferImage"]
+					if (loadImage) image = (tex?.value as? UTexture2D)?.toBufferedImage()
+					imagePath = tex?.getPathName()
+				}
+			}
+		}
+		// TODO banner
+	}
 }

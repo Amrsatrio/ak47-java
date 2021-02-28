@@ -5,6 +5,7 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.BoolArgumentType.bool
 import com.mojang.brigadier.arguments.BoolArgumentType.getBool
+import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
@@ -17,8 +18,9 @@ import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commoncore.SetReceiveGiftsEnabled
 import com.tb24.fn.util.format
+import net.dv8tion.jda.api.EmbedBuilder
 
-class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift settings such as the gift wrap to use.", arrayOf("gs")) {
+class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift settings such as gift acceptance, wrap, and message.", arrayOf("giftconfig", "gs")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires(Rune::hasPremium)
 		.executes {
@@ -27,12 +29,12 @@ class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift s
 			source.loading("Getting gift settings")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 			val canReceiveGifts = (source.api.profileManager.getProfileData("common_core").stats.attributes as CommonCoreProfileAttributes).allowed_to_receive_gifts
-			val settings = /*r.table("giftsettings").get(source.author.id).run(source.client.dbConn, GiftSettingsEntry::class.java).first() ?: */GiftSettingsEntry(source.author.id)
+			val settings = getGiftSettings(source)
 			source.complete(null, source.createEmbed()
 				.setTitle("Gift Settings")
-				.addField("Can Receive Gifts", if (canReceiveGifts) "✔ Yes" else "❌ No", false)
-				.addField("Wrap", settings.wrap ?: "Default Wrap: *Purple*", false)
-				.addField("Message", settings.message ?: "Default Message: *${L10N.MESSAGE_BOX_DEFAULT_MSG.format()}*", false)
+				.addField("Can receive gifts", if (canReceiveGifts) "✅ Yes" else "❌ No", false)
+				.addField("Wrap", settings.wrapText, false)
+				.addField("Message", settings.messageText, false)
 				.build())
 			Command.SINGLE_SUCCESS
 		}
@@ -43,13 +45,45 @@ class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift s
 			)
 		)
 		.then(literal("message")
+			.then(literal("clear").executes { setGiftMessage(it.source, "") })
 			.then(argument("gift message", greedyString())
 				.executes {
-					r.table("giftsettings").insert(GiftSettingsEntry(it.source.author.id, null, null)).run(it.source.client.dbConn)
-					Command.SINGLE_SUCCESS
+					val message = getString(it, "gift message")
+					if (message.length > 100) {
+						throw SimpleCommandExceptionType(LiteralMessage("Gift message must not exceed 100 characters.")).create()
+					}
+					setGiftMessage(it.source, message)
 				}
 			)
 		)
+	/*.then(literal("wrap")
+		.then(literal("clear").executes { setGiftWrap(it.source, "") })
+		.then(argument("gift wrap", greedyString())
+			.executes { setGiftWrap(it.source, getString(it, "gift wrap")) }
+		)
+	)*/
+
+	private fun setGiftMessage(source: CommandSourceStack, message: String): Int {
+		val settings = getGiftSettings(source)
+		settings.message = message
+		r.table("gift_settings").insert(settings).run(source.client.dbConn)
+		source.complete(null, EmbedBuilder().setColor(COLOR_SUCCESS)
+			.setTitle("✅ Changed gift message")
+			.addField("Message", settings.messageText, false)
+			.build())
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun setGiftWrap(source: CommandSourceStack, wrap: String): Int {
+		val settings = getGiftSettings(source)
+		settings.wrap = wrap
+		r.table("gift_settings").insert(settings).run(source.client.dbConn)
+		source.complete(null, EmbedBuilder().setColor(COLOR_SUCCESS)
+			.setTitle("✅ Changed gift wrap")
+			.addField("Wrap", settings.wrapText, false)
+			.build())
+		return Command.SINGLE_SUCCESS
+	}
 
 	private fun updateReceiveGifts(source: CommandSourceStack, receiveGifts: Boolean? = null): Int {
 		source.loading(if (receiveGifts != null)
@@ -76,9 +110,25 @@ class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift s
 		return Command.SINGLE_SUCCESS
 	}
 
-	class GiftSettingsEntry(
-		val id: String,
-		val wrap: String? = null,
-		val message: String? = null
-	)
+	class GiftSettingsEntry {
+		@JvmField var id: String
+		@JvmField var wrap: String
+		@JvmField var message: String
+
+		constructor() : this("", "", "")
+
+		constructor(id: String = "", wrap: String = "", message: String = "") {
+			this.id = id
+			this.wrap = wrap
+			this.message = message
+		}
+
+		val wrapText get() = if (wrap.isNotEmpty()) wrap else "Default wrap: *Purple*"
+		val messageText get() = if (message.isNotEmpty()) message else "Default message: *${L10N.MESSAGE_BOX_DEFAULT_MSG.format()}*"
+	}
 }
+
+fun getGiftSettings(source: CommandSourceStack) = r.table("gift_settings")
+	.get(source.author.id)
+	.run(source.client.dbConn, GiftSettingsCommand.GiftSettingsEntry::class.java).first()
+	?: GiftSettingsCommand.GiftSettingsEntry(source.author.id)

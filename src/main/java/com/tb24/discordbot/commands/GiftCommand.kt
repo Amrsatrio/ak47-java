@@ -23,6 +23,7 @@ import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.format
 import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.entities.Role
 import kotlin.math.min
 
 class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry from current Battle Royale item shop.", arrayOf("g")) {
@@ -85,18 +86,21 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 				throw e
 			}
 		}
-		val giftMessage = L10N.MESSAGE_BOX_DEFAULT_MSG.format()
+		val settings = getGiftSettings(source)
+		val giftMessage = if (settings.message.isEmpty()) L10N.MESSAGE_BOX_DEFAULT_MSG.format() else settings.message
 		ce.resolve(profileManager)
 		val price = ce.price
+		val displayData = OfferDisplayData(catalogOffer)
 		val embed = source.createEmbed()
-			.setColor(0x00FF00)
 			.setTitle("Confirm your Gift")
 			.setDescription(L10N.CANT_BE_REFUNDED.format())
 			.addField(L10N.format("catalog.items"), ce.compiledNames.joinToString("\n"), false)
 			.addField("Recipients", recipients.values.mapIndexed { i, v -> "${i + 1}. ${v.displayName} - ${v.id}" }.joinToString("\n"), false)
-			// .addField("Gift message", giftMessage, false)
+			.addField("Gift message", giftMessage, false)
 			.addField(L10N.format("catalog.total_price"), price.render(recipients.size), true)
 			.addField(L10N.format("catalog.balance"), price.getAccountBalanceText(profileManager), true)
+			.setThumbnail(Utils.benBotExportAsset(displayData.imagePath))
+			.setColor(displayData.presentationParams?.vector?.get("Background_Color_B") ?: Role.DEFAULT_COLOR_RAW)
 		if (price.currencyType == EStoreCurrencyType.MtxCurrency) {
 			embed.addField(L10N.format("catalog.mtx_platform"), (commonCore.stats.attributes as CommonCoreProfileAttributes).current_mtx_platform.name, true)
 				.addField(L10N.format("sac.verb"), CatalogHelper.getAffiliateNameRespectingSetDate(commonCore) ?: L10N.format("common.none"), false)

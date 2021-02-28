@@ -23,6 +23,7 @@ import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.schedule
+import kotlin.math.min
 
 class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", arrayOf("i", "signin")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -179,8 +180,8 @@ private inline fun startDefaultLoginFlow(source: CommandSourceStack) =
 	//authorizationCodeHint(source, EAuthClient.FORTNITE_IOS_GAME_CLIENT)
 	deviceCode(source, EAuthClient.FORTNITE_SWITCH_GAME_CLIENT)
 
-private val timer = Timer()
 fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
+	val timer = Timer()
 	if (source.api.userToken != null) {
 		source.session.logout(source.message)
 	}
@@ -190,7 +191,7 @@ fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 		.request().newBuilder()
 		.header("Authorization", ccLoginResponse.token_type + ' ' + ccLoginResponse.access_token)
 		.build()).exec().to<PinGrantInfo>()
-	deviceCodeResponse.expiration = System.currentTimeMillis() + deviceCodeResponse.expires_in * 1000L
+	deviceCodeResponse.expiration = System.currentTimeMillis() + min(300L, deviceCodeResponse.expires_in) * 1000L
 	source.complete(null, EmbedBuilder()
 		.setTitle("📲 Open this link to log in.", deviceCodeResponse.verification_uri_complete)
 		.setDescription("""— OR —

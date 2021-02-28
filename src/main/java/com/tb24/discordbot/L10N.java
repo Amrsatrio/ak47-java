@@ -2,6 +2,7 @@ package com.tb24.discordbot;
 
 import com.google.common.reflect.TypeToken;
 import com.google.gson.JsonSyntaxException;
+import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -9,11 +10,10 @@ import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
 
-import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText;
-
 import static com.tb24.fn.EpicApi.GSON;
 
 public class L10N {
+	public static final FText TOTAL_BUNDLE_ITEMS = new FText("", "3FA85FF74000638C17CD57B45CF60F20", "{total bundle items} ITEM BUNDLE");
 	public static final FText GiftSuccessDesc = new FText("FortGiftingScreen", "GiftSuccessDesc", "All gifts were delivered successfully.");
 	public static final FText AlreadyOwned = new FText("FortGiftingScreen", "AlreadyOwned", "Already owned");
 	public static final FText BannerIcon = new FText("FortGiftingScreen", "BannerIcon", "BANNER ICON");

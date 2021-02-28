@@ -1,5 +1,6 @@
 package com.tb24.discordbot
 
+import com.tb24.discordbot.commands.OfferDisplayData
 import com.tb24.discordbot.managers.CatalogManager
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
@@ -9,18 +10,14 @@ import com.tb24.fn.model.gamesubcatalog.CatalogDownload
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
-import com.tb24.fn.util.getPreviewImagePath
 import com.tb24.uasset.AssetManager
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.enums.EFortRarity
 import me.fungames.jfortniteparse.fort.exports.CatalogMessaging
-import me.fungames.jfortniteparse.fort.exports.FortMtxOfferData
 import me.fungames.jfortniteparse.fort.exports.FortRarityData
-import me.fungames.jfortniteparse.fort.exports.FortShopOfferDisplayData
 import me.fungames.jfortniteparse.fort.objects.FortColorPalette
-import me.fungames.jfortniteparse.ue4.assets.exports.mats.UMaterialInstanceConstant
-import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
-import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
+import me.fungames.jfortniteparse.ue4.assets.exports.mats.UMaterialInstance
+import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture
 import me.fungames.jfortniteparse.ue4.objects.core.math.FVector2D
 import me.fungames.jfortniteparse.util.drawCenteredString
 import me.fungames.jfortniteparse.util.toPngArray
@@ -39,16 +36,17 @@ import kotlin.system.exitProcess
 
 fun main() {
 	AssetManager.INSTANCE.loadPaks()
-	File("out.png").writeBytes(generateShopImage().toPngArray())
+	val catalogManager = CatalogManager()
+	catalogManager.catalogData = FileReader("D:/Downloads/shop-23-02-2021-en.json").use { EpicApi.GSON.fromJson(it, CatalogDownload::class.java) }
+	catalogManager.sectionsData = OkHttpClient().newCall(Request.Builder().url("https://fortnitecontent-website-prod07.ol.epicgames.com/content/api/pages/fortnite-game/shop-sections").build()).exec().to<FortCmsData.ShopSectionsData>()
+	catalogManager.validate()
+	File("out.png").writeBytes(generateShopImage(catalogManager).toPngArray())
 	exitProcess(0)
 }
 
-fun generateShopImage(): BufferedImage {
-	val rarityData = loadObject<FortRarityData>("/Game/Balance/RarityData.RarityData")!!
-	val catalogManager = CatalogManager()
-	catalogManager.catalogData = FileReader("D:\\Downloads\\shop-25-12-2020-en.json").use { EpicApi.GSON.fromJson(it, CatalogDownload::class.java) }
-	catalogManager.sectionsData = OkHttpClient().newCall(Request.Builder().url("https://fortnitecontent-website-prod07.ol.epicgames.com/content/api/pages/fortnite-game/shop-sections").build()).exec().to<FortCmsData.ShopSectionsData>()
-	catalogManager.validate()
+val catalogMessages by lazy { loadObject<CatalogMessaging>("/Game/Athena/UI/Frontend/CatalogMessages.CatalogMessages")!! }
+
+fun generateShopImage(catalogManager: CatalogManager): BufferedImage {
 	val itemSpacingH = 24f
 	val itemSpacingV = 24f
 	val sectionSpacing = 72f
@@ -73,10 +71,13 @@ fun generateShopImage(): BufferedImage {
 		// medium is not implemented
 	)
 
-	val catalogMessages = loadObject<CatalogMessaging>("/Game/Athena/UI/Frontend/CatalogMessages.CatalogMessages")!!
-	val sectionsToDisplay = if (true) catalogManager.athenaSections.values.filter { it.items.isNotEmpty() && it.sectionData.sectionId != "LimitedTime" } else listOf(catalogManager.athenaSections.values.filter { it.items.isNotEmpty() }.first())
+	val sectionsToDisplay = if (true) catalogManager.athenaSections.values.filter {
+		val sid = it.sectionData.sectionId
+		it.items.isNotEmpty() && sid != "LimitedTime" && sid != "Battlepass" && sid != "Subscription"
+	}
+	else catalogManager.athenaSections.values.filter { it.items.isNotEmpty() }.subList(0, 2)
 	val titleFont = ResourcesContext.burbankBigRegularBlack.deriveFont(Font.ITALIC, 160f)
-	val titleText = "ITEM SHOP"
+	val titleText = System.getProperty("java.version")//"ITEM SHOP"
 	val sectionContainers = mutableListOf<FShopSectionContainer>()
 
 	// region Measure & Layout
@@ -149,7 +150,7 @@ fun generateShopImage(): BufferedImage {
 	// region Draw
 	return createAndDrawCanvas(imageW.toInt(), imageH.toInt()) { ctx ->
 		// Background
-		ctx.drawRadialGradient(0xFF099AFE, 0xFF0942B4, 0, 0, imageW.toInt(), imageH.toInt())
+		ctx.drawStretchedRadialGradient(0xFF099AFE, 0xFF0942B4, 0, 0, imageW.toInt(), imageH.toInt())
 
 		// Title
 		if (false) {
@@ -180,48 +181,92 @@ fun generateShopImage(): BufferedImage {
 			ctx.color = Color.BLACK
 			for (offerContainer in sectionContainer.entries) {
 				val offer = offerContainer.offer.holder()
+				//println("\ndrawing ${offerContainer.displayData.title}")
 				val tileSize = offerContainer.tileSize
 				val tileX = offerContainer.x
 				val tileY = offerContainer.y
 				val tileW = offerContainer.w
 				val tileH = offerContainer.h
 				val firstItem = offer.ce.itemGrants.firstOrNull() ?: continue
-				val xOffset = when {
-					firstItem.primaryAssetType == "AthenaDance" -> tileSize.offsets().emoteX
-					firstItem.primaryAssetType == "AthenaGlider" && tileSize == EItemShopTileSize.Small -> tileSize.offsets().gliderX
+				val firstItemType = firstItem.primaryAssetType
+				/*val xOffset = when {
+					firstItemType == "AthenaDance" -> tileSize.offsets().emoteX
+					firstItemType == "AthenaGlider" && tileSize == EItemShopTileSize.Small -> tileSize.offsets().gliderX
 					else -> 0
+				}*/
+				val artificialScale = when {
+					tileSize == EItemShopTileSize.Small -> when (firstItemType) {
+						"AthenaCharacter", "AthenaPickaxe", "AthenaGlider" -> 1f
+						"AthenaDance", "AthenaItemWrap" -> 0.7f
+						else -> 0.5f
+					}
+					tileSize == EItemShopTileSize.Normal && firstItemType == "AthenaDance" -> 0.8f
+					else -> 1f
 				}
-				val seriesExists = false
-				firstItem.defData?.Series?.value?.let {
-					// fuck the series bg
-				}
-				val endsWithIcon = false//imageLink.endsWith("icon.png")
-				var multi = if (tileSize == EItemShopTileSize.Normal && endsWithIcon) 0.5f else 1.0f
-				multi = if (tileSize == EItemShopTileSize.Small && firstItem.primaryAssetType != "AthenaDance" && firstItem.primaryAssetType != "AthenaItemWrap") 2f else multi
-				multi = if (tileSize == EItemShopTileSize.Small && firstItem.primaryAssetType == "AthenaDance") 1.4f else multi
-				multi = if (tileSize == EItemShopTileSize.Normal && firstItem.primaryAssetType == "AthenaDance" && !endsWithIcon) 1.1f else multi
-				multi = if (tileSize == EItemShopTileSize.Small && firstItem.primaryAssetType == "AthenaCharacter" && endsWithIcon) 1.2f else multi
-				multi = if (tileSize == EItemShopTileSize.Small && firstItem.primaryAssetType == "AthenaPickaxe" && endsWithIcon) 1f else multi
-				multi = if (tileSize == EItemShopTileSize.Small && firstItem.primaryAssetType == "AthenaGlider" && endsWithIcon) 1f else multi
-				val multi2 = multi * 2
 
-				// TODO draw item img
-				// background
-				ctx.drawRadialGradient(
-					0xFF40AFFF, 0xFF227FD5,
-					tileX.toInt(), tileY.toInt(),
-					tileW.toInt(), tileH.toInt()
+				val p = offerContainer.displayData.presentationParams!!
+				val bgColorA = p.vector["Background_Color_A"] ?: 0xFF000000.toInt()
+				val bgColorB = p.vector["Background_Color_B"] ?: 0xFF000000.toInt()
+
+				val gradientSize = p.scalar["Gradient_Size"] ?: 50f
+				val gradientX = p.scalar["Gradient_Position_X"] ?: 0f
+				val gradientY = p.scalar["Gradient_Position_Y"] ?: 0f
+
+				/*val spotlightSize = p.scalar["Spotlight_Size"] ?: 50f
+				val spotlightHardness = p.scalar["Spotlight_Hardness"]
+				val spotlightIntensity = p.scalar["Spotlight_Intensity"]
+				val spotlightX = p.scalar["Spotlight_Position_X"]
+				val spotlightY = p.scalar["Spotlight_Position_Y"]
+
+				val fallOffColor = p.vector["FallOff_Color"]!!
+				val fallOffColorFillPct = p.vector["FallOffColor_Fill_Percent"]
+				val fallOffPosition = p.scalar["FallOffColor_Postion"]!!*/
+
+				// base radial gradient background
+				//println("Gradient x=$gradientX y=$gradientY size=$gradientSize")
+				ctx.paint = RadialGradientPaint(
+					tileX + (gradientX / 100f) * tileW, tileY + (gradientY / 100f) * tileH,
+					(gradientSize / 100f) * max(tileW, tileH),
+					floatArrayOf(0f, 1f),
+					arrayOf(bgColorB.awtColor(), bgColorA.awtColor())
 				)
+				ctx.fillRect(tileX.toInt(), tileY.toInt(), tileW.toInt(), tileH.toInt())
+
+				// spotlight, needs more research
+				/*if (spotlightX != null && spotlightY != null) {
+					println("Spotlight x=$spotlightX y=$spotlightY hardness=$spotlightHardness intensity=$spotlightIntensity size=$spotlightSize")
+					ctx.paint = RadialGradientPaint(
+						tileX + (spotlightX / 100f) * tileW, tileY + (spotlightY / 100f) * tileH,
+						(spotlightSize / 100f) * max(tileW, tileH),
+						floatArrayOf(0f, .4f),
+						arrayOf(bgColorB.awtColor(), (fallOffColor and 0xFFFFFF).awtColor(true))
+					)
+				}
+				ctx.fillRect(tileX.toInt(), tileY.toInt(), tileW.toInt(), tileH.toInt())*/
 
 				// item image
-				val itemImage = offerContainer.image
+				val itemImage = offerContainer.displayData.image
 				if (itemImage != null) {
+					//println("itemImg w/h ${itemImage.width} ${itemImage.height}")
+					val offsetImageX = p.scalar["OffsetImage_X"] ?: 0f
+					val offsetImageY = p.scalar["OffsetImage_Y"] ?: 0f
+					val zoomImagePct = p.scalar["ZoomImage_Percent"] ?: 0f
+					//println("ox=$offsetImageX oy=$offsetImageY zoomPct=$zoomImagePct")
+
+					// centerCrop, needs more research
+					val src = Rectangle(offsetImageX.toInt(), offsetImageY.toInt(), itemImage.width, itemImage.height)
+					val deltaScale = artificialScale //zoomImagePct / 100f
+					if (deltaScale != 0f) {
+						//println("deltaScale $deltaScale")
+						src.growByFac(-deltaScale)
+					}
 					val cropOffsetRatio = (1f - tileW / tileH) / 2f
 					ctx.drawImage(itemImage,
 						tileX.toInt(), tileY.toInt(),
 						(tileX + tileW).toInt(), (tileY + tileH).toInt(),
-						(cropOffsetRatio * itemImage.width).toInt(), 0,
-						((1f - cropOffsetRatio) * itemImage.width).toInt(), itemImage.height,
+						src.x + (cropOffsetRatio * src.width).toInt(), src.y,
+						src.x + ((1f - cropOffsetRatio) * src.width).toInt(), src.y + src.height,
+						Color.GRAY,
 						null
 					)
 				}
@@ -229,8 +274,8 @@ fun generateShopImage(): BufferedImage {
 				val path = Path2D.Float()
 
 				// rarity
-				if (!offer.getMeta("HideRarityBorder").equals("true", true)) {
-					val palette = rarityData.forRarity(firstItem.rarity)
+				val palette = offerContainer.displayData.palette
+				if (palette != null && !offer.getMeta("HideRarityBorder").equals("true", true)) {
 					ctx.color = palette.Color1.toColor()
 					path.moveTo(tileX, tileY + tileH - 72)
 					path.lineTo(tileX + tileW, tileY + tileH - 82)
@@ -270,7 +315,7 @@ fun generateShopImage(): BufferedImage {
 
 				ctx.color = Color.WHITE
 				ctx.font = ctx.font.deriveFont(Font.ITALIC, 20f)
-				val entryTitleText = offerContainer.title?.toUpperCase().orEmpty()
+				val entryTitleText = offerContainer.displayData.title?.toUpperCase().orEmpty()
 				ctx.drawCenteredString(entryTitleText, (tileX + tileW / 2).toInt(), (tileY + tileH - 40).toInt())
 
 				val violatorIntensity = runCatching { EViolatorIntensity.valueOf(offer.getMeta("ViolatorIntensity")!!) }.getOrNull()
@@ -311,13 +356,19 @@ fun generateShopImage(): BufferedImage {
 				}
 			}
 		}
+
+		// Attribution
+		ctx.font = ResourcesContext.burbankSmallBold.deriveFont(Font.ITALIC, 16f)
+		ctx.color = 0x7FFFFFFF.awtColor()
+		val attribText = "Original code by Otavio, adapted and improved by tb24"
+		ctx.drawCenteredString(attribText, (imageW / 2).toInt(), (imageH - 8).toInt())
 	}
 	// endregion
 }
 
-fun Graphics2D.drawRadialGradient(innerColor: Number, outerColor: Number, x: Int, y: Int, w: Int, h: Int, fac: Float = .3f) {
+fun Graphics2D.drawStretchedRadialGradient(innerColor: Number, outerColor: Number, x: Int, y: Int, w: Int, h: Int, scale: Float = .3f) {
 	paint = RadialGradientPaint(
-		Rectangle(x, y, w, h).apply { grow((w * fac).toInt(), (h * fac).toInt()) },
+		Rectangle(x, y, w, h).apply { grow((w * scale).toInt(), (h * scale).toInt()) },
 		floatArrayOf(0f, 1f),
 		arrayOf(innerColor.awtColor(), outerColor.awtColor()),
 		MultipleGradientPaint.CycleMethod.NO_CYCLE)
@@ -368,33 +419,7 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 	var w = 0f
 	var h = 0f
 	var tileSize = EItemShopTileSize.Normal
-	var image: BufferedImage? = null
-	var title: String? = null
-	var rarity: EFortRarity? = null
-
-	init {
-		offer.itemGrants.firstOrNull()?.let { item ->
-			image = item.getPreviewImagePath()?.load<UTexture2D>()?.toBufferedImage()
-			title = item.displayName
-			rarity = item.defData.Rarity
-		}
-		if (!offer.displayAssetPath.isNullOrEmpty()) {
-			loadObject<FortMtxOfferData>(offer.displayAssetPath)?.let {
-				it.DisplayName?.run { title = format() }
-			}
-		}
-		val newDisplayAssetPath = offer.getMeta("NewDisplayAssetPath")
-		if (newDisplayAssetPath != null) {
-			val newDisplayAsset = loadObject<FortShopOfferDisplayData>(newDisplayAssetPath)
-			if (newDisplayAsset != null) {
-				val firstPresentation = newDisplayAsset.Presentations.first().load<UMaterialInstanceConstant>()
-				if (firstPresentation != null) {
-					image = (firstPresentation.TextureParameterValues.first { it.ParameterInfo.Name.toString() == "OfferImage" }.ParameterValue.value as? UTexture2D)?.toBufferedImage()
-					// TODO wen eta fancy gradient shit
-				}
-			}
-		}
-	}
+	val displayData = OfferDisplayData(offer, true)
 }
 
 fun FortRarityData.forRarity(rarity: EFortRarity): FortColorPalette {
@@ -422,4 +447,33 @@ fun EItemShopTileSize.offsets() = when (this) {
 	EItemShopTileSize.Normal -> FOffsets(30, 0)
 	EItemShopTileSize.DoubleWide -> FOffsets(0, 0)
 	EItemShopTileSize.TripleWide -> FOffsets(0, 0)
+}
+
+class FMergedMaterialParams(material: UMaterialInstance) {
+	val scalar = mutableMapOf<String, Float>()
+	val vector = mutableMapOf<String, Int>()
+	val texture = mutableMapOf<String, Lazy<UTexture>>()
+
+	init {
+		var cur: UMaterialInstance? = material
+		while (cur != null) {
+			cur.ScalarParameterValues?.forEach {
+				scalar.putIfAbsent(it.ParameterInfo.Name.text, it.ParameterValue)
+			}
+			cur.VectorParameterValues?.forEach {
+				vector.putIfAbsent(it.ParameterInfo.Name.text, it.ParameterValue.toFColor(true).toPackedARGB())
+			}
+			cur.TextureParameterValues?.forEach {
+				texture.putIfAbsent(it.ParameterInfo.Name.text, it.ParameterValue)
+			}
+			cur = cur.Parent.value as? UMaterialInstance
+		}
+	}
+}
+
+fun Rectangle.growByFac(fac: Float) {
+	val newWidth = (width + width * fac).toInt()
+	val newHeight = (width + height * fac).toInt()
+	setLocation(x + (width - newWidth) / 2, y + (height - newHeight) / 2)
+	setSize(newWidth, newHeight)
 }

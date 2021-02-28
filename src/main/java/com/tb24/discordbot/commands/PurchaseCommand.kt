@@ -22,6 +22,7 @@ import com.tb24.fn.model.mcpprofile.notifications.CatalogPurchaseNotification
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.CatalogHelper.isItemOwned
 import com.tb24.fn.util.Formatters
+import net.dv8tion.jda.api.entities.Role
 import java.time.Instant
 import java.util.concurrent.CompletableFuture
 
@@ -96,10 +97,10 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 			val priceIcon = price.icon()
 			throw SimpleCommandExceptionType(LiteralMessage("Not enough $priceIcon to afford ${sd.friendlyName}. You need $priceIcon ${Formatters.num.format(price.basePrice - accountBalance)} more.\nCurrent balance: $priceIcon ${Formatters.num.format(accountBalance)}")).create()
 		}
+		val displayData = OfferDisplayData(offer)
 		var confirmed = true
 		if (sd.price.basePrice > 0) {
 			val embed = source.createEmbed()
-				.setColor(0x4BDA74)
 				.setTitle(L10N.format("purchase.confirmation.title"))
 				.addField(L10N.format("catalog.items"), sd.compiledNames.mapIndexed { i, s ->
 					val strike = if (offer.offerType == ECatalogOfferType.DynamicBundle && isItemOwned(profileManager, offer.itemGrants[i].templateId, offer.itemGrants[i].quantity)) "~~" else ""
@@ -108,6 +109,8 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 				.addField(L10N.format("catalog.quantity"), Formatters.num.format(quantity), false)
 				.addField(L10N.format("catalog.total_price"), price.render(quantity), true)
 				.addField(L10N.format("catalog.balance"), price.getAccountBalanceText(profileManager), true)
+				.setThumbnail(Utils.benBotExportAsset(displayData.imagePath))
+				.setColor(displayData.presentationParams?.vector?.get("Background_Color_B") ?: Role.DEFAULT_COLOR_RAW)
 			if (price.currencyType == EStoreCurrencyType.MtxCurrency) {
 				embed.addField(L10N.format("catalog.mtx_platform"), (commonCore.stats.attributes as CommonCoreProfileAttributes).current_mtx_platform.name, true)
 					.addField(L10N.format("sac.verb"), CatalogHelper.getAffiliateNameRespectingSetDate(commonCore) ?: L10N.format("common.none"), false)

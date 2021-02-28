@@ -255,7 +255,7 @@ fun <T> Array<T>.safeGetOneIndexed(index: Int, reader: StringReader? = null, sta
 }
 
 @Throws(CommandSyntaxException::class)
-fun Message.yesNoReactions(author: User, inTime: Long = 30000L): CompletableFuture<Boolean> = CompletableFuture.supplyAsync {
+fun Message.yesNoReactions(author: User, inTime: Long = 45000L): CompletableFuture<Boolean> = CompletableFuture.supplyAsync {
 	val icons = arrayOf("✅", "❌").apply { forEach { addReaction(it).queue() } }
 	awaitReactions({ reaction, user, _ -> icons.contains(reaction.reactionEmote.name) && user?.idLong == author.idLong }, AwaitReactionsOptions().apply {
 		max = 1
@@ -342,5 +342,5 @@ object ResourcesContext {
 	val burbankBigRegularBlack by lazy { fromPaks("FortniteGame/Content/UI/Foundation/Fonts/BurbankBigRegular-Black.ufont") }
 	val burbankBigCondensedBlack by lazy { fromPaks("FortniteGame/Content/UI/Foundation/Fonts/BurbankBigCondensed-Black.ufont") }
 
-	private inline fun fromPaks(path: String) = Font.createFont(Font.TRUETYPE_FONT, ByteArrayInputStream(AssetManager.INSTANCE.provider.saveGameFile(path)))
+	private fun fromPaks(path: String) = Font.createFont(Font.TRUETYPE_FONT, ByteArrayInputStream(AssetManager.INSTANCE.provider.saveGameFile(path)))
 }
