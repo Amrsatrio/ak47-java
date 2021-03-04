@@ -17,7 +17,7 @@ class SchematicsCommand : BrigadierCommand("schematics", "Lists your or a given 
 	private fun display(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
 		val source = c.source
 		source.ensureCompletedCampaignTutorial(campaign)
-		val schems = campaign.items.values.filter { it.primaryAssetType.equals("Schematic", true) }.sortedWith { a, b ->
+		val schems = campaign.items.values.filter { it.primaryAssetType == "Schematic" }.sortedWith { a, b ->
 			val rating1 = a.powerLevel
 			val rating2 = b.powerLevel
 			if (rating1 == rating2) {

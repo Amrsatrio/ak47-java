@@ -65,7 +65,7 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 			authorName, null,
 			session.channelsManager.getUserSettings(user.id, "avatar")
 				.firstOrNull()?.let { "https://cdn2.unrealengine.com/Kairos/portraits/$it.png?preview=1" }
-		).setColor(BrigadierCommand.COLOR_SUCCESS)
+		).setColor(BrigadierCommand.COLOR_INFO)
 	}
 
 	@Throws(HttpException::class)

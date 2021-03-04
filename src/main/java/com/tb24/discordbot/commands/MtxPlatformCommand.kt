@@ -34,7 +34,7 @@ class MtxPlatformCommand : BrigadierCommand("vbucksplatform", "Changes the V-Buc
 				source.complete(null, source.createEmbed()
 					.setTitle("✅ Updated V-Bucks platform to **${attrs.current_mtx_platform}**.")
 					.setDescription("Balance: ${Formatters.num.format(CatalogHelper.countMtxCurrency(commonCore))} V-Bucks on this platform.\nUse `${source.prefix}vbucks` to see all of your V-Bucks.")
-					.setColor(0x4BDA74)
+					.setColor(COLOR_SUCCESS)
 					.build())
 				Command.SINGLE_SUCCESS
 			}

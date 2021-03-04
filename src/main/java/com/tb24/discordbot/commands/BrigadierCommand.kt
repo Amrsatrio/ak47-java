@@ -54,6 +54,9 @@ abstract class BrigadierCommand @JvmOverloads constructor(val name: String, val 
 		)
 
 	companion object {
-		const val COLOR_SUCCESS = 0x40FAA1
+		const val COLOR_ERROR = 0xFF4526
+		const val COLOR_INFO = 0x40FAA1
+		const val COLOR_SUCCESS = 0x4BDA74
+		const val COLOR_WARNING = 0xFFF300
 	}
 }

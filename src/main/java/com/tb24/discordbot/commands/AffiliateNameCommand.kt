@@ -48,7 +48,7 @@ class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Su
 			}).await()
 			source.complete(null, source.createEmbed()
 				.setDescription(if (isClear) "🗑 **Cleared** Support a Creator code." else "✅ Support a Creator code set to **$newCode**.")
-				.setColor(0x4BDA74)
+				.setColor(COLOR_SUCCESS)
 				.build())
 		}
 		return Command.SINGLE_SUCCESS

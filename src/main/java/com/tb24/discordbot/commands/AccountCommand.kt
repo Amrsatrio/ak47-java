@@ -47,7 +47,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		if (!source.complete(null, source.createEmbed()
 				.setTitle("✋ Hold up!")
 				.setDescription("You're about to view the account details of ${source.api.currentLoggedIn.displayName}. Some of the data that we will send here might be sensitive, such as real name or Facebook name. We don't recommend to proceed if this account isn't yours.\n\nAre you sure you want to continue? (❌ in 30s)")
-				.setColor(0xFFF300)
+				.setColor(COLOR_WARNING)
 				.build()).yesNoReactions(source.author).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS
@@ -94,7 +94,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		if (!source.complete(null, source.createEmbed()
 				.setTitle("Change display name?")
 				.setDescription("You're about to change the display name of account `${source.api.currentLoggedIn.id}`:\n\n`${oldName.orDash()}` \u2192 `$newName`\n\nThis action will be recorded in the Account History as `HISTORY_ACCOUNT_UPDATE`. You will not be able to change the display name again for the next 14 days if you proceed. Are you sure you want to continue? (❌ in 30s)")
-				.setColor(0xFFF300)
+				.setColor(COLOR_WARNING)
 				.build()).yesNoReactions(source.author).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS
@@ -181,7 +181,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		source.api.accountService.removeExternalAuth(source.api.currentLoggedIn.id, externalAuthType).exec()
 		source.complete(null, source.createEmbed()
 			.setTitle("✅ Unlinked $externalAuthType")
-			.setColor(0xFFF300)
+			.setColor(COLOR_WARNING)
 			.build())
 		return Command.SINGLE_SUCCESS
 	}

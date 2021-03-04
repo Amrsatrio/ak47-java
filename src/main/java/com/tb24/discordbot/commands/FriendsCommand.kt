@@ -312,7 +312,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		if (!source.complete(null, source.createEmbed()
 				.setTitle("Confirmation")
 				.setDescription(L10N.format("friends.$type.bulk.warning"))
-				.setColor(0xFFF300)
+				.setColor(COLOR_WARNING)
 				.build()).yesNoReactions(source.author).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS
@@ -377,7 +377,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 				"Configured your account to **allow** friend requests."
 			else
 				"Configured your account to **disallow** friend requests.")
-			.setColor(0x4BDA74)
+			.setColor(COLOR_SUCCESS)
 			.build())
 		return Command.SINGLE_SUCCESS
 	}

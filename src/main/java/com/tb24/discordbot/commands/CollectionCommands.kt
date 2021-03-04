@@ -92,7 +92,7 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 			for ((i, entry) in data.withIndex()) {
 				if (i % 24 == 0 && i / 24 > 0) {
 					source.complete(null, embed.build())
-					embed = EmbedBuilder().setTitle("$title (continued)").setColor(COLOR_SUCCESS)
+					embed = EmbedBuilder().setTitle("$title (continued)").setColor(COLOR_INFO)
 				}
 				val def = entry.def
 				val collectedProps = entry.collectedProps
@@ -150,7 +150,7 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 			.map { source.api.statsproxyService.queryMultipleUserStats("collection_character", QueryMultipleUserStats().apply { owners = it.toTypedArray() }).future() }
 			.apply { CompletableFuture.allOf(*toTypedArray()).await() }
 			.flatMap { it.get().body()!!.toList() }
-		val embed = EmbedBuilder().setTitle("Characters / Friends leaderboard").setColor(COLOR_SUCCESS)
+		val embed = EmbedBuilder().setTitle("Characters / Friends leaderboard").setColor(COLOR_INFO)
 		val scores = mutableMapOf<String, Int>(self.id to selfScore) // account ID -> characters completed
 		stats.associateTo(scores) { it.accountId to (it.stats["br_collection_character_count_s15"] ?: 0) }
 		val iterator = scores.entries.sortedWith { a, b ->

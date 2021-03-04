@@ -50,7 +50,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 			source.complete(null, source.createEmbed()
 				.setTitle("⚠ Hold up before gifting!")
 				.setDescription("You haven't claimed the two-factor authentication reward, which needs to be claimed first before sending gifts. Please enable two-factor authentication and claim its rewards by doing `+claim2fa` or by logging in to the game.\n\n[Enable two-factor authentication on epicgames.com](${source.generateUrl("https://www.epicgames.com/account/password#2fa-signup")})")
-				.setColor(0xFFF300)
+				.setColor(COLOR_WARNING)
 				.build())
 			return 0
 		}
@@ -79,7 +79,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 					source.complete(null, EmbedBuilder()
 						.setTitle("⚠ ${errorTitle.format()}")
 						.setDescription(errorText.format())
-						.setColor(0xFFF300)
+						.setColor(COLOR_WARNING)
 						.build())
 					return 0
 				}
@@ -137,7 +137,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 					source.complete(null, EmbedBuilder()
 						.setTitle("⚠ ${source.errorTitle}")
 						.setDescription(FAILED_FORMATS[min(failedAccIds.size, 5) - 1].format(*(fmt as Array<String>)))
-						.setColor(0xFFF300)
+						.setColor(COLOR_WARNING)
 						.build())
 					return 0
 				}

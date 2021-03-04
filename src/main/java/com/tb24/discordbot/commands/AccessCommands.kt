@@ -71,7 +71,7 @@ fun premium(source: CommandSourceStack, target: User, remove: Boolean/*, secret:
 		.setTitle((if (remove) "Removed premium from %s" else "Granted premium to %s").format(target.asTag))
 		.setThumbnail(target.avatarUrl)
 		.setFooter("Requested by %s".format(source.author.asTag), source.author.avatarUrl)
-		.setColor(if (remove) 0xFF0000 else 0x40FAA1)
+		.setColor(if (remove) BrigadierCommand.COLOR_ERROR else BrigadierCommand.COLOR_SUCCESS)
 		.setTimestamp(Instant.now())
 		.build())
 	source.client.dlog(null, EmbedBuilder()
@@ -80,7 +80,7 @@ fun premium(source: CommandSourceStack, target: User, remove: Boolean/*, secret:
 		.addField("Target User", "%s (tag: %s)".format(target.asMention, target.asTag), false)
 		.addField("Requested By", "%s (tag: %s)".format(source.author.asMention, source.author.asTag), false)
 		.addField("Requested At", if (source.isFromType(ChannelType.PRIVATE)) "Direct Message" else if (source.isFromType(ChannelType.TEXT)) "Guild: %s".format(source.guild.name) else "Unknown", false)
-		.setColor(if (remove) 0xFF0000 else 0x40FAA1)
+		.setColor(if (remove) BrigadierCommand.COLOR_ERROR else BrigadierCommand.COLOR_SUCCESS)
 		.setTimestamp(Instant.now())
 		.build())
 	source.client.discord.getGuildById(648556726672556048L)?.let { homebaseGuild ->

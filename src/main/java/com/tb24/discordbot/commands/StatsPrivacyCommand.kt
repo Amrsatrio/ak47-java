@@ -38,7 +38,7 @@ class StatsPrivacyCommand : BrigadierCommand("statsprivacy", "Toggles or sets yo
 				"Your stats visibility is now **private**."
 			else
 				"Your stats visibility is now **public**.")
-			.setColor(0x4BDA74)
+			.setColor(COLOR_SUCCESS)
 			.build())
 		return Command.SINGLE_SUCCESS
 	}

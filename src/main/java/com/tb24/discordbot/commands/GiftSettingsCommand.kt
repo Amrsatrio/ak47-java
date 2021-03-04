@@ -66,7 +66,11 @@ class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift s
 	private fun setGiftMessage(source: CommandSourceStack, message: String): Int {
 		val settings = getGiftSettings(source)
 		settings.message = message
-		r.table("gift_settings").insert(settings).run(source.client.dbConn)
+		if (settings.persisted) {
+			r.table("gift_settings").update(settings)
+		} else {
+			r.table("gift_settings").insert(settings)
+		}.run(source.client.dbConn)
 		source.complete(null, EmbedBuilder().setColor(COLOR_SUCCESS)
 			.setTitle("✅ Changed gift message")
 			.addField("Message", settings.messageText, false)
@@ -77,7 +81,11 @@ class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift s
 	private fun setGiftWrap(source: CommandSourceStack, wrap: String): Int {
 		val settings = getGiftSettings(source)
 		settings.wrap = wrap
-		r.table("gift_settings").insert(settings).run(source.client.dbConn)
+		if (settings.persisted) {
+			r.table("gift_settings").update(settings)
+		} else {
+			r.table("gift_settings").insert(settings)
+		}.run(source.client.dbConn)
 		source.complete(null, EmbedBuilder().setColor(COLOR_SUCCESS)
 			.setTitle("✅ Changed gift wrap")
 			.addField("Wrap", settings.wrapText, false)
@@ -105,7 +113,7 @@ class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift s
 				"Configured your account to **accept** gifts."
 			else
 				"Configured your account to **reject** gifts.")
-			.setColor(0x4BDA74)
+			.setColor(COLOR_SUCCESS)
 			.build())
 		return Command.SINGLE_SUCCESS
 	}
@@ -114,13 +122,15 @@ class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift s
 		@JvmField var id: String
 		@JvmField var wrap: String
 		@JvmField var message: String
+		@JvmField @Transient var persisted = true
 
 		constructor() : this("", "", "")
 
-		constructor(id: String = "", wrap: String = "", message: String = "") {
+		constructor(id: String, wrap: String = "", message: String = "") {
 			this.id = id
 			this.wrap = wrap
 			this.message = message
+			persisted = false
 		}
 
 		val wrapText get() = if (wrap.isNotEmpty()) wrap else "Default wrap: *Purple*"

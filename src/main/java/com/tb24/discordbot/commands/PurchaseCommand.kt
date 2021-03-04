@@ -57,7 +57,7 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 		if (priceIndex < 0 && offer.prices.size > 1) {
 			val priceSelectionEbd = source.createEmbed()
 				.setTitle("How do you want to pay?")
-				.setColor(0x4BDA74)
+				.setColor(COLOR_WARNING)
 				.addField("Prices", offer.prices.joinToString("\n") { it.render(quantity) }, true)
 				.addField("Balances", offer.prices.joinToString("\n") { it.getAccountBalanceText(profileManager) }, true)
 			val priceSelectionMsg = source.complete(null, priceSelectionEbd.build())
@@ -140,7 +140,7 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 			commonCore = profileManager.getProfileData("common_core")
 			val successEmbed = source.createEmbed()
 				.setTitle("✅ " + L10N.format("purchase.success.title"))
-				.setColor(0x4BDA74)
+				.setColor(COLOR_SUCCESS)
 				.addField(L10N.format("purchase.success.received"), if (results.isEmpty()) "No items" else results.joinToString("\n") { it.asItemStack().render() }, false)
 				.addField(L10N.format("purchase.success.final_balance"), price.getAccountBalanceText(profileManager), false)
 				.setTimestamp(Instant.now())

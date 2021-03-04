@@ -14,7 +14,7 @@ class InviteBotCommand : BrigadierCommand("invite", "Sends a link to invite this
 			source.complete(null, EmbedBuilder()
 				.setTitle("Invite ${selfUser.name} to your server!", "https://discordapp.com/api/oauth2/authorize?client_id=${selfUser.id}&permissions=8&scope=bot")
 				.setDescription("[Join our server!](${Utils.HOMEBASE_GUILD_INVITE})")
-				.setColor(COLOR_SUCCESS)
+				.setColor(COLOR_INFO)
 				.build())
 			Command.SINGLE_SUCCESS
 		}

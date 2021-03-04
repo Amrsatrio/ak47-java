@@ -49,7 +49,7 @@ class HomebaseNameCommand : BrigadierCommand("homebasename", "Displays or change
 			}, "common_public").await()
 			source.complete(null, source.createEmbed()
 				.setDescription("✅ Updated homebase name to **$newHomebaseName**.")
-				.setColor(0x4BDA74)
+				.setColor(COLOR_SUCCESS)
 				.build())
 		}
 		return Command.SINGLE_SUCCESS

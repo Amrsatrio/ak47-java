@@ -246,7 +246,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				source.complete(null, EmbedBuilder()
 					.setTitle("🚫 Logged out")
 					.setDescription("You have been logged out due to one of the following reasons:\n\u2022 Account logged in elsewhere.\n\u2022 Been more than 8 hours since login.\n\u2022 Logged in using exchange code or authorization code but the originating session has been logged out.\n\u2022 Logged in using a saved login but got it removed.\n\u2022 Account's password changed.\n\u2022 Password reset initiated by Epic Games.\n\nYou don't have a saved login for this account, so we cannot log you back in automatically.")
-					.setColor(0xFF4526)
+					.setColor(BrigadierCommand.COLOR_ERROR)
 					.build())
 				return false
 			}
@@ -260,7 +260,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 			.setTitle("⚠ $errorTitle")
 			.setDescription(Helpers.truncate(description, MessageEmbed.TEXT_MAX_LENGTH))
 			.setFooter(e.code().toString() + footer)
-			.setColor(0xFFF300)
+			.setColor(BrigadierCommand.COLOR_WARNING)
 			.build())
 		return false
 	}
@@ -270,7 +270,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 			.setTitle("💥 Uh oh! That was unexpected!")
 			.setDescription("An error has occurred and we're working to fix the problem!\nYou can [join our server](${Utils.HOMEBASE_GUILD_INVITE}) and report it there if we failed to fix it in time!")
 			.addField("Error", "```$e```", false)
-			.setColor(0xFF4526)
+			.setColor(BrigadierCommand.COLOR_ERROR)
 			.build())
 		if (DiscordBot.ENV == "prod" || DiscordBot.ENV == "stage") {
 			client.dlog("""__**Error report**__

@@ -58,7 +58,7 @@ class ClaimMfaCommand : BrigadierCommand("claimmfa", "Claim 2FA reward (Boogie D
 			source.complete(null, source.createEmbed()
 				.setTitle("❌ Failed to claim 2FA reward")
 				.setDescription("Please make sure that you already have two-factor authentication enabled on your account prior to attempting to claim the rewards.\n\n[Enable two-factor authentication on epicgames.com](${source.generateUrl("https://www.epicgames.com/account/password#2fa-signup")})")
-				.setColor(0xFF4526)
+				.setColor(COLOR_ERROR)
 				.build())
 		}
 		return Command.SINGLE_SUCCESS

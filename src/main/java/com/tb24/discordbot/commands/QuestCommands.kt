@@ -209,7 +209,7 @@ class QuestCommand : BrigadierCommand("quest", "Shows the details of a quest by 
 		val quest = item.defData as? FortQuestItemDefinition
 			?: throw SimpleCommandExceptionType(LiteralMessage("Not a quest item. It is ${item.defData?.clazz?.name}.")).create()
 		val embed = EmbedBuilder()
-			.setColor(COLOR_SUCCESS)
+			.setColor(COLOR_INFO)
 			.setAuthor(quest.DisplayName?.format(), null, Utils.benBotExportAsset(quest.LargePreviewImage?.toString()))
 			.setDescription(quest.Description?.format())
 		val objectives = renderQuestObjectives(item)
@@ -274,7 +274,7 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 	if (!source.complete(null, source.createEmbed()
 			.setTitle("Replace this daily quest?")
 			.setDescription(renderChallenge(questToReplace, conditionalCondition = canReceiveMtxCurrency))
-			.setColor(0xFFF300)
+			.setColor(BrigadierCommand.COLOR_WARNING)
 			.build()).yesNoReactions(source.author).await()) {
 		source.complete("👌 Alright.")
 		return Command.SINGLE_SUCCESS
