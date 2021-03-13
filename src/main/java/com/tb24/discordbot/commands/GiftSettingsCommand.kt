@@ -34,7 +34,7 @@ class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift s
 				.setTitle("Gift Settings")
 				.addField("Can receive gifts", if (canReceiveGifts) "✅ Yes" else "❌ No", false)
 				.addField("Wrap", settings.wrapText, false)
-				.addField("Message", settings.messageText, false)
+				.addField("Message (Applies to your Discord account)", settings.messageText, false)
 				.build())
 			Command.SINGLE_SUCCESS
 		}
@@ -72,7 +72,8 @@ class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift s
 			r.table("gift_settings").insert(settings)
 		}.run(source.client.dbConn)
 		source.complete(null, EmbedBuilder().setColor(COLOR_SUCCESS)
-			.setTitle("✅ Changed gift message")
+			.setTitle("✅ Updated gift message")
+			.setDescription("**Disclaimer:** The message is tied to your Discord account, not to Epic accounts.")
 			.addField("Message", settings.messageText, false)
 			.build())
 		return Command.SINGLE_SUCCESS
@@ -87,7 +88,7 @@ class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift s
 			r.table("gift_settings").insert(settings)
 		}.run(source.client.dbConn)
 		source.complete(null, EmbedBuilder().setColor(COLOR_SUCCESS)
-			.setTitle("✅ Changed gift wrap")
+			.setTitle("✅ Updated gift wrap")
 			.addField("Wrap", settings.wrapText, false)
 			.build())
 		return Command.SINGLE_SUCCESS
@@ -122,15 +123,16 @@ class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift s
 		@JvmField var id: String
 		@JvmField var wrap: String
 		@JvmField var message: String
-		@JvmField @Transient var persisted = true
+		@JvmField @Transient var persisted = false
 
-		constructor() : this("", "", "")
+		constructor() : this("", "", "") {
+			persisted = true
+		}
 
 		constructor(id: String, wrap: String = "", message: String = "") {
 			this.id = id
 			this.wrap = wrap
 			this.message = message
-			persisted = false
 		}
 
 		val wrapText get() = if (wrap.isNotEmpty()) wrap else "Default wrap: *Purple*"

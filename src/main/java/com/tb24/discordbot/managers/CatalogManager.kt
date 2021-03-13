@@ -6,6 +6,7 @@ import com.tb24.discordbot.util.to
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortCmsData
 import com.tb24.fn.model.FortCmsData.ShopSectionsData
+import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.gamesubcatalog.CatalogDownload
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 import okhttp3.Request
@@ -46,6 +47,11 @@ class CatalogManager {
 					DiscordBot.instance?.keychainTask?.handle(it)
 				}
 				(athenaSections[offer.getMeta("SectionId") ?: continue] ?: continue).items.add(offer)
+				if (offer.getMeta("IsLevelBundle").equals("true", true)) {
+					val tierToken = FortItemStack("Token:athenabattlepasstier", offer.getMeta("LevelsToGrant")?.toIntOrNull() ?: 1)
+					offer.itemGrants = listOf(tierToken)
+					offer.title = "%,d %s".format(tierToken.quantity, tierToken.displayName)
+				}
 			}
 			when (storefront.name) {
 				"STWSpecialEventStorefront" -> stwEvent.items.addAll(storefront.catalogEntries)

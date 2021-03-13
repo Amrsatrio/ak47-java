@@ -8,6 +8,7 @@ import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.Rune
 import com.tb24.uasset.AssetManager
 import javax.script.ScriptEngineManager
 import javax.script.ScriptException
@@ -19,7 +20,7 @@ class EvalCommand : BrigadierCommand("eval", "Evaluate an expression for debuggi
 	private val detailMessageField = Throwable::class.java.getDeclaredField("detailMessage").apply { ReflectionAccessor.getInstance().makeAccessible(this) }
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires { it.author.idLong == 624299014388711455L }
+		.requires(Rune::isBotDev)
 		.then(argument("code", greedyString())
 			.executes { handle(it.source, getString(it, "code")) }
 		)

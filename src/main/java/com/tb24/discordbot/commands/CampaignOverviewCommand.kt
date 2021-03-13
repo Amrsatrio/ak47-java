@@ -38,7 +38,7 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 			when {
 				item.templateId == "Token:collectionresource_nodegatetoken01" -> researchPoints += item.quantity
 				item.templateId.contains("stormking_sr") -> mythicSchematics.add(item)
-				quests.any { it == item.templateId } -> questItems[item.templateId] = item
+				item.templateId in quests -> questItems[item.templateId] = item
 			}
 		}
 		val embed = source.createEmbed(campaign.owner)

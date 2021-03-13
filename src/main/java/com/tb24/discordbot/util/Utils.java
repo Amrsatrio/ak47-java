@@ -28,6 +28,7 @@ public class Utils {
 		"WHOOPS!"
 	};
 	private static final Random RANDOM = new Random();
+	public static final long HOMEBASE_GUILD_ID = 648556726672556048L;
 	public static final String HOMEBASE_GUILD_INVITE = "https://discord.gg/HCVjeXJ";
 	public static final Pattern EMAIL_ADDRESS
 		= Pattern.compile(

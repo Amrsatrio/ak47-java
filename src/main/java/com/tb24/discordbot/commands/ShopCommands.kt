@@ -93,8 +93,11 @@ fun executeShopImage(source: CommandSourceStack): Int {
 	val tz = TimeZone.getTimeZone("UTC")
 	val now = Date()
 	val fileName = "shop-${SimpleDateFormat("dd-MM-yyyy").apply { timeZone = tz }.format(now)}.png"
-	source.channel.sendMessage("**Battle Royale Item Shop (%s)**".format(DateFormat.getDateInstance().apply { timeZone = tz }.format(now))).addFile(createAttachmentOfIcons(slots, "shop"), fileName).complete()
+	val message = source.channel.sendMessage("**Battle Royale Item Shop (%s)**".format(DateFormat.getDateInstance().apply { timeZone = tz }.format(now))).addFile(createAttachmentOfIcons(slots, "shop"), fileName).complete()
 	source.loadingMsg!!.delete().queue()
+	if (source.channel.idLong == DiscordBot.ITEM_SHOP_CHANNEL_ID) {
+		message.crosspost().queue()
+	}
 	return Command.SINGLE_SUCCESS
 }
 
@@ -122,12 +125,12 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 	for ((i, section) in sections.withIndex()) {
 		val lines = mutableListOf<String>()
 		for (catalogEntry in section.items) {
-/*			if (catalogEntry.shouldBeSkipped(commonCore)) {
+			/*if (catalogEntry.shouldBeSkipped(commonCore)) {
 				continue
 			}*/
 			if (catalogEntry.offerType == ECatalogOfferType.StaticPrice && (catalogEntry.prices.isEmpty() || catalogEntry.prices.first().currencyType == EStoreCurrencyType.RealMoney)) continue
 			val sd = catalogEntry.holder().apply { resolve(profileManager) }
-			lines.add("${(catalogEntry.__ak47_index + 1)}. ${sd.friendlyName}${if (showAccInfo && (sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit)) " ✅" else ""}")
+			lines.add("%,d. %s%s".format(catalogEntry.__ak47_index + 1, sd.friendlyName, if (showAccInfo && (sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit)) " ✅" else ""))
 			catalogEntry.prices.forEach { prices.putIfAbsent(it.currencyType.name + ' ' + it.currencySubType, it) }
 		}
 		contents[i] = lines
@@ -145,7 +148,10 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 		}
 		embed.addFieldSeparate(section.sectionData.sectionDisplayName ?: "", contents[i], 0)
 	}
-	source.complete(null, embed.build())
+	val message = source.complete(null, embed.build())
+	if (!showAccInfo) {
+		message.crosspost().queue()
+	}
 	return Command.SINGLE_SUCCESS
 }
 
@@ -159,7 +165,7 @@ private fun isUserAnIdiot(source: CommandSourceStack): Boolean {
 
 val rarityData by lazy { loadObject<FortRarityData>("/Game/Balance/RarityData.RarityData")!! }
 
-class OfferDisplayData(offer: CatalogOffer, loadImage: Boolean = false) {
+class OfferDisplayData {
 	var banner: String? = null
 	var image: BufferedImage? = null
 	var imagePath: String? = null
@@ -168,7 +174,7 @@ class OfferDisplayData(offer: CatalogOffer, loadImage: Boolean = false) {
 	var subtitle: String? = null
 	var palette: FortColorPalette? = null
 
-	init {
+	constructor(offer: CatalogOffer, loadImage: Boolean = false, loadDAV2: Boolean = true) {
 		val firstGrant = offer.itemGrants.firstOrNull()
 		title = offer.title
 		subtitle = offer.shortDescription
@@ -192,7 +198,7 @@ class OfferDisplayData(offer: CatalogOffer, loadImage: Boolean = false) {
 			}
 		}
 		val newDisplayAssetPath = offer.getMeta("NewDisplayAssetPath")
-		if (newDisplayAssetPath != null) {
+		if (loadDAV2 && newDisplayAssetPath != null) {
 			val newDisplayAsset = loadObject<FortShopOfferDisplayData>(newDisplayAssetPath)
 			if (newDisplayAsset != null) {
 				val firstPresentation = newDisplayAsset.Presentations.first().value as? UMaterialInstance

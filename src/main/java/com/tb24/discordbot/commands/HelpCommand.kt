@@ -19,16 +19,14 @@ class HelpCommand : BrigadierCommand("help", "Shows all commands and their infos
 		.executes { c ->
 			val source = c.source
 			source.message.replyPaginated(source.client.commandManager.commandMap.values.filter { it.registeredNode.canUse(source) }.sortedBy { it.name }) { content, page, pageCount ->
-				MessageBuilder(EmbedBuilder()
+				val embed = EmbedBuilder()
 					.setTitle(":mailbox_with_mail: Hey! Want some help?")
 					.setColor(0x408BFA)
 					.setFooter("Page %,d of %,d \u00b7 Powered by Brigadier".format(page + 1, pageCount))
-					.apply {
-						content.forEach {
-							addField(source.prefix + it.name, it.description, true)
-						}
-					}
-				).build()
+				content.forEach {
+					embed.addField(source.prefix + it.name, it.description, true)
+				}
+				MessageBuilder(embed).build()
 			}
 			Command.SINGLE_SUCCESS
 		}

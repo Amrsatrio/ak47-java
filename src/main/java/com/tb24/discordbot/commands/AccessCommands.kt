@@ -8,6 +8,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
 import com.tb24.discordbot.commands.arguments.MentionArgument.Companion.getMention
 import com.tb24.discordbot.commands.arguments.MentionArgument.Companion.mention
+import com.tb24.discordbot.util.Utils
 import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.ChannelType
@@ -42,7 +43,7 @@ class GrantRoledCommand : BrigadierCommand("grantroled", "Grants premium to ever
 		.requires { r.table("admins").get(it.author.id).run(it.client.dbConn).first() != null }
 		.executes { c ->
 			val source = c.source
-			val guild = source.client.discord.getGuildById(648556726672556048L)
+			val guild = source.client.discord.getGuildById(Utils.HOMEBASE_GUILD_ID)
 				?: throw SimpleCommandExceptionType(LiteralMessage("Guild not found.")).create()
 			val membersWithRole = guild.loadMembers().get().filter { m -> m.roles.any { it.name.equals("premium", true) } }
 			val granted = r.table("members").run(source.client.dbConn).toList()
@@ -57,6 +58,9 @@ class GrantRoledCommand : BrigadierCommand("grantroled", "Grants premium to ever
 }
 
 fun premium(source: CommandSourceStack, target: User, remove: Boolean/*, secret: String?*/): Int {
+	if (target.isBot) {
+		throw SimpleCommandExceptionType(LiteralMessage("Only users are allowed as target.")).create()
+	}
 	//val tableName = if (secret != null && secret == MessageDigest.getInstance("SHA-256").digest(secret.toByteArray()).printHexBinary(false)) "admins" else "members"
 	val tableName = "members"
 	if (r.table(tableName).get(target.id).run(source.client.dbConn).first() != null != remove) {
@@ -83,15 +87,14 @@ fun premium(source: CommandSourceStack, target: User, remove: Boolean/*, secret:
 		.setColor(if (remove) BrigadierCommand.COLOR_ERROR else BrigadierCommand.COLOR_SUCCESS)
 		.setTimestamp(Instant.now())
 		.build())
-	source.client.discord.getGuildById(648556726672556048L)?.let { homebaseGuild ->
-		val guildMember = homebaseGuild.getMember(target)
+	source.client.discord.getGuildById(Utils.HOMEBASE_GUILD_ID)?.let { homebaseGuild ->
 		val role = homebaseGuild.getRolesByName("premium", true).firstOrNull()
-		if (guildMember != null && role != null) {
+		if (role != null) {
 			if (remove) {
-				homebaseGuild.removeRoleFromMember(guildMember, role)
+				homebaseGuild.removeRoleFromMember(target.idLong, role).reason("Premium revoke")
 			} else {
-				homebaseGuild.addRoleToMember(guildMember, role)
-			}.complete()
+				homebaseGuild.addRoleToMember(target.idLong, role).reason("Premium grant")
+			}.onErrorMap { null }.complete()
 		}
 	}
 	return Command.SINGLE_SUCCESS

@@ -194,7 +194,7 @@ class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR q
 
 class QuestCommand : BrigadierCommand("quest", "Shows the details of a quest by description.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.then(argument("item", item())
+		.then(argument("item", item(true, "Quest"))
 			.executes {
 				val source = it.source
 				source.ensureSession()

@@ -47,6 +47,15 @@ public class L10N {
 	public static final FText MESSAGE_BOX_DEFAULT_MSG = new FText("", "C4562D2A4C4F7939FBA8A8B2311A257E", "Hope you like this gift. Good luck; have fun!");
 	public static final FText CANT_BE_REFUNDED = new FText("", "2CD2F0D84F6F6F3518D241989F8A2614", "*Note: Gifts cannot be refunded");
 	public static final FText Manager = new FText("FortWorkerType", "Manager", "Lead Survivor");
+	public static final FText E_FILTER_ALL = new FText("", "C3AE82E3441E72074BCD7F87BD9EC1E2", "All Expeditions");
+	public static final FText E_FILTER_ONGOING = new FText("", "F6EC46E74C83A1A70F04FCA58E2C66CE", "In Progress");
+	public static final FText E_FILTER_LAND = new FText("", "0997D44F445155FBA9A2768896ACD63E", "Land");
+	public static final FText E_FILTER_SEA = new FText("", "0CC46FF344057CE022CA0A945330EC78", "Sea");
+	public static final FText E_FILTER_AIR = new FText("", "389A607844AA28B7972408AC66FD23AC", "Air");
+	public static final FText TARGET_SQUAD_POWER = new FText("", "1BBEBD344847B8384FFAB1BBE07CF114", "Target Squad Power:");
+	public static final FText EXPEDITION_DURATION = new FText("", "08F2AE94413785B08D3EC5ACC9E25E41", "Expedition Duration: {A}");
+	public static final FText EXPIRES = new FText("", "7D4C54AF4A7AAC19FFECE3A724C535DA", "Expires: {A}");
+	public static final FText RETURNS = new FText("", "221A64D642AFD10C70D84ABABFDFEF2F", "Returns: {A}");
 	private static final Map<String, String> locData;
 
 	static {

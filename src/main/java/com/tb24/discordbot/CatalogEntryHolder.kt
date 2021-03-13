@@ -2,6 +2,7 @@ package com.tb24.discordbot
 
 import android.util.Log2
 import com.mojang.brigadier.exceptions.CommandSyntaxException
+import com.tb24.discordbot.commands.OfferDisplayData
 import com.tb24.discordbot.util.render
 import com.tb24.discordbot.util.safeGetOneIndexed
 import com.tb24.fn.ProfileManager
@@ -32,16 +33,14 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 		for (i in ce.itemGrants.indices) {
 			val item = ce.itemGrants[i]
 			val defData = item.defData
-			if (defData == null) {
+			val name = if (defData == null) {
 				// item data not found from assets, item is encrypted or new
-				compiledNames.add(fromDevName.getOrNull(i) ?: item.templateId)
-				continue
+				fromDevName.getOrNull(i) ?: item.templateId
+			} else {
+				val displayName = item.displayName ?: item.primaryAssetName
+				if (displayName.isNotEmpty()) displayName else item.templateId
 			}
-			var name = item.displayName ?: item.primaryAssetName
-			if (name.isEmpty()) {
-				name = item.templateId
-			}
-			compiledNames.add(name)
+			compiledNames.add(if (item.quantity != 1) "(x%,d) %s".format(item.quantity, name) else name)
 		}
 		compiledNames
 	}
@@ -161,5 +160,8 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 
 	val catalogOffer by lazy { if (ce.appStoreId.isNotEmpty()) FortCatalogResponse.sCatalogOffersMap[ce.appStoreId[EAppStore.EpicPurchasingService.ordinal]] else null }*/
 
-	val friendlyName by lazy { "${ce.title ?: compiledNames.joinToString(", ")} [${(if (ce.offerType == ECatalogOfferType.DynamicBundle) listOf(price) else ce.prices).joinToString(" | ") { it.render() }}]" }
+	val friendlyName by lazy {
+		val displayData = OfferDisplayData(ce, loadDAV2 = false)
+		"${displayData.title ?: compiledNames.joinToString(", ")} [${(if (ce.offerType == ECatalogOfferType.DynamicBundle) listOf(price) else ce.prices).joinToString(" | ") { it.render() }}]"
+	}
 }

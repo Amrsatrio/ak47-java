@@ -208,7 +208,7 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 			if (poiName.isNullOrEmpty()) {
 				poiName = tag
 			}
-			sb.append(if (collectedProps != null && collectedProps.contextTags.any { it == tag }) {
+			sb.append(if (collectedProps != null && tag in collectedProps.contextTags) {
 				++visited
 				"`☑` ~~$poiName~~"
 			} else {

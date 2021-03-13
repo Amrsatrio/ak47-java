@@ -26,7 +26,8 @@ import java.util.*
 class HomebaseManager(val accountId: String, api: EpicApi) {
 	@JvmField val squads = LinkedHashMap<String, Squad>(squadsDataTable.rows.size).apply {
 		for ((k, v) in squadsDataTable.rows) {
-			put(k.text.toLowerCase(Locale.ROOT), Squad(v.mapToClass()))
+			val squadId = k.text.toLowerCase(Locale.ROOT)
+			put(squadId, Squad(squadId, v.mapToClass()))
 		}
 	}
 	@JvmField val bonuses = mutableMapOf<EFortStatType, Int>()
@@ -88,7 +89,7 @@ class HomebaseManager(val accountId: String, api: EpicApi) {
 		return powerPointToRatingConversion?.eval(calculatedFortPoints * fortAttributeToPowerMultiplier) ?: 0f
 	}
 
-	inner class Squad(@JvmField val backing: HomebaseSquad) {
+	class Squad(@JvmField val squadId: String, @JvmField val backing: HomebaseSquad) {
 		@JvmField val slots = Array(backing.CrewSlots.size) { SquadSlot(backing.CrewSlots[it], it) }
 		@JvmField val bonuses = mutableMapOf<EFortStatType, Int>()
 		val leadSlot by lazy { getSlotsByType(ESquadSlotType.SurvivorSquadLeadSurvivor).firstOrNull() }
@@ -100,7 +101,7 @@ class HomebaseManager(val accountId: String, api: EpicApi) {
 
 		fun getSlotsByType(type: ESquadSlotType) = slots.filter { it.backing.SlotType == type }
 
-		fun computeBonuses(parentBonuses: MutableMap<EFortStatType, Int>) {
+		fun computeBonuses(totalBonuses: MutableMap<EFortStatType, Int>?) {
 			if (backing.SquadType != EFortHomebaseSquadType.AttributeSquad) {
 				return
 			}
@@ -121,53 +122,55 @@ class HomebaseManager(val accountId: String, api: EpicApi) {
 				mismatchingPersonalityPenalty = 0
 			}
 			bonuses.clear()
-			for (slot in slots) {
-				slot.bonuses.clear()
-				val slotItem = slot.item
-				if (slotItem == null) {
-					slot.personality = null
-					slot.setBonus = null
-					slot.personalityMatch = false
-					continue
-				}
-				slot.personality = slotItem.attributes.getString("personality")
-				if (slot.backing.SlotType == ESquadSlotType.SurvivorSquadSurvivor) {
-					slot.setBonus = slotItem.attributes.getString("set_bonus")
-					slot.personalityMatch = managerPersonality != null && slot.personality == managerPersonality
-				} else {
-					slot.setBonus = null
-					slot.personalityMatch = false
-				}
-				var powerLevel = slotItem.powerLevel
-				if (slot.backing.SlotType == ESquadSlotType.SurvivorSquadSurvivor && managerPersonality != null) {
-					powerLevel += if (slot.personalityMatch) {
-						matchingPersonalityBonus
-					} else {
-						mismatchingPersonalityPenalty
-					}
-				} else if (slot.backing.SlotType == ESquadSlotType.SurvivorSquadLeadSurvivor && managerMatch) {
-					powerLevel *= 2f
-				}
-				for (slottingBonus in slot.backing.SlottingBonuses) {
-					val statType = EFortStatType.from(slottingBonus.AttributeGranted.AttributeName)
-					val statBonus = slottingBonus.BonusCurve.eval(powerLevel).toInt()
-					slot.bonuses[statType] = statBonus
-					Utils.sumKV(bonuses, statType, statBonus)
-					Utils.sumKV(parentBonuses, statType, statBonus)
-				}
-			}
+			slots.forEach { it.computeBonuses(this, totalBonuses) }
 		}
 
 		fun getStatBonus(stat: EFortStatType) = bonuses[stat] ?: 0
 	}
 
-	inner class SquadSlot(@JvmField val backing: HomebaseSquadSlot, @JvmField val index: Int) {
+	class SquadSlot(@JvmField val backing: HomebaseSquadSlot, @JvmField val index: Int) {
 		@JvmField var item: FortItemStack? = null
 		@JvmField var unlocked = false
 		@JvmField val bonuses = mutableMapOf<EFortStatType, Int>()
 		@JvmField var personality: String? = null
 		@JvmField var setBonus: String? = null
 		@JvmField var personalityMatch = false
+
+		fun computeBonuses(squad: Squad, totalBonuses: MutableMap<EFortStatType, Int>?) {
+			bonuses.clear()
+			val slotItem = item
+			if (slotItem == null) {
+				personality = null
+				setBonus = null
+				personalityMatch = false
+				return
+			}
+			personality = slotItem.attributes.getString("personality")
+			if (backing.SlotType == ESquadSlotType.SurvivorSquadSurvivor) {
+				setBonus = slotItem.attributes.getString("set_bonus")
+				personalityMatch = squad.managerPersonality != null && personality == squad.managerPersonality
+			} else {
+				setBonus = null
+				personalityMatch = false
+			}
+			var powerLevel = slotItem.powerLevel
+			if (backing.SlotType == ESquadSlotType.SurvivorSquadSurvivor && squad.managerPersonality != null) {
+				powerLevel += if (personalityMatch) {
+					squad.matchingPersonalityBonus
+				} else {
+					squad.mismatchingPersonalityPenalty
+				}
+			} else if (backing.SlotType == ESquadSlotType.SurvivorSquadLeadSurvivor && squad.managerMatch) {
+				powerLevel *= 2f
+			}
+			for (slottingBonus in backing.SlottingBonuses) {
+				val statType = EFortStatType.from(slottingBonus.AttributeGranted.AttributeName)
+				val statBonus = slottingBonus.BonusCurve.eval(powerLevel).toInt()
+				bonuses[statType] = statBonus
+				Utils.sumKV(squad.bonuses, statType, statBonus)
+				if (totalBonuses != null) Utils.sumKV(totalBonuses, statType, statBonus)
+			}
+		}
 
 		fun getTotalBonus() = bonuses.values.sum()
 	}

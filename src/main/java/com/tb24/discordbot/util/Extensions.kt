@@ -53,7 +53,7 @@ val EMOJI_GUILDS = arrayOf(
 	805121146214940682L, // add ur emoji idc 2
 	805122305701314570L, // add ur emoji idc 3
 	677515124373979155L, // Epic Server Version Status
-	648556726672556048L, // AK Facility
+	Utils.HOMEBASE_GUILD_ID, // AK Facility
 	612383214962606081L, // AS Development
 )
 
