@@ -61,6 +61,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(DeleteSavedLoginCommand())
 		register(DeviceAuthCommand())
 		register(DumpAssetCommand())
+		register(DumpClassCommand())
 		register(DumpItemNamesCommand())
 		register(EmbedCommand())
 		register(EvalCommand())

@@ -9,9 +9,11 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.uasset.AssetManager
 import com.tb24.uasset.JWPSerializer
+import com.tb24.uasset.dumpToCpp
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.converters.createContainer
 import me.fungames.jfortniteparse.fort.exports.FortItemDefinition
+import me.fungames.jfortniteparse.ue4.assets.exports.UClassReal
 import me.fungames.jfortniteparse.ue4.assets.exports.USoundWave
 import me.fungames.jfortniteparse.ue4.assets.exports.UStaticMesh
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
@@ -87,6 +89,27 @@ class ExportObjectCommand : BrigadierCommand("export", "Export an object from th
 				}
 				c.source.channel.sendMessage("`${obj.exportType}'${obj.getPathName(null)}'`").addFile(data, fileName).complete()
 				c.source.loadingMsg?.delete()?.complete()
+				Command.SINGLE_SUCCESS
+			}
+		)
+}
+
+class DumpClassCommand : BrigadierCommand("dumpclass", "Class dump.") {
+	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.requires { it.author.idLong in arrayOf(624299014388711455L, 299693897859465228L, 129267551673909249L, 476930709227962389L) }
+		.then(argument("path", greedyString())
+			.executes { c ->
+				var path = getString(c, "path")
+				if (!path.contains('.')) {
+					path += ".${path.substringAfterLast('/')}_C"
+				}
+				val obj = runCatching { loadObject(path) }
+					.getOrElse { throw SimpleCommandExceptionType(LiteralMessage("Failed to load object.\n```$it```")).create() }
+					?: throw SimpleCommandExceptionType(LiteralMessage("Object not found. Possibly the package on the given path is not a class.")).create()
+				val theClass = obj as? UClassReal
+					?: throw SimpleCommandExceptionType(LiteralMessage("Not a class")).create()
+				val dumped = theClass.dumpToCpp()
+				c.source.channel.sendFile(dumped.toByteArray(), "${theClass.name}.h").complete()
 				Command.SINGLE_SUCCESS
 			}
 		)

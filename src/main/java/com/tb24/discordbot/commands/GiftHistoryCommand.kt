@@ -63,11 +63,11 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 	private fun summary(data: Map<String, Date>, localUserMap: MutableMap<String, GameProfile>, commandHint: String, limit: Int = 10): String {
 		val lines = mutableListOf<String>()
 		for ((i, o) in data.entries.sortedByDescending { it.value }.withIndex()) {
-			lines.add(renderUserDate(o, localUserMap))
-			if (i >= limit - 1) {
+			if (i >= limit) {
 				lines.add("... ${Formatters.num.format(data.size - limit)} more, `$commandHint` to show more")
 				break
 			}
+			lines.add(renderUserDate(o, localUserMap))
 		}
 		return lines.joinToString("\n")
 	}
