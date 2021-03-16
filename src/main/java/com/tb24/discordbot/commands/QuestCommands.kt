@@ -320,7 +320,7 @@ fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: Str
 }
 
 fun getQuestCompletion(item: FortItemStack): Pair<Int, Int> {
-	val quest = item.defData as FortQuestItemDefinition
+	val quest = item.defData as? FortQuestItemDefinition ?: return 0 to 0
 	var completion = 0
 	var max = 0
 	for (objective in quest.Objectives) {
@@ -333,7 +333,7 @@ fun getQuestCompletion(item: FortItemStack): Pair<Int, Int> {
 	if (quest.ObjectiveCompletionCount != null) {
 		max = quest.ObjectiveCompletionCount
 	}
-	return Pair(completion, max)
+	return completion to max
 }
 
 fun main() {
