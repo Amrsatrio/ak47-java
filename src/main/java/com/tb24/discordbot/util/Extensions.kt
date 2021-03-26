@@ -215,17 +215,17 @@ fun FortItemQuantityPair.render(fac: Float, conditionalCondition: Boolean) =
 fun Map<FName, FortQuestRewardTableRow>.render(prefix: String, orPrefix: String, fac: Float, bold: Boolean, conditionalCondition: Boolean): List<String> {
 	val fmt = if (bold) "**" else ""
 	val lines = mutableListOf<String>()
-	var lastEntry: FortQuestRewardTableRow? = null
+	var lastIsSelectable = false
 	toSortedMap { o1, o2 ->
 		val priority1 = o1.text.substringAfterLast('_', "0").toInt()
 		val priority2 = o2.text.substringAfterLast('_', "0").toInt()
 		priority1 - priority2
 	}.forEach {
 		lines.add("$prefix$fmt${it.value.asItemStack().apply { setConditionForConditionalItem(conditionalCondition) }.renderWithIcon((it.value.Quantity * fac).toInt())}$fmt")
-		if (lastEntry != null && lastEntry!!.Selectable && it.value.Selectable) {
+		if (lastIsSelectable && it.value.Selectable) {
 			lines.add("$orPrefix- OR -")
 		}
-		lastEntry = it.value
+		lastIsSelectable = it.value.Selectable
 	}
 	return lines
 }
@@ -342,5 +342,5 @@ object ResourcesContext {
 	val burbankBigRegularBlack by lazy { fromPaks("FortniteGame/Content/UI/Foundation/Fonts/BurbankBigRegular-Black.ufont") }
 	val burbankBigCondensedBlack by lazy { fromPaks("FortniteGame/Content/UI/Foundation/Fonts/BurbankBigCondensed-Black.ufont") }
 
-	private fun fromPaks(path: String) = Font.createFont(Font.TRUETYPE_FONT, ByteArrayInputStream(AssetManager.INSTANCE.provider.saveGameFile(path)))
+	private fun fromPaks(path: String) = Font.createFont(Font.TRUETYPE_FONT, ByteArrayInputStream(AssetManager.INSTANCE.saveGameFile(path)))
 }

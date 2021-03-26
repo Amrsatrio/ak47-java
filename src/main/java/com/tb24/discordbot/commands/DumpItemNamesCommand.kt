@@ -15,12 +15,12 @@ import me.fungames.jfortniteparse.fort.exports.FortSchematicItemDefinition
 
 class DumpItemNamesCommand : BrigadierCommand("dumpitemnames", "Gives you a JSON file of a map of template ID to their display names.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires { AssetManager.INSTANCE.provider.assetManager.templateIdToObjectPathMap.isNotEmpty() && Rune.isBotDev(it) }
+		.requires { AssetManager.INSTANCE.assetRegistry.templateIdToObjectPathMap.isNotEmpty() && Rune.isBotDev(it) }
 		.executes {
 			val source = it.source
 			source.loading("Loading objects")
 			val map = sortedMapOf<String, String>()
-			for ((templateId, objectPath) in AssetManager.INSTANCE.provider.assetManager.templateIdToObjectPathMap) {
+			for ((templateId, objectPath) in AssetManager.INSTANCE.assetRegistry.templateIdToObjectPathMap) {
 				val obj = loadObject(objectPath)
 				val dn = when (obj) {
 					is FortAlterationItemDefinition -> obj.Description

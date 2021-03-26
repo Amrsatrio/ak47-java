@@ -11,6 +11,7 @@ class GrantFortniteAccessCommand : BrigadierCommand("fortniteaccess", "Checks yo
 			val source = it.source
 			source.ensureSession()
 			source.api.fortniteService.requestAccess(source.api.currentLoggedIn.id).exec()
+			source.complete("✅ You now have access to Fortnite services")
 			Command.SINGLE_SUCCESS
 		}
 }

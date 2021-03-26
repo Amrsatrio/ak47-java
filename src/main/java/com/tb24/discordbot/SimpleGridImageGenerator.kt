@@ -41,7 +41,7 @@ fun createAttachmentOfIcons(slots: List<GridSlot>, type: String, scale: Float = 
 				ctx.drawImage(ImageIO.read(File("canvas/${slot.rarity.name.toLowerCase()}.png")), x, y, tileSize, tileSize, null)
 			}
 
-			if (slot.name != null) {
+			if (!slot.name.isNullOrEmpty()) {
 				val text = if (type == "shop") "(${(slot.index ?: i) + 1}) ${slot.name}" else slot.name
 				val textDimen = TextLayout(text, ctx.font, ctx.fontRenderContext)
 				val shape = textDimen.getOutline(null)

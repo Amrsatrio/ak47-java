@@ -29,6 +29,7 @@ import me.fungames.jfortniteparse.fort.exports.AthenaDailyQuestDefinition
 import me.fungames.jfortniteparse.fort.exports.FortChallengeBundleItemDefinition
 import me.fungames.jfortniteparse.fort.exports.FortQuestItemDefinition
 import me.fungames.jfortniteparse.fort.exports.FortQuestItemDefinition.EFortQuestType
+import me.fungames.jfortniteparse.fort.exports.FortTandemCharacterData
 import me.fungames.jfortniteparse.fort.objects.rows.FortQuestRewardTableRow
 import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
 import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
@@ -60,22 +61,23 @@ class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manage
 			val athena = source.api.profileManager.getProfileData("athena")
 			val numRerolls = (athena.stats.attributes as IQuestManager).questManager?.dailyQuestRerolls ?: 0
 			var description = getAthenaDailyQuests(athena)
-				.joinToString("\n") { renderChallenge(it, "• ", "\u00a0\u00a0\u00a0", true) }
+				.mapIndexed { i, it -> renderChallenge(it, "${i + 1}. ", "\u00a0\u00a0\u00a0", isAthenaDaily = true) }
+				.joinToString("\n")
 			if (description.isEmpty()) {
-				description = "You have no quick challenges"
+				description = "You have no daily challenges"
 			} else if (numRerolls > 0) {
 				description += "\n\n" + "You have %,d reroll(s) remaining today.\nUse `%s%s replace <%s>` to replace one."
-					.format(numRerolls, source.prefix, c.commandName, "quick challenge #")
+					.format(numRerolls, source.prefix, c.commandName, "daily challenge #")
 			}
 			source.complete(null, source.createEmbed()
-				.setTitle("Quick Challenges")
+				.setTitle("Daily Challenges")
 				.setDescription(description)
 				.build())
 			Command.SINGLE_SUCCESS
 		}
 		.then(literal("replace")
-			.then(argument("quick challenge #", integer())
-				.executes { replaceQuest(it.source, "athena", getInteger(it, "quick challenge #"), ::getAthenaDailyQuests) }
+			.then(argument("daily challenge #", integer())
+				.executes { replaceQuest(it.source, "athena", getInteger(it, "daily challenge #"), ::getAthenaDailyQuests) }
 			)
 		)
 
@@ -162,12 +164,30 @@ class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR q
 			entries.add(item)
 		}
 		if (entries.isNotEmpty()) {
-			entries.sortByDescending { it.rarity }
+			entries.sortWith { a, b ->
+				val rarity1 = a.rarity
+				val rarity2 = b.rarity
+				val rarityCmp = rarity2.compareTo(rarity1)
+				if (rarityCmp != 0) {
+					rarityCmp
+				} else {
+					val tandem1 = (a.defData as? FortQuestItemDefinition)?.TandemCharacterData?.load<FortTandemCharacterData>()?.DisplayName?.format() ?: ""
+					val tandem2 = (b.defData as? FortQuestItemDefinition)?.TandemCharacterData?.load<FortTandemCharacterData>()?.DisplayName?.format() ?: ""
+					val tandemCmp = tandem1.compareTo(tandem2, true)
+					if (tandemCmp != 0) {
+						tandemCmp
+					} else { // custom, game does not sort by challenge bundle
+						val challengeBundleId1 = a.attributes["challenge_bundle_id"]?.asString ?: ""
+						val challengeBundleId2 = b.attributes["challenge_bundle_id"]?.asString ?: ""
+						challengeBundleId1.compareTo(challengeBundleId2, true)
+					}
+				}
+			}
 			source.message.replyPaginated(entries, 15, source.loadingMsg) { content, page, pageCount ->
 				val entriesStart = page * 15 + 1
 				val entriesEnd = entriesStart + content.size
 				val value = content.joinToString("\n") {
-					renderChallenge(it, "• ", "\u00a0\u00a0\u00a0")
+					renderChallenge(it, "• ", "\u00a0\u00a0\u00a0", showRarity = true)
 				}
 				val embed = source.createEmbed()
 					.setTitle("Battle Royale Quests" + if (tab != null) " / " + tab.DisplayName.format() else "")
@@ -186,7 +206,7 @@ class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR q
 	}
 
 	private fun getTabs(): List<RewardCategoryTabData> {
-		val d = AssetManager.INSTANCE.provider.loadGameFile("/Game/Athena/HUD/Minimap/AthenaMapGamePanel_BP")?.exportsLazy?.get(7)?.value
+		val d = AssetManager.INSTANCE.loadGameFile("/Game/Athena/HUD/Minimap/AthenaMapGamePanel_BP")?.exportsLazy?.get(7)?.value
 			?: throw SimpleCommandExceptionType(LiteralMessage("Object defining categories not found.")).create()
 		return d.getProp<List<RewardCategoryTabData>>("RewardTabsData", TypeToken.getParameterized(List::class.java, RewardCategoryTabData::class.java).type)!!
 	}
@@ -283,7 +303,7 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 	source.api.profileManager.dispatchClientCommandRequest(FortRerollDailyQuest().apply { questId = questToReplace.itemId }, profileId).await()
 	profile = source.api.profileManager.getProfileData(profileId)
 	source.complete(null, source.createEmbed()
-		.setTitle("✅ Replaced a daily quest")
+		.setTitle("✅ Replaced")
 		.setDescription("Here's your daily quests now:")
 		.addField("Daily Quests", questsGetter(profile)
 			.mapIndexed { i, it -> renderChallenge(it, "${i + 1}. ", "\u00a0\u00a0\u00a0", conditionalCondition = canReceiveMtxCurrency) }
@@ -293,16 +313,25 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 	return Command.SINGLE_SUCCESS
 }
 
-fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: String = "", canBold: Boolean = false, conditionalCondition: Boolean = false): String {
+fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: String = "", isAthenaDaily: Boolean = false, showRarity: Boolean = isAthenaDaily, conditionalCondition: Boolean = false): String {
 	val (completion, max) = getQuestCompletion(item)
 	val xpRewardScalar = item.attributes["xp_reward_scalar"]?.asFloat ?: 1f
 	var dn = item.displayName
 	if (dn.isEmpty()) {
 		dn = item.templateId
 	}
-	val sb = StringBuilder("%s**%s** ( %,d / %,d )".format(prefix, dn, completion, max))
+	val rarity = if (showRarity) {
+		var rarity = item.rarity
+		item.attributes["quest_rarity"]?.asString?.let { overrideRarity ->
+			EFortRarity.values().firstOrNull { it.name.equals(overrideRarity, true) }?.let {
+				rarity = it
+			}
+		}
+		"[${rarity.rarityName.format()}] "
+	} else ""
+	val sb = StringBuilder("%s%s**%s** [%,d/%,d]".format(prefix, rarity, dn, completion, max))
 	val quest = item.defData as FortQuestItemDefinition
-	val bold = canBold && xpRewardScalar == 1f
+	val bold = isAthenaDaily && xpRewardScalar == 1f
 	quest.Rewards?.forEach { reward ->
 		if (reward.ItemPrimaryAssetId.PrimaryAssetType.Name.text != "Quest") {
 			sb.append('\n')

@@ -24,6 +24,7 @@ import com.tb24.fn.model.mcpprofile.item.CollectionAttributes.*
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
 import com.tb24.uasset.AssetManager.INSTANCE
+import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.exports.*
 import me.fungames.jfortniteparse.ue4.assets.exports.UWorld
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
@@ -46,8 +47,8 @@ import java.io.File
 import java.util.concurrent.CompletableFuture
 import kotlin.system.exitProcess
 
-private val defaultGameDataBR by lazy { INSTANCE.provider.loadObject<GameDataBR>("/Game/Balance/DefaultGameDataBR.DefaultGameDataBR") }
-private val questIndicatorData by lazy { INSTANCE.provider.loadObject<FortQuestIndicatorData>("/Game/Quests/QuestIndicatorData.QuestIndicatorData") }
+private val defaultGameDataBR by lazy { loadObject<GameDataBR>("/Game/Balance/DefaultGameDataBR.DefaultGameDataBR") }
+private val questIndicatorData by lazy { loadObject<FortQuestIndicatorData>("/Game/Quests/QuestIndicatorData.QuestIndicatorData") }
 private val locationTagToDisplayName by lazy {
 	val map = hashMapOf<String, FText>()
 	questIndicatorData?.apply {
@@ -55,7 +56,7 @@ private val locationTagToDisplayName by lazy {
 	}
 	map
 }
-private val seasonNum = 15
+private val seasonNum = 16
 
 class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Shows your character collection.", arrayOf("characters", "npcs")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -328,18 +329,22 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 
 fun main() {
 	INSTANCE.loadPaks()
-	val tandems = INSTANCE.provider.loadObject<FortCollectionDataCharacter>("/BattlepassS15/SeasonData/CollectionDataCharacter")!!.Entries.map { (it.value as FortCollectionDataEntryCharacter).CharacterData.load<FortTandemCharacterData>()!! }
-	val world = INSTANCE.provider.loadObject<UWorld>("/BattlepassS15/Maps/Apollo_Terrain_LevelOverlay_Islanders")!!
-	val persistentLevel = world.persistentLevel!!.value
+	val tandems = loadObject<FortCollectionDataCharacter>("/BattlepassS16/SeasonData/CollectionDataCharacter")!!.Entries.map { (it.value as FortCollectionDataEntryCharacter).CharacterData.load<FortTandemCharacterData>()!! }
+	val actors = arrayOf(
+		"/NPCLibrary/LevelOverlays/Apollo_Terrain_NPCLibrary_Overlay",
+		"/NPCLibrary/LevelOverlays/Apollo_Terrain_NPCLibraryBoss_Overlay",
+		"/NPCLibrary/LevelOverlays/Apollo_Terrain_NPCLibrary_Overlay"
+	).flatMap {
+		val world = loadObject<UWorld>(it)!!
+		val persistentLevel = world.persistentLevel!!.value
+		persistentLevel.actors.toList()
+	}
 	val map = MapImageGenerator()
 	val f = Font.createFont(Font.TRUETYPE_FONT, File("C:\\Users\\satri\\AppData\\Local\\Microsoft\\Windows\\Fonts\\zh-cn.ttf")).deriveFont(26f)
 	val noTagsPatrolPaths = mutableMapOf<String, FortAthenaPatrolPath>()
 	val patrolPathsWithTagsFromOtherObject = mutableMapOf<String, FortAthenaPatrolPath>()
-	for (actorLazy in persistentLevel.actors) {
-		if (actorLazy == null) {
-			continue
-		}
-		val actor = actorLazy.value
+	for (actorLazy in actors) {
+		val actor = actorLazy?.value ?: continue
 		if (actor is FortAthenaPatrolPath) {
 			if (actor.GameplayTags != null) {
 				addPatrolPath(actor, actor.GameplayTags, map, tandems, f)
@@ -354,9 +359,9 @@ fun main() {
 				val value = it.getTagTypeValueLegacy() as FPackageIndex
 				val calendarPointProvider = value.load<FortAthenaPatrolPathPointProvider>()!!
 				if (calendarPointProvider.FiltersTags != null) {
-					val actor = calendarPointProvider.AssociatedPatrolPath.value
-					addPatrolPath(actor, calendarPointProvider.FiltersTags, map, tandems, f)
-					patrolPathsWithTagsFromOtherObject[actor.name] = actor
+					val associatedPath = calendarPointProvider.AssociatedPatrolPath.value
+					addPatrolPath(associatedPath, calendarPointProvider.FiltersTags, map, tandems, f)
+					patrolPathsWithTagsFromOtherObject[associatedPath.name] = associatedPath
 				}
 			}
 		}
@@ -366,7 +371,7 @@ fun main() {
 			addPatrolPath(it, null, map, tandems, f)
 		}
 	}
-	File("test_npc_map.png").writeBytes(map.draw().toPngArray())
+	File("npc_map_16.00.png").writeBytes(map.draw().toPngArray())
 	exitProcess(0)
 }
 
@@ -378,7 +383,8 @@ private fun addPatrolPath(patrolPath: FortAthenaPatrolPath, tags: FGameplayTagCo
 		}
 	}
 	val bounds = FBox()
-	for ((i, patrolPoint) in patrolPath.PatrolPoints.map { it.value }.withIndex()) {
+	for ((i, patrolPoint_) in patrolPath.PatrolPoints.withIndex()) {
+		val patrolPoint = patrolPoint_?.value ?: continue
 		val sceneComp = patrolPoint.RootComponent.value
 		val rl = sceneComp.RelativeLocation
 		path.ops.add(MapPath.Op(if (i == 0) EPathOp.Move else EPathOp.Line, FVector2D(rl.x, rl.y)))
@@ -388,7 +394,7 @@ private fun addPatrolPath(patrolPath: FortAthenaPatrolPath, tags: FGameplayTagCo
 	val center3d = bounds.getCenter()
 	val center = FVector2D(bounds.max.x/*center3d.x*/, center3d.y)
 	val tandem = tags?.let { spawnerTagsToTandem(it, tandems) }
-	val text = tandem?.DisplayName.format() ?: patrolPath.name.replace("FortAthenaPatrolPath_Tandem_", "")
+	val text = tandem?.DisplayName.format() ?: patrolPath.name.replace("FortAthenaPatrolPath_", "")
 	val pic = tandem?.ToastIcon?.load<UTexture2D>()
 	map.markers.add(MapMarker(center) { ctx, mx, my ->
 		ctx.font = f

@@ -19,6 +19,7 @@ import com.tb24.discordbot.util.CollectorException
 import com.tb24.discordbot.util.Utils
 import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.entities.ChannelType
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
@@ -97,6 +98,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(QuestCommand())
 		register(ReceiptsCommand())
 		register(RedeemCodeCommand())
+		register(RedeemPurchasesCommand())
 		register(ResearchCommand())
 		register(ResourcesCommand())
 		register(RevokeCommand())
@@ -105,6 +107,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(ShopCommand())
 		register(ShopDumpCommand())
 		register(ShopTextCommand())
+		register(SkipIntroCommand())
 		register(StatsPrivacyCommand())
 		register(UndoCommand())
 		register(WorkersCommand())
@@ -157,7 +160,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				try {
 					dispatcher.execute(parseResults)
 				} catch (e: CollectorException) {
-					if (e.reason == CollectorEndReason.TIME) {
+					if (e.reason == CollectorEndReason.TIME && source.isFromType(ChannelType.PRIVATE)) {
 						throw SimpleCommandExceptionType(LiteralMessage("Timed out while waiting for your response.")).create()
 					}
 				}

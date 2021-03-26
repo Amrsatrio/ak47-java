@@ -34,7 +34,7 @@ class KeychainTask(val client: DiscordBot) : Runnable {
 		val guid = FGuid(split[0])
 		val key = Base64.getDecoder().decode(split[1])
 		val itemName = split.getOrNull(2)
-		val provider = AssetManager.INSTANCE.provider
+		val provider = AssetManager.INSTANCE
 		val requiredKeys = provider.requiredKeys()
 		if (requiredKeys.contains(guid)) {
 			val mounted = provider.submitKey(guid, key)

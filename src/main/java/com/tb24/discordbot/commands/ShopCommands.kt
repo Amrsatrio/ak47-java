@@ -187,13 +187,14 @@ class OfferDisplayData {
 			if (subtitle == null) subtitle = L10N.TOTAL_BUNDLE_ITEMS.format()?.replace("{total bundle items}", Formatters.num.format(offer.dynamicBundleInfo.bundleItems.size))
 		}
 		firstGrant?.also { item ->
+			val defData = item.defData
 			val softPath = item.getPreviewImagePath(true)
 			if (loadImage) image = softPath?.load<UTexture2D>()?.toBufferedImage()
 			imagePath = softPath.toString()
 			if (title == null) title = item.displayName
-			if (subtitle == null) subtitle = item.defData.ShortDescription?.format()
+			if (subtitle == null) subtitle = defData?.ShortDescription?.format()
 			palette = rarityData.forRarity(item.rarity)
-			item.defData.Series?.value?.also {
+			defData?.Series?.value?.also {
 				palette = it.Colors
 			}
 		}

@@ -19,7 +19,7 @@ import java.io.File
 import java.util.*
 
 fun main(args: Array<String>) {
-	if (AssetManager.INSTANCE.provider.mountedPaks().isEmpty()) {
+	if (AssetManager.INSTANCE.mountedPaks().isEmpty()) {
 		AssetManager.INSTANCE.loadPaks()
 	}
 	val app = ignite()
