@@ -137,8 +137,11 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 		for (row in table) {
 			val eventTag = row.EventTag
 			if (cachedActiveEvents.getOrPut(eventTag) {
-					activeEvent.element = clientEventsState.getEvent(eventTag)
-					activeEvent.element?.isActive == true
+					val event = clientEventsState.getEvent(eventTag)
+					if (event?.isActive == true) {
+						activeEvent.element = event
+						true
+					} else false
 				}) {
 				levels.add(row)
 			}
