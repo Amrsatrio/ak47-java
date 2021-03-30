@@ -27,7 +27,7 @@ class StormShieldCommand : BrigadierCommand("ssd", "Shows info about your storm 
 					"twine", "twinepeaks" -> "Outpost:outpostcore_pve_04"
 					else -> throw SimpleCommandExceptionType(LiteralMessage("Valid zones are: stonewood, plankerton, canny, twine")).create()
 				}
-				source.loading("Getting storm shield status")
+				source.loading("Loading storm shield")
 				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "metadata").await()
 				val metadata = source.api.profileManager.getProfileData("metadata")
 				val outpostItem = metadata.items.values.firstOrNull { it.templateId == lookupTemplateId }

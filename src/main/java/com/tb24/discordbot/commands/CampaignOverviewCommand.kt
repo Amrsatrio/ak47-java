@@ -4,11 +4,13 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
-import com.tb24.discordbot.util.Utils
-import com.tb24.discordbot.util.textureEmote
+import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.attributes.CampaignProfileAttributes
+import com.tb24.fn.model.mcpprofile.attributes.CommonPublicProfileAttributes
+import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.commands.QueryPublicProfile
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
 import me.fungames.jfortniteparse.fort.enums.EFortStatType.*
@@ -22,6 +24,12 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 		val source = c.source
 		source.ensureCompletedCampaignTutorial(campaign)
 		val attrs = campaign.stats.attributes as CampaignProfileAttributes
+		if (source.api.currentLoggedIn.id == campaign.owner.id) {
+			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "common_public").await()
+		} else {
+			source.api.profileManager.dispatchPublicCommandRequest(campaign.owner, QueryPublicProfile(), "common_public").await()
+		}
+		val homebaseName = (source.api.profileManager.getProfileData(campaign.owner.id, "common_public").stats.attributes as CommonPublicProfileAttributes).homebase_name
 		val quests = arrayOf(
 			"Quest:achievement_destroygnomes",
 			"Quest:achievement_savesurvivors",
@@ -43,7 +51,7 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 		}
 		val embed = source.createEmbed(campaign.owner)
 			.setDescription("**Commander Level:** %,d\n**Days Logged in:** %,d\n**Homebase Name:** %s"
-				.format(attrs.level, attrs.daily_rewards?.totalDaysLoggedIn ?: 0, "[PH] TODO"))
+				.format(attrs.level, attrs.daily_rewards?.totalDaysLoggedIn ?: 0, homebaseName))
 		embed.addField("Achievements", quests.joinToString("\n") { questTemplateId ->
 			val questItem = campaign.items.values.firstOrNull { it.templateId == questTemplateId }
 				?: FortItemStack(questTemplateId, 1)
