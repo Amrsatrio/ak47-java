@@ -13,7 +13,7 @@ import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.model.mcpprofile.notifications.DailyRewardsNotification
 import com.tb24.fn.util.Formatters
 
-class DailyRewardsCommand : BrigadierCommand("dailyrewards", "Claims the STW daily reward.", arrayOf("daily", "claimdaily")) {
+class DailyRewardsCommand : BrigadierCommand("dailyrewards", "Claims the STW daily reward.", arrayOf("daily", "claimdaily", "d")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { c ->
 			val source = c.source

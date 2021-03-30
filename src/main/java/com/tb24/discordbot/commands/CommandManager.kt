@@ -109,6 +109,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(ShopTextCommand())
 		register(SkipIntroCommand())
 		register(StatsPrivacyCommand())
+		register(StormShieldCommand())
 		register(UndoCommand())
 		register(WorkersCommand())
 		register(XpCoinsCommand())

@@ -37,6 +37,9 @@ class EmbedCommand : BrigadierCommand("embed", "Shiver me embeds!") {
 		val args = titleDescription.split('\n').toMutableList()
 		val title = args.removeFirst()
 		val description = args.joinToString("\n")
+		if (title.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("Title must not be empty.")).create()
+		}
 		val embed = EmbedBuilder().setTitle(title).setDescription(description).setColor(15767080)
 		var content = ""
 		val bMsg = source.channel.sendMessage("React with ➕ to add fields, 🗨 to add a message, or 📩 to send. *Preview:*\n$content").embed(embed.build()).allowedMentions(setOf()).complete()

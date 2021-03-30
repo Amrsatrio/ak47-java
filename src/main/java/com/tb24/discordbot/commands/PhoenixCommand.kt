@@ -136,7 +136,10 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 		val levels = mutableListOf<FortPhoenixLevelRewardData>()
 		for (row in table) {
 			val eventTag = row.EventTag
-			if (cachedActiveEvents.getOrPut(eventTag) { clientEventsState.isEventActive(eventTag, activeEvent) }) {
+			if (cachedActiveEvents.getOrPut(eventTag) {
+					activeEvent.element = clientEventsState.getEvent(eventTag)
+					activeEvent.element?.isActive == true
+				}) {
 				levels.add(row)
 			}
 		}

@@ -15,7 +15,7 @@ import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.campaign.StartExpedition
-import com.tb24.fn.model.mcpprofile.item.ExpeditionAttributes
+import com.tb24.fn.model.mcpprofile.item.FortExpeditionItem
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.asItemStack
 import com.tb24.fn.util.format
@@ -71,8 +71,8 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 		val seaAvailable = 2
 		val airAvailable = 2
 		val totalAvailable = landAvailable + seaAvailable + airAvailable
-		val ongoingExpeditions = campaign.items.values.filter { it.primaryAssetType == "Expedition" && it.getAttributes(ExpeditionAttributes::class.java).expedition_start_time != null }
-		val completedExpeditions = ongoingExpeditions.filter { System.currentTimeMillis() >= it.getAttributes(ExpeditionAttributes::class.java).expedition_end_time.time }
+		val ongoingExpeditions = campaign.items.values.filter { it.primaryAssetType == "Expedition" && it.getAttributes(FortExpeditionItem::class.java).expedition_start_time != null }
+		val completedExpeditions = ongoingExpeditions.filter { System.currentTimeMillis() >= it.getAttributes(FortExpeditionItem::class.java).expedition_end_time.time }
 		embed.appendDescription("%s %,d / %,d - %s %,d / %,d - %s %,d / %,d".format(
 			textureEmote("/Game/UI/Foundation/Textures/Icons/SkillTree/T-Icon-ST-Struck-128.T-Icon-ST-Struck-128")?.asMention, landAvailable, 2,
 			textureEmote("/Game/UI/Foundation/Textures/Icons/SkillTree/T-Icon-ST-Speedboat-128.T-Icon-ST-Speedboat-128")?.asMention, seaAvailable, 2,
@@ -163,7 +163,7 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 
 	private fun claim(source: CommandSourceStack, expedition: FortItemStack): Int {
 		val defData = expedition.defData as FortExpeditionItemDefinition
-		val attrs = expedition.getAttributes(ExpeditionAttributes::class.java)
+		val attrs = expedition.getAttributes(FortExpeditionItem::class.java)
 		attrs.expedition_success_chance = .5f // TODO dummy data
 		val recipe = defData.ExpeditionRules.getRowMapped<Recipe>()
 		val embed = source.createEmbed().setTitle("AN EXPEDITION HAS RETURNED!")
@@ -199,7 +199,7 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 
 	private fun render(expedition: FortItemStack): String {
 		val defData = expedition.defData as FortExpeditionItemDefinition
-		val attrs = expedition.getAttributes(ExpeditionAttributes::class.java)
+		val attrs = expedition.getAttributes(FortExpeditionItem::class.java)
 		val recipe = defData.ExpeditionRules.getRowMapped<Recipe>()
 		val startTime = attrs.expedition_start_time.time
 		val max = attrs.expedition_end_time.time - startTime
@@ -246,7 +246,7 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 	}
 
 	private class ExpeditionBuildSquadContext(val expedition: FortItemStack, homebase: HomebaseManager) {
-		val attrs = expedition.getAttributes(ExpeditionAttributes::class.java)
+		val attrs = expedition.getAttributes(FortExpeditionItem::class.java)
 		val defData = expedition.defData as FortExpeditionItemDefinition
 		val recipe = defData.ExpeditionRules.getRowMapped<Recipe>()
 		val type = recipe.RequiredCatalysts.first().toString()

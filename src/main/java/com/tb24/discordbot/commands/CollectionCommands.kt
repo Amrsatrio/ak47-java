@@ -19,8 +19,8 @@ import com.tb24.fn.model.assetdata.FortAthenaPatrolPathPointProvider
 import com.tb24.fn.model.assetdata.FortQuestIndicatorData
 import com.tb24.fn.model.assetdata.GameDataBR
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
-import com.tb24.fn.model.mcpprofile.item.CollectionAttributes
-import com.tb24.fn.model.mcpprofile.item.CollectionAttributes.*
+import com.tb24.fn.model.mcpprofile.item.FortMcpCollectionBase
+import com.tb24.fn.model.mcpprofile.item.FortMcpCollectionBase.*
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
 import com.tb24.uasset.AssetManager.INSTANCE
@@ -73,7 +73,7 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 		val collected = mutableListOf<FortMcpCollectedItemProperties>()
 		for (item in collections.items.values) {
 			if (item.primaryAssetType == "CollectableCharacter") {
-				collected.addAll(item.getAttributes(CollectionAttributes::class.java).collected)
+				collected.addAll(item.getAttributes(FortMcpCollectionBase::class.java).collected)
 			}
 		}
 		val seasonData = FortItemStack("AthenaSeason:athenaseason$seasonNum", 1).defData as? AthenaSeasonItemDefinition
@@ -141,7 +141,7 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 		var selfScore = 0
 		for (item in collections.items.values) {
 			if (item.primaryAssetType == "CollectableCharacter") {
-				selfScore += item.getAttributes(CollectionAttributes::class.java).collected.count { it.seenState == EFortCollectedState.Complete }
+				selfScore += item.getAttributes(FortMcpCollectionBase::class.java).collected.count { it.seenState == EFortCollectedState.Complete }
 			}
 		}
 		val self = source.api.currentLoggedIn
@@ -248,7 +248,7 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 		val collected = mutableListOf<FortMcpCollectedItemProperties>()
 		for (item in collections.items.values) {
 			if (item.primaryAssetType == "CollectableFish") {
-				collected.addAll(item.getAttributes(CollectionAttributes::class.java).collected)
+				collected.addAll(item.getAttributes(FortMcpCollectionBase::class.java).collected)
 			}
 		}
 		val seasonData = FortItemStack("AthenaSeason:athenaseason$seasonNum", 1).defData as? AthenaSeasonItemDefinition

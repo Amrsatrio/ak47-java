@@ -11,7 +11,7 @@ import com.tb24.fn.event.ProfileUpdatedEvent
 import com.tb24.fn.model.account.AccountMutationResponse
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.McpLootEntry
-import com.tb24.fn.model.mcpprofile.item.GiftBoxAttributes
+import com.tb24.fn.model.mcpprofile.item.FortGiftBoxItem
 import com.tb24.fn.util.EAuthClient
 import com.tb24.fn.util.Utils.DEFAULT_GSON
 import net.dv8tion.jda.api.EmbedBuilder
@@ -157,7 +157,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 				}
 				for (item in profile.items.values) {
 					if (item.primaryAssetType == "GiftBox") {
-						val attrs = item.getAttributes(GiftBoxAttributes::class.java)
+						val attrs = item.getAttributes(FortGiftBoxItem::class.java)
 						val fromAccount = attrs.fromAccountId?.run { queryUsers(Collections.singleton(attrs.fromAccountId)).firstOrNull() }
 						var icon: String? = null
 						var title: String
@@ -187,7 +187,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 									line1 = "From: ${fromAccount?.displayName ?: attrs.fromAccountId}"
 								}
 								attrs.params["userMessage"]?.apply {
-									line2 = this
+									line2 = asString
 								}
 							}
 							else -> continue

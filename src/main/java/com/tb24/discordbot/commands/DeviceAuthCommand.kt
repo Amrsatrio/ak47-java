@@ -20,7 +20,7 @@ class DeviceAuthCommand : BrigadierCommand("devices", "Device auth operation com
 		.executes(::list)
 		.then(literal("list").executes(::list))
 		.then(literal("create").executes(::create))
-		.then(literal("delete")
+		.then(literal("remove")
 			.then(argument("device ID", greedyString())
 				.executes {
 					val deviceId = getString(it, "device ID")

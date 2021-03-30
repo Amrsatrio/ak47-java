@@ -88,7 +88,7 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 		source.message.replyPaginated(data.entries.sortedByDescending { it.value }, 20, source.loadingMsg) { content, page, pageCount ->
 			MessageBuilder(source.createEmbed()
 				.setTitle("Gift History / ${if (isReceive) "Received" else "Sent"}")
-				.setDescription("Showing ${page * 20 + 1} to ${page * 20 + content.size} of ${data.size} entries" + "\n\n" + content.joinToString("\n") { "\u00b7 ${renderUserDate(it, localUserMap)}" })
+				.setDescription("Showing ${page * 20 + 1} to ${page * 20 + content.size} of ${data.size} entries" + "\n\n" + content.joinToString("\n") { "\u2022 ${renderUserDate(it, localUserMap)}" })
 				.setFooter("Page %,d of %,d".format(page + 1, pageCount))
 			).build()
 		}
