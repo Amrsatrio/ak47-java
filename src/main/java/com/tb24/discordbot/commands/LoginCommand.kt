@@ -29,6 +29,7 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires { System.getProperty("freeTierEnabled") == "true" || Rune.hasPremium(it) }
 		.executes { accountPicker(it.source) }
+		.then(literal("new").executes { startDefaultLoginFlow(it.source) })
 		.then(argument("authorization code", greedyString())
 			.executes {
 				val source = it.source

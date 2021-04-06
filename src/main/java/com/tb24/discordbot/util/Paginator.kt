@@ -25,7 +25,7 @@ fun <T> Message.replyPaginated(all: List<T>,
 	customReactions?.addReactions(reactions)
 	reactions.forEach { msg.addReaction(it).queue() }
 	val collector = msg.createReactionCollector({ reaction, user, _ -> reactions.contains(reaction.reactionEmote.name) && user?.idLong == author.idLong }, ReactionCollectorOptions().apply {
-		idle = 60000L
+		idle = 90000L
 		//dispose = true
 	})
 	collector.callback = object : CollectorListener<MessageReaction> {

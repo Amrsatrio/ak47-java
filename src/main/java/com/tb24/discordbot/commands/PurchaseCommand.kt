@@ -34,13 +34,6 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 				.executes { execute(it.source, getCatalogEntry(it, "item number"), getInteger(it, "quantity")) }
 				.then(argument("price index", integer())
 					.executes { execute(it.source, getCatalogEntry(it, "item number"), getInteger(it, "quantity"), getInteger(it, "price index") - 1) }
-					/*.then(argument("more", integer())
-						.then(argument("and more", integer())
-							.then(argument("and more again", integer())
-								.executes { Command.SINGLE_SUCCESS }
-							)
-						)
-					)*/
 				)
 			)
 		)
@@ -141,7 +134,7 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 			val successEmbed = source.createEmbed()
 				.setTitle("✅ " + L10N.format("purchase.success.title"))
 				.setColor(COLOR_SUCCESS)
-				.addField(L10N.format("purchase.success.received"), if (results.isEmpty()) "No items" else results.joinToString("\n") { it.asItemStack().render() }, false)
+				.addFieldSeparate(L10N.format("purchase.success.received"), results.toList(), 0) { it.asItemStack().render() }
 				.addField(L10N.format("purchase.success.final_balance"), price.getAccountBalanceText(profileManager), false)
 				.setTimestamp(Instant.now())
 			if (offer.refundable && !CatalogHelper.isUndoUnderCooldown(commonCore, offer.offerId)) {

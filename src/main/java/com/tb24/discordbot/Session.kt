@@ -13,7 +13,6 @@ import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.McpLootEntry
 import com.tb24.fn.model.mcpprofile.item.FortGiftBoxItem
 import com.tb24.fn.util.EAuthClient
-import com.tb24.fn.util.Utils.DEFAULT_GSON
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.internal.entities.UserImpl
@@ -108,10 +107,10 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		}
 		val avatarKeys = channelsManager.getUserSettings(user.id, ChannelsManager.KEY_AVATAR, ChannelsManager.KEY_AVATAR_BACKGROUND)
 		val embed = EmbedBuilder()
-			.setTitle("👋 Welcome, %s!".format(user.displayName ?: "Unknown"))
+			.setTitle("👋 Welcome, %s".format(user.displayName ?: "Unknown"))
 			.addField("Account ID", user.id, false)
 			.setThumbnail("https://cdn2.unrealengine.com/Kairos/portraits/${avatarKeys[0]}.png?preview=1")
-			.setColor(Color.decode(DEFAULT_GSON.fromJson(avatarKeys[1], Array<String>::class.java)[1]))
+			.setColor(Color.decode(EpicApi.GSON.fromJson(avatarKeys[1], Array<String>::class.java)[1]))
 		user.externalAuths?.run {
 			values.forEach {
 				if (it.type == "psn" || it.type == "xbl" || it.type == "nintendo") {

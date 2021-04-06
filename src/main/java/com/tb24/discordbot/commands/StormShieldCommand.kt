@@ -7,6 +7,7 @@ import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.word
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.util.addFieldSeparate
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.FortItemStack
@@ -43,9 +44,7 @@ class StormShieldCommand : BrigadierCommand("ssd", "Shows info about your storm 
 					embed.addField("Endurance max waves", Formatters.num.format(outpost.outpost_core_info.highestEnduranceWaveReached), true)
 				}
 				val users = source.queryUsers(outpost.outpost_core_info.accountsWithEditPermission.toList())
-				embed.addField("Accounts with edit permissions", if (users.isNotEmpty()) users.mapIndexed { i, user ->
-					"%,d. %s".format(i + 1, user.displayName ?: user.id)
-				}.joinToString("\n") else "No entries", false)
+				embed.addFieldSeparate("Accounts with edit permissions", users) { it.displayName ?: it.id }
 				source.complete(null, embed.build())
 				Command.SINGLE_SUCCESS
 			}
