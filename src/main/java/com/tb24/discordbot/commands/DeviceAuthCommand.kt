@@ -12,7 +12,9 @@ import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.format
 import com.tb24.fn.model.account.DeviceAuth
+import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.ChannelType
+import net.dv8tion.jda.internal.entities.UserImpl
 
 class DeviceAuthCommand : BrigadierCommand("devices", "Device auth operation commands.", arrayOf("device")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -139,13 +141,19 @@ private fun create(c: CommandContext<CommandSourceStack>): Int {
 	val embed = source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS)
 		.setTitle("✅ Device auth created and registered to ${source.client.discord.selfUser.name}")
 	if (inDMs) {
-		embed.addField("Account", user.displayName + " - " + user.id, false)
-			.addField("Device ID", response.deviceId, false)
-			.addField("Secret", "||" + response.secret + "||", false)
+		source.complete(null, embed.populateDeviceAuthDetails(response).build())
+	} else {
+		source.complete(null, embed.setDescription("Check your DMs for details.").build())
+		val channel = (source.author as UserImpl).privateChannel ?: runCatching { source.author.openPrivateChannel().complete() }.getOrNull()
+		channel?.sendMessage(embed.setDescription(null).populateDeviceAuthDetails(response).build())?.complete()
 	}
-	source.complete(null, embed.build())
 	return Command.SINGLE_SUCCESS
 }
+
+private fun EmbedBuilder.populateDeviceAuthDetails(deviceAuth: DeviceAuth) =
+	this.addField("Account ID", deviceAuth.accountId, false)
+		.addField("Device ID", deviceAuth.deviceId, false)
+		.addField("Secret (Do not share!)", "||" + deviceAuth.secret + "||", false)
 
 private fun delete(source: CommandSourceStack, deviceId: String): Int {
 	source.ensureSession()

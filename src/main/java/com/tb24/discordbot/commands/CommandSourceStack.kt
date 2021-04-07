@@ -75,7 +75,7 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 	@Throws(HttpException::class)
 	fun generateUrl(url: String): String {
 		if (!isFromType(ChannelType.PRIVATE)) {
-			throw SimpleCommandExceptionType(LiteralMessage("Please invoke the command again in DMs, as we have to send you a link that takes you to the account page.")).create()
+			throw SimpleCommandExceptionType(LiteralMessage("Please invoke the command again in DMs, as we have to send you a link that carries over your current session.")).create()
 		}
 		return "https://www.epicgames.com/id/exchange?exchangeCode=${api.accountService.exchangeCode.exec().body()!!.code}&redirectUrl=${URLEncoder.encode(url, "UTF-8")}"
 	}

@@ -47,9 +47,12 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 			profileManager.dispatchClientCommandRequest(QueryProfile(), if (offer.__ak47_storefront.startsWith("BR")) "athena" else "campaign") // there must be a better way to do this
 		).await()
 		var commonCore = profileManager.getProfileData("common_core")
-		if (priceIndex < 0 && offer.prices.size > 1) {
-			val priceSelectionEbd = source.createEmbed()
-				.setTitle("How do you want to pay?").setColor(COLOR_WARNING)
+		if (priceIndex < 0) { // find a free price
+			priceIndex = offer.prices.indexOfFirst { it.currencyType != EStoreCurrencyType.RealMoney && it.basePrice == 0 }
+		}
+		if (priceIndex < 0 && offer.prices.size > 1) { // ask which currency to use
+			val priceSelectionEbd = source.createEmbed().setColor(COLOR_WARNING)
+				.setTitle("How do you want to pay?")
 				.addField("Prices", offer.prices.joinToString("\n") { it.render(quantity) }, true)
 				.addField("Balances", offer.prices.joinToString("\n") { it.getAccountBalanceText(profileManager) }, true)
 			val priceSelectionMsg = source.complete(null, priceSelectionEbd.build())
@@ -64,7 +67,7 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 			if (priceIndex == -1) {
 				throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
 			}
-		} else if (priceIndex < 0) {
+		} else if (priceIndex < 0) { // only one price, just use it
 			priceIndex = 0
 		}
 		val sd = offer.holder().apply { resolve(profileManager, priceIndex) }
