@@ -291,10 +291,9 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 	if (remainingRerolls <= 0) {
 		throw SimpleCommandExceptionType(LiteralMessage("You ran out of daily quest rerolls for today.")).create()
 	}
-	if (!source.complete(null, source.createEmbed()
-			.setTitle("Replace this daily quest?")
+	if (!source.complete(null, source.createEmbed().setColor(BrigadierCommand.COLOR_WARNING)
+			.setTitle("Replace?")
 			.setDescription(renderChallenge(questToReplace, conditionalCondition = canReceiveMtxCurrency))
-			.setColor(BrigadierCommand.COLOR_WARNING)
 			.build()).yesNoReactions(source.author).await()) {
 		source.complete("👌 Alright.")
 		return Command.SINGLE_SUCCESS
@@ -302,10 +301,9 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 	source.loading("Replacing daily quest")
 	source.api.profileManager.dispatchClientCommandRequest(FortRerollDailyQuest().apply { questId = questToReplace.itemId }, profileId).await()
 	profile = source.api.profileManager.getProfileData(profileId)
-	source.complete(null, source.createEmbed()
+	source.complete(null, source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS)
 		.setTitle("✅ Replaced")
-		.setDescription("Here's your daily quests now:")
-		.addField("Daily Quests", questsGetter(profile)
+		.addField("Here are your daily quests now:", questsGetter(profile)
 			.mapIndexed { i, it -> renderChallenge(it, "${i + 1}. ", "\u00a0\u00a0\u00a0", conditionalCondition = canReceiveMtxCurrency) }
 			.joinToString("\n")
 			.takeIf { it.isNotEmpty() } ?: "You have no active daily quests", false)

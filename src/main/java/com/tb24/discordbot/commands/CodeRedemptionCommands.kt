@@ -64,7 +64,7 @@ class RedeemCodeCommand : BrigadierCommand("redeem", "Redeems an Epic Games code
 					throw SimpleCommandExceptionType(LiteralMessage("Invalid code (offer ID unknown)")).create()
 				}
 				val redeemCodeResponse = session.api.fulfillmentService.redeemCode(session.api.currentLoggedIn.id, code, lockCodeResponse.codeUseId, RedeemCodePayload().apply { fulfillmentSource = "DieselWebClient" }).exec().body()!!
-				val embed = source.createEmbed().setTitle("✅ Code redeemed").setFooter(code)
+				val embed = source.createEmbed().setTitle("✅ Code redeemed").setColor(COLOR_SUCCESS).setFooter(code)
 				val codeInfo = runCatching { session.api.catalogService.queryOffersBulk(listOf(lockCodeResponse.consumptionMetadata.offerId), null, null, null).exec().body()!!.values.first() }.getOrNull()
 				if (codeInfo != null) {
 					val name = codeInfo.title

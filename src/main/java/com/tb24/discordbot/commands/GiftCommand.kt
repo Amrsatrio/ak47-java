@@ -47,10 +47,9 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 		profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 		val commonCore = profileManager.getProfileData("common_core")
 		if (!(commonCore.stats.attributes as CommonCoreProfileAttributes).mfa_enabled) {
-			source.complete(null, source.createEmbed()
+			source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
 				.setTitle("⚠ Hold up before gifting!")
 				.setDescription("You haven't claimed the two-factor authentication reward, which needs to be claimed first before sending gifts. Please enable two-factor authentication and claim its rewards by doing `${source.prefix}claim2fa` or by logging in to the game.\n\n[Enable two-factor authentication on epicgames.com](${source.generateUrl("https://www.epicgames.com/account/password#2fa-signup")})")
-				.setColor(COLOR_WARNING)
 				.build())
 			return 0
 		}
@@ -76,10 +75,9 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 					}
 				}
 				if (errorTitle != null) {
-					source.complete(null, EmbedBuilder()
+					source.complete(null, EmbedBuilder().setColor(COLOR_WARNING)
 						.setTitle("⚠ ${errorTitle.format()}")
 						.setDescription(errorText.format())
-						.setColor(COLOR_WARNING)
 						.build())
 					return 0
 				}
@@ -134,10 +132,9 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 							fmt[i] = errorMsg.format(gameProfile?.displayName ?: failedAccIds[i]) + if (errorMsg == L10N.GiftFailedGeneric) " (${failedReasons[i]})" else ""
 						}
 					}
-					source.complete(null, EmbedBuilder()
+					source.complete(null, EmbedBuilder().setColor(COLOR_WARNING)
 						.setTitle("⚠ ${source.errorTitle}")
 						.setDescription(FAILED_FORMATS[min(failedAccIds.size, 5) - 1].format(*(fmt as Array<String>)))
-						.setColor(COLOR_WARNING)
 						.build())
 					return 0
 				}

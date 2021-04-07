@@ -33,12 +33,11 @@ class StatsPrivacyCommand : BrigadierCommand("statsprivacy", "Toggles or sets yo
 		source.api.fortniteService.setAccountPrivacy(source.api.currentLoggedIn.id, AccountPrivacyResponse().apply {
 			optOutOfPublicLeaderboards = newState
 		}).exec()
-		source.complete(null, source.createEmbed()
+		source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
 			.setDescription("✅ " + if (newState)
 				"Your stats visibility is now **private**."
 			else
 				"Your stats visibility is now **public**.")
-			.setColor(COLOR_SUCCESS)
 			.build())
 		return Command.SINGLE_SUCCESS
 	}

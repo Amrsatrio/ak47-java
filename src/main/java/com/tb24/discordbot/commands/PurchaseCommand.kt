@@ -49,8 +49,7 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 		var commonCore = profileManager.getProfileData("common_core")
 		if (priceIndex < 0 && offer.prices.size > 1) {
 			val priceSelectionEbd = source.createEmbed()
-				.setTitle("How do you want to pay?")
-				.setColor(COLOR_WARNING)
+				.setTitle("How do you want to pay?").setColor(COLOR_WARNING)
 				.addField("Prices", offer.prices.joinToString("\n") { it.render(quantity) }, true)
 				.addField("Balances", offer.prices.joinToString("\n") { it.getAccountBalanceText(profileManager) }, true)
 			val priceSelectionMsg = source.complete(null, priceSelectionEbd.build())
@@ -131,9 +130,8 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 			}).await()
 			val results = response.notifications.filterIsInstance<CatalogPurchaseNotification>().firstOrNull()?.lootResult?.items ?: emptyArray()
 			commonCore = profileManager.getProfileData("common_core")
-			val successEmbed = source.createEmbed()
+			val successEmbed = source.createEmbed().setColor(COLOR_SUCCESS)
 				.setTitle("✅ " + L10N.format("purchase.success.title"))
-				.setColor(COLOR_SUCCESS)
 				.addFieldSeparate(L10N.format("purchase.success.received"), results.toList(), 0) { it.asItemStack().render() }
 				.addField(L10N.format("purchase.success.final_balance"), price.getAccountBalanceText(profileManager), false)
 				.setTimestamp(Instant.now())

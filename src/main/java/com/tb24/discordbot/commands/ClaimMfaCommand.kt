@@ -50,15 +50,14 @@ class ClaimMfaCommand : BrigadierCommand("claimmfa", "Claim 2FA reward (Boogie D
 		source.loading("Claiming 2FA reward")
 		val response = source.api.profileManager.dispatchClientCommandRequest(ClaimMfaEnabled().apply { bClaimForStw = claimForStw }).await()
 		if (response.profileRevision > response.profileChangesBaseRevision) {
-			source.complete(null, source.createEmbed()
+			source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
 				.setTitle("✅ 2FA reward claimed for $subGameName")
 				.setDescription("${if (claimForStw) "" else "You're now ready to send gifts and participate in tournaments.\n"}It's your choice whether you want to keep it enabled or disable it for your convenience, albeit making the account less secure.")
 				.build())
 		} else {
-			source.complete(null, source.createEmbed()
+			source.complete(null, source.createEmbed().setColor(COLOR_ERROR)
 				.setTitle("❌ Failed to claim 2FA reward")
 				.setDescription("Please make sure that you already have two-factor authentication enabled on your account prior to attempting to claim the rewards.\n\n[Enable two-factor authentication on epicgames.com](${source.generateUrl("https://www.epicgames.com/account/password#2fa-signup")})")
-				.setColor(COLOR_ERROR)
 				.build())
 		}
 		return Command.SINGLE_SUCCESS

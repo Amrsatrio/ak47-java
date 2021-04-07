@@ -44,10 +44,9 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 	private inline fun displaySummary(c: CommandContext<CommandSourceStack>): Int {
 		val source = c.source
 		source.ensureSession()
-		if (!source.complete(null, source.createEmbed()
+		if (!source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
 				.setTitle("✋ Hold up!")
 				.setDescription("You're about to view the account details of ${source.api.currentLoggedIn.displayName}. Some of the data that we will send here might be sensitive, such as real name or Facebook name. We don't recommend to proceed if this account isn't yours.\n\nAre you sure you want to continue? (❌ in 30s)")
-				.setColor(COLOR_WARNING)
 				.build()).yesNoReactions(source.author).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS
@@ -91,10 +90,9 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 			throw SimpleCommandExceptionType(LiteralMessage("The Epic display name `$displayName` has already been taken. Please choose another name.")).create()
 		}
 		val oldName = source.api.currentLoggedIn.epicDisplayName.orDash()
-		if (!source.complete(null, source.createEmbed()
+		if (!source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
 				.setTitle("Change display name?")
 				.setDescription("You're about to change the display name of account `${source.api.currentLoggedIn.id}`:\n\n`${oldName.orDash()}` \u2192 `$newName`\n\nThis action will be recorded in the Account History as `HISTORY_ACCOUNT_UPDATE`. You will not be able to change the display name again for the next 14 days if you proceed. Are you sure you want to continue? (❌ in 30s)")
-				.setColor(COLOR_WARNING)
 				.build()).yesNoReactions(source.author).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS
@@ -104,7 +102,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 			displayName = newName
 		}).exec().body()!!
 		source.session.handleAccountMutation(response)
-		source.complete(null, source.createEmbed()
+		source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
 			.setTitle("✅ Updated the Epic display name")
 			.addField("Old name", oldName.orDash(), true)
 			.addField("New name", response.accountInfo.epicDisplayName.orDash(), true)
@@ -141,7 +139,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		source.ensureSession()
 		source.loading("Generating backup codes")
 		val response = source.api.accountService.generateBackupCodes(source.api.currentLoggedIn.id).exec().body()!!
-		source.complete(null, source.createEmbed()
+		source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
 			.setTitle("✅ Generated new backup codes")
 			.addField("Backup codes", renderBackupCodes(response.backupCodes.toList()), true)
 			.build())
@@ -179,9 +177,8 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		}
 		source.loading("Unlinking $externalAuthType")
 		source.api.accountService.removeExternalAuth(source.api.currentLoggedIn.id, externalAuthType).exec()
-		source.complete(null, source.createEmbed()
+		source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
 			.setTitle("✅ Unlinked $externalAuthType")
-			.setColor(COLOR_WARNING)
 			.build())
 		return Command.SINGLE_SUCCESS
 	}

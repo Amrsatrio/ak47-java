@@ -47,9 +47,8 @@ class HomebaseNameCommand : BrigadierCommand("homebasename", "Displays or change
 			source.api.profileManager.dispatchClientCommandRequest(SetHomebaseName().apply {
 				homebaseName = newHomebaseName
 			}, "common_public").await()
-			source.complete(null, source.createEmbed()
+			source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
 				.setDescription("✅ Updated homebase name to **$newHomebaseName**.")
-				.setColor(COLOR_SUCCESS)
 				.build())
 		}
 		return Command.SINGLE_SUCCESS

@@ -172,7 +172,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			val body = RequestBody.create(MediaType.get("text/plain"), new)
 			(if (note) friendsService.setFriendNote(accountId, friendId, body) else friendsService.setFriendAlias(accountId, friendId, body)).exec()
 		}
-		source.complete(null, source.createEmbed()
+		source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
 			.setTitle("✅ Updated $propName of ${friend.displayName}")
 			.setDescription("${old.orUnset()} \u2192 ${new.orUnset()}")
 			.build())
@@ -261,58 +261,57 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 	private fun add(source: CommandSourceStack, user: GameProfile): Int {
 		source.loading("Sending friend request to ${user.displayName}")
 		source.api.friendsService.sendInviteOrAcceptInvite(source.api.currentLoggedIn.id, user.id).exec()
-		source.complete(null, source.createEmbed().setTitle("✅ Sent friend request to ${user.displayName}").build())
+		source.complete(null, source.createEmbed().setTitle("✅ Sent friend request to ${user.displayName}").setColor(COLOR_SUCCESS).build())
 		return Command.SINGLE_SUCCESS
 	}
 
 	private fun remove(source: CommandSourceStack, user: GameProfile): Int {
 		source.loading("Unfriending ${user.displayName}")
 		source.api.friendsService.deleteFriendOrRejectInvite(source.api.currentLoggedIn.id, user.id).exec()
-		source.complete(null, source.createEmbed().setTitle("✅ You're no longer friends with ${user.displayName}").build())
+		source.complete(null, source.createEmbed().setTitle("✅ You're no longer friends with ${user.displayName}").setColor(COLOR_SUCCESS).build())
 		return Command.SINGLE_SUCCESS
 	}
 
 	private fun accept(source: CommandSourceStack, user: GameProfile): Int {
 		source.loading("Accepting ${user.displayName}'s friend request")
 		source.api.friendsService.sendInviteOrAcceptInvite(source.api.currentLoggedIn.id, user.id).exec()
-		source.complete(null, source.createEmbed().setTitle("✅ ${user.displayName} is now your friend").build())
+		source.complete(null, source.createEmbed().setTitle("✅ ${user.displayName} is now your friend").setColor(COLOR_SUCCESS).build())
 		return Command.SINGLE_SUCCESS
 	}
 
 	private fun reject(source: CommandSourceStack, user: GameProfile): Int {
 		source.loading("Rejecting ${user.displayName}'s friend request")
 		source.api.friendsService.deleteFriendOrRejectInvite(source.api.currentLoggedIn.id, user.id).exec()
-		source.complete(null, source.createEmbed().setTitle("✅ Rejected friend request from ${user.displayName}").build())
+		source.complete(null, source.createEmbed().setTitle("✅ Rejected friend request from ${user.displayName}").setColor(COLOR_SUCCESS).build())
 		return Command.SINGLE_SUCCESS
 	}
 
 	private fun cancel(source: CommandSourceStack, user: GameProfile): Int {
 		source.loading("Canceling friend request to ${user.displayName}")
 		source.api.friendsService.deleteFriendOrRejectInvite(source.api.currentLoggedIn.id, user.id).exec()
-		source.complete(null, source.createEmbed().setTitle("✅ Cancelled outgoing friend request to ${user.displayName}").build())
+		source.complete(null, source.createEmbed().setTitle("✅ Cancelled outgoing friend request to ${user.displayName}").setColor(COLOR_SUCCESS).build())
 		return Command.SINGLE_SUCCESS
 	}
 
 	private fun block(source: CommandSourceStack, user: GameProfile): Int {
 		source.loading("Blocking ${user.displayName}")
 		source.api.friendsService.sendBlock(source.api.currentLoggedIn.id, user.id).exec()
-		source.complete(null, source.createEmbed().setTitle("✅ Blocked ${user.displayName}").build())
+		source.complete(null, source.createEmbed().setTitle("✅ Blocked ${user.displayName}").setColor(COLOR_SUCCESS).build())
 		return Command.SINGLE_SUCCESS
 	}
 
 	private fun unblock(source: CommandSourceStack, user: GameProfile): Int {
 		source.loading("Unblocking ${user.displayName}")
 		source.api.friendsService.sendUnblock(source.api.currentLoggedIn.id, user.id).exec()
-		source.complete(null, source.createEmbed().setTitle("✅ Unblocked ${user.displayName}").build())
+		source.complete(null, source.createEmbed().setTitle("✅ Unblocked ${user.displayName}").setColor(COLOR_SUCCESS).build())
 		return Command.SINGLE_SUCCESS
 	}
 
 	private fun bulk(source: CommandSourceStack, type: String, suppliedQueue: List<GameProfile>?, query: ((FriendsService, String, Boolean?) -> Call<Array<FriendV2>>)?, op: FriendsService.(String, String) -> Call<Void>): Int {
 		source.ensureSession()
-		if (!source.complete(null, source.createEmbed()
+		if (!source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
 				.setTitle("Confirmation")
 				.setDescription(L10N.format("friends.$type.bulk.warning"))
-				.setColor(COLOR_WARNING)
 				.build()).yesNoReactions(source.author).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS
@@ -350,7 +349,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 				}
 			}
 		}
-		source.complete(null, source.createEmbed()
+		source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
 			.setTitle("✅ " + L10N.format("friends.$type.bulk.done", Formatters.num.format(success)))
 			.build())
 		return Command.SINGLE_SUCCESS
@@ -372,12 +371,11 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		source.api.friendsService.setFriendSettings(source.api.currentLoggedIn.id, FriendsSettings().apply {
 			acceptInvites = if (newState) "PUBLIC" else "PRIVATE"
 		}).exec()
-		source.complete(null, source.createEmbed()
+		source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
 			.setDescription("✅ " + if (newState)
 				"Configured your account to **allow** friend requests."
 			else
 				"Configured your account to **disallow** friend requests.")
-			.setColor(COLOR_SUCCESS)
 			.build())
 		return Command.SINGLE_SUCCESS
 	}

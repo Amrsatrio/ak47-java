@@ -23,13 +23,12 @@ class RefreshProfileCommand : BrigadierCommand("refresh", "Refreshes your BR or 
 		source.loading("Refreshing profile")
 		val response = source.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), if (stw) "campaign" else "athena").await()
 		if (response.profileRevision > response.profileChangesBaseRevision) {
-			source.complete(null, source.createEmbed()
+			source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
 				.setTitle("✅ Refreshed")
 				.build())
 		} else {
-			source.complete(null, source.createEmbed()
+			source.complete(null, source.createEmbed().setColor(COLOR_ERROR)
 				.setTitle("❌ Nothing refreshed")
-				.setColor(COLOR_ERROR)
 				.build())
 		}
 		return Command.SINGLE_SUCCESS

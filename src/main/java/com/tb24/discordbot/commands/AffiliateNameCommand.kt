@@ -46,9 +46,8 @@ class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Su
 			source.api.profileManager.dispatchClientCommandRequest(SetAffiliateName().apply {
 				affiliateName = if (isClear) "" else newCode
 			}).await()
-			source.complete(null, source.createEmbed()
+			source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
 				.setDescription(if (isClear) "🗑 **Cleared** Support a Creator code." else "✅ Support a Creator code set to **$newCode**.")
-				.setColor(COLOR_SUCCESS)
 				.build())
 		}
 		return Command.SINGLE_SUCCESS

@@ -166,13 +166,12 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 		val attrs = expedition.getAttributes(FortExpeditionItem::class.java)
 		attrs.expedition_success_chance = .5f // TODO dummy data
 		val recipe = defData.ExpeditionRules.getRowMapped<Recipe>()
-		val embed = source.createEmbed().setTitle("AN EXPEDITION HAS RETURNED!")
+		val embed = source.createEmbed().setTitle("AN EXPEDITION HAS RETURNED!").setColor(COLOR_WARNING)
 			.setDescription("**%s**\n%s Chance of Success".format(
 				expedition.displayName,
 				Formatters.percentZeroFraction.format(attrs.expedition_success_chance)
 			))
 			.setThumbnail(Utils.benBotExportAsset(expeditionTypeIcon(recipe.RequiredCatalysts.first().toString())))
-			.setColor(COLOR_WARNING)
 		val message = source.complete(null, embed.build())
 		message.addReaction("✅").queue()
 		if (message.awaitReactions({ _, user, _ -> user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {

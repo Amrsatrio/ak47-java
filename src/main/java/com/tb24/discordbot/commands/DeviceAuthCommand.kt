@@ -136,7 +136,7 @@ private fun create(c: CommandContext<CommandSourceStack>): Int {
 		secret = response.secret
 		clientId = source.api.userToken.client_id
 	})
-	val embed = source.createEmbed()
+	val embed = source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS)
 		.setTitle("✅ Device auth created and registered to ${source.client.discord.selfUser.name}")
 	if (inDMs) {
 		embed.addField("Account", user.displayName + " - " + user.id, false)

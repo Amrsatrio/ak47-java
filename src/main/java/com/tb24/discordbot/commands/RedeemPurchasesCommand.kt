@@ -38,13 +38,12 @@ class RedeemPurchasesCommand : BrigadierCommand("redeempurchases", "Redeems Fort
                 }
             }
             if (attempted > 0) {
-                source.complete(null, source.createEmbed()
+                source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
                     .setDescription("✅ Redeemed %,d of %,d purchases!".format(success, attempted))
                     .build())
             } else {
-                source.complete(null, source.createEmbed()
+                source.complete(null, source.createEmbed().setColor(COLOR_ERROR)
                     .setDescription("❌ You have no purchases to redeem.")
-                    .setColor(COLOR_ERROR)
                     .build())
             }
             Command.SINGLE_SUCCESS

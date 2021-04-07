@@ -109,12 +109,11 @@ class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift s
 				"Your account is already configured to **reject** gifts.")).create()
 		}
 		source.api.profileManager.dispatchClientCommandRequest(SetReceiveGiftsEnabled().apply { bReceiveGifts = newValue }).await()
-		source.complete(null, source.createEmbed()
+		source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
 			.setDescription("✅ " + if (newValue)
 				"Configured your account to **accept** gifts."
 			else
 				"Configured your account to **reject** gifts.")
-			.setColor(COLOR_SUCCESS)
 			.build())
 		return Command.SINGLE_SUCCESS
 	}

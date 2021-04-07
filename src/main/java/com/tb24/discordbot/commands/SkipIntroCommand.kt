@@ -15,14 +15,13 @@ class SkipIntroCommand : BrigadierCommand("skipintro", "Skips the forced Chapter
 			source.loading("Skipping intro")
 			val response = source.api.profileManager.dispatchClientCommandRequest(SetForcedIntroPlayed().apply { forcedIntroName = "yogurt" }).await()
 			if (response.profileRevision > response.profileChangesBaseRevision) {
-				source.complete(null, source.createEmbed()
+				source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
 					.setTitle("✅ Skipped intro")
 					.setDescription("You will load straight into the lobby the next time you launch the game with this account.")
 					.build())
 			} else {
-				source.complete(null, source.createEmbed()
+				source.complete(null, source.createEmbed().setColor(COLOR_ERROR)
 					.setDescription("❌ You have already played or skipped the intro, no need to skip.")
-					.setColor(COLOR_ERROR)
 					.build())
 			}
 			Command.SINGLE_SUCCESS

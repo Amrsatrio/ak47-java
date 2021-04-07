@@ -32,7 +32,7 @@ class DailyRewardsCommand : BrigadierCommand("dailyrewards", "Claims the STW dai
 fun notifyDailyRewardsClaimed(source: CommandSourceStack, stat: FortDailyLoginRewardStat?, notification: DailyRewardsNotification?) {
 	val item = notification?.items?.firstOrNull()
 	val daysLoggedIn = Formatters.num.format(stat?.totalDaysLoggedIn ?: 0)
-	source.complete(null, if (item != null) source.createEmbed()
+	source.complete(null, if (item != null) source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS)
 		.setTitle("✅ Daily rewards claimed")
 		.addField("Days logged in", daysLoggedIn, true)
 		.addField("Reward", item.asItemStack().renderWithIcon(), true)
