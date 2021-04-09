@@ -90,30 +90,29 @@ class RollCommand : BrigadierCommand("roll", "Simulate a given loot pool.", arra
 		} else {
 			tierGroupName = inTierGroupName
 		}
-		val tierGroup = context.lootTiers[tierGroupName]
+		val tierGroup = context.lootTiers[tierGroupName.toLowerCase(Locale.ROOT)]
 			?: throw SimpleCommandExceptionType(LiteralMessage("Loot tier group `$tierGroupName` not found")).create()
 		val random = Random(seed)
+		val tier = (if (tierOverride != null) tierGroup.firstOrNull { it.LootPackage.text.equals(tierOverride, true) } else tierGroup.pickOne(random))
+			?: throw SimpleCommandExceptionType(LiteralMessage("Loot tier not found")).create()
 		val outItems = mutableListOf<FortItemStack>()
-		val tier = if (tierOverride != null) tierGroup.firstOrNull { it.LootPackage.text == tierOverride } else tierGroup.pickOne(random)
-		tier?.roll(context, random, outItems::add)
-		val forDisplay = outItems.maxByOrNull { it.rarity }
+		tier.roll(context, random, outItems::add)
+		val displayItem = outItems.maxByOrNull { it.rarity }
 		val descLines = mutableListOf<String>()
-		if (tier != null) {
-			descLines.add(tier.LootPackage.text)
-			if (tier.LootTier > 0) {
-				descLines.add("Tier: %,d".format(tier.LootTier))
-			}
+		descLines.add(tier.LootPackage.text)
+		if (tier.LootTier > 0) {
+			descLines.add("Tier: %,d".format(tier.LootTier))
 		}
 		val embed = EmbedBuilder()
-			.setTitle("Roll: $tierGroupName")
+			.setTitle("Roll: ${tier.TierGroup}")
 			.setDescription(descLines.joinToString("\n"))
 			.addFieldSeparate("You got", outItems, 0) {
 				"%,d \u00d7 [%s] %s".format(it.quantity, it.rarity, it.displayName)
 			}
 			//.setFooter("Seed: %d".format(seed))
-			.setThumbnail(Utils.benBotExportAsset(forDisplay?.getPreviewImagePath(true)?.toString()))
-		if (forDisplay != null) {
-			embed.setColor(rarityData.forRarity(forDisplay.rarity).Color2.toFColor(true).toPackedARGB())
+			.setThumbnail(Utils.benBotExportAsset(displayItem?.getPreviewImagePath(true)?.toString()))
+		if (displayItem != null) {
+			embed.setColor(rarityData.forRarity(displayItem.rarity).Color2.toFColor(true).toPackedARGB())
 		}
 		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS
@@ -129,7 +128,7 @@ class RollCommand : BrigadierCommand("roll", "Simulate a given loot pool.", arra
 		} else {
 			tierGroupName = inTierGroupName
 		}
-		var tierGroup: List<FortLootTierData> = context.lootTiers[tierGroupName]
+		var tierGroup: List<FortLootTierData> = context.lootTiers[tierGroupName.toLowerCase(Locale.ROOT)]
 			?: throw SimpleCommandExceptionType(LiteralMessage("Loot tier group `$tierGroupName` not found")).create()
 		if (!showDisabled) {
 			tierGroup = tierGroup.filter { it.Weight > 0f }
@@ -142,13 +141,13 @@ class RollCommand : BrigadierCommand("roll", "Simulate a given loot pool.", arra
 		val tier = when {
 			tierGroup.size == 1 -> tierGroup[0]
 			tierOverride != null -> {
-				tierGroup.firstOrNull { it.LootPackage.text == tierOverride }
+				tierGroup.firstOrNull { it.LootPackage.text.equals(tierOverride, true) }
 					?: throw SimpleCommandExceptionType(LiteralMessage("Loot tier with loot package name `$tierOverride` not found")).create()
 			}
 			else -> null
 		}
 		if (tier != null) {
-			val lootPackages = context.lootPackages.row(tier.LootPackage.text)?.values?.flatten()
+			val lootPackages = context.lootPackages.row(tier.LootPackage.text.toLowerCase(Locale.ROOT))?.values?.flatten()
 				?: throw SimpleCommandExceptionType(LiteralMessage("Loot package `${tier.LootPackage}` not found")).create()
 			val embed = EmbedBuilder()
 				.setAuthor(tier.TierGroup.text)
@@ -181,7 +180,7 @@ class RollCommand : BrigadierCommand("roll", "Simulate a given loot pool.", arra
 		}
 		var key: String? = "%,d \u00d7 Unknown/Empty".format(Count)
 		if (LootPackageCall.isNotEmpty()) {
-			val called = context.lootPackages.row(LootPackageCall)?.values?.flatten()
+			val called = context.lootPackages.row(LootPackageCall.toLowerCase(Locale.ROOT))?.values?.flatten()
 			if (called != null) {
 				var totalCalledWeight = 0f
 				if (true) {
@@ -215,27 +214,28 @@ class LootContext {
 	fun addLootTiers(lootTiersDataTable: UDataTable?) {
 		lootTiersDataTable?.rows?.values?.forEach {
 			val row = it.mapToClass<FortLootTierData>()
-			lootTiers.getOrPut(row.TierGroup.text) { mutableListOf() }.add(row)
+			lootTiers.getOrPut(row.TierGroup.text.toLowerCase(Locale.ROOT)) { mutableListOf() }.add(row)
 		}
 	}
 
 	fun addLootPackages(lootPackagesDataTable: UDataTable?) {
 		lootPackagesDataTable?.rows?.values?.forEach {
 			val row = it.mapToClass<FortLootPackageData>()
-			var list = lootPackages.get(row.LootPackageID.text, row.LootPackageCategory)
+			val key = row.LootPackageID.text.toLowerCase(Locale.ROOT)
+			var list = lootPackages.get(key, row.LootPackageCategory)
 			if (list == null) {
 				list = mutableListOf()
-				lootPackages.put(row.LootPackageID.text, row.LootPackageCategory, list)
+				lootPackages.put(key, row.LootPackageCategory, list)
 			}
 			list.add(row)
 		}
 	}
 
-	fun pickTier(tierGroup: String, random: Random) = lootTiers[tierGroup]?.pickOne(random)
+	fun pickTier(tierGroup: String, random: Random) = lootTiers[tierGroup.toLowerCase(Locale.ROOT)]?.pickOne(random)
 }
 
 fun FortLootTierData.roll(context: LootContext, random: Random, consumer: Consumer<FortItemStack>) {
-	val row = context.lootPackages.row(LootPackage.text) ?: return
+	val row = context.lootPackages.row(LootPackage.text.toLowerCase(Locale.ROOT)) ?: return
 	// TODO LootPackageCategoryWeightArray, LootPackageCategoryMinArray, LootPackageCategoryMaxArray?
 	for ((lootPackageCategory, lootPackageCategoryValues) in row) {
 		for (lootPackage in lootPackageCategoryValues) {
@@ -249,7 +249,7 @@ fun FortLootTierData.roll(context: LootContext, random: Random, consumer: Consum
 
 fun FortLootPackageData.createItem(context: LootContext, random: Random): FortItemStack? {
 	if (LootPackageCall.isNotEmpty()) {
-		return context.lootPackages.row(LootPackageCall)?.values?.flatten()?.pickOne(random)?.createItem(context, random)
+		return context.lootPackages.row(LootPackageCall.toLowerCase(Locale.ROOT))?.values?.flatten()?.pickOne(random)?.createItem(context, random)
 	} else if (!ItemDefinition.assetPathName.isNone()) {
 		return loadObject<FortItemDefinition>(ItemDefinition.toString())?.let { FortItemStack(it, Count) }
 	}
