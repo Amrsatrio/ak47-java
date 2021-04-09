@@ -9,6 +9,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.MapImageGenerator
 import com.tb24.discordbot.MapProcessor
+import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.mcpprofile.attributes.AthenaProfileAttributes
@@ -150,6 +151,7 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 
 class GenXpCoinsDataCommand : BrigadierCommand("genxpcoinsdata", "Generate XP coins data based on the current loaded game files.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.requires(Rune::isBotDev)
 		.executes { c ->
 			c.source.loading("Generating XP coins data")
 			val start = System.currentTimeMillis()

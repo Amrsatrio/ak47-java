@@ -40,7 +40,7 @@ fun main() {
 	exitProcess(0)
 }
 
-class RollCommand : BrigadierCommand("roll", "Fortnite loot simulator.", arrayOf("r")) {
+class RollCommand : BrigadierCommand("roll", "Simulate a given loot pool.", arrayOf("r")) {
 	val context = LootContext()
 
 	init {
@@ -65,24 +65,25 @@ class RollCommand : BrigadierCommand("roll", "Fortnite loot simulator.", arrayOf
 			}
 		)
 
-	private fun execute(source: CommandSourceStack, tierGroup: String, seed: Long = Random().nextLong()): Int {
+	private fun execute(source: CommandSourceStack, tierGroupName: String, seed: Long = Random().nextLong()): Int {
 		val random = Random(seed)
 		val outItems = mutableListOf<FortItemStack>()
-		val tier = context.pickTier(tierGroup, random)
-			?: throw SimpleCommandExceptionType(LiteralMessage("Tier group $tierGroup not found")).create()
-		tier.roll(context, random, outItems::add)
+		val tierGroup = context.lootTiers[tierGroupName]
+			?: throw SimpleCommandExceptionType(LiteralMessage("Loot tier group `$tierGroupName` not found")).create()
+		val tier = tierGroup.pickOne(random)
+		tier?.roll(context, random, outItems::add)
 		val forDisplay = outItems.maxByOrNull { it.rarity }
 		val descLines = mutableListOf<String>()
-		if (tier.LootTier > 0) {
+		if (tier != null && tier.LootTier > 0) {
 			descLines.add("Tier: %,d".format(tier.LootTier))
 		}
-		descLines.add("Seed: %d".format(seed))
 		val embed = EmbedBuilder()
-			.setTitle("Roll: $tierGroup")
+			.setTitle("Roll: $tierGroupName")
 			.setDescription(descLines.joinToString("\n"))
 			.addFieldSeparate("You got", outItems, 0) {
 				"%,d \u00d7 [%s] %s".format(it.quantity, it.rarity, it.displayName)
 			}
+			.setFooter("Seed: %d".format(seed))
 			.setThumbnail(Utils.benBotExportAsset(forDisplay?.getPreviewImagePath(true)?.toString()))
 		if (forDisplay != null) {
 			embed.setColor(rarityData.forRarity(forDisplay.rarity).Color2.toFColor(true).toPackedARGB())
@@ -117,7 +118,7 @@ fun FortLootTierData.roll(context: LootContext, random: Random, consumer: Consum
 	val lootPackages = context.lootPackages[LootPackage.text] ?: emptyList()
 	for (lootPackage in lootPackages) {
 		val item = lootPackage.createItem(context, random)
-		if (item != null /*&& item.quantity > 0*/) {
+		if (item != null && item.quantity > 0) {
 			consumer.accept(item)
 		}
 	}
@@ -151,7 +152,7 @@ fun <T> pickFromWeighted(entries: List<T>, random: Random, getter: (T) -> Float)
 				}
 				entry = iterator.next()
 				remaining -= getter(entry)
-			} while (remaining >= 0)
+			} while (remaining >= 0f)
 			return entry
 		}
 	}
