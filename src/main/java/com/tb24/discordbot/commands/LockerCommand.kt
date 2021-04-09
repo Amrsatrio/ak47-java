@@ -155,10 +155,10 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 			source.loading("Getting cosmetics")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 			val athena = source.api.profileManager.getProfileData("athena")
-			val exclusivesResponse = source.client.okHttpClient.newCall(Request.Builder().url("https://fort-api.com/exclusives/list").build()).execute()
-			val exclusiveTemplateIds = if (exclusivesResponse.isSuccessful) {
+			val exclusivesResponse = runCatching { source.client.okHttpClient.newCall(Request.Builder().url("https://fort-api.com/exclusives/list").build()).exec() }
+			val exclusiveTemplateIds = if (exclusivesResponse.isSuccess) {
 				val out = mutableListOf<String>()
-				exclusivesResponse.body()!!.charStream().use { it.forEachLine(out::add) }
+				exclusivesResponse.getOrThrow().body()!!.charStream().use { it.forEachLine(out::add) }
 				out
 			} else exclusivesOverride
 			val items = athena.items.values.filter { item -> exclusiveTemplateIds.any { it.equals(item.templateId, true) } }
