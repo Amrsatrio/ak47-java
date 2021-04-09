@@ -66,6 +66,9 @@ public class Utils {
 	}
 
 	public static String benBotExportAsset(String objectPath) {
+		if (objectPath.startsWith("/PrimalGameplay/")) { // Hack because benbot does not like short plugin package paths
+			objectPath = "FortniteGame/Plugins/GameFeatures/PrimalGameplay/Content/" + objectPath.substring("/PrimalGameplay/".length());
+		}
 		return isNone(objectPath) ? null : "https://benbotfn.tk/api/v1/exportAsset?path=" + objectPath;
 	}
 
