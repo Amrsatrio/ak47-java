@@ -55,6 +55,7 @@ val EMOJI_GUILDS = arrayOf(
 	677515124373979155L, // Epic Server Version Status
 	Utils.HOMEBASE_GUILD_ID, // AK Facility
 	612383214962606081L, // AS Development
+	784128953387974736L, // add ur emoji idc
 )
 
 @Throws(HttpException::class, IOException::class)

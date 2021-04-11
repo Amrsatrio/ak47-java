@@ -346,7 +346,7 @@ fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: Str
 	return sb.toString()
 }
 
-fun getQuestCompletion(item: FortItemStack): Pair<Int, Int> {
+fun getQuestCompletion(item: FortItemStack, allowCompletionCountOverride: Boolean = true): Pair<Int, Int> {
 	val quest = item.defData as? FortQuestItemDefinition ?: return 0 to 0
 	var completion = 0
 	var max = 0
@@ -357,7 +357,7 @@ fun getQuestCompletion(item: FortItemStack): Pair<Int, Int> {
 		completion += Utils.getCompletion(objective, item)
 		max += objective.Count
 	}
-	if (quest.ObjectiveCompletionCount != null) {
+	if (allowCompletionCountOverride && quest.ObjectiveCompletionCount != null) {
 		max = quest.ObjectiveCompletionCount
 	}
 	return completion to max
