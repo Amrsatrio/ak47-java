@@ -66,10 +66,13 @@ public class Utils {
 	}
 
 	public static String benBotExportAsset(String objectPath) {
+		if (isNone(objectPath)) {
+			return null;
+		}
 		if (objectPath.startsWith("/PrimalGameplay/")) { // Hack because benbot does not like short plugin package paths
 			objectPath = "FortniteGame/Plugins/GameFeatures/PrimalGameplay/Content/" + objectPath.substring("/PrimalGameplay/".length());
 		}
-		return isNone(objectPath) ? null : "https://benbotfn.tk/api/v1/exportAsset?path=" + objectPath;
+		return "https://benbotfn.tk/api/v1/exportAsset?path=" + objectPath;
 	}
 
 	public static int getCompletion(FortMcpQuestObjectiveInfo objective, FortItemStack item) {
@@ -92,15 +95,15 @@ public class Utils {
 		float ratio = (float) current / (float) max;
 		int barEnd = (int) (ratio * barWidth + 0.5F);
 
-		StringBuilder sb = new StringBuilder(width);
-		sb.append('[');
+		char[] chars = new char[width];
+		chars[0] = '[';
 
 		for (int i = 0; i < barWidth; ++i) {
-			sb.append(i >= barEnd ? ' ' : i == barEnd - 1 ? '>' : '=');
+			chars[i + 1] = i >= barEnd ? ' ' : i == barEnd - 1 ? '>' : '=';
 		}
 
-		sb.append(']');
-		return sb.toString();
+		chars[width - 1] = ']';
+		return new String(chars);
 	}
 
 	/**

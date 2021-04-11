@@ -30,23 +30,55 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 			val inventory = source.api.fortniteService.inventorySnapshot(source.api.currentLoggedIn.id).exec().body()!!
 			val embed = source.createEmbed()
 				.setTitle("Season " + attrs.season_num)
-				.addField("Level %,d".format(attrs.level), "`%s`\n%,d / %,d".format(Utils.progress(attrs.xp, xpToNextLevel, 32), attrs.xp, xpToNextLevel), false)
+				.addField("%s Level %,d".format(if (attrs.book_purchased) "Battle Pass" else "Free Pass", attrs.level), "`%s`\n%,d / %,d".format(Utils.progress(attrs.xp, xpToNextLevel, 32), attrs.xp, xpToNextLevel), false)
 			if (nextLevelReward != null) {
 				val rewardItem = nextLevelReward.asItemStack()
 				embed.addField("Rewards for level %,d".format(attrs.level + 1), rewardItem.render(), false)
-				embed.setThumbnail(Utils.benBotExportAsset(rewardItem.getPreviewImagePath(true).toString()))
+				embed.setThumbnail(Utils.benBotExportAsset(rewardItem.getPreviewImagePath(true)?.toString()))
 			}
-			val restedXpMaxAccrue = seasonData?.RestedXpMaxAccrue ?: 0
-			var restedXpText = "`%s`\n%,d / %,d\nMultiplier: %,.2f\u00d7".format(Utils.progress(attrs.rested_xp, restedXpMaxAccrue, 32), attrs.rested_xp, restedXpMaxAccrue, attrs.rested_xp_mult)
-			if (restedXpMaxAccrue > 0 && attrs.rested_xp >= restedXpMaxAccrue) {
-				restedXpText += "\n⚠ " + "Your supercharged XP is at maximum. You won't be granted more supercharged XP if you don't complete your daily challenges until you deplete it."
+			if (attrs.xp_overflow > 0) {
+				embed.addField("XP Overflow", Formatters.num.format(attrs.xp_overflow), false)
 			}
-			embed.addField("Supercharged XP", restedXpText, false)
+			if (attrs.rested_xp > 0) {
+				val restedXpMaxAccrue = seasonData?.RestedXpMaxAccrue ?: 0
+				var restedXpText = "`%s`\n%,d / %,d\nMultiplier: %,.2f\u00d7 \u00b7 Exchange: %,.2f \u00b7 Overflow: %,d".format(
+					Utils.progress(attrs.rested_xp, restedXpMaxAccrue, 32),
+					attrs.rested_xp, restedXpMaxAccrue,
+					attrs.rested_xp_mult, attrs.rested_xp_exchange, attrs.rested_xp_overflow)
+				if (restedXpMaxAccrue > 0 && attrs.rested_xp >= restedXpMaxAccrue) {
+					restedXpText += "\n⚠ " + "Your supercharged XP is at maximum. You won't be granted more supercharged XP if you don't complete your daily challenges until you deplete it."
+				}
+				embed.addField("Supercharged XP", restedXpText, false)
+			}
 			embed.addField("Account Level", Formatters.num.format(attrs.accountLevel), false)
 			embed.addField("Bars", "%s %,d".format(barsEmote?.asMention, inventory.stash["globalcash"] ?: 0), false)
+			attrs.last_match_end_datetime?.apply {
+				embed.setFooter("Last match end").setTimestamp(toInstant())
+			}
 			source.complete(null, embed.build())
 			Command.SINGLE_SUCCESS
 		}
+		.then(literal("info")
+			.executes { c ->
+				val source = c.source
+				source.ensureSession()
+				source.loading("Getting BR data")
+				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+				val attrs = source.api.profileManager.getProfileData("athena").stats.attributes as AthenaProfileAttributes
+				val embed = source.createEmbed()
+				embed.addField("Lifetime wins", Formatters.num.format(attrs.lifetime_wins), true)
+				embed.addField("2FA reward claimed", if (attrs.mfa_reward_claimed) "✅" else "❌", true)
+				embed.addFieldSeparate("Past seasons", attrs.past_seasons.toList(), 0) {
+					if (it.seasonNumber >= 11) {
+						"Season %,d: %s level %,d, %,d wins".format(it.seasonNumber, if (it.purchasedVIP) "Battle Pass" else "Free Pass", it.seasonLevel, it.numWins)
+					} else {
+						"Season %,d: Level %,d, %s tier %,d, %,d wins".format(it.seasonNumber, it.seasonLevel, if (it.purchasedVIP) "Battle Pass" else "Free Pass", it.bookLevel, it.numWins)
+					}
+				}
+				source.complete(null, embed.build())
+				Command.SINGLE_SUCCESS
+			}
+		)
 
 	private fun getXpToNextLevel(defData: AthenaSeasonItemDefinition?, level: Int): Int {
 		if (defData == null) {

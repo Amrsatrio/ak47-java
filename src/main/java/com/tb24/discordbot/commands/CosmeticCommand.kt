@@ -29,7 +29,7 @@ class CosmeticCommand : BrigadierCommand("cosmetic", "Shows info of a cosmetic b
 					.setTitle(item.displayName)
 					.setDescription(defData.Description.format())
 					.addField("Rarity", defData.Rarity.name.format(), false)
-					.setThumbnail(Utils.benBotExportAsset(item.getPreviewImagePath(true).toString()))
+					.setThumbnail(Utils.benBotExportAsset(item.getPreviewImagePath(true)?.toString()))
 					.setImage(Utils.benBotExportAsset(defData.DisplayAssetPath?.load<FortMtxOfferData>()?.DetailsImage?.ResourceObject?.value?.getPathName()))
 					.setFooter("${System.currentTimeMillis() - start}ms")
 				defData.GameplayTags?.apply {
