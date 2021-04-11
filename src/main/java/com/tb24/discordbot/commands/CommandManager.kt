@@ -116,6 +116,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(StormShieldCommand())
 		register(UndoCommand())
 		register(WorkersCommand())
+		register(WorthCommand())
 		register(XpCoinsCommand())
 		register(FortniteAndroidApkCommand())
 	}
