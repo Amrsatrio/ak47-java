@@ -17,8 +17,10 @@ import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.friends.FriendV2
 import com.tb24.fn.model.friends.FriendsSettings
 import com.tb24.fn.model.friends.FriendsSummary
+import com.tb24.fn.model.party.FPartyInfo
 import com.tb24.fn.network.FriendsService
 import com.tb24.fn.util.Formatters
+import com.tb24.fn.util.MetaStringMap
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -130,11 +132,15 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 	}
 
 	private fun friends(source: CommandSourceStack, friend: FriendV2, user: GameProfile): Int {
+		val party = getCurrentParty(source)
 		val message = source.complete(null, source.createEmbed()
 			.setTitle("You're friends with ${friend.displayName?.escapeMarkdown() ?: friend.accountId}")
-			.setDescription("📛 Change nickname\n🗑 Remove friend\n🚫 Block")
+			.setDescription((if (party != null) "📩 Invite to party\n" else "") + "📛 Change nickname\n🗑 Remove friend\n🚫 Block")
 			.populateFriendInfo(friend)
 			.build())
+		if (party != null) {
+			message.addReaction("📩").queue()
+		}
 		message.addReaction("📛").queue()
 		//message.addReaction("📝").queue()
 		message.addReaction("🗑").queue()
@@ -145,12 +151,46 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
 		}).await().first().reactionEmote.name
 		return when (choice) {
+			"📩" -> inviteToParty(source, friend, party ?: throw SimpleCommandExceptionType(LiteralMessage("You are currently not in a party.")).create())
 			"📛" -> aliasOrNote(source, friend, false)
 			"📝" -> aliasOrNote(source, friend, true)
 			"🗑" -> remove(source, user)
 			"🚫" -> block(source, user)
 			else -> throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
 		}
+	}
+
+	private fun getCurrentParty(source: CommandSourceStack): FPartyInfo? {
+		val summary = source.api.partyService.getUserSummary("Fortnite", source.api.currentLoggedIn.id).exec().body()!!
+		return summary.current.firstOrNull()
+	}
+
+	private fun FPartyInfo.invite(source: CommandSourceStack, accountId: String) =
+		source.api.partyService.sendInvite("Fortnite", id, accountId, true, MetaStringMap().apply {
+			put("urn:epic:conn:type", "game")
+			put("urn:epic:conn:platform", "WIN")
+			put("urn:epic:member:dn", source.api.currentLoggedIn.epicDisplayName)
+			put("urn:epic:cfg:build-id", meta.getString("urn:epic:cfg:build-id", "1:3:"))
+			put("urn:epic:invite:platformdata", "")
+		}).exec()
+
+	private fun ping(source: CommandSourceStack, accountId: String) =
+		source.api.partyService.createPing("Fortnite", accountId, source.api.currentLoggedIn.id, MetaStringMap().apply {
+			put("urn:epic:invite:platformdata", "")
+		}).exec().body()!!
+
+	private fun inviteToParty(source: CommandSourceStack, friend: FriendV2, party: FPartyInfo): Int {
+		val invite = party.invites.firstOrNull { it.sent_to == friend.accountId }
+		if (invite != null) {
+			ping(source, friend.accountId)
+		} else {
+			party.invite(source, friend.accountId)
+		}
+		source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
+			.setTitle("✅ Party Invite Sent")
+			.setDescription("Party invite sent to " + friend.displayName)
+			.build())
+		return Command.SINGLE_SUCCESS
 	}
 
 	private fun aliasOrNote(source: CommandSourceStack, friend: FriendV2, note: Boolean): Int {
