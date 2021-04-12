@@ -38,10 +38,7 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 				if (accountIndex != null) {
 					val devices = source.client.savedLoginsManager.getAll(source.author.id)
 					val deviceData = devices.safeGetOneIndexed(accountIndex)
-					doDeviceAuthLogin(source, deviceData, lazy {
-						source.session = source.client.internalSession
-						source.queryUsers(Collections.singleton(deviceData.accountId))
-					})
+					doDeviceAuthLogin(source, deviceData)
 				} else {
 					doLogin(source, GrantType.authorization_code, arg, EAuthClient.FORTNITE_IOS_GAME_CLIENT)
 				}
@@ -163,10 +160,13 @@ private inline fun accountPicker(source: CommandSourceStack): Int {
 	}
 }
 
-private fun doDeviceAuthLogin(source: CommandSourceStack, deviceData: DeviceAuth, users: Lazy<List<GameProfile>>): Int {
+fun doDeviceAuthLogin(source: CommandSourceStack, deviceData: DeviceAuth, users: Lazy<List<GameProfile>> = lazy {
+	source.session = source.client.internalSession
+	source.queryUsers(Collections.singleton(deviceData.accountId))
+}, sendMessages: Boolean = true): Int {
 	val auth = deviceData.clientId?.let(EAuthClient::getByClientId) ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT
 	try {
-		return source.session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", deviceData.accountId, "device_id", deviceData.deviceId, "secret", deviceData.secret, "token_type", "eg1"), auth)
+		return source.session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", deviceData.accountId, "device_id", deviceData.deviceId, "secret", deviceData.secret, "token_type", "eg1"), auth, sendMessages)
 	} catch (e: HttpException) {
 		if (e.epicError.errorCode == "errors.com.epicgames.account.invalid_account_credentials" || e.epicError.errorCode == "errors.com.epicgames.account.account_not_active") {
 			val accountId = deviceData.accountId

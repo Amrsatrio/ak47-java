@@ -1,7 +1,6 @@
 package com.tb24.discordbot.commands
 
 import com.google.common.base.Throwables
-import com.google.common.collect.ImmutableMap
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.StringReader
@@ -17,7 +16,6 @@ import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.util.CollectorEndReason
 import com.tb24.discordbot.util.CollectorException
 import com.tb24.discordbot.util.Utils
-import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.ChannelType
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -247,7 +245,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				session.api.userToken = null
 				if (savedDevice != null) {
 					try {
-						session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", savedDevice.accountId, "device_id", savedDevice.deviceId, "secret", savedDevice.secret, "token_type", "eg1"), savedDevice.clientId?.let(EAuthClient::getByClientId) ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT, false)
+						doDeviceAuthLogin(source, savedDevice)
 						source.session = source.initialSession
 						return true
 					} catch (e: HttpException) {
