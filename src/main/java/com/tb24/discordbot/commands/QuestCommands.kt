@@ -258,7 +258,7 @@ class MilestonesCommand : BrigadierCommand("milestones", "Shows your milestone q
 			source.loading("Getting challenges")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 			val athena = source.api.profileManager.getProfileData("athena")
-			val payload = mutableMapOf<String, Int>()
+			val payload = sortedMapOf<String, Int>(String.CASE_INSENSITIVE_ORDER)
 			for (item in athena.items.values) {
 				if (item.primaryAssetType != "ChallengeBundle") {
 					continue
@@ -273,11 +273,13 @@ class MilestonesCommand : BrigadierCommand("milestones", "Shows your milestone q
 				val progress = getQuestCompletion(lastQuest).first
 				payload[item.primaryAssetName.substring(milestoneIdx + trigger.length)] = progress
 			}
-			payload["progress"] = 1
-			val url = "https://fortnite.gg/quests?" + payload.entries.joinToString("&") { it.key + '=' + it.value.toString() }
-			val shortened = shortenUrl(source, url)
+			if (payload.isEmpty()) {
+				throw SimpleCommandExceptionType(LiteralMessage("No milestone quests detected")).create()
+			}
+			var url = "https://fortnite.gg/quests?progress=1&" + payload.entries.sortedBy { it.key }.joinToString("&") { it.key + '=' + it.value.toString() }
+			url = shortenUrl(source, url)
 			source.complete(null, source.createEmbed()
-				.setTitle("View your milestones in Fortnite.GG", shortened)
+				.setTitle("View your milestones in Fortnite.GG", url)
 				.build())
 			Command.SINGLE_SUCCESS
 		}
