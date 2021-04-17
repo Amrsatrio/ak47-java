@@ -5,6 +5,7 @@ import com.tb24.fn.model.FortItemStack;
 import com.tb24.fn.util.EAuthClient;
 import me.fungames.jfortniteparse.fort.objects.FortMcpQuestObjectiveInfo;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Locale;
@@ -45,9 +46,9 @@ public class Utils {
 		return String.format("https://www.epicgames.com/id/api/redirect?clientId=%s&responseType=code", client.clientId);
 	}
 
-	public static String login(String redirectUrl) {
+	public static String login(String redirectUrl) throws UnsupportedEncodingException {
 		if (redirectUrl != null) {
-			return "https://www.epicgames.com/id/login?redirectUrl=" + URLEncoder.encode(redirectUrl);
+			return "https://www.epicgames.com/id/login?redirectUrl=" + URLEncoder.encode(redirectUrl, "UTF-8");
 		} else {
 			return "https://www.epicgames.com/id/login";
 		}

@@ -11,6 +11,9 @@ import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.discordbot.util.getEmoteByName
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.uasset.loadObject
+import me.fungames.jfortniteparse.ue4.assets.exports.UCurveTable
+import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 
 class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your daily creative XP.", arrayOf("doihavecreativexp")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -24,7 +27,7 @@ class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your 
 				?: throw SimpleCommandExceptionType(LiteralMessage("No playtime tracker")).create()
 			val (current, max) = getQuestCompletion(lastCreativePlaytimeTracker, false)
 			val delta = 15
-			val xpCount = 6300
+			val xpCount = loadObject<UCurveTable>("/Game/Athena/Balance/DataTables/AthenaAccoladeXP.AthenaAccoladeXP")!!.findCurve(FName.dummy("CreativeMode_15mMedal"))!!.eval(1f).toInt()
 			source.complete(if (Rune.isBotDev(source)) getEmoteByName(if (current < max) "yus" else "nu")?.asMention else null, source.createEmbed()
 				.setTitle("Creative XP")
 				.setDescription("`%s`\n%,d / %,d minutes played\n%,d / %,d %s".format(

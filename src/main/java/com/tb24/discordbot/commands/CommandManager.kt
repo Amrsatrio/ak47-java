@@ -88,6 +88,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(LoginCommand())
 		register(LogoutCommand())
 		register(MemoryCommand())
+		register(MilestonesCommand())
 		register(MtxAlertsCommand())
 		register(MtxBalanceCommand())
 		register(MtxPlatformCommand())
@@ -245,11 +246,13 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				session.api.userToken = null
 				if (savedDevice != null) {
 					try {
-						doDeviceAuthLogin(source, savedDevice)
+						doDeviceAuthLogin(source, savedDevice, sendMessages = false)
 						source.session = source.initialSession
 						return true
 					} catch (e: HttpException) {
 						httpError(source, e, "Login Failed")
+					} catch (e: CommandSyntaxException) {
+						source.complete(null, EmbedBuilder().setColor(0xF04947).setDescription("❌ " + e.rawMessage.string).build())
 					}
 				}
 				session.clear()

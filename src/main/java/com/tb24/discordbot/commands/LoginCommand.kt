@@ -178,8 +178,8 @@ fun doDeviceAuthLogin(source: CommandSourceStack, deviceData: DeviceAuth, users:
 }
 
 private inline fun startDefaultLoginFlow(source: CommandSourceStack) =
-	//authorizationCodeHint(source, EAuthClient.FORTNITE_IOS_GAME_CLIENT)
-	deviceCode(source, EAuthClient.FORTNITE_SWITCH_GAME_CLIENT)
+	authorizationCodeHint(source, EAuthClient.FORTNITE_IOS_GAME_CLIENT)
+	//deviceCode(source, EAuthClient.FORTNITE_SWITCH_GAME_CLIENT)
 
 fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 	val timer = Timer()

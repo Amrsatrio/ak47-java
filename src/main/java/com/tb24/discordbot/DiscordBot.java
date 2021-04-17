@@ -45,7 +45,7 @@ import java.util.concurrent.TimeUnit;
 import static com.rethinkdb.RethinkDB.r;
 
 public final class DiscordBot {
-	public static final String VERSION = "6.2.16";
+	public static final String VERSION = "6.3.0";
 	public static final Logger LOGGER = LoggerFactory.getLogger("DiscordBot");
 	public static final boolean LOAD_PAKS = System.getProperty("loadPaks", "false").equals("true");
 	public static final String ENV = System.getProperty("env", "dev");
@@ -73,7 +73,7 @@ public final class DiscordBot {
 			System.exit(1);
 			return;
 		}
-		LOGGER.info("Starting AK-47 Discord Bot...");
+		LOGGER.info("Starting Discord Bot...");
 		if (LOAD_PAKS) AssetManager.INSTANCE.loadPaks(false, 0);
 		try {
 			instance = new DiscordBot(args[0]);

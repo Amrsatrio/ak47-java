@@ -1,5 +1,6 @@
 package com.tb24.discordbot.commands
 
+import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
@@ -21,7 +22,9 @@ import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.attributes.IQuestManager
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.subgame.FortRerollDailyQuest
+import com.tb24.fn.model.mcpprofile.item.FortChallengeBundleItem
 import com.tb24.fn.util.format
+import com.tb24.fn.util.getString
 import com.tb24.uasset.AssetManager
 import com.tb24.uasset.getProp
 import me.fungames.jfortniteparse.fort.enums.EFortRarity
@@ -36,6 +39,8 @@ import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
 import me.fungames.jfortniteparse.util.toPngArray
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
+import okhttp3.HttpUrl
+import okhttp3.Request
 import java.awt.AlphaComposite
 import java.awt.Color
 import java.awt.Font
@@ -245,6 +250,46 @@ class QuestCommand : BrigadierCommand("quest", "Shows the details of a quest by 
 	}
 }
 
+class MilestonesCommand : BrigadierCommand("milestones", "Shows your milestone quests in Fortnite.GG", arrayOf("rarequests")) {
+	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.executes { c ->
+			val source = c.source
+			source.ensureSession()
+			source.loading("Getting challenges")
+			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+			val athena = source.api.profileManager.getProfileData("athena")
+			val payload = mutableMapOf<String, Int>()
+			for (item in athena.items.values) {
+				if (item.primaryAssetType != "ChallengeBundle") {
+					continue
+				}
+				val trigger = "_milestone_"
+				val milestoneIdx = item.primaryAssetName.indexOf(trigger)
+				if (milestoneIdx == -1) {
+					continue
+				}
+				val attrs = item.getAttributes(FortChallengeBundleItem::class.java)
+				val lastQuest = athena.items[attrs.grantedquestinstanceids.last()]!!
+				val progress = getQuestCompletion(lastQuest).first
+				payload[item.primaryAssetName.substring(milestoneIdx + trigger.length)] = progress
+			}
+			payload["progress"] = 1
+			val url = "https://fortnite.gg/quests?" + payload.entries.joinToString("&") { it.key + '=' + it.value.toString() }
+			val shortened = shortenUrl(source, url)
+			source.complete(null, source.createEmbed()
+				.setTitle("View your milestones in Fortnite.GG", shortened)
+				.build())
+			Command.SINGLE_SUCCESS
+		}
+
+	private fun shortenUrl(source: CommandSourceStack, url: String): String {
+		val cuttlyApiKey = "2f305deea48f34be34018ab54b7b7dd2b72e4"
+		val shortenerUrl = HttpUrl.get("https://cutt.ly/api/api.php").newBuilder().addQueryParameter("key", cuttlyApiKey).addQueryParameter("short", url).build()
+		val shortenerResponse = source.api.okHttpClient.newCall(Request.Builder().url(shortenerUrl).build()).exec().to<JsonObject>().getAsJsonObject("url")
+		return shortenerResponse.getString("shortLink")!!
+	}
+}
+
 fun renderQuestObjectives(item: FortItemStack, short: Boolean = false): String {
 	val objectives = (item.defData as FortQuestItemDefinition).Objectives.filter { !it.bHidden }
 	return objectives.joinToString("\n") {
@@ -291,23 +336,23 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 	if (remainingRerolls <= 0) {
 		throw SimpleCommandExceptionType(LiteralMessage("You ran out of daily quest rerolls for today.")).create()
 	}
-	if (!source.complete(null, source.createEmbed().setColor(BrigadierCommand.COLOR_WARNING)
-			.setTitle("Replace?")
-			.setDescription(renderChallenge(questToReplace, conditionalCondition = canReceiveMtxCurrency))
-			.build()).yesNoReactions(source.author).await()) {
+	val embed = source.createEmbed().setColor(BrigadierCommand.COLOR_WARNING)
+		.setTitle("Replace?")
+		.setDescription(renderChallenge(questToReplace, conditionalCondition = canReceiveMtxCurrency))
+	val confirmationEmbed = source.complete(null, embed.build())
+	if (!confirmationEmbed.yesNoReactions(source.author).await()) {
 		source.complete("👌 Alright.")
 		return Command.SINGLE_SUCCESS
 	}
-	source.loading("Replacing daily quest")
 	source.api.profileManager.dispatchClientCommandRequest(FortRerollDailyQuest().apply { questId = questToReplace.itemId }, profileId).await()
 	profile = source.api.profileManager.getProfileData(profileId)
-	source.complete(null, source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS)
+	confirmationEmbed.editMessage(embed.setColor(BrigadierCommand.COLOR_SUCCESS)
 		.setTitle("✅ Replaced")
 		.addField("Here are your daily quests now:", questsGetter(profile)
 			.mapIndexed { i, it -> renderChallenge(it, "${i + 1}. ", "\u00a0\u00a0\u00a0", conditionalCondition = canReceiveMtxCurrency) }
 			.joinToString("\n")
 			.takeIf { it.isNotEmpty() } ?: "You have no active daily quests", false)
-		.build())
+		.build()).complete()
 	return Command.SINGLE_SUCCESS
 }
 
