@@ -52,6 +52,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(CharacterCollectionCommand())
 		register(CheckCodeCommand())
 		register(ClaimMfaCommand())
+		register(CloudStorageCommand())
 		register(ColorCommand())
 		register(CompetitiveCommand())
 		//register(ComposeMcpCommand())

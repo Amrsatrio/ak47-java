@@ -279,7 +279,7 @@ class MilestonesCommand : BrigadierCommand("milestones", "Shows your milestone q
 			var url = "https://fortnite.gg/quests?progress=1&" + payload.entries.sortedBy { it.key }.joinToString("&") { it.key + '=' + it.value.toString() }
 			url = shortenUrl(source, url)
 			source.complete(null, source.createEmbed()
-				.setTitle("View your milestones in Fortnite.GG", url)
+				.setTitle("View your milestones on Fortnite.GG", url)
 				.build())
 			Command.SINGLE_SUCCESS
 		}
