@@ -1,5 +1,6 @@
 package com.tb24.discordbot.commands
 
+import com.google.common.hash.Hashing
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
@@ -14,6 +15,7 @@ import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
 import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import net.dv8tion.jda.api.entities.Message
 import okhttp3.Request
+import java.nio.ByteBuffer
 import java.util.*
 import java.util.concurrent.CompletableFuture
 
@@ -57,6 +59,44 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 			source.complete("✅ All images have been sent successfully.")
 			Command.SINGLE_SUCCESS
 		}
+		.then(literal("fortnitegg")
+			.executes { c ->
+				val source = c.source
+				source.ensureSession()
+				source.loading("Getting cosmetics")
+				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+				val athena = source.api.profileManager.getProfileData("athena")
+				val types = arrayOf(
+					"AthenaCharacter",
+					"AthenaBackpack",
+					"AthenaPickaxe",
+					"AthenaGlider",
+					"AthenaSkyDiveContrail",
+					"AthenaDance",
+					"AthenaItemWrap",
+					"AthenaMusicPack",
+					"AthenaLoadingScreen"
+				)
+				val ints = mutableListOf<UInt>()
+				for (item in athena.items.values) {
+					if (item.primaryAssetType !in types) {
+						continue
+					}
+					ints.add(Hashing.murmur3_32().hashString(item.primaryAssetName.toLowerCase(), Charsets.UTF_8).asInt().toUInt())
+				}
+				ints.sort()
+				val buf = ByteBuffer.allocate(4 + ints.size * 4)
+				buf.putInt(ints.size)
+				ints.forEach { buf.putInt(it.toInt()) }
+				val encodedCosmetics = Base64.getUrlEncoder().encodeToString(buf.array())
+				var url = "https://fortnite.gg/locker?data=$encodedCosmetics"
+				url = url.shortenUrl(source)
+				source.complete(null, source.createEmbed()
+					.setTitle("View your locker on Fortnite.GG", url)
+					.build())
+				Command.SINGLE_SUCCESS
+			}
+		)
 }
 
 class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive cosmetics in an image.") {

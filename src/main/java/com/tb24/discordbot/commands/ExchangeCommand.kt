@@ -14,7 +14,7 @@ class ExchangeCommand : BrigadierCommand("exchange", "Generates an exchange code
 			source.loading("Generating exchange code")
 			source.api.accountService.exchangeCode.exec().body()!!.apply {
 				source.complete(code)
-				source.complete("Expires ${(System.currentTimeMillis() + expiresInSeconds * 1000L).relativeFromNow(true)}. Use `${source.prefix}logout` to invalidate the code.")
+				source.complete("Expires ${(System.currentTimeMillis() + expiresInSeconds * 1000L + 1L).relativeFromNow(true)}. Use `${source.prefix}logout` to invalidate the code.")
 			}
 			Command.SINGLE_SUCCESS
 		}

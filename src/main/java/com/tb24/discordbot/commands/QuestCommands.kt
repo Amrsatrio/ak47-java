@@ -1,6 +1,5 @@
 package com.tb24.discordbot.commands
 
-import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
@@ -24,7 +23,6 @@ import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.subgame.FortRerollDailyQuest
 import com.tb24.fn.model.mcpprofile.item.FortChallengeBundleItem
 import com.tb24.fn.util.format
-import com.tb24.fn.util.getString
 import com.tb24.uasset.AssetManager
 import com.tb24.uasset.getProp
 import me.fungames.jfortniteparse.fort.enums.EFortRarity
@@ -39,8 +37,6 @@ import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
 import me.fungames.jfortniteparse.util.toPngArray
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
-import okhttp3.HttpUrl
-import okhttp3.Request
 import java.awt.AlphaComposite
 import java.awt.Color
 import java.awt.Font
@@ -277,19 +273,12 @@ class MilestonesCommand : BrigadierCommand("milestones", "Shows your milestone q
 				throw SimpleCommandExceptionType(LiteralMessage("No milestone quests detected")).create()
 			}
 			var url = "https://fortnite.gg/quests?progress=1&" + payload.entries.sortedBy { it.key }.joinToString("&") { it.key + '=' + it.value.toString() }
-			url = shortenUrl(source, url)
+			url = url.shortenUrl(source)
 			source.complete(null, source.createEmbed()
 				.setTitle("View your milestones on Fortnite.GG", url)
 				.build())
 			Command.SINGLE_SUCCESS
 		}
-
-	private fun shortenUrl(source: CommandSourceStack, url: String): String {
-		val cuttlyApiKey = "2f305deea48f34be34018ab54b7b7dd2b72e4"
-		val shortenerUrl = HttpUrl.get("https://cutt.ly/api/api.php").newBuilder().addQueryParameter("key", cuttlyApiKey).addQueryParameter("short", url).build()
-		val shortenerResponse = source.api.okHttpClient.newCall(Request.Builder().url(shortenerUrl).build()).exec().to<JsonObject>().getAsJsonObject("url")
-		return shortenerResponse.getString("shortLink")!!
-	}
 }
 
 fun renderQuestObjectives(item: FortItemStack, short: Boolean = false): String {

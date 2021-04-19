@@ -53,10 +53,10 @@ class CloudStorageCommand : BrigadierCommand("cloudstorage", "List, download, or
 				} else {
 					source.loading("Downloading $fileName")
 					val response = source.api.fortniteService.readUserFile(source.api.currentLoggedIn.id, fileName).exec().body()!!
-					source.loadingMsg!!.delete().queue()
 					response.byteStream().use {
 						source.channel.sendFile(it, fileName).complete()
 					}
+					source.loadingMsg!!.delete().queue()
 				}
 				Command.SINGLE_SUCCESS
 			}

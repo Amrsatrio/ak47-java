@@ -1,5 +1,6 @@
 package com.tb24.discordbot.util
 
+import com.google.gson.JsonObject
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.StringReader
 import com.mojang.brigadier.context.CommandContext
@@ -8,6 +9,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
+import com.tb24.discordbot.commands.CommandSourceStack
 import com.tb24.fn.EpicApi
 import com.tb24.fn.ProfileManager
 import com.tb24.fn.model.FortItemStack
@@ -29,6 +31,8 @@ import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.*
+import okhttp3.HttpUrl
+import okhttp3.Request
 import retrofit2.Call
 import retrofit2.Response
 import java.awt.Color
@@ -321,6 +325,13 @@ fun Long.relativeFromNow(withSeconds: Boolean = false): String {
 		delta < 60L -> "just now"
 		else /*delta > 0L*/ -> "$elapsedStr ago"
 	}
+}
+
+fun String.shortenUrl(source: CommandSourceStack): String {
+	val cuttlyApiKey = "2f305deea48f34be34018ab54b7b7dd2b72e4"
+	val shortenerUrl = HttpUrl.get("https://cutt.ly/api/api.php").newBuilder().addQueryParameter("key", cuttlyApiKey).addQueryParameter("short", this).build()
+	val shortenerResponse = source.api.okHttpClient.newCall(Request.Builder().url(shortenerUrl).build()).exec().to<JsonObject>().getAsJsonObject("url")
+	return shortenerResponse.getString("shortLink")!!
 }
 
 fun Number.awtColor(hasAlpha: Boolean = toInt() ushr 24 != 0) = Color(toInt(), hasAlpha)

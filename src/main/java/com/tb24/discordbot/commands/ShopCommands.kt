@@ -19,9 +19,9 @@ import com.tb24.fn.util.format
 import com.tb24.fn.util.getPathName
 import com.tb24.fn.util.getPreviewImagePath
 import com.tb24.uasset.loadObject
+import me.fungames.jfortniteparse.fort.exports.AthenaItemShopOfferDisplayData
 import me.fungames.jfortniteparse.fort.exports.FortMtxOfferData
 import me.fungames.jfortniteparse.fort.exports.FortRarityData
-import me.fungames.jfortniteparse.fort.exports.FortShopOfferDisplayData
 import me.fungames.jfortniteparse.fort.objects.FortColorPalette
 import me.fungames.jfortniteparse.ue4.assets.exports.mats.UMaterialInstance
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
@@ -200,7 +200,7 @@ class OfferDisplayData {
 		}
 		val newDisplayAssetPath = offer.getMeta("NewDisplayAssetPath")
 		if (loadDAV2 && newDisplayAssetPath != null) {
-			val newDisplayAsset = loadObject<FortShopOfferDisplayData>(newDisplayAssetPath)
+			val newDisplayAsset = loadObject<AthenaItemShopOfferDisplayData>(newDisplayAssetPath)
 			if (newDisplayAsset != null) {
 				val firstPresentation = newDisplayAsset.Presentations.first().value as? UMaterialInstance
 				if (firstPresentation != null) {

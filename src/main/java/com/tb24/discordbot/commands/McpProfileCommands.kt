@@ -46,8 +46,8 @@ class ComposeMcpCommand : BrigadierCommand("composemcp", "Perform an arbitrary M
 		fun result(data: JsonElement, lastNamePart: String) {
 			val dataAsString = GsonBuilder().setPrettyPrinting().create().toJson(data)
 			if (dataAsString.length > (Message.MAX_CONTENT_LENGTH - "```json\n```".length)) {
-				source.loadingMsg!!.delete().queue()
 				source.channel.sendFile(dataAsString.toByteArray(), "ComposeMCP-${source.api.currentLoggedIn.displayName}-${command}-${profileId}-${lastNamePart}.json").complete()
+				source.loadingMsg!!.delete().queue()
 			} else {
 				source.complete("```json\n$dataAsString```")
 			}
