@@ -15,6 +15,7 @@ import me.fungames.jfortniteparse.fort.objects.AthenaRewardItemReference
 import me.fungames.jfortniteparse.fort.objects.rows.AthenaExtendedXPCurveEntry
 import me.fungames.jfortniteparse.fort.objects.rows.AthenaSeasonalXPCurveEntry
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
+import java.text.DateFormat
 
 class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of current season.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -64,8 +65,14 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 				source.ensureSession()
 				source.loading("Getting BR data")
 				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
-				val attrs = source.api.profileManager.getProfileData("athena").stats.attributes as AthenaProfileAttributes
+				val athena = source.api.profileManager.getProfileData("athena")
+				val attrs = athena.stats.attributes as AthenaProfileAttributes
 				val embed = source.createEmbed()
+				val df = DateFormat.getDateInstance()
+				embed.addField("Dates", "**Creation Date:** %s\n**Last Updated:** %s".format(
+					df.format(athena.created),
+					df.format(athena.updated)
+				), true)
 				embed.addField("Lifetime wins", Formatters.num.format(attrs.lifetime_wins), true)
 				embed.addField("2FA reward claimed", if (attrs.mfa_reward_claimed) "✅" else "❌", true)
 				embed.addFieldSeparate("Past seasons", attrs.past_seasons.toList(), 0) {

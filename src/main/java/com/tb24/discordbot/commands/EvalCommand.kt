@@ -32,8 +32,8 @@ class EvalCommand : BrigadierCommand("eval", "Evaluate an expression for debuggi
 				engine.put("S", source)
 				source.complete("```\n${engine.eval(code)}```", null)
 			}
-		} catch (e: ScriptException) {
-			throw SimpleCommandExceptionType(LiteralMessage("Execution failed```\n${detailMessageField.get(e) as String}```")).create()
+		} catch (e: Throwable) {
+			throw SimpleCommandExceptionType(LiteralMessage("Execution failed```\n${if (e is ScriptException) detailMessageField.get(e) as String else e.toString()}```")).create()
 		}
 		return Command.SINGLE_SUCCESS
 	}

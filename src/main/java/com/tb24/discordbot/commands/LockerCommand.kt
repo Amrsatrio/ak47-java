@@ -143,7 +143,6 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 		"AthenaCharacter:cid_783_athena_commando_m_aquajacket",
 		"AthenaCharacter:cid_926_athena_commando_f_streetfashiondiamond",
 		"AthenaDance:eid_davinci",
-		"AthenaDance:eid_goodvibes",
 		"AthenaDance:eid_kpopdance03",
 		"AthenaDance:eid_playereleven",
 		"AthenaDance:spid_066_llamalaxy",
@@ -186,6 +185,7 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 		"CosmeticVariantToken:vtid_389_halloween_stylec",
 		"CosmeticVariantToken:vtid_828_m_jupiter_styleb",
 		"CosmeticVariantToken:vtid_837_m_historian_styleb",
+		"CosmeticVariantToken:vtid_976_alchemy_styleb",
 	)
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()

@@ -10,15 +10,17 @@ class LaunchCommand : BrigadierCommand("launch", "Launches/logs you into Fortnit
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
 			val source = it.source
+			source.ensureSession()
 			source.loading("Generating exchange code")
 			val code = source.api.accountService.getExchangeCode().exec().body()!!.code
 			val bat = "\"C:\\Program Files\\Epic Games\\Fortnite\\FortniteGame\\Binaries\\Win64\\FortniteLauncher.exe\" -AUTH_LOGIN=unused -AUTH_PASSWORD=$code -AUTH_TYPE=exchangecode -epicapp=Fortnite -epicenv=Prod -epicportal"
-			source.complete("__**Log in to Fortnite Windows as ${source.api.currentLoggedIn.displayName}**__\nCopy and paste the text below into the Run box (Win+R). Valid for 5 minutes, until it's used, or until you log out.\n```batch\n$bat\n```")
+			source.complete("__**Log in to Fortnite Windows as ${source.api.currentLoggedIn.displayName}**__\nCopy and paste the text below into the Run box (Win+R). Valid for 5 minutes, until it's used, or until you log out.\n```bat\n$bat\n```")
 			Command.SINGLE_SUCCESS
 		}
 		.then(literal("android")
 			.executes {
 				val source = it.source
+				source.ensureSession()
 				source.loading("Generating exchange code")
 				val code = source.api.accountService.getExchangeCode().exec().body()!!.code
 				val link = "https://www.epicgames.com/id/exchange?exchangeCode=$code&clientId=${EAuthClient.FORTNITE_ANDROID_GAME_CLIENT.clientId}&responseType=code"

@@ -36,7 +36,7 @@ class CreativeCommand : BrigadierCommand("creative", "Manages your creative isla
 					.setAuthor(linkData.creatorName + " presents")
 					.setTitle(linkData.metadata.title, "https://fortnite.com/creative/island-codes/$mnemonic")
 					.setFooter(mnemonic)
-					.setTimestamp(linkData.published.toInstant())
+					.setTimestamp(linkData.published?.toInstant())
 				linkData.metadata.tagline?.let { embed.setDescription(it) }
 				linkData.metadata.introduction?.let { embed.addField("Introduction", it, false) }
 				linkData.descriptionTags?.let { embed.addField("Tags", it.joinToString(), false) }
