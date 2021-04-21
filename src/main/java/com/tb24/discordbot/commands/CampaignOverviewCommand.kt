@@ -42,10 +42,12 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 		val questItems = hashMapOf<String, FortItemStack>()
 		var researchPoints = 0
 		val mythicSchematics = mutableListOf<FortItemStack>()
+		var canReceiveMtxCurrency = false
 		for (item in campaign.items.values) {
 			when {
 				item.templateId == "Token:collectionresource_nodegatetoken01" -> researchPoints += item.quantity
 				item.templateId.contains("stormking_sr") -> mythicSchematics.add(item)
+				item.templateId == "Token:receivemtxcurrency" -> canReceiveMtxCurrency = true
 				item.templateId in quests -> questItems[item.templateId] = item
 			}
 		}
@@ -84,6 +86,11 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 			campaign.rvn,
 			attrs.gameplay_stats?.firstOrNull { it.statName == "zonescompleted" }?.statValue?.toIntOrNull() ?: 0
 		), true)
+		if (canReceiveMtxCurrency) {
+			embed.setFooter("Founders Account", Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Items/T-Items-MTX.T-Items-MTX"))
+		} else {
+			embed.setFooter("Non-Founders Account", Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Items/T-Items-Currency-X-RayLlama.T-Items-Currency-X-RayLlama"))
+		}
 		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS
 	}
