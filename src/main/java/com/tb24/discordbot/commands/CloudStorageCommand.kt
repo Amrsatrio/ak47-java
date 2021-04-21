@@ -40,6 +40,7 @@ class CloudStorageCommand : BrigadierCommand("cloudstorage", "List, download, or
 			.executes { c ->
 				val source = c.source
 				val fileName = getString(c, "file name")
+				source.ensureSession()
 				val fileToUpload = source.message.attachments.firstOrNull()
 				if (fileToUpload != null) {
 					source.loading("Uploading $fileName")

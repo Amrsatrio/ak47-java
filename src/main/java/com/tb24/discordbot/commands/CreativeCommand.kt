@@ -12,6 +12,7 @@ import com.tb24.discordbot.util.AwaitReactionsOptions
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.awaitReactions
 import com.tb24.discordbot.util.exec
+import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
 import java.util.*
@@ -31,16 +32,23 @@ class CreativeCommand : BrigadierCommand("creative", "Manages your creative isla
 				}
 				source.ensureSession()
 				source.loading("Searching island code")
-				val linkData = source.api.linksService.QueryLinkByMnemonic("fn", mnemonic, "Creative:Island", null).exec().body()!!
+				val linkData = source.api.linksService.QueryLinkByMnemonic("fn", mnemonic, null, null).exec().body()!!
 				val embed = EmbedBuilder().setColor(COLOR_INFO)
 					.setAuthor(linkData.creatorName + " presents")
 					.setTitle(linkData.metadata.title, "https://fortnite.com/creative/island-codes/$mnemonic")
+					.setDescription(linkData.metadata.tagline)
+					.setImage(linkData.metadata.image_url ?: linkData.metadata.generated_image_urls?.url)
 					.setFooter(mnemonic)
 					.setTimestamp(linkData.published?.toInstant())
-				linkData.metadata.tagline?.let { embed.setDescription(it) }
-				linkData.metadata.introduction?.let { embed.addField("Introduction", it, false) }
-				linkData.descriptionTags?.let { embed.addField("Tags", it.joinToString(), false) }
-				(linkData.metadata.image_url ?: linkData.metadata.generated_image_urls?.url)?.let(embed::setImage)
+				val introduction = linkData.metadata.introduction
+				if (!introduction.isNullOrEmpty()) {
+					embed.addField("Introduction", introduction, false)
+				}
+				val descriptionTags = linkData.descriptionTags ?: emptyArray()
+				if (descriptionTags.isNotEmpty()) {
+					embed.addField("Tags", descriptionTags.joinToString(), false)
+				}
+				embed.addField("Version", Formatters.num.format(linkData.version), false)
 				val message = source.complete(null, embed.build())
 				if (source.session == source.client.internalSession) {
 					return@executes Command.SINGLE_SUCCESS
@@ -74,7 +82,7 @@ class CreativeCommand : BrigadierCommand("creative", "Manages your creative isla
 						"Added to favorites"
 					}
 					message.editMessage(embed.setFooter("✅ $successMessage \u2022 $mnemonic").build()).complete()
-				} else if (message.member!!.hasPermission(Permission.MESSAGE_MANAGE)) {
+				} else if (message.member?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
 					message.clearReactions().queue()
 				}
 				Command.SINGLE_SUCCESS

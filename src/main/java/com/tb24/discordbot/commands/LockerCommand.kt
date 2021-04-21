@@ -1,6 +1,7 @@
 package com.tb24.discordbot.commands
 
-import com.google.common.hash.Hashing
+import com.google.gson.JsonObject
+import com.google.gson.internal.bind.util.ISO8601Utils
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
@@ -15,9 +16,10 @@ import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
 import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import net.dv8tion.jda.api.entities.Message
 import okhttp3.Request
-import java.nio.ByteBuffer
+import java.io.ByteArrayOutputStream
 import java.util.*
 import java.util.concurrent.CompletableFuture
+import java.util.zip.DeflaterOutputStream
 
 class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form of an image.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -66,6 +68,7 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 				source.loading("Getting cosmetics")
 				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 				val athena = source.api.profileManager.getProfileData("athena")
+				val fnggItems = source.api.okHttpClient.newCall(Request.Builder().url("https://fortnite.gg/api/items.json").build()).exec().to<JsonObject>()
 				val types = arrayOf(
 					"AthenaCharacter",
 					"AthenaBackpack",
@@ -77,19 +80,21 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 					"AthenaMusicPack",
 					"AthenaLoadingScreen"
 				)
-				val ints = mutableListOf<UInt>()
+				val ints = mutableListOf<Int>()
 				for (item in athena.items.values) {
 					if (item.primaryAssetType !in types) {
 						continue
 					}
-					ints.add(Hashing.murmur3_32().hashString(item.primaryAssetName.toLowerCase(), Charsets.UTF_8).asInt().toUInt())
+					fnggItems.entrySet().firstOrNull { it.key.equals(item.primaryAssetName, true) }?.let { ints.add(it.value.asInt) }
 				}
 				ints.sort()
-				val buf = ByteBuffer.allocate(4 + ints.size * 4)
-				buf.putInt(ints.size)
-				ints.forEach { buf.putInt(it.toInt()) }
-				val encodedCosmetics = Base64.getUrlEncoder().encodeToString(buf.array())
-				var url = "https://fortnite.gg/locker?data=$encodedCosmetics"
+				val diff = ints.mapIndexed { it, i -> if (i > 0) it - ints[i - 1] else it }
+				val os = ByteArrayOutputStream()
+				DeflaterOutputStream(os).use {
+					it.write((ISO8601Utils.format(athena.created) + ',' + diff.joinToString(",")).toByteArray())
+				}
+				val encodedCosmetics = Base64.getUrlEncoder().encode(os.toByteArray())
+				var url = "https://fortnite.gg/my-locker?items=$encodedCosmetics"
 				url = url.shortenUrl(source)
 				source.complete(null, source.createEmbed()
 					.setTitle("View your locker on Fortnite.GG", url)

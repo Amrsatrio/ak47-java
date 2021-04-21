@@ -39,8 +39,8 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 
 	var loadingMsg: Message? = null
 
-	fun loading(text: String): Message {
-		val loadingText = Utils.loadingText(text)
+	fun loading(text: String?): Message {
+		val loadingText = Utils.loadingText(text ?: "Loading")
 		return (loadingMsg?.editMessage(loadingText) ?: channel.sendMessage(loadingText)).override(true).complete().also { loadingMsg = it }
 	}
 

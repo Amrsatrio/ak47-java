@@ -63,7 +63,7 @@ public class Utils {
 	}
 
 	public static String loadingText(String s) {
-		return s.contains("%LOADING%") ? s.replace("%LOADING%", LOADING_EMOJI) : (s + " " + LOADING_EMOJI);
+		return s.contains("...") ? s.replace("...", ' ' + LOADING_EMOJI) : (s + ' ' + LOADING_EMOJI);
 	}
 
 	public static String benBotExportAsset(String objectPath) {

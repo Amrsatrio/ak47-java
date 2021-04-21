@@ -9,6 +9,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.HttpException
+import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.format
 import com.tb24.fn.model.account.DeviceAuth
@@ -113,6 +114,7 @@ private fun create(c: CommandContext<CommandSourceStack>): Int {
 		throw SimpleCommandExceptionType(LiteralMessage("You already registered a device auth of this account.")).create()
 	}
 	val limit = when {
+		Rune.isBotDev(source) -> 20
 		source.hasPremium() -> 10
 		else -> {
 			val timeCreated = source.author.timeCreated.toEpochSecond()

@@ -14,6 +14,7 @@ import com.tb24.fn.model.account.DeviceAuth
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.account.PinGrantInfo
 import com.tb24.fn.util.EAuthClient
+import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.MessageReaction
@@ -113,14 +114,13 @@ private inline fun accountPicker(source: CommandSourceStack): Int {
 		return startDefaultLoginFlow(source)
 	}
 	val numberEmojis = arrayOf("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "0️⃣")
-	check(devices.size <= numberEmojis.size)
 	source.loading("Preparing your login")
 	source.session = source.client.internalSession
 	val users = source.queryUsers(devices.map { it.accountId })
 	val description = mutableListOf<String>().apply {
 		for (i in devices.indices) {
 			val accountId = devices[i].accountId
-			add("${numberEmojis[i]} ${users.firstOrNull { it.id == accountId }?.displayName ?: accountId}")
+			add("${numberEmojis.getOrNull(i) ?: Formatters.num.format(i + 1)} ${users.firstOrNull { it.id == accountId }?.displayName ?: accountId}")
 		}
 		add("✨ Login to another account")
 	}
@@ -136,7 +136,10 @@ private inline fun accountPicker(source: CommandSourceStack): Int {
 			if (shouldStop.get()) {
 				return@supplyAsync
 			}
-			botMessage.addReaction(numberEmojis[i % numberEmojis.size]).complete()
+			if (i >= numberEmojis.size) {
+				break
+			}
+			botMessage.addReaction(numberEmojis[i]).complete()
 		}
 		if (!shouldStop.get()) {
 			botMessage.addReaction("✨").complete()
@@ -215,7 +218,7 @@ fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 					fut.completeExceptionally(SimpleCommandExceptionType(LiteralMessage("The code has expired. Please do the command again.")).create())
 					cancel()
 				} else {
-					source.loading("Waiting for your action %LOADING%\n⏱ ${StringUtil.formatElapsedTime(deviceCodeResponse.expiration - System.currentTimeMillis(), true)}")
+					source.loading("Waiting for your action...\n⏱ ${StringUtil.formatElapsedTime(deviceCodeResponse.expiration - System.currentTimeMillis(), true)}")
 				}
 				return@schedule
 			}
@@ -223,7 +226,7 @@ fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 			cancel()
 		}
 	}
-	val waitingMsg = source.loading("Waiting for your action %LOADING%\n⏱ ${StringUtil.formatElapsedTime(deviceCodeResponse.expiration - System.currentTimeMillis(), true)}")
+	val waitingMsg = source.loading("Waiting for your action...\n⏱ ${StringUtil.formatElapsedTime(deviceCodeResponse.expiration - System.currentTimeMillis(), true)}")
 	waitingMsg.addReaction("❌").queue()
 	val collector = waitingMsg.createReactionCollector({ reaction, user, _ -> reaction.reactionEmote.name == "❌" && user?.idLong == source.author.idLong }, ReactionCollectorOptions().apply { max = 1 })
 	collector.callback = object : CollectorListener<MessageReaction> {

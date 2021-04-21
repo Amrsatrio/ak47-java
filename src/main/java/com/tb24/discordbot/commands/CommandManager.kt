@@ -4,12 +4,9 @@ import com.google.common.base.Throwables
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.StringReader
-import com.mojang.brigadier.arguments.*
 import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.mojang.brigadier.tree.ArgumentCommandNode
-import com.mojang.brigadier.tree.CommandNode
 import com.mojang.brigadier.tree.LiteralCommandNode
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
@@ -292,64 +289,4 @@ User: ${source.author.asMention}$additional
 ${Throwables.getStackTraceAsString(e)}```""", null)
 		}
 	}
-
-	fun ArgumentType<*>.string(): String {
-		return when (this) {
-			is BoolArgumentType -> "bool"
-			is DoubleArgumentType -> "double" + when {
-				minimum == -Double.MAX_VALUE && maximum == Double.MAX_VALUE -> ""
-				minimum != -Double.MAX_VALUE && maximum == Double.MAX_VALUE -> "(min=$minimum)"
-				minimum == -Double.MAX_VALUE && maximum != Double.MAX_VALUE -> "(max=$maximum)"
-				else -> "(min=$minimum,max=$maximum)"
-			}
-			is FloatArgumentType -> "float" + when {
-				minimum == -Float.MAX_VALUE && maximum == Float.MAX_VALUE -> ""
-				minimum != -Float.MAX_VALUE && maximum == Float.MAX_VALUE -> "(min=$minimum)"
-				minimum == -Float.MAX_VALUE && maximum != Float.MAX_VALUE -> "(max=$maximum)"
-				else -> "(min=$minimum,max=$maximum)"
-			}
-			is IntegerArgumentType -> "int" + when {
-				minimum == Integer.MIN_VALUE && maximum == Integer.MAX_VALUE -> ""
-				minimum != Integer.MIN_VALUE && maximum == Integer.MAX_VALUE -> "(min=$minimum)"
-				minimum == Integer.MIN_VALUE && maximum != Integer.MAX_VALUE -> "(max=$maximum)"
-				else -> "(min=$minimum,max=$maximum)"
-			}
-			is LongArgumentType -> "long" + when {
-				minimum == Long.MIN_VALUE && maximum == Long.MAX_VALUE -> ""
-				minimum != Long.MIN_VALUE && maximum == Long.MAX_VALUE -> "(min=$minimum)"
-				minimum == Long.MIN_VALUE && maximum != Long.MAX_VALUE -> "(max=$maximum)"
-				else -> "(min=$minimum,max=$maximum)"
-			}
-			is StringArgumentType -> "String(type=${type})"
-			else -> javaClass.simpleName.substringBefore("Argument")
-		}
-	}
-
-	fun dumpCommand(node: CommandNode<*> = dispatcher.root): String {
-		val indentSize = 2
-		val sb = StringBuilder()
-		sb.append(when (node) {
-			is LiteralCommandNode<*> -> node.literal
-			is ArgumentCommandNode<*, *> -> "<${node.name}> : ${node.type.string()}"
-			else -> node.toString()
-		})
-		if (node.command != null) {
-			sb.append('\n').append(tree(node.children.isNotEmpty(), indentSize)).append("execute()")
-		}
-		if (node.children.isNotEmpty()) {
-			sb.append('\n')
-			val iterator = node.children.iterator()
-			while (iterator.hasNext()) {
-				sb.append(dumpCommand(iterator.next()).lines().mapIndexed { i, s -> (if (i == 0) tree() else seq(' ', indentSize)) + s }.joinToString("\n"))
-				if (iterator.hasNext()) {
-					sb.append('\n')
-				}
-			}
-		}
-		return sb.toString()
-	}
-
-	fun tree(hasNext: Boolean = false, indentSize: Int = 2) = (if (hasNext) '├' else '└') + seq('─', indentSize - 1)
-
-	fun seq(c: Char, i: Int) = CharArray(i) { c }.concatToString()
 }

@@ -59,9 +59,6 @@ class HelpCommand : BrigadierCommand("help", "Shows all commands and their infos
 				if (command != null && command.aliases.isNotEmpty()) {
 					embed.addField(if (command.aliases.size == 1) "Alias" else "Aliases", command.aliases.joinToString(", ") { "`$it`" }, true)
 				}
-				if (source.author.idLong == 624299014388711455L) {
-					embed.addField("Tree", "```\n${source.client.commandManager.dumpCommand(lastNode)}```", false)
-				}
 				source.complete(null, embed.build())
 				smartUsage.size
 			}
