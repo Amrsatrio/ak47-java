@@ -19,6 +19,7 @@ import okhttp3.Request
 import java.io.ByteArrayOutputStream
 import java.util.*
 import java.util.concurrent.CompletableFuture
+import java.util.zip.Deflater
 import java.util.zip.DeflaterOutputStream
 
 class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form of an image.") {
@@ -88,12 +89,12 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 					fnggItems.entrySet().firstOrNull { it.key.equals(item.primaryAssetName, true) }?.let { ints.add(it.value.asInt) }
 				}
 				ints.sort()
-				val diff = ints.mapIndexed { it, i -> if (i > 0) it - ints[i - 1] else it }
+				val diff = ints.mapIndexed { i, it -> if (i > 0) it - ints[i - 1] else it }
 				val os = ByteArrayOutputStream()
-				DeflaterOutputStream(os).use {
+				DeflaterOutputStream(os, Deflater(Deflater.DEFAULT_COMPRESSION, true)).use {
 					it.write((ISO8601Utils.format(athena.created) + ',' + diff.joinToString(",")).toByteArray())
 				}
-				val encodedCosmetics = Base64.getUrlEncoder().encode(os.toByteArray())
+				val encodedCosmetics = Base64.getUrlEncoder().encodeToString(os.toByteArray())
 				var url = "https://fortnite.gg/my-locker?items=$encodedCosmetics"
 				url = url.shortenUrl(source)
 				source.complete(null, source.createEmbed()

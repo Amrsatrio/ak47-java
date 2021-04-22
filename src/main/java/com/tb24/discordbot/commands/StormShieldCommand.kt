@@ -7,20 +7,46 @@ import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.word
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.util.addFieldSeparate
-import com.tb24.discordbot.util.await
-import com.tb24.discordbot.util.dispatchClientCommandRequest
+import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
+import com.tb24.fn.model.assetdata.FortOutpostItemDefinition
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.item.FortOutpostItem
 import com.tb24.fn.util.Formatters
 import java.util.*
 
-class StormShieldCommand : BrigadierCommand("ssd", "Shows info about your storm shield.") {
+class StormShieldCommand : BrigadierCommand("stormshield", "Shows info about your storm shields.", arrayOf("ss", "ssd")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.executes { c ->
+			val source = c.source
+			source.ensureSession()
+			source.loading("Loading storm shields")
+			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "metadata").await()
+			val metadata = source.api.profileManager.getProfileData("metadata")
+			val outposts = sortedMapOf<Int, FortItemStack>()
+			metadata.items.values.associateByTo(outposts) { (it.defData as FortOutpostItemDefinition).TheaterIndex }
+			if (outposts.isEmpty()) {
+				throw SimpleCommandExceptionType(LiteralMessage("You have no storm shields.")).create()
+			}
+			source.complete(null, source.createEmbed()
+				.setTitle("Storm Shields")
+				.setDescription(outposts.entries.joinToString("\n") { (_, item) ->
+					val attrs = item.getAttributes(FortOutpostItem::class.java)
+					val def = item.defData as FortOutpostItemDefinition
+					val sb = StringBuilder(item.displayName).append(": Level ").append(Formatters.num.format(attrs.level))
+					if (attrs.level >= def.MaxLevel) {
+						sb.append(", Endurance Wave ").append(Formatters.num.format(attrs.outpost_core_info.highestEnduranceWaveReached))
+					}
+					sb.toString()
+				})
+				.setFooter("Use ${source.prefix}${c.commandName} <zone> for more details")
+				.build())
+			Command.SINGLE_SUCCESS
+		}
 		.then(argument("zone", word())
 			.executes { c ->
 				val source = c.source
+				source.ensureSession()
 				val lookupTemplateId = when (getString(c, "zone").toLowerCase(Locale.ROOT)) {
 					"stonewood" -> "Outpost:outpostcore_pve_01"
 					"plankerton" -> "Outpost:outpostcore_pve_02"
@@ -31,20 +57,20 @@ class StormShieldCommand : BrigadierCommand("ssd", "Shows info about your storm 
 				source.loading("Loading storm shield")
 				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "metadata").await()
 				val metadata = source.api.profileManager.getProfileData("metadata")
-				val outpostItem = metadata.items.values.firstOrNull { it.templateId == lookupTemplateId }
+				val item = metadata.items.values.firstOrNull { it.templateId == lookupTemplateId }
 					?: throw SimpleCommandExceptionType(LiteralMessage("You don't have a " + FortItemStack(lookupTemplateId, 1).displayName)).create()
-				val outpost = outpostItem.getAttributes(FortOutpostItem::class.java)
-				val hasReachedMaxLevel = outpost.level >= 10
+				val attrs = item.getAttributes(FortOutpostItem::class.java)
+				val hasReachedMaxLevel = attrs.level >= 10
 				val embed = source.createEmbed()
-					.setTitle(outpostItem.displayName)
-					.addField("Level", if (hasReachedMaxLevel) "%,d (Endurance unlocked!)".format(outpost.level) else Formatters.num.format(outpost.level), true)
-					.setFooter("Save count: %,d · Last modified".format(outpost.cloud_save_info.saveCount))
+					.setTitle(item.displayName)
+					.addField("Level", if (hasReachedMaxLevel) "%,d (Endurance unlocked!)".format(attrs.level) else Formatters.num.format(attrs.level), true)
+					.setFooter("Save count: %,d \u2022 Last modified".format(attrs.cloud_save_info.saveCount))
 					.setTimestamp(metadata.updated.toInstant())
 				if (hasReachedMaxLevel) {
-					embed.addField("Endurance max waves", Formatters.num.format(outpost.outpost_core_info.highestEnduranceWaveReached), true)
+					embed.addField("Endurance max waves", Formatters.num.format(attrs.outpost_core_info.highestEnduranceWaveReached), true)
 				}
-				val users = source.queryUsers(outpost.outpost_core_info.accountsWithEditPermission.toList())
-				embed.addFieldSeparate("Accounts with edit permissions", users) { it.displayName ?: it.id }
+				val users = source.queryUsers(attrs.outpost_core_info.accountsWithEditPermission.toList())
+				embed.addFieldSeparate("Accounts with edit permissions", users) { it.displayName.escapeMarkdown() ?: it.id }
 				source.complete(null, embed.build())
 				Command.SINGLE_SUCCESS
 			}
