@@ -11,6 +11,7 @@ import com.tb24.fn.model.mcpprofile.attributes.CampaignProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.campaign.SetActiveHeroLoadout
 import com.tb24.fn.model.mcpprofile.item.FortCampaignHeroLoadoutItem
 import com.tb24.fn.util.format
+import com.tb24.fn.util.getPreviewImagePath
 import me.fungames.jfortniteparse.fort.exports.FortAbilityKit
 import me.fungames.jfortniteparse.fort.exports.FortHeroGameplayDefinition
 import me.fungames.jfortniteparse.fort.exports.FortHeroType
@@ -35,34 +36,41 @@ class HeroLoadoutCommand : BrigadierCommand("heroloadout", "Manages your STW her
 			val loadoutAttrs = item.getAttributes(FortCampaignHeroLoadoutItem::class.java)
 			loadoutsMap[loadoutAttrs.loadout_index] = item
 		}
-		val isUsingInternal = source.session == source.client.internalSession
+		val isMine = source.api.currentLoggedIn.id == campaign.owner.id
 		val event = CompletableFuture<FortItemStack?>()
 		val available = loadoutsMap.values.toList()
-		source.message.replyPaginated(available, 1, source.loadingMsg, max(available.indexOfFirst { it.itemId == attrs.selected_hero_loadout }, 0), if (isUsingInternal) null else HeroLoadoutReactions(available, event)) { content, page, pageCount ->
+		source.message.replyPaginated(available, 1, source.loadingMsg, max(available.indexOfFirst { it.itemId == attrs.selected_hero_loadout }, 0), if (isMine) HeroLoadoutReactions(available, event) else null) { content, page, pageCount ->
 			val loadoutItem = content[0]
 			val loadoutAttrs = loadoutItem.getAttributes(FortCampaignHeroLoadoutItem::class.java)
-			val embed = source.createEmbed()
+			val embed = source.createEmbed(campaign.owner)
 				.setTitle("Hero Loadout %,d".format(loadoutAttrs.loadout_index + 1))
-				.addField("Commander", loadoutAttrs.crew_members.commanderslot?.let { campaign.items[it]?.displayName } ?: "Empty", false)
-				.addField("Team Perk", loadoutAttrs.team_perk?.let { campaign.items[it]?.displayName } ?: "Empty", false)
-				.addField("Support Team", arrayOf(loadoutAttrs.crew_members.followerslot1, loadoutAttrs.crew_members.followerslot2, loadoutAttrs.crew_members.followerslot3, loadoutAttrs.crew_members.followerslot4, loadoutAttrs.crew_members.followerslot5).joinToString("\n") {
-					val heroItem = campaign.items[it]
-					if (heroItem != null) {
-						val heroDef = heroItem.defData as? FortHeroType
-						val gameplayDef = heroDef?.HeroGameplayDefinition?.load<FortHeroGameplayDefinition>()
-						val heroPerkAbilityKit = gameplayDef?.HeroPerk?.GrantedAbilityKit?.load<FortAbilityKit>()
-						heroPerkAbilityKit?.DisplayName?.format() ?: "<Unknown hero perk>"
-					} else "Empty"
-				}, false)
-				.addField("Gadgets", Array(2, loadoutAttrs::getGadget).joinToString("\n") {
-					if (it.isNotEmpty()) {
-						val gadgetItem = FortItemStack(it, 1)
-						gadgetItem.renderWithIcon()
-					} else "Empty"
-				}, false)
+				.setFooter("%,d of %,d".format(page + 1, pageCount) + if (loadoutItem.itemId == attrs.selected_hero_loadout) " (current)" else "")
+			val commanderItem = campaign.items[loadoutAttrs.crew_members.commanderslot]
+			if (commanderItem != null) {
+				embed.addField("Commander", commanderItem.displayName, false)
+				embed.setThumbnail(Utils.benBotExportAsset(commanderItem.getPreviewImagePath(true)?.toString()))
+			} else {
+				embed.addField("Commander", "Empty", false)
+			}
+			embed.addField("Team Perk", campaign.items[loadoutAttrs.team_perk]?.displayName ?: "Empty", false)
+			embed.addField("Support Team", arrayOf(loadoutAttrs.crew_members.followerslot1, loadoutAttrs.crew_members.followerslot2, loadoutAttrs.crew_members.followerslot3, loadoutAttrs.crew_members.followerslot4, loadoutAttrs.crew_members.followerslot5).joinToString("\n") {
+				val heroItem = campaign.items[it]
+				if (heroItem != null) {
+					val heroDef = heroItem.defData as? FortHeroType
+					val gameplayDef = heroDef?.HeroGameplayDefinition?.load<FortHeroGameplayDefinition>()
+					val heroPerkAbilityKit = gameplayDef?.HeroPerk?.GrantedAbilityKit?.load<FortAbilityKit>()
+					heroPerkAbilityKit?.DisplayName?.format() ?: "<Unknown hero perk>"
+				} else "Empty"
+			}, false)
+			embed.addField("Gadgets", Array(2, loadoutAttrs::getGadget).joinToString("\n") {
+				if (it.isNotEmpty()) {
+					val gadgetItem = FortItemStack(it, 1)
+					gadgetItem.renderWithIcon()
+				} else "Empty"
+			}, false)
 			MessageBuilder(embed.build()).build()
 		}
-		if (isUsingInternal) {
+		if (!isMine) {
 			return Command.SINGLE_SUCCESS
 		}
 		source.loadingMsg = null
