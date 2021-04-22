@@ -32,9 +32,8 @@ class StormShieldCommand : BrigadierCommand("stormshield", "Shows info about you
 				.setTitle("Storm Shields")
 				.setDescription(outposts.entries.joinToString("\n") { (_, item) ->
 					val attrs = item.getAttributes(FortOutpostItem::class.java)
-					val def = item.defData as FortOutpostItemDefinition
 					val sb = StringBuilder(item.displayName).append(": Level ").append(Formatters.num.format(attrs.level))
-					if (attrs.level >= def.MaxLevel) {
+					if (attrs.level >= 10) {
 						sb.append(", Endurance Wave ").append(Formatters.num.format(attrs.outpost_core_info.highestEnduranceWaveReached))
 					}
 					sb.toString()

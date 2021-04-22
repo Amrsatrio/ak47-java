@@ -58,6 +58,7 @@ fun <T> Message.replyPaginated(all: List<T>,
 		override fun onDispose(item: MessageReaction, user: User?) {}
 
 		override fun onEnd(collected: Map<Any, MessageReaction>, reason: CollectorEndReason) {
+			customReactions?.onEnd(collected, reason)
 			if (reason == CollectorEndReason.IDLE && msg.member?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
 				msg.clearReactions().queue()
 			}
@@ -68,4 +69,5 @@ fun <T> Message.replyPaginated(all: List<T>,
 interface PaginatorCustomReactions<T> {
 	fun addReactions(reactions: MutableCollection<String>)
 	fun handleReaction(collector: ReactionCollector, item: MessageReaction, user: User?, page: Int, pageCount: Int)
+	fun onEnd(collected: Map<Any, MessageReaction>, reason: CollectorEndReason)
 }

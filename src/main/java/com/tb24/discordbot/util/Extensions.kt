@@ -30,6 +30,7 @@ import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
 import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.*
 import okhttp3.HttpUrl
 import okhttp3.Request
@@ -52,7 +53,7 @@ import javax.imageio.ImageIO
 import kotlin.math.abs
 import kotlin.math.min
 
-val WHITELIST_ICON_EMOJI_ITEM_TYPES = arrayOf("AccountResource", "ConsumableAccountItem", "Currency", "Stat")
+val WHITELIST_ICON_EMOJI_ITEM_TYPES = arrayOf("AccountResource", "ConsumableAccountItem", "Currency", "Gadget", "Stat")
 val EMOJI_GUILDS = arrayOf(
 	805121146214940682L, // add ur emoji idc 2
 	805122305701314570L, // add ur emoji idc 3
@@ -148,7 +149,7 @@ fun getItemIconEmoji(templateId: String): Emote? {
 	getEmoteByName(name.run { substring(0, min(32, length)) })?.let { return it }
 	val item = FortItemStack(templateId, 1)
 	val defData = item.transformedDefData ?: return null
-	val icon = item.getPreviewImagePath(true)?.load<UTexture2D>()?.toBufferedImage() ?: return null
+	val icon = (item.getPreviewImagePath(true) ?: item.getPreviewImagePath())?.load<UTexture2D>()?.toBufferedImage() ?: return null
 	return createEmote(defData.name.run { substring(0, min(32, length)) }, icon)
 }
 
@@ -186,6 +187,10 @@ private fun createEmote(name: String, icon: BufferedImage): Emote? {
 	for (guildId in EMOJI_GUILDS) {
 		val guild = client.getGuildById(guildId)
 		if (guild == null || guild.emotes.size >= 50) { // server boosts can expire, hardcode it to 50 which is the regular limit
+			continue
+		}
+		if (!guild.selfMember.hasPermission(Permission.MANAGE_EMOTES)) {
+			DiscordBot.LOGGER.warn("Insufficient permissions to add emoji :{}: into {}", name, guild)
 			continue
 		}
 		val baos = ByteArrayOutputStream()

@@ -81,6 +81,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(GrantFortniteAccessCommand())
 		register(GrantRoledCommand())
 		register(HelpCommand())
+		register(HeroLoadoutCommand())
 		register(HomebaseNameCommand())
 		register(InviteBotCommand())
 		register(LaunchCommand())

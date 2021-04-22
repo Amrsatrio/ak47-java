@@ -51,7 +51,7 @@ class AvatarCommand : BrigadierCommand("avatar", "Manage your Party Hub avatar."
 		val avatarKeys = source.session.channelsManager.getUserSettings(source.api.currentLoggedIn.id, ChannelsManager.KEY_AVATAR, ChannelsManager.KEY_AVATAR_BACKGROUND)
 		val current = avatarKeys[settingKeyIndex]
 		val available = source.api.channelsService.QueryAvailableUserSettingValues(source.api.currentLoggedIn.id, settingKey).exec().body()!!.toList()
-		val event = CompletableFuture<String>()
+		val event = CompletableFuture<String?>()
 		source.message.replyPaginated(available, 1, source.loadingMsg, max(available.indexOf(current), 0), AvatarReactions(available, event)) { content, page, pageCount ->
 			val pageValue = content[0]
 			MessageBuilder(EmbedBuilder()
@@ -86,7 +86,7 @@ class AvatarCommand : BrigadierCommand("avatar", "Manage your Party Hub avatar."
 		return Command.SINGLE_SUCCESS
 	}
 
-	private class AvatarReactions(val list: List<String>, val event: CompletableFuture<String>) : PaginatorCustomReactions<String> {
+	private class AvatarReactions(val list: List<String>, val event: CompletableFuture<String?>) : PaginatorCustomReactions<String> {
 		var confirmed = false
 
 		override fun addReactions(reactions: MutableCollection<String>) {
@@ -99,6 +99,10 @@ class AvatarCommand : BrigadierCommand("avatar", "Manage your Party Hub avatar."
 				event.complete(list[page])
 				collector.stop()
 			}
+		}
+
+		override fun onEnd(collected: Map<Any, MessageReaction>, reason: CollectorEndReason) {
+			event.complete(null)
 		}
 	}
 }
