@@ -156,7 +156,7 @@ fun generateShopImage(catalogManager: CatalogManager): BufferedImage {
 		ctx.drawCenteredString(titleText, imageW.toInt() / 2, ctx.fontMetrics.ascent)
 
 		// Sections
-		sectionContainers.forEach { it.drawSection(ctx) }
+		sectionContainers.forEach { it.draw(ctx) }
 
 		// Attribution
 		ctx.font = ResourcesContext.burbankSmallBold.deriveFont(Font.ITALIC, 16f)
@@ -213,7 +213,7 @@ class FShopSectionContainer(val section: CatalogManager.ShopSection) {
 	var y = 0f
 	val entries = mutableListOf<FShopEntryContainer>()
 
-	fun drawSection(ctx: Graphics2D) {
+	fun draw(ctx: Graphics2D) {
 		ctx.color = Color.WHITE
 		ctx.font = ResourcesContext.burbankBigRegularBlack.deriveFont(Font.ITALIC, 40f)
 		val sectionTitleText = section.sectionData.sectionDisplayName?.toUpperCase() ?: ""
@@ -226,7 +226,7 @@ class FShopSectionContainer(val section: CatalogManager.ShopSection) {
 		}
 
 		ctx.color = Color.BLACK
-		entries.forEach { it.drawOffer(ctx) }
+		entries.forEach { it.draw(ctx) }
 	}
 }
 
@@ -246,7 +246,7 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 	var tileSize = EItemShopTileSize.Normal
 	val displayData = OfferDisplayData(offer, true)
 
-	fun drawOffer(ctx: Graphics2D) {
+	fun draw(ctx: Graphics2D) {
 		val offer = offer.holder()
 		//println("\ndrawing ${offerContainer.displayData.title}")
 		val firstItem = offer.ce.itemGrants.firstOrNull() ?: return
@@ -266,13 +266,13 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 			else -> 1f
 		}
 
-		val p = displayData.presentationParams!!
-		val bgColorA = p.vector["Background_Color_A"] ?: 0xFF000000.toInt()
-		val bgColorB = p.vector["Background_Color_B"] ?: 0xFF000000.toInt()
+		val p = displayData.presentationParams
+		val bgColorA = p?.vector?.get("Background_Color_A") ?: 0xFF000000.toInt()
+		val bgColorB = p?.vector?.get("Background_Color_B") ?: 0xFF000000.toInt()
 
-		val gradientSize = p.scalar["Gradient_Size"] ?: 50f
-		val gradientX = p.scalar["Gradient_Position_X"] ?: 0f
-		val gradientY = p.scalar["Gradient_Position_Y"] ?: 0f
+		val gradientSize = p?.scalar?.get("Gradient_Size") ?: 50f
+		val gradientX = p?.scalar?.get("Gradient_Position_X") ?: 0f
+		val gradientY = p?.scalar?.get("Gradient_Position_Y") ?: 0f
 
 		/*val spotlightSize = p.scalar["Spotlight_Size"] ?: 50f
 		val spotlightHardness = p.scalar["Spotlight_Hardness"]
@@ -310,9 +310,9 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 		val itemImage = displayData.image
 		if (itemImage != null) {
 			//println("itemImg w/h ${itemImage.width} ${itemImage.height}")
-			val offsetImageX = p.scalar["OffsetImage_X"] ?: 0f
-			val offsetImageY = p.scalar["OffsetImage_Y"] ?: 0f
-			val zoomImagePct = p.scalar["ZoomImage_Percent"] ?: 0f
+			val offsetImageX = p?.scalar?.get("OffsetImage_X") ?: 0f
+			val offsetImageY = p?.scalar?.get("OffsetImage_Y") ?: 0f
+			val zoomImagePct = p?.scalar?.get("ZoomImage_Percent") ?: 0f
 			//println("ox=$offsetImageX oy=$offsetImageY zoomPct=$zoomImagePct")
 
 			// centerCrop, needs more research

@@ -249,9 +249,16 @@ class MilestonesCommand : BrigadierCommand("milestones", "Shows your milestone q
 					continue
 				}
 				val attrs = item.getAttributes(FortChallengeBundleItem::class.java)
-				val lastQuest = athena.items[attrs.grantedquestinstanceids.last()]!!
-				val progress = getQuestCompletion(lastQuest).first
-				payload[item.primaryAssetName.substring(milestoneIdx + trigger.length)] = progress
+				val bundleDef = item.defData as FortChallengeBundleItemDefinition
+				val lastQuestName = bundleDef.QuestInfos.last().QuestDefinition.toString().substringAfterLast('.')
+				for (questId in attrs.grantedquestinstanceids) {
+					val questItem = athena.items[questId]
+					if (questItem != null && questItem.primaryAssetName.equals(lastQuestName, true)) {
+						val progress = getQuestCompletion(questItem).first
+						payload[item.primaryAssetName.substring(milestoneIdx + trigger.length)] = progress
+						break
+					}
+				}
 			}
 			if (payload.isEmpty()) {
 				throw SimpleCommandExceptionType(LiteralMessage("No milestone quests detected")).create()
