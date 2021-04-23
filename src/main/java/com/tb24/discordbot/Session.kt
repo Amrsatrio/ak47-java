@@ -15,6 +15,7 @@ import com.tb24.fn.model.mcpprofile.item.FortGiftBoxItem
 import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
+import net.dv8tion.jda.api.entities.ChannelType
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.internal.entities.UserImpl
 import org.greenrobot.eventbus.Subscribe
@@ -47,7 +48,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 	@Throws(HttpException::class, IOException::class)
 	fun login(source: CommandSourceStack?, grantType: GrantType, fields: Map<String, String>, auth: EAuthClient = EAuthClient.FORTNITE_IOS_GAME_CLIENT, sendMessages: Boolean = true): Int {
 		if (source != null) {
-			if (grantType != GrantType.device_auth && grantType != GrantType.device_code && source.member?.hasPermission(Permission.MESSAGE_MANAGE) == true && sendMessages) {
+			if (grantType != GrantType.device_auth && grantType != GrantType.device_code && source.isFromType(ChannelType.TEXT) && source.guild.selfMember.hasPermission(Permission.MESSAGE_MANAGE) && sendMessages) {
 				source.message.delete().queue()
 			}
 			if (api.userToken != null) {

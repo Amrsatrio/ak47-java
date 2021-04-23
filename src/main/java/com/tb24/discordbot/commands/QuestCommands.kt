@@ -14,7 +14,6 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.commands.arguments.ItemArgument.Companion.getItem
 import com.tb24.discordbot.commands.arguments.ItemArgument.Companion.item
 import com.tb24.discordbot.util.*
-import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.assetdata.RewardCategoryTabData
 import com.tb24.fn.model.mcpprofile.McpProfile
@@ -34,23 +33,8 @@ import me.fungames.jfortniteparse.fort.exports.FortTandemCharacterData
 import me.fungames.jfortniteparse.fort.objects.rows.FortQuestRewardTableRow
 import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
 import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
-import me.fungames.jfortniteparse.util.toPngArray
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
-import java.awt.AlphaComposite
-import java.awt.Color
-import java.awt.Font
-import java.awt.Graphics2D
-import java.awt.font.TextAttribute
-import java.awt.geom.GeneralPath
-import java.awt.geom.RoundRectangle2D
-import java.awt.image.BufferedImage
-import java.io.File
-import java.io.FileReader
-import java.text.AttributedString
-import javax.imageio.ImageIO
-import kotlin.math.max
-import kotlin.system.exitProcess
 
 class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manages your active BR daily challenges.", arrayOf("dailychals", "brdailies")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -397,156 +381,4 @@ fun getQuestCompletion(item: FortItemStack, allowCompletionCountOverride: Boolea
 		max = quest.ObjectiveCompletionCount
 	}
 	return completion to max
-}
-
-fun main() {
-//	AssetManager.INSTANCE.loadPaks()
-	val profile = FileReader("D:\\Downloads\\ComposeMCP-amrsatrio-queryprofile-athena-18824.json").use {
-		EpicApi.GSON.fromJson(it, McpProfile::class.java)
-	}
-	val questsToDisplay = mutableListOf<QuestBubbleContainer>()
-	fun h(Rarity: EFortRarity): QuestBubbleContainer {
-//		val defData = item.defData
-		return QuestBubbleContainer(arrayOf(0, 0x61BF00, 0, 0xCE59FF, 0xFF8B19, 0, 0, 0)[Rarity.ordinal])
-	}
-	questsToDisplay += h(EFortRarity.Epic)
-	val scale = 2f
-	val pngData = createAndDrawCanvas((512 * scale).toInt(), (512 * scale).toInt()) { ctx ->
-		val baseFont = Font.createFont(Font.TRUETYPE_FONT, File("C:\\Users\\satri\\AppData\\Local\\Microsoft\\Windows\\Fonts\\zh-cn.ttf"))
-		ctx.font = /*resources.burbankSmallBold*/baseFont.deriveFont(Font.PLAIN, 20f * scale)
-		ctx.drawString(profile.version, 0, 0 + ctx.fontMetrics.ascent)
-		var cur = 0
-		questsToDisplay.forEach {
-			it.measure(ctx, scale)
-//			it.w = (512 * scale).toInt()
-			it.draw(ctx, scale)
-			cur += it.h
-		}
-	}.toPngArray()
-	File("test_quests_s15.png").writeBytes(pngData)
-	exitProcess(0)
-}
-
-class QuestEntryContainer(
-	val bubble: QuestBubbleContainer
-) {
-	fun draw(ctx: Graphics2D, scale: Float) {
-		val charAvatarSize = 48 * scale
-	}
-}
-
-class QuestBubbleContainer(
-	val rarityColor: Int,
-	val displayName: String = "Display Name",
-	val shortDescription: String = "Short Description",
-	val description: String = "Shotgun eliminations",
-	val stageIdx: Int = 0,
-	val stageNum: Int = 4,
-	val completed: Boolean = false,
-	val completion: Int = 2,
-	val max: Int = 3,
-) {
-	var avatarSize = 0f
-	var avatarAreaW = 0f
-	var barWidth = 0f
-	var triangleWidth = 0f
-	var totalLeftWidth = 0f
-	lateinit var descriptionText: String
-	var contentWidth = 0
-	var contentHeight = 0
-	var w = 0
-	var h = 0
-
-	fun measure(ctx: Graphics2D, scale: Float) {
-		avatarSize = 48 * scale
-		avatarAreaW = avatarSize + 8 * scale
-		barWidth = 10 * scale
-		triangleWidth = 16 * scale
-		totalLeftWidth = triangleWidth + barWidth
-		contentWidth = 0
-		contentHeight = 0
-		ctx.font = ctx.font.deriveFont(14 * scale)
-		descriptionText = description
-		if (stageNum > 1) {
-			descriptionText = "Stage %,d of %,d - %s".format(stageIdx + 1, stageNum, description)
-		}
-		contentWidth = max(contentWidth, ctx.fontMetrics.stringWidth(descriptionText))
-		contentHeight += (ctx.fontMetrics.height + 6 * scale).toInt()
-		contentHeight += ctx.fontMetrics.height
-		w = (avatarAreaW.toInt() + totalLeftWidth + contentWidth + 24 * scale).toInt()
-		h = (contentHeight + 16 * scale).toInt()
-	}
-
-	fun draw(ctx: Graphics2D, scale: Float) {
-		ctx.color = 0xFFFF00FF.awtColor()
-
-		ctx.fillRect(0, 0, avatarSize.toInt(), avatarSize.toInt())
-		ctx.drawImage(drawBubble((totalLeftWidth + contentWidth + 24 * scale).toInt(), (contentHeight + 16 * scale).toInt(), scale), avatarAreaW.toInt(), 0, null)
-		val contentLeft = avatarAreaW + totalLeftWidth + 12 * scale
-		var yCur = 8 * scale
-		ctx.font = ctx.font.deriveFont(14 * scale)
-		ctx.color = 0x7FD3FF.awtColor()
-
-		// description
-		ctx.drawString(descriptionText, contentLeft, yCur + ctx.fontMetrics.ascent)
-		yCur += ctx.fontMetrics.height + 6 * scale
-
-		// time remaining
-		val l = 691200000L
-		val timeRemainingColor = getTimeRemainingColor(l)
-		val timerIcon = ImageIO.read(File("C:\\Users\\satri\\Desktop\\ui_timer_64x.png"))
-		val tW = timerIcon.width
-		val tH = timerIcon.height
-		val pixels = timerIcon.getRGB(0, 0, tW, tH, null, 0, tW)
-		val handPixels = IntArray(pixels.size)
-		for ((i, it) in pixels.withIndex()) {
-			var outAlpha = (it shr 16) and 0xFF // red channel: base
-			outAlpha -= (it shr 8) and 0xFF // green channel: inner
-			outAlpha = max(outAlpha, 0)
-			pixels[i] = (outAlpha shl 24) or timeRemainingColor
-			handPixels[i] = ((it and 0xFF) shl 24) or timeRemainingColor // blue channel: hand
-		}
-		val frame = BufferedImage(tW, tH, BufferedImage.TYPE_INT_ARGB)
-		frame.setRGB(0, 0, tW, tH, pixels, 0, tW)
-		val hand = BufferedImage(tW, tH, BufferedImage.TYPE_INT_ARGB)
-		hand.setRGB(0, 0, tW, tH, handPixels, 0, tW)
-		val iconY = (yCur - 6 * scale).toInt()
-		val iconSize = (28 * scale).toInt()
-		ctx.drawImage(frame, contentLeft.toInt(), iconY, iconSize, iconSize, null)
-		val saveT = ctx.transform
-		val oX = 0.49 * iconSize
-		val oY = 0.575 * iconSize
-		val currentSecondsInHour = (System.currentTimeMillis() / 1000) % (60 * 60)
-		ctx.rotate(Math.toRadians(currentSecondsInHour.toDouble() / (60 * 60) * 360), contentLeft + oX, iconY + oY)
-		ctx.drawImage(hand, contentLeft.toInt(), iconY, iconSize, iconSize, null)
-		ctx.transform = saveT
-		ctx.color = timeRemainingColor.awtColor()
-		ctx.drawString(StringUtil.formatElapsedTime(l, false).toString().toUpperCase(), contentLeft + iconSize, yCur + ctx.fontMetrics.ascent)
-
-		// completion
-		val completionTextRaw = "%,d / %,d".format(completion, max)
-		val completionText = AttributedString(completionTextRaw)
-		completionText.addAttribute(TextAttribute.FONT, ctx.font)
-		completionText.addAttribute(TextAttribute.FOREGROUND, rarityColor.awtColor(), completionTextRaw.indexOf('/'), completionTextRaw.length)
-		ctx.color = Color.WHITE
-		ctx.drawString(completionText.iterator, w - 12 * scale - ctx.fontMetrics.stringWidth(completionTextRaw), yCur + ctx.fontMetrics.ascent)
-	}
-
-	fun drawBubble(w: Int, h: Int, scale: Float) = createAndDrawCanvas(w, h) { ctx ->
-		val radius = 8 * scale
-		ctx.fill(RoundRectangle2D.Float(triangleWidth, 0f, w - triangleWidth, h.toFloat(), radius * 2, radius * 2))
-		ctx.fill(GeneralPath().apply { moveTo(0f, barWidth); lineTo(triangleWidth, barWidth); lineTo(triangleWidth, barWidth + triangleWidth); closePath() })
-		ctx.composite = AlphaComposite.SrcIn
-		ctx.color = rarityColor.awtColor()
-		ctx.fillRect(0, 0, totalLeftWidth.toInt(), h)
-		ctx.color = 0x000C59.withAlpha(.8f).awtColor()
-		ctx.fillRect(totalLeftWidth.toInt(), 0, w - totalLeftWidth.toInt(), h)
-	}
-}
-
-inline fun Number.withAlpha(v: Float) = (v * 255 + 0.5).toInt() shl 24 or toInt()
-
-fun getTimeRemainingColor(l: Long) = when {
-	l <= 1 * 24 * 60 * 60 * 1000 /*1d*/ -> 0x00A6FF
-	else -> 0x00A6FF
 }

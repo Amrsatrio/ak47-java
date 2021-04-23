@@ -65,12 +65,6 @@ fun generateShopImage(catalogManager: CatalogManager): BufferedImage {
 	var imageW = 0f
 	var imageH = 0f
 
-	val violatorPalettes = mapOf(
-		EViolatorIntensity.High to FViolatorColorPalette(0xFFFFFF, 0xFFFF00, 0x00062B),
-		EViolatorIntensity.Low to FViolatorColorPalette(0xFF2C78, 0xCF0067, 0xFFFFFF),
-		// medium is not implemented
-	)
-
 	val sectionsToDisplay = if (true) catalogManager.athenaSections.values.filter {
 		val sid = it.sectionData.sectionId
 		it.items.isNotEmpty() && sid != "LimitedTime" && sid != "Battlepass" && sid != "Subscription"
@@ -162,200 +156,7 @@ fun generateShopImage(catalogManager: CatalogManager): BufferedImage {
 		ctx.drawCenteredString(titleText, imageW.toInt() / 2, ctx.fontMetrics.ascent)
 
 		// Sections
-		for (sectionContainer in sectionContainers) {
-			val section = sectionContainer.section
-			val sectionX = sectionContainer.x
-			val sectionY = sectionContainer.y
-
-			ctx.color = Color.WHITE
-			ctx.font = ResourcesContext.burbankBigRegularBlack.deriveFont(Font.ITALIC, 40f)
-			val sectionTitleText = section.sectionData.sectionDisplayName?.toUpperCase() ?: ""
-			ctx.drawString(sectionTitleText, sectionX + 27, sectionY - 18)
-
-			if (section.sectionData.bShowTimer) {
-				ctx.color = 0x89F0FF.awtColor()
-				val textWidth = ctx.fontMetrics.stringWidth(sectionTitleText)
-				ctx.drawTimer((sectionX + 27 + textWidth + 5 + 6).toInt(), (sectionY - 46).toInt(), 32)
-			}
-
-			ctx.color = Color.BLACK
-			for (offerContainer in sectionContainer.entries) {
-				val offer = offerContainer.offer.holder()
-				//println("\ndrawing ${offerContainer.displayData.title}")
-				val tileSize = offerContainer.tileSize
-				val tileX = offerContainer.x
-				val tileY = offerContainer.y
-				val tileW = offerContainer.w
-				val tileH = offerContainer.h
-				val firstItem = offer.ce.itemGrants.firstOrNull() ?: continue
-				val firstItemType = firstItem.primaryAssetType
-				/*val xOffset = when {
-					firstItemType == "AthenaDance" -> tileSize.offsets().emoteX
-					firstItemType == "AthenaGlider" && tileSize == EItemShopTileSize.Small -> tileSize.offsets().gliderX
-					else -> 0
-				}*/
-				val artificialScale = when {
-					tileSize == EItemShopTileSize.Small -> when (firstItemType) {
-						"AthenaCharacter", "AthenaPickaxe", "AthenaGlider" -> 1f
-						"AthenaDance", "AthenaItemWrap" -> 0.7f
-						else -> 0.5f
-					}
-					tileSize == EItemShopTileSize.Normal && firstItemType == "AthenaDance" -> 0.8f
-					else -> 1f
-				}
-
-				val p = offerContainer.displayData.presentationParams!!
-				val bgColorA = p.vector["Background_Color_A"] ?: 0xFF000000.toInt()
-				val bgColorB = p.vector["Background_Color_B"] ?: 0xFF000000.toInt()
-
-				val gradientSize = p.scalar["Gradient_Size"] ?: 50f
-				val gradientX = p.scalar["Gradient_Position_X"] ?: 0f
-				val gradientY = p.scalar["Gradient_Position_Y"] ?: 0f
-
-				/*val spotlightSize = p.scalar["Spotlight_Size"] ?: 50f
-				val spotlightHardness = p.scalar["Spotlight_Hardness"]
-				val spotlightIntensity = p.scalar["Spotlight_Intensity"]
-				val spotlightX = p.scalar["Spotlight_Position_X"]
-				val spotlightY = p.scalar["Spotlight_Position_Y"]
-
-				val fallOffColor = p.vector["FallOff_Color"]!!
-				val fallOffColorFillPct = p.vector["FallOffColor_Fill_Percent"]
-				val fallOffPosition = p.scalar["FallOffColor_Postion"]!!*/
-
-				// base radial gradient background
-				//println("Gradient x=$gradientX y=$gradientY size=$gradientSize")
-				ctx.paint = RadialGradientPaint(
-					tileX + (gradientX / 100f) * tileW, tileY + (gradientY / 100f) * tileH,
-					(gradientSize / 100f) * max(tileW, tileH),
-					floatArrayOf(0f, 1f),
-					arrayOf(bgColorB.awtColor(), bgColorA.awtColor())
-				)
-				ctx.fillRect(tileX.toInt(), tileY.toInt(), tileW.toInt(), tileH.toInt())
-
-				// spotlight, needs more research
-				/*if (spotlightX != null && spotlightY != null) {
-					println("Spotlight x=$spotlightX y=$spotlightY hardness=$spotlightHardness intensity=$spotlightIntensity size=$spotlightSize")
-					ctx.paint = RadialGradientPaint(
-						tileX + (spotlightX / 100f) * tileW, tileY + (spotlightY / 100f) * tileH,
-						(spotlightSize / 100f) * max(tileW, tileH),
-						floatArrayOf(0f, .4f),
-						arrayOf(bgColorB.awtColor(), (fallOffColor and 0xFFFFFF).awtColor(true))
-					)
-				}
-				ctx.fillRect(tileX.toInt(), tileY.toInt(), tileW.toInt(), tileH.toInt())*/
-
-				// item image
-				val itemImage = offerContainer.displayData.image
-				if (itemImage != null) {
-					//println("itemImg w/h ${itemImage.width} ${itemImage.height}")
-					val offsetImageX = p.scalar["OffsetImage_X"] ?: 0f
-					val offsetImageY = p.scalar["OffsetImage_Y"] ?: 0f
-					val zoomImagePct = p.scalar["ZoomImage_Percent"] ?: 0f
-					//println("ox=$offsetImageX oy=$offsetImageY zoomPct=$zoomImagePct")
-
-					// centerCrop, needs more research
-					val src = Rectangle(offsetImageX.toInt(), offsetImageY.toInt(), itemImage.width, itemImage.height)
-					val deltaScale = artificialScale //zoomImagePct / 100f
-					if (deltaScale != 0f) {
-						//println("deltaScale $deltaScale")
-						src.growByFac(-deltaScale)
-					}
-					val cropOffsetRatio = (1f - tileW / tileH) / 2f
-					ctx.drawImage(itemImage,
-						tileX.toInt(), tileY.toInt(),
-						(tileX + tileW).toInt(), (tileY + tileH).toInt(),
-						src.x + (cropOffsetRatio * src.width).toInt(), src.y,
-						src.x + ((1f - cropOffsetRatio) * src.width).toInt(), src.y + src.height,
-						Color.GRAY,
-						null
-					)
-				}
-
-				val path = Path2D.Float()
-
-				// rarity
-				val palette = offerContainer.displayData.palette
-				if (palette != null && !offer.getMeta("HideRarityBorder").equals("true", true)) {
-					ctx.color = palette.Color1.toColor()
-					path.moveTo(tileX, tileY + tileH - 72)
-					path.lineTo(tileX + tileW, tileY + tileH - 82)
-					path.lineTo(tileX + tileW, tileY + tileH - 74)
-					path.lineTo(tileX, tileY + tileH - 67)
-					path.closePath()
-					ctx.fill(path)
-				}
-
-				// text bg
-				ctx.color = 0x1E1E1E.awtColor()
-				path.reset()
-				path.moveTo(tileX, tileY + tileH - 67)
-				path.lineTo(tileX + tileW, tileY + tileH - 74)
-				path.lineTo(tileX + tileW, tileY + tileH)
-				path.lineTo(tileX, tileY + tileH)
-				path.closePath()
-				ctx.fill(path)
-
-				// bottom
-				ctx.color = 0x0E0E0E.awtColor()
-				path.reset()
-				path.moveTo(tileX, tileY + tileH - 26)
-				path.lineTo(tileX + tileW, tileY + tileH - 28)
-				path.lineTo(tileX + tileW, tileY + tileH)
-				path.lineTo(tileX, tileY + tileH)
-				path.closePath()
-				ctx.fill(path)
-
-				offer.resolve()
-				val priceNum = offer.price.basePrice
-				val priceText = Formatters.num.format(priceNum)
-
-				ctx.color = 0xA7B8BC.awtColor()
-				ctx.font = ResourcesContext.burbankBigRegularBlack.deriveFont(Font.ITALIC, 16f)
-				ctx.drawString(priceText, tileX + tileW - 8 - ctx.fontMetrics.stringWidth(priceText), tileY + tileH - 9)
-
-				ctx.color = Color.WHITE
-				ctx.font = ctx.font.deriveFont(Font.ITALIC, 20f)
-				val entryTitleText = offerContainer.displayData.title?.toUpperCase().orEmpty()
-				ctx.drawCenteredString(entryTitleText, (tileX + tileW / 2).toInt(), (tileY + tileH - 40).toInt())
-
-				val violatorIntensity = runCatching { EViolatorIntensity.valueOf(offer.getMeta("ViolatorIntensity")!!) }.getOrNull()
-				if (violatorIntensity != null) {
-					check(violatorIntensity != EViolatorIntensity.Medium) {
-						"medium is not implemented"
-					}
-					ctx.font = ResourcesContext.burbankSmallBold.deriveFont(16f)
-
-					val violatorTag = offer.getMeta("ViolatorTag")
-					val violatorText = (catalogMessages.StoreToast_Body[violatorTag]?.format() ?: violatorTag ?: "?!?!?!").toUpperCase()
-					// yeah dynamic bundle later lets get the basic stuff first
-					val xOffsetText = ctx.fontMetrics.stringWidth(violatorText)
-
-					//outline
-					ctx.color = violatorPalettes[violatorIntensity]!!.outline.awtColor()
-					path.reset()
-					path.moveTo(tileX - 12, tileY - 9)
-					path.lineTo(tileX + 22 + xOffsetText, tileY - 12)
-					path.lineTo(tileX + 14 + xOffsetText, tileY + 27)
-					path.lineTo(tileX - 8, tileY + 26)
-					path.closePath()
-					ctx.fill(path)
-
-					//inside
-					ctx.color = violatorPalettes[violatorIntensity]!!.inside.awtColor()
-					path.reset()
-					path.moveTo(tileX - 6, tileY - 4)
-					path.lineTo(tileX + 15 + xOffsetText, tileY - 6)
-					path.lineTo(tileX + 9 + xOffsetText, tileY + 22)
-					path.lineTo(tileX - 3, tileY + 21)
-					path.closePath()
-					ctx.fill(path)
-
-					//text
-					ctx.color = violatorPalettes[violatorIntensity]!!.text.awtColor()
-					ctx.drawString(violatorText, (tileX - 6) + (tileX + 10 + xOffsetText - (tileX - 6)) / 2, tileY - 10 + (tileY + 26 - (tileY - 10)) / 2 + ctx.fontMetrics.ascent / 2)
-				}
-			}
-		}
+		sectionContainers.forEach { it.drawSection(ctx) }
 
 		// Attribution
 		ctx.font = ResourcesContext.burbankSmallBold.deriveFont(Font.ITALIC, 16f)
@@ -411,15 +212,211 @@ class FShopSectionContainer(val section: CatalogManager.ShopSection) {
 	var x = 0f
 	var y = 0f
 	val entries = mutableListOf<FShopEntryContainer>()
+
+	fun drawSection(ctx: Graphics2D) {
+		ctx.color = Color.WHITE
+		ctx.font = ResourcesContext.burbankBigRegularBlack.deriveFont(Font.ITALIC, 40f)
+		val sectionTitleText = section.sectionData.sectionDisplayName?.toUpperCase() ?: ""
+		ctx.drawString(sectionTitleText, x + 27, y - 18)
+
+		if (section.sectionData.bShowTimer) {
+			ctx.color = 0x89F0FF.awtColor()
+			val textWidth = ctx.fontMetrics.stringWidth(sectionTitleText)
+			ctx.drawTimer((x + 27 + textWidth + 5 + 6).toInt(), (y - 46).toInt(), 32)
+		}
+
+		ctx.color = Color.BLACK
+		entries.forEach { it.drawOffer(ctx) }
+	}
 }
 
 class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.ShopSection) {
+	companion object {
+		val violatorPalettes = mapOf(
+			EViolatorIntensity.High to FViolatorColorPalette(0xFFFFFF, 0xFFFF00, 0x00062B),
+			EViolatorIntensity.Low to FViolatorColorPalette(0xFF2C78, 0xCF0067, 0xFFFFFF),
+			// medium is not implemented
+		)
+	}
+
 	var x = 0f
 	var y = 0f
 	var w = 0f
 	var h = 0f
 	var tileSize = EItemShopTileSize.Normal
 	val displayData = OfferDisplayData(offer, true)
+
+	fun drawOffer(ctx: Graphics2D) {
+		val offer = offer.holder()
+		//println("\ndrawing ${offerContainer.displayData.title}")
+		val firstItem = offer.ce.itemGrants.firstOrNull() ?: return
+		val firstItemType = firstItem.primaryAssetType
+		/*val xOffset = when {
+			firstItemType == "AthenaDance" -> tileSize.offsets().emoteX
+			firstItemType == "AthenaGlider" && tileSize == EItemShopTileSize.Small -> tileSize.offsets().gliderX
+			else -> 0
+		}*/
+		val artificialScale = when {
+			tileSize == EItemShopTileSize.Small -> when (firstItemType) {
+				"AthenaCharacter", "AthenaPickaxe", "AthenaGlider" -> 1f
+				"AthenaDance", "AthenaItemWrap" -> 0.7f
+				else -> 0.5f
+			}
+			tileSize == EItemShopTileSize.Normal && firstItemType == "AthenaDance" -> 0.8f
+			else -> 1f
+		}
+
+		val p = displayData.presentationParams!!
+		val bgColorA = p.vector["Background_Color_A"] ?: 0xFF000000.toInt()
+		val bgColorB = p.vector["Background_Color_B"] ?: 0xFF000000.toInt()
+
+		val gradientSize = p.scalar["Gradient_Size"] ?: 50f
+		val gradientX = p.scalar["Gradient_Position_X"] ?: 0f
+		val gradientY = p.scalar["Gradient_Position_Y"] ?: 0f
+
+		/*val spotlightSize = p.scalar["Spotlight_Size"] ?: 50f
+		val spotlightHardness = p.scalar["Spotlight_Hardness"]
+		val spotlightIntensity = p.scalar["Spotlight_Intensity"]
+		val spotlightX = p.scalar["Spotlight_Position_X"]
+		val spotlightY = p.scalar["Spotlight_Position_Y"]
+
+		val fallOffColor = p.vector["FallOff_Color"]!!
+		val fallOffColorFillPct = p.vector["FallOffColor_Fill_Percent"]
+		val fallOffPosition = p.scalar["FallOffColor_Postion"]!!*/
+
+		// base radial gradient background
+		//println("Gradient x=$gradientX y=$gradientY size=$gradientSize")
+		ctx.paint = RadialGradientPaint(
+			x + (gradientX / 100f) * w, y + (gradientY / 100f) * h,
+			(gradientSize / 100f) * max(w, h),
+			floatArrayOf(0f, 1f),
+			arrayOf(bgColorB.awtColor(), bgColorA.awtColor())
+		)
+		ctx.fillRect(x.toInt(), y.toInt(), w.toInt(), h.toInt())
+
+		// spotlight, needs more research
+		/*if (spotlightX != null && spotlightY != null) {
+			println("Spotlight x=$spotlightX y=$spotlightY hardness=$spotlightHardness intensity=$spotlightIntensity size=$spotlightSize")
+			ctx.paint = RadialGradientPaint(
+				tileX + (spotlightX / 100f) * tileW, tileY + (spotlightY / 100f) * tileH,
+				(spotlightSize / 100f) * max(tileW, tileH),
+				floatArrayOf(0f, .4f),
+				arrayOf(bgColorB.awtColor(), (fallOffColor and 0xFFFFFF).awtColor(true))
+			)
+		}
+		ctx.fillRect(tileX.toInt(), tileY.toInt(), tileW.toInt(), tileH.toInt())*/
+
+		// item image
+		val itemImage = displayData.image
+		if (itemImage != null) {
+			//println("itemImg w/h ${itemImage.width} ${itemImage.height}")
+			val offsetImageX = p.scalar["OffsetImage_X"] ?: 0f
+			val offsetImageY = p.scalar["OffsetImage_Y"] ?: 0f
+			val zoomImagePct = p.scalar["ZoomImage_Percent"] ?: 0f
+			//println("ox=$offsetImageX oy=$offsetImageY zoomPct=$zoomImagePct")
+
+			// centerCrop, needs more research
+			val src = Rectangle(offsetImageX.toInt(), offsetImageY.toInt(), itemImage.width, itemImage.height)
+			val deltaScale = artificialScale //zoomImagePct / 100f
+			if (deltaScale != 0f) {
+				//println("deltaScale $deltaScale")
+				src.growByFac(-deltaScale)
+			}
+			val cropOffsetRatio = (1f - w / h) / 2f
+			ctx.drawImage(itemImage,
+				x.toInt(), y.toInt(),
+				(x + w).toInt(), (y + h).toInt(),
+				src.x + (cropOffsetRatio * src.width).toInt(), src.y,
+				src.x + ((1f - cropOffsetRatio) * src.width).toInt(), src.y + src.height,
+				Color.GRAY,
+				null
+			)
+		}
+
+		val path = Path2D.Float()
+
+		// rarity
+		val palette = displayData.palette
+		if (palette != null && !offer.getMeta("HideRarityBorder").equals("true", true)) {
+			ctx.color = palette.Color1.toColor()
+			path.moveTo(x, y + h - 72)
+			path.lineTo(x + w, y + h - 82)
+			path.lineTo(x + w, y + h - 74)
+			path.lineTo(x, y + h - 67)
+			path.closePath()
+			ctx.fill(path)
+		}
+
+		// text bg
+		ctx.color = 0x1E1E1E.awtColor()
+		path.reset()
+		path.moveTo(x, y + h - 67)
+		path.lineTo(x + w, y + h - 74)
+		path.lineTo(x + w, y + h)
+		path.lineTo(x, y + h)
+		path.closePath()
+		ctx.fill(path)
+
+		// bottom
+		ctx.color = 0x0E0E0E.awtColor()
+		path.reset()
+		path.moveTo(x, y + h - 26)
+		path.lineTo(x + w, y + h - 28)
+		path.lineTo(x + w, y + h)
+		path.lineTo(x, y + h)
+		path.closePath()
+		ctx.fill(path)
+
+		offer.resolve()
+		val priceNum = offer.price.basePrice
+		val priceText = Formatters.num.format(priceNum)
+
+		ctx.color = 0xA7B8BC.awtColor()
+		ctx.font = ResourcesContext.burbankBigRegularBlack.deriveFont(Font.ITALIC, 16f)
+		ctx.drawString(priceText, x + w - 8 - ctx.fontMetrics.stringWidth(priceText), y + h - 9)
+
+		ctx.color = Color.WHITE
+		ctx.font = ctx.font.deriveFont(Font.ITALIC, 20f)
+		val entryTitleText = displayData.title?.toUpperCase().orEmpty()
+		ctx.drawCenteredString(entryTitleText, (x + w / 2).toInt(), (y + h - 40).toInt())
+
+		val violatorIntensity = runCatching { EViolatorIntensity.valueOf(offer.getMeta("ViolatorIntensity")!!) }.getOrNull()
+		if (violatorIntensity != null) {
+			check(violatorIntensity != EViolatorIntensity.Medium) {
+				"medium is not implemented"
+			}
+			ctx.font = ResourcesContext.burbankSmallBold.deriveFont(16f)
+
+			val violatorTag = offer.getMeta("ViolatorTag")
+			val violatorText = (catalogMessages.StoreToast_Body[violatorTag]?.format() ?: violatorTag ?: "?!?!?!").toUpperCase()
+			// yeah dynamic bundle later lets get the basic stuff first
+			val xOffsetText = ctx.fontMetrics.stringWidth(violatorText)
+
+			//outline
+			ctx.color = violatorPalettes[violatorIntensity]!!.outline.awtColor()
+			path.reset()
+			path.moveTo(x - 12, y - 9)
+			path.lineTo(x + 22 + xOffsetText, y - 12)
+			path.lineTo(x + 14 + xOffsetText, y + 27)
+			path.lineTo(x - 8, y + 26)
+			path.closePath()
+			ctx.fill(path)
+
+			//inside
+			ctx.color = violatorPalettes[violatorIntensity]!!.inside.awtColor()
+			path.reset()
+			path.moveTo(x - 6, y - 4)
+			path.lineTo(x + 15 + xOffsetText, y - 6)
+			path.lineTo(x + 9 + xOffsetText, y + 22)
+			path.lineTo(x - 3, y + 21)
+			path.closePath()
+			ctx.fill(path)
+
+			//text
+			ctx.color = violatorPalettes[violatorIntensity]!!.text.awtColor()
+			ctx.drawString(violatorText, (x - 6) + (x + 10 + xOffsetText - (x - 6)) / 2, y - 10 + (y + 26 - (y - 10)) / 2 + ctx.fontMetrics.ascent / 2)
+		}
+	}
 }
 
 fun FortRarityData.forRarity(rarity: EFortRarity): FortColorPalette {
