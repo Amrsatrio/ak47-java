@@ -17,7 +17,7 @@ import com.tb24.fn.util.getPathName
 import com.tb24.uasset.StructJson
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.objects.rows.GameDifficultyInfo
-import me.fungames.jfortniteparse.ue4.assets.exports.UClassReal
+import me.fungames.jfortniteparse.ue4.assets.exports.UClass
 import me.fungames.jfortniteparse.ue4.assets.exports.UObject
 import me.fungames.jfortniteparse.ue4.assets.objects.FPropertyTag
 import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
@@ -80,7 +80,7 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 	}
 
 	private fun <T : UObject> loadCDO(path: String, clazz: Class<T>): T? {
-		val classObject = loadObject<UClassReal>(path)
+		val classObject = loadObject<UClass>(path)
 			?: return null
 		val cdo = classObject.classDefaultObject.load<UObject>()
 			?: return null

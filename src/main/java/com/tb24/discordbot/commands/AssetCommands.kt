@@ -13,7 +13,7 @@ import com.tb24.uasset.dumpToCpp
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.converters.createContainer
 import me.fungames.jfortniteparse.fort.exports.FortItemDefinition
-import me.fungames.jfortniteparse.ue4.assets.exports.UClassReal
+import me.fungames.jfortniteparse.ue4.assets.exports.UClass
 import me.fungames.jfortniteparse.ue4.assets.exports.USoundWave
 import me.fungames.jfortniteparse.ue4.assets.exports.UStaticMesh
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
@@ -106,7 +106,7 @@ class DumpClassCommand : BrigadierCommand("dumpclass", "Class dump.") {
 				val obj = runCatching { loadObject(path) }
 					.getOrElse { throw SimpleCommandExceptionType(LiteralMessage("Failed to load object.\n```$it```")).create() }
 					?: throw SimpleCommandExceptionType(LiteralMessage("Object not found. Possibly the package on the given path is not a class.")).create()
-				val theClass = obj as? UClassReal
+				val theClass = obj as? UClass
 					?: throw SimpleCommandExceptionType(LiteralMessage("Not a class")).create()
 				val dumped = theClass.dumpToCpp()
 				c.source.channel.sendFile(dumped.toByteArray(), "${theClass.name}.h").complete()
