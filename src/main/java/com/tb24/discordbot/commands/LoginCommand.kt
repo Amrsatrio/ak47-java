@@ -19,6 +19,9 @@ import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.MessageReaction
 import net.dv8tion.jda.api.entities.User
+import okhttp3.MediaType
+import okhttp3.Request
+import okhttp3.RequestBody
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.CompletableFuture
@@ -191,9 +194,10 @@ fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 	}
 	source.loading("Preparing your login")
 	val ccLoginResponse = source.api.accountService.getAccessToken(authClient.asBasicAuthString(), "client_credentials", ImmutableMap.of("token_type", "eg1"), null).exec().body()!!
-	val deviceCodeResponse = source.client.okHttpClient.newCall(source.api.accountService.initiatePinAuth("login")
-		.request().newBuilder()
+	val deviceCodeResponse = source.client.okHttpClient.newCall(Request.Builder()
+		.url("https://api.epicgames.dev/epic/oauth/v1/deviceAuthorization")
 		.header("Authorization", ccLoginResponse.token_type + ' ' + ccLoginResponse.access_token)
+		.post(RequestBody.create(MediaType.get("application/x-www-form-urlencoded"), "prompt=login"))
 		.build()).exec().to<PinGrantInfo>()
 	deviceCodeResponse.expiration = System.currentTimeMillis() + min(300L, deviceCodeResponse.expires_in) * 1000L
 	source.complete(null, EmbedBuilder()
