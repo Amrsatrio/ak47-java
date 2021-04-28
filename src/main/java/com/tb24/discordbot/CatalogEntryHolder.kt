@@ -1,6 +1,5 @@
 package com.tb24.discordbot
 
-import android.util.Log2
 import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.tb24.discordbot.commands.OfferDisplayData
 import com.tb24.discordbot.util.render
@@ -15,10 +14,16 @@ import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Utils
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.exports.FortMtxOfferData
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.util.*
 import kotlin.math.max
 
 class CatalogEntryHolder(val ce: CatalogOffer) {
+	companion object {
+		val LOGGER: Logger = LoggerFactory.getLogger("CatalogEntryHolder")
+	}
+
 	private var offerData: FortMtxOfferData? = null
 	var owned = false
 	var ownedItems: MutableSet<String>? = null
@@ -136,9 +141,9 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 				}
 			}
 		} catch (e: NullPointerException) {
-			Log2.w("CatalogEntry", "Failed getting purchase limits", e)
+			LOGGER.warn("Failed getting purchase limits", e)
 		} catch (e: ClassCastException) {
-			Log2.w("CatalogEntry", "Failed getting purchase limits", e)
+			LOGGER.warn("Failed getting purchase limits", e)
 		}
 	}
 

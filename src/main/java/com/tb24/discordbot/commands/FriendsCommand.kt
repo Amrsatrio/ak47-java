@@ -47,7 +47,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			val friends = source.api.friendsService.queryFriends(source.api.currentLoggedIn.id, null).exec().body()!!
 			val ids = friends.map { it.accountId }
 				.chunked(100)
-				.map { source.api.channelsService.QueryMultiUserSingleSetting_Field(it, "avatar").future() }
+				.map { source.api.channelsService.queryMultiUserSingleSetting_field(it, "avatar").future() }
 				.apply { CompletableFuture.allOf(*toTypedArray()).await() }
 				.flatMap { it.get().body()!!.toList() }
 				.map { it.value }

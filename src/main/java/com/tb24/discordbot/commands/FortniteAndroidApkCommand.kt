@@ -18,7 +18,7 @@ class FortniteAndroidApkCommand : BrigadierCommand("apk", "Get an APK download l
 			source.loading("Getting the APK download link")
 			val token = api.accountService.getAccessToken(EAuthClient.LAUNCHER_APP_CLIENT_2.asBasicAuthString(), "client_credentials", ImmutableMap.of("token_type", "eg1"), null).exec().body()!!
 			api.userToken = token
-			val assetResponse = api.launcherService.getItemBuild("Android", "4fe75bbc5a674f4f9b356b5c90567da5", "Fortnite", "Live", ClientDetails().apply {
+			val assetResponse = api.launcherService.querySignedDownload("Android", "4fe75bbc5a674f4f9b356b5c90567da5", "Fortnite", "Live", ClientDetails().apply {
 				abis = arrayOf("arm64-v8a")
 			}).exec().body()!!
 			val element = assetResponse.elements.first()

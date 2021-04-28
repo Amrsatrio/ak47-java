@@ -86,7 +86,7 @@ class ChannelsManager(private val client: EpicApi) {
 			return result
 		}
 
-		for (userSetting in client.channelsService.QueryMultiUserMultiSetting_Field(Collections.singletonList(accountId), keysToFetch).exec().body()!!) {
+		for (userSetting in client.channelsService.queryMultiUserMultiSetting_field(Collections.singletonList(accountId), keysToFetch).exec().body()!!) {
 			// we only fetch 1 account id
 			if (existingMap == null) {
 				existingMap = mutableMapOf()

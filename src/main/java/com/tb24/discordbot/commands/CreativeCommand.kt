@@ -32,7 +32,7 @@ class CreativeCommand : BrigadierCommand("creative", "Manages your creative isla
 				}
 				source.ensureSession()
 				source.loading("Searching island code")
-				val linkData = source.api.linksService.QueryLinkByMnemonic("fn", mnemonic, null, null).exec().body()!!
+				val linkData = source.api.linksService.queryLinkByMnemonic("fn", mnemonic, null, null).exec().body()!!
 				val embed = EmbedBuilder().setColor(COLOR_INFO)
 					.setAuthor(linkData.creatorName + " presents")
 					.setTitle(linkData.metadata.title, "https://fortnite.com/creative/island-codes/$mnemonic")

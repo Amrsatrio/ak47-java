@@ -50,7 +50,7 @@ class AvatarCommand : BrigadierCommand("avatar", "Manage your Party Hub avatar."
 		val settingKeyIndex = if (isColor) 1 else 0
 		val avatarKeys = source.session.channelsManager.getUserSettings(source.api.currentLoggedIn.id, ChannelsManager.KEY_AVATAR, ChannelsManager.KEY_AVATAR_BACKGROUND)
 		val current = avatarKeys[settingKeyIndex]
-		val available = source.api.channelsService.QueryAvailableUserSettingValues(source.api.currentLoggedIn.id, settingKey).exec().body()!!.toList()
+		val available = source.api.channelsService.queryAvailableUserSettingValues(source.api.currentLoggedIn.id, settingKey).exec().body()!!.toList()
 		val event = CompletableFuture<String?>()
 		source.message.replyPaginated(available, 1, source.loadingMsg, max(available.indexOf(current), 0), AvatarReactions(available, event)) { content, page, pageCount ->
 			val pageValue = content[0]
@@ -74,7 +74,7 @@ class AvatarCommand : BrigadierCommand("avatar", "Manage your Party Hub avatar."
 		source.loadingMsg = null
 		val newSetting = runCatching { event.await() }.getOrNull() ?: return Command.SINGLE_SUCCESS
 		source.loading("Applying")
-		source.api.channelsService.UpdateUserSetting(source.api.currentLoggedIn.id, settingKey, UserSetting().apply { value = newSetting })
+		source.api.channelsService.updateUserSetting(source.api.currentLoggedIn.id, settingKey, UserSetting().apply { value = newSetting })
 		source.session.channelsManager.put(source.api.currentLoggedIn.id, settingKey, newSetting)
 		avatarKeys[settingKeyIndex] = newSetting
 		source.complete(null, EmbedBuilder()

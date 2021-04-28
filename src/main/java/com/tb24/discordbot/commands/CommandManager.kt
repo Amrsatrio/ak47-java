@@ -85,6 +85,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(HomebaseNameCommand())
 		register(InviteBotCommand())
 		register(LaunchCommand())
+		register(LibraryCommand())
 		register(LockerCommand())
 		register(LoginCommand())
 		register(LogoutCommand())
@@ -245,6 +246,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 			if ((e.code() == HttpURLConnection.HTTP_UNAUTHORIZED || (e.code() == HttpURLConnection.HTTP_FORBIDDEN && e.epicError.errorCode == "com.epicgames.common.token_verify_failed") /*special case for events service*/) && session.api.userToken?.account_id != null) {
 				val savedDevice = client.savedLoginsManager.get(session.id, session.api.userToken.account_id)
 				session.api.userToken = null
+				session.otherClientApis.clear()
 				if (savedDevice != null) {
 					try {
 						doDeviceAuthLogin(source, savedDevice, sendMessages = false)

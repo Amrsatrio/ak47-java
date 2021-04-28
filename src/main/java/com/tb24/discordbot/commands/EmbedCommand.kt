@@ -18,7 +18,7 @@ import net.dv8tion.jda.api.entities.TextChannel
 
 class EmbedCommand : BrigadierCommand("embed", "Shiver me embeds!") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires { it.message.isFromGuild }
+		.requires { it.member?.hasPermission(it.channel as TextChannel, Permission.MESSAGE_MANAGE) == true }
 		.then(argument("channel", mention(Message.MentionType.CHANNEL))
 			.then(argument("title and description separated by new line", greedyString())
 				.executes {

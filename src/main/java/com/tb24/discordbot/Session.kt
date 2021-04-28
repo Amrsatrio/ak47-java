@@ -1,5 +1,6 @@
 package com.tb24.discordbot
 
+import com.google.common.collect.ImmutableMap
 import com.mojang.brigadier.Command
 import com.tb24.discordbot.commands.CommandSourceStack
 import com.tb24.discordbot.commands.GrantType
@@ -10,6 +11,7 @@ import com.tb24.fn.EpicApi
 import com.tb24.fn.event.ProfileUpdatedEvent
 import com.tb24.fn.model.account.AccountMutationResponse
 import com.tb24.fn.model.account.GameProfile
+import com.tb24.fn.model.account.Token
 import com.tb24.fn.model.mcpprofile.McpLootEntry
 import com.tb24.fn.model.mcpprofile.item.FortGiftBoxItem
 import com.tb24.fn.util.EAuthClient
@@ -25,6 +27,7 @@ import java.awt.Color
 import java.io.IOException
 import java.util.*
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 
 class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, private var persistent: Boolean = true) {
 	companion object {
@@ -37,10 +40,9 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 
 	init {
 		if (persistent) SessionPersister.get(id)?.apply {
-			api.userToken = token
+			setToken(token)
 			api.currentLoggedIn = accountData
 		}
-		api.buildServices()
 		api.eventBus.register(this)
 		LOGGER.info("Created session $id")
 	}
@@ -63,8 +65,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 			}
 		}
 		val token = api.accountService.getAccessToken(auth.asBasicAuthString(), grantType.name, fields, null).exec().body()!!
-		api.userToken = token
-		api.buildServices()
+		setToken(token)
 		val accountData = api.accountService.findAccountsByIds(Collections.singletonList(token.account_id)).exec().body()?.firstOrNull()
 		api.currentLoggedIn = accountData
 		save()
@@ -100,7 +101,26 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 
 	fun clear() {
 		api.clear()
+		otherClientApis.clear()
 		if (persistent) SessionPersister.remove(id)
+	}
+
+	fun setToken(token: Token?) {
+		api.userToken = token
+		if (token != null && token.client_service != "fortnite") {
+			api.buildServices()
+		}
+	}
+
+	val otherClientApis = ConcurrentHashMap<EAuthClient, EpicApi>()
+
+	fun getApiForOtherClient(authClient: EAuthClient) = otherClientApis.getOrPut(authClient) {
+		val exchangeCode = api.accountService.getExchangeCode().exec().body()!!.code
+		val newApi = EpicApi(client.okHttpClient)
+		val token = newApi.accountService.getAccessToken(authClient.asBasicAuthString(), "exchange_code", ImmutableMap.of("exchange_code", exchangeCode, "token_type", "eg1"), null).exec().body()!!
+		newApi.userToken = token
+		newApi.currentLoggedIn = api.currentLoggedIn
+		newApi
 	}
 
 	fun sendLoginMessage(source: CommandSourceStack, user: GameProfile? = api.currentLoggedIn) {
@@ -126,7 +146,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 	fun handleAccountMutation(response: AccountMutationResponse) {
 		api.currentLoggedIn = response.accountInfo.run { GameProfile(id, epicDisplayName) }
 		if (response.oauthSession != null) {
-			api.userToken = response.oauthSession
+			setToken(response.oauthSession)
 		}
 		save()
 	}
