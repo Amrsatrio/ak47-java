@@ -19,11 +19,16 @@ import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commoncore.PurchaseCatalogEntry
 import com.tb24.fn.model.mcpprofile.notifications.CatalogPurchaseNotification
+import com.tb24.fn.model.priceengine.QueryOfferPricesPayload
+import com.tb24.fn.model.priceengine.QueryOfferPricesPayload.LineOfferReq
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.CatalogHelper.isItemOwned
 import com.tb24.fn.util.Formatters
+import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Role
+import java.text.NumberFormat
 import java.time.Instant
+import java.util.*
 import java.util.concurrent.CompletableFuture
 
 class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry from the Battle Royale or Save the World Item Shop.", arrayOf("buy", "b")) {
@@ -84,7 +89,25 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 			}
 			val epicAppStoreId = offer.appStoreId?.getOrNull(EAppStore.EpicPurchasingService.ordinal)
 				?: throw SimpleCommandExceptionType(LiteralMessage("${sd.friendlyName} can't be purchased using Epic Direct Payment, which is the only payment method supported by ${source.client.discord.selfUser.name}.")).create()
-			source.complete("Visit the link below to complete your purchase of ${sd.friendlyName}:\n${source.generateUrl("https://launcher-website-prod07.ol.epicgames.com/purchase?namespace=fn&offers=$epicAppStoreId")}")
+			val completeAccountData = source.api.accountService.getById(source.api.currentLoggedIn.id).exec().body()!!
+			val storeOffer = source.api.catalogService.queryOffersBulk(listOf(epicAppStoreId), false, completeAccountData.country, "en").exec().body()!!.values.first()
+			val rmPrice = source.api.priceEngineService.queryOfferPrices(QueryOfferPricesPayload().apply {
+				accountId = source.api.currentLoggedIn.id
+				calculateTax = false
+				lineOffers = arrayOf(
+					LineOfferReq().also {
+						it.offerId = epicAppStoreId
+						it.quantity = 1
+					}
+				)
+				country = completeAccountData.country
+			}).exec().body()!!.lineOffers.first().price
+			val priceFormatter = NumberFormat.getCurrencyInstance()
+			priceFormatter.currency = Currency.getInstance(rmPrice.currencyCode)
+			source.complete("Visit this link to purchase the item described below:\n${source.generateUrl("https://launcher-website-prod07.ol.epicgames.com/purchase?namespace=fn&offers=$epicAppStoreId")}", EmbedBuilder().setColor(COLOR_INFO)
+				.populateOffer(storeOffer)
+				.addField("Price", priceFormatter.format(rmPrice.discountPrice / 100.0) + (if (rmPrice.originalPrice != rmPrice.discountPrice) " ~~" + priceFormatter.format(rmPrice.originalPrice / 100.0) + "~~" else "") + if (rmPrice.vatRate > 0.0) '\n' + "VAT included if applicable" else "", false)
+				.build())
 			return Command.SINGLE_SUCCESS
 		}
 		val accountBalance = price.getAccountBalance(profileManager)
