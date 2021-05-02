@@ -148,11 +148,7 @@ private inline fun accountPicker(source: CommandSourceStack): Int {
 			botMessage.addReaction("✨").complete()
 		}
 	}
-	val choice = botMessage.awaitReactions({ _, user, _ -> user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
-		max = 1
-		time = 30000
-		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
-	}).await().first().reactionEmote.name
+	val choice = botMessage.awaitOneReaction(source)
 	shouldStop.set(true)
 	source.session = source.initialSession
 	return if (choice == "✨") {

@@ -149,12 +149,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		//message.addReaction("📝").queue()
 		message.addReaction("🗑").queue()
 		message.addReaction("🚫").queue()
-		val choice = message.awaitReactions({ _, user, _ -> user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
-			max = 1
-			time = 30000
-			errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
-		}).await().first().reactionEmote.name
-		return when (choice) {
+		return when (message.awaitOneReaction(source)) {
 			"📩" -> inviteToParty(source, friend, party ?: throw SimpleCommandExceptionType(LiteralMessage("You are currently not in a party.")).create())
 			"📛" -> aliasOrNote(source, friend, false)
 			"📝" -> aliasOrNote(source, friend, true)
@@ -232,12 +227,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		message.addReaction("✅").queue()
 		message.addReaction("❌").queue()
 		message.addReaction("🚫").queue()
-		val choice = message.awaitReactions({ _, user, _ -> user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
-			max = 1
-			time = 30000
-			errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
-		}).await().first().reactionEmote.name
-		return when (choice) {
+		return when (message.awaitOneReaction(source)) {
 			"✅" -> accept(source, user)
 			"❌" -> reject(source, user)
 			"🚫" -> block(source, user)
@@ -253,12 +243,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			.build())
 		message.addReaction("❌").queue()
 		message.addReaction("🚫").queue()
-		val choice = message.awaitReactions({ _, user, _ -> user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
-			max = 1
-			time = 30000
-			errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
-		}).await().first().reactionEmote.name
-		return when (choice) {
+		return when (message.awaitOneReaction(source)) {
 			"❌" -> cancel(source, user)
 			"🚫" -> block(source, user)
 			else -> throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
@@ -272,12 +257,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			.populateFriendInfo(friend)
 			.build())
 		message.addReaction("🔓").queue()
-		val choice = message.awaitReactions({ _, user, _ -> user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
-			max = 1
-			time = 30000
-			errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
-		}).await().first().reactionEmote.name
-		return when (choice) {
+		return when (message.awaitOneReaction(source)) {
 			"🔓" -> unblock(source, user)
 			else -> throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
 		}
@@ -290,12 +270,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			.build())
 		message.addReaction("📩").queue()
 		message.addReaction("🚫").queue()
-		val choice = message.awaitReactions({ _, user, _ -> user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
-			max = 1
-			time = 30000
-			errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
-		}).await().first().reactionEmote.name
-		return when (choice) {
+		return when (message.awaitOneReaction(source)) {
 			"📩" -> add(source, user)
 			"🚫" -> block(source, user)
 			else -> throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()

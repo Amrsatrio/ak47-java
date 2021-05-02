@@ -274,6 +274,13 @@ fun Message.yesNoReactions(author: User, inTime: Long = 45000L): CompletableFutu
 	}).await().first().reactionEmote.name == "✅"
 }
 
+fun Message.awaitOneReaction(source: CommandSourceStack) =
+	awaitReactions({ _, user, _ -> user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
+		max = 1
+		time = 30000
+		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
+	}).await().first().reactionEmote.name
+
 fun <T> Future<T>.await(): T {
 	try {
 		return get()
