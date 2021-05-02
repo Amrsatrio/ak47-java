@@ -2,19 +2,44 @@ package com.tb24.discordbot.commands
 
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.util.exec
 import com.tb24.fn.util.EAuthClient
+import net.dv8tion.jda.api.entities.ChannelType
 
 class LaunchCommand : BrigadierCommand("launch", "Launches/logs you into Fortnite game client.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
 			val source = it.source
 			source.ensureSession()
-			source.loading("Generating exchange code")
-			val code = source.api.accountService.getExchangeCode().exec().body()!!.code
-			val bat = "\"C:\\Program Files\\Epic Games\\Fortnite\\FortniteGame\\Binaries\\Win64\\FortniteLauncher.exe\" -AUTH_LOGIN=unused -AUTH_PASSWORD=$code -AUTH_TYPE=exchangecode -epicapp=Fortnite -epicenv=Prod -epicportal"
-			source.complete("__**Log in to Fortnite Windows as ${source.api.currentLoggedIn.displayName}**__\nCopy and paste the text below into the Run box (Win+R). Valid for 5 minutes, until it's used, or until you log out.\n```bat\n$bat\n```")
+			if (!source.isFromType(ChannelType.PRIVATE)) {
+				throw SimpleCommandExceptionType(LiteralMessage("Please invoke the command again in DMs, as we have to send you info that carries over your current session.")).create()
+			}
+			val login: String
+			val password: String
+			val type: String
+			var authClientArgs = ""
+			val deviceData = source.client.savedLoginsManager.get(source.session.id, source.api.currentLoggedIn.id)
+			if (deviceData != null) {
+				login = source.api.currentLoggedIn.id
+				password = deviceData.deviceId + ':' + deviceData.secret
+				type = "device_auth"
+				val authClient = deviceData.authClient
+				if (authClient != EAuthClient.FORTNITE_PC_GAME_CLIENT) {
+					authClientArgs = " -AuthClient=${authClient.clientId} -AuthSecret=${authClient.secret}"
+				}
+			} else {
+				source.loading("Generating exchange code")
+				login = "unused"
+				password = source.api.accountService.getExchangeCode().exec().body()!!.code
+				type = "exchangecode"
+			}
+			val launcherPath = "C:\\Program Files\\Epic Games\\Fortnite\\FortniteGame\\Binaries\\Win64\\FortniteLauncher.exe"
+			val bat = "\"$launcherPath\" -AUTH_LOGIN=$login -AUTH_PASSWORD=$password -AUTH_TYPE=$type$authClientArgs -epicapp=Fortnite -epicenv=Prod -epicportal"
+			val validityMessage = if (deviceData != null) "Valid until you delete the saved login for that account.\n⚠ **Don't share the text below, anyone can login to your account easily with it!**" else "Valid for 5 minutes, until it's used, or until you log out."
+			source.complete("__**Log in to Fortnite Windows as ${source.api.currentLoggedIn.displayName}**__\nCopy and paste the text below into the Windows Search box (Win+S) and hit enter. $validityMessage\n```bat\n$bat\n```")
 			Command.SINGLE_SUCCESS
 		}
 		.then(literal("android")

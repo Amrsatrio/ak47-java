@@ -16,7 +16,6 @@ import com.tb24.fn.model.mcpprofile.attributes.CampaignProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.campaign.ClaimLoginReward
 import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.model.mcpprofile.notifications.DailyRewardsNotification
-import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.exceptions.ErrorResponseException
 import net.dv8tion.jda.internal.entities.UserImpl
 import org.slf4j.LoggerFactory
@@ -90,7 +89,7 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 						source.complete("Disabled automatic daily rewards claiming of `$displayName` because we couldn't find a saved login.")
 						return true
 					}
-					session.login(source, savedDevice.generateAuthFields(), savedDevice.getAuthClient(EAuthClient.FORTNITE_IOS_GAME_CLIENT), false)
+					session.login(source, savedDevice.generateAuthFields(), savedDevice.authClient, false)
 				}
 				session.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "campaign").await()
 				val dailyRewardStat = (source.api.profileManager.getProfileData("campaign").stats.attributes as CampaignProfileAttributes).daily_rewards

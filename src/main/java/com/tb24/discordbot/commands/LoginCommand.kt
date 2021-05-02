@@ -170,9 +170,8 @@ fun doDeviceAuthLogin(source: CommandSourceStack, deviceData: DeviceAuth, users:
 	source.session = source.client.internalSession
 	source.queryUsers(Collections.singleton(deviceData.accountId))
 }, sendMessages: Boolean = true): Int {
-	val auth = deviceData.clientId?.let(EAuthClient::getByClientId) ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT
 	try {
-		return source.session.login(source, deviceData.generateAuthFields(), deviceData.getAuthClient(EAuthClient.FORTNITE_IOS_GAME_CLIENT), sendMessages)
+		return source.session.login(source, deviceData.generateAuthFields(), deviceData.authClient, sendMessages)
 	} catch (e: HttpException) {
 		if (e.epicError.errorCode == "errors.com.epicgames.account.invalid_account_credentials" || e.epicError.errorCode == "errors.com.epicgames.account.account_not_active") {
 			val accountId = deviceData.accountId

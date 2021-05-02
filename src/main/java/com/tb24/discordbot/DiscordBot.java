@@ -14,7 +14,6 @@ import com.tb24.discordbot.tasks.KeychainTask;
 import com.tb24.discordbot.util.Utils;
 import com.tb24.fn.model.account.DeviceAuth;
 import com.tb24.fn.model.assetdata.ESubGame;
-import com.tb24.fn.util.EAuthClient;
 import com.tb24.uasset.AssetManager;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
@@ -103,7 +102,7 @@ public final class DiscordBot {
 		discord = builder.build();
 		discord.addEventListener(commandManager = new CommandManager(this));
 //		discord.addEventListener(new ReactionHandler(this)); // TODO doesn't respond if the channel hasn't been interacted with
-		discord.addEventListener(new GhostPingHandler(this));
+		discord.addEventListener(new GuildListeners(this));
 		discord.awaitReady();
 		LOGGER.info("Logged in as {}! v{}", discord.getSelfUser().getAsTag(), VERSION);
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -162,7 +161,7 @@ public final class DiscordBot {
 		}
 		DeviceAuth internalDeviceData = savedLoginsManager.getAll("__internal__").get(0);
 		try {
-			internalSession.login(null, internalDeviceData.generateAuthFields(), internalDeviceData.getAuthClient(EAuthClient.FORTNITE_IOS_GAME_CLIENT), false);
+			internalSession.login(null, internalDeviceData.generateAuthFields(), internalDeviceData.getAuthClient(), false);
 			LOGGER.info("Logged in to internal account: {} {}", internalSession.getApi().currentLoggedIn.getDisplayName(), internalSession.getApi().currentLoggedIn.getId());
 		} catch (IOException e) {
 			e.printStackTrace();
