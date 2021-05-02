@@ -1,9 +1,7 @@
 package com.tb24.discordbot
 
-import com.google.common.collect.ImmutableMap
 import com.mojang.brigadier.Command
 import com.tb24.discordbot.commands.CommandSourceStack
-import com.tb24.discordbot.commands.GrantType
 import com.tb24.discordbot.managers.ChannelsManager
 import com.tb24.discordbot.managers.HomebaseManager
 import com.tb24.discordbot.util.*
@@ -14,6 +12,7 @@ import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.account.Token
 import com.tb24.fn.model.mcpprofile.McpLootEntry
 import com.tb24.fn.model.mcpprofile.item.FortGiftBoxItem
+import com.tb24.fn.network.AccountService.GrantType.exchangeCode
 import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
@@ -35,6 +34,8 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 	}
 
 	val api = EpicApi(client.okHttpClient)
+	var lastClientService = "fortnite"
+	val otherClientApis = ConcurrentHashMap<EAuthClient, EpicApi>()
 	var channelsManager = ChannelsManager(api)
 	val homebaseManagers = hashMapOf<String, HomebaseManager>()
 
@@ -48,15 +49,16 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 	}
 
 	@Throws(HttpException::class, IOException::class)
-	fun login(source: CommandSourceStack?, grantType: GrantType, fields: Map<String, String>, auth: EAuthClient = EAuthClient.FORTNITE_IOS_GAME_CLIENT, sendMessages: Boolean = true): Int {
+	fun login(source: CommandSourceStack?, fields: String, auth: EAuthClient = EAuthClient.FORTNITE_IOS_GAME_CLIENT, sendMessages: Boolean = true): Int {
 		if (source != null) {
-			if (grantType != GrantType.device_auth && grantType != GrantType.device_code && source.isFromType(ChannelType.TEXT) && source.guild.selfMember.hasPermission(Permission.MESSAGE_MANAGE) && sendMessages) {
+			val grantType = fields.substringBefore('&')
+			if (grantType != "device_auth" && grantType != "device_code" && source.isFromType(ChannelType.TEXT) && source.guild.selfMember.hasPermission(Permission.MESSAGE_MANAGE) && sendMessages) {
 				source.message.delete().queue()
 			}
 			if (api.userToken != null) {
 				logout(if (sendMessages) source.message else null)
 			}
-			if (grantType != GrantType.device_code) {
+			if (grantType != "device_code") {
 				if (sendMessages) {
 					source.errorTitle = "Login Failed"
 					source.loading("Signing in to Epic services")
@@ -64,7 +66,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 				LOGGER.info("Requesting login for user {} with grant type {}", source.author.asTag, grantType)
 			}
 		}
-		val token = api.accountService.getAccessToken(auth.asBasicAuthString(), grantType.name, fields, null).exec().body()!!
+		val token = api.accountService.getAccessToken(auth.asBasicAuthString(), fields, "eg1", null).exec().body()!!
 		setToken(token)
 		val accountData = api.accountService.findAccountsByIds(Collections.singletonList(token.account_id)).exec().body()?.firstOrNull()
 		api.currentLoggedIn = accountData
@@ -107,17 +109,16 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 
 	fun setToken(token: Token?) {
 		api.userToken = token
-		if (token != null && token.client_service != "fortnite") {
+		if (token != null && token.client_service != lastClientService) {
+			lastClientService = token.client_service
 			api.buildServices()
 		}
 	}
 
-	val otherClientApis = ConcurrentHashMap<EAuthClient, EpicApi>()
-
 	fun getApiForOtherClient(authClient: EAuthClient) = otherClientApis.getOrPut(authClient) {
 		val exchangeCode = api.accountService.getExchangeCode().exec().body()!!.code
 		val newApi = EpicApi(client.okHttpClient)
-		val token = newApi.accountService.getAccessToken(authClient.asBasicAuthString(), "exchange_code", ImmutableMap.of("exchange_code", exchangeCode, "token_type", "eg1"), null).exec().body()!!
+		val token = newApi.accountService.getAccessToken(authClient.asBasicAuthString(), exchangeCode(exchangeCode), "eg1", null).exec().body()!!
 		newApi.userToken = token
 		newApi.currentLoggedIn = api.currentLoggedIn
 		newApi

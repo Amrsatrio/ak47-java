@@ -2,11 +2,9 @@ package com.tb24.discordbot;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableMap;
 import com.rethinkdb.net.Connection;
 import com.rethinkdb.utils.Internals;
 import com.tb24.discordbot.commands.CommandManager;
-import com.tb24.discordbot.commands.GrantType;
 import com.tb24.discordbot.commands.OnlyChannelCommandSource;
 import com.tb24.discordbot.commands.ShopCommandsKt;
 import com.tb24.discordbot.managers.CatalogManager;
@@ -45,7 +43,7 @@ import java.util.concurrent.TimeUnit;
 import static com.rethinkdb.RethinkDB.r;
 
 public final class DiscordBot {
-	public static final String VERSION = "6.3.3";
+	public static final String VERSION = "6.3.5";
 	public static final Logger LOGGER = LoggerFactory.getLogger("DiscordBot");
 	public static final boolean LOAD_PAKS = System.getProperty("loadPaks", "false").equals("true");
 	public static final String ENV = System.getProperty("env", "dev");
@@ -164,10 +162,7 @@ public final class DiscordBot {
 		}
 		DeviceAuth internalDeviceData = savedLoginsManager.getAll("__internal__").get(0);
 		try {
-			internalSession.login(null, GrantType.device_auth, ImmutableMap.of(
-				"account_id", internalDeviceData.accountId,
-				"device_id", internalDeviceData.deviceId,
-				"secret", internalDeviceData.secret), EAuthClient.FORTNITE_IOS_GAME_CLIENT, false);
+			internalSession.login(null, internalDeviceData.generateAuthFields(), internalDeviceData.getAuthClient(EAuthClient.FORTNITE_IOS_GAME_CLIENT), false);
 			LOGGER.info("Logged in to internal account: {} {}", internalSession.getApi().currentLoggedIn.getDisplayName(), internalSession.getApi().currentLoggedIn.getId());
 		} catch (IOException e) {
 			e.printStackTrace();

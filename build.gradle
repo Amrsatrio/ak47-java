@@ -41,6 +41,10 @@ repositories {
 	mavenCentral()
 	maven { url "https://dl.bintray.com/fungamesleaks/mavenRepo" }
 	maven { url 'https://libraries.minecraft.net' }
+	maven {
+		name 'm2-dv8tion'
+		url 'https://m2.dv8tion.net/releases'
+	}
 }
 
 dependencies {

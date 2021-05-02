@@ -1,6 +1,5 @@
 package com.tb24.discordbot.tasks
 
-import com.google.common.collect.ImmutableMap
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
@@ -8,7 +7,6 @@ import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.Session
 import com.tb24.discordbot.commands.CommandSourceStack
-import com.tb24.discordbot.commands.GrantType
 import com.tb24.discordbot.commands.PrivateChannelCommandSource
 import com.tb24.discordbot.commands.notifyDailyRewardsClaimed
 import com.tb24.discordbot.util.await
@@ -92,7 +90,7 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 						source.complete("Disabled automatic daily rewards claiming of `$displayName` because we couldn't find a saved login.")
 						return true
 					}
-					session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", savedDevice.accountId, "device_id", savedDevice.deviceId, "secret", savedDevice.secret, "token_type", "eg1"), savedDevice.clientId?.let(EAuthClient::getByClientId) ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT, false)
+					session.login(source, savedDevice.generateAuthFields(), savedDevice.getAuthClient(EAuthClient.FORTNITE_IOS_GAME_CLIENT), false)
 				}
 				session.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "campaign").await()
 				val dailyRewardStat = (source.api.profileManager.getProfileData("campaign").stats.attributes as CampaignProfileAttributes).daily_rewards

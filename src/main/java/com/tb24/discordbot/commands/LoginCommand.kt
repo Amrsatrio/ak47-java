@@ -1,6 +1,5 @@
 package com.tb24.discordbot.commands
 
-import com.google.common.collect.ImmutableMap
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
@@ -13,6 +12,7 @@ import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.DeviceAuth
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.account.PinGrantInfo
+import com.tb24.fn.network.AccountService.GrantType.*
 import com.tb24.fn.util.EAuthClient
 import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
@@ -44,7 +44,7 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 					val deviceData = devices.safeGetOneIndexed(accountIndex)
 					doDeviceAuthLogin(source, deviceData)
 				} else {
-					doLogin(source, GrantType.authorization_code, arg, EAuthClient.FORTNITE_IOS_GAME_CLIENT)
+					doLogin(source, EGrantType.authorization_code, arg, EAuthClient.FORTNITE_IOS_GAME_CLIENT)
 				}
 			}
 		)
@@ -66,47 +66,47 @@ class ExtendedLoginCommand : BrigadierCommand("loginx", "Login with arbitrary pa
 
 	private fun extendedLogin(source: CommandSourceStack, inGrantType: String? = null, params: String = "", inAuthClient: String? = null): Int {
 		val grantType = inGrantType?.replace("_", "")?.run {
-			GrantType.values().firstOrNull { it.name.replace("_", "").equals(this, true) }
-				?: throw SimpleCommandExceptionType(LiteralMessage("Invalid grant type `$inGrantType`. Valid types are:```\n${GrantType.values().joinToString()}```")).create()
+			EGrantType.values().firstOrNull { it.name.replace("_", "").equals(this, true) }
+				?: throw SimpleCommandExceptionType(LiteralMessage("Invalid grant type `$inGrantType`. Valid types are:```\n${EGrantType.values().joinToString()}```")).create()
 		}
 		val authClient = inAuthClient?.replace("_", "")?.run {
 			EAuthClient.values().firstOrNull { it.name.replace("_", "").equals(this, true) }
 				?: throw SimpleCommandExceptionType(LiteralMessage("Invalid auth client `$inAuthClient`. Valid clients are:```\n${EAuthClient.values().joinToString()}```")).create()
 		}
-		return doLogin(source, grantType ?: GrantType.device_code, params, authClient)
+		return doLogin(source, grantType ?: EGrantType.device_code, params, authClient)
 	}
 }
 
-fun doLogin(source: CommandSourceStack, grantType: GrantType, params: String, authClient: EAuthClient?): Int {
-	if (grantType != GrantType.device_code && params.isEmpty()) {
+fun doLogin(source: CommandSourceStack, grantType: EGrantType, params: String, authClient: EAuthClient?): Int {
+	if (grantType != EGrantType.device_code && params.isEmpty()) {
 		throw SimpleCommandExceptionType(LiteralMessage("The login method $grantType cannot be used without a parameter.")).create()
 	}
 	var params = params
 	return when (grantType) {
-		GrantType.authorization_code -> {
+		EGrantType.authorization_code -> {
 			params = params.replace("[&/\\\\#,+()$~%.'\":*?<>{}]".toRegex(), "").replace("code", "")
 			if (params.length != 32) {
 				throw SimpleCommandExceptionType(LiteralMessage("That is not an authorization code.\nHere's how to use the command correctly: When you open ${Utils.login(Utils.redirect(authClient))} you will see this text:\n```json\n{\"redirectUrl\":\"https://accounts.epicgames.com/fnauth?code=*aabbccddeeff11223344556677889900*\",\"sid\":null}```You only need to input exactly the text surrounded between *'s into the command, so it becomes:\n`${source.prefix}login aabbccddeeff11223344556677889900`")).create()
 			}
-			source.session.login(source, grantType, ImmutableMap.of("code", params, "token_type", "eg1"), authClient ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT)
+			source.session.login(source, authorizationCode(params), authClient ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT)
 		}
-		GrantType.device_auth -> {
+		EGrantType.device_auth -> {
 			val split = params.split(":")
 			if (split.size != 3) {
 				throw SimpleCommandExceptionType(LiteralMessage("Login arguments for device auth must be in this format: `account_id:device_id:secret`")).create()
 			}
-			source.session.login(source, grantType, ImmutableMap.of("account_id", split[0], "device_id", split[1], "secret", split[2], "token_type", "eg1"), authClient ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT)
+			source.session.login(source, deviceAuth(split[0], split[1], split[2]), authClient ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT)
 		}
-		GrantType.device_code -> deviceCode(source, authClient ?: EAuthClient.FORTNITE_SWITCH_GAME_CLIENT)
-		GrantType.exchange_code -> {
+		EGrantType.device_code -> deviceCode(source, authClient ?: EAuthClient.FORTNITE_SWITCH_GAME_CLIENT)
+		EGrantType.exchange_code -> {
 			params = params.replace("[&/\\\\#,+()$~%.'\":*?<>{}]".toRegex(), "").replace("code", "")
 			if (params.length != 32) {
 				throw SimpleCommandExceptionType(LiteralMessage("That is not an exchange code.")).create()
 			}
-			source.session.login(source, grantType, ImmutableMap.of("exchange_code", params, "token_type", "eg1"), authClient ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT)
+			source.session.login(source, exchangeCode(params), authClient ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT)
 		}
-		GrantType.token_to_token -> {
-			source.session.login(source, grantType, ImmutableMap.of("access_token", params, "token_type", "eg1"), authClient ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT)
+		EGrantType.token_to_token -> {
+			source.session.login(source, tokenToToken(params), authClient ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT)
 		}
 	}
 }
@@ -172,7 +172,7 @@ fun doDeviceAuthLogin(source: CommandSourceStack, deviceData: DeviceAuth, users:
 }, sendMessages: Boolean = true): Int {
 	val auth = deviceData.clientId?.let(EAuthClient::getByClientId) ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT
 	try {
-		return source.session.login(source, GrantType.device_auth, ImmutableMap.of("account_id", deviceData.accountId, "device_id", deviceData.deviceId, "secret", deviceData.secret, "token_type", "eg1"), auth, sendMessages)
+		return source.session.login(source, deviceData.generateAuthFields(), deviceData.getAuthClient(EAuthClient.FORTNITE_IOS_GAME_CLIENT), sendMessages)
 	} catch (e: HttpException) {
 		if (e.epicError.errorCode == "errors.com.epicgames.account.invalid_account_credentials" || e.epicError.errorCode == "errors.com.epicgames.account.account_not_active") {
 			val accountId = deviceData.accountId
@@ -193,7 +193,7 @@ fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 		source.session.logout(source.message)
 	}
 	source.loading("Preparing your login")
-	val ccLoginResponse = source.api.accountService.getAccessToken(authClient.asBasicAuthString(), "client_credentials", ImmutableMap.of("token_type", "eg1"), null).exec().body()!!
+	val ccLoginResponse = source.api.accountService.getAccessToken(authClient.asBasicAuthString(), clientCredentials(), "eg1", null).exec().body()!!
 	val deviceCodeResponse = source.client.okHttpClient.newCall(Request.Builder()
 		.url("https://api.epicgames.dev/epic/oauth/v1/deviceAuthorization")
 		.header("Authorization", ccLoginResponse.token_type + ' ' + ccLoginResponse.access_token)
@@ -213,7 +213,7 @@ fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 	val fut = CompletableFuture<Boolean>()
 	val task = timer.schedule(deviceCodeResponse.interval * 1000L, deviceCodeResponse.interval * 1000L) {
 		try {
-			source.session.login(source, GrantType.device_code, ImmutableMap.of("device_code", deviceCodeResponse.device_code, "token_type", "eg1"), authClient)
+			source.session.login(source, deviceCode(deviceCodeResponse.device_code), authClient)
 			fut.complete(true)
 			cancel()
 		} catch (e: Exception) {
@@ -274,7 +274,7 @@ fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): 
 	return Command.SINGLE_SUCCESS
 }
 
-enum class GrantType {
+enum class EGrantType {
 	authorization_code,
 	//client_credentials,
 	device_auth,

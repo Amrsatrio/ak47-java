@@ -113,6 +113,7 @@ class OnlyChannelCommandSource(client: DiscordBot, channel: MessageChannel) : Co
 	emptyList(),
 	emptyList(),
 	emptyList(),
+	emptyList(),
 	0
 ), null)
 
@@ -133,6 +134,7 @@ class PrivateChannelCommandSource(client: DiscordBot, channel: PrivateChannel) :
 	null,
 	null,
 	null,
+	emptyList(),
 	emptyList(),
 	emptyList(),
 	emptyList(),

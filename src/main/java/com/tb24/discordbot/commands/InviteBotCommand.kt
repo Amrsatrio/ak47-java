@@ -12,7 +12,7 @@ class InviteBotCommand : BrigadierCommand("invite", "Sends a link to invite this
 			val source = it.source
 			val selfUser = source.client.discord.selfUser
 			source.complete(null, EmbedBuilder()
-				.setTitle("Invite ${selfUser.name} to your server!", "https://discordapp.com/api/oauth2/authorize?client_id=${selfUser.id}&permissions=519232&scope=bot")
+				.setTitle("Invite ${selfUser.name} to your server!", "https://discordapp.com/api/oauth2/authorize?client_id=${selfUser.id}&permissions=519232&scope=bot%20applications.commands")
 				.setDescription("[Join our server!](${Utils.HOMEBASE_GUILD_INVITE})")
 				.setColor(COLOR_INFO)
 				.build())
