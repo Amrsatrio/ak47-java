@@ -15,7 +15,7 @@ import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.ue4.assets.exports.UCurveTable
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 
-class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your daily creative XP.", arrayOf("doihavecreativexp")) {
+class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your daily creative XP.", arrayOf("doihavecreativexp", "cxp")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
 			val source = it.source

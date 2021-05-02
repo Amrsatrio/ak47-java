@@ -354,7 +354,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 				++success
 			} catch (e: HttpException) {
 				when {
-					e.epicError.errorCode == "errors.com.epicgames.common.throttled" -> Thread.sleep(e.epicError.messageVars[0].toInt() * 1000L)
+					e.code() == 429 -> Thread.sleep((e.response.header("Retry-After")?.toIntOrNull() ?: throw e) * 1000L)
 					e.code() == HttpURLConnection.HTTP_UNAUTHORIZED || e.epicError.errorCode == "errors.com.epicgames.friends.invitee_friendships_limit_exceeded" -> throw e
 					else -> {
 						val displayName = if (usingSuppliedQueue) {

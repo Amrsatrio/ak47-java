@@ -127,12 +127,10 @@ private inline fun accountPicker(source: CommandSourceStack): Int {
 		}
 		add("✨ Login to another account")
 	}
-	val botMessage = source.complete(null, EmbedBuilder()
+	val botMessage = source.complete(null, EmbedBuilder().setColor(0x8AB4F8)
 		.setTitle("Pick an account")
 		.setDescription(description.joinToString("\n"))
-		.setColor(0x8AB4F8)
-		.build()
-	)
+		.build())
 	val shouldStop = AtomicBoolean()
 	CompletableFuture.supplyAsync {
 		for (i in devices.indices) {

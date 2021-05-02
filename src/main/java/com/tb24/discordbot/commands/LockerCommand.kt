@@ -4,7 +4,11 @@ import com.google.gson.JsonObject
 import com.google.gson.internal.bind.util.ISO8601Utils
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.LiteralMessage
+import com.mojang.brigadier.arguments.StringArgumentType.getString
+import com.mojang.brigadier.arguments.StringArgumentType.word
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.GridSlot
 import com.tb24.discordbot.createAttachmentOfIcons
 import com.tb24.discordbot.util.*
@@ -23,6 +27,18 @@ import java.util.zip.Deflater
 import java.util.zip.DeflaterOutputStream
 
 class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form of an image.") {
+	val names = mutableMapOf(
+		"AthenaCharacter" to "Outfits",
+		"AthenaBackpack" to "Back Blings",
+		"AthenaPickaxe" to "Harvesting Tools",
+		"AthenaGlider" to "Gliders",
+		"AthenaSkyDiveContrail" to "Contrails",
+		"AthenaDance" to "Emotes",
+		"AthenaItemWrap" to "Wraps",
+		"AthenaMusicPack" to "Musics",
+		"AthenaLoadingScreen" to "Loading Screens"
+	)
+
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { c ->
 			val source = c.source
@@ -49,19 +65,49 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 			}
 			source.loading("Generating and uploading images")
 			CompletableFuture.allOf(
-				perform(source, "Outfits", ctgs["AthenaCharacter"]),
-				perform(source, "Back Blings", ctgs["AthenaBackpack"]),
-				perform(source, "Harvesting Tools", ctgs["AthenaPickaxe"]),
-				perform(source, "Gliders", ctgs["AthenaGlider"]),
-				perform(source, "Contrails", ctgs["AthenaSkyDiveContrail"]),
-				perform(source, "Emotes", ctgs["AthenaDance"]),
-				perform(source, "Wraps", ctgs["AthenaItemWrap"]),
-				perform(source, "Musics", ctgs["AthenaMusicPack"]),
-				//perform(source, "Loading Screens", ctgs["AthenaLoadingScreen"])
+				perform(source, names["AthenaCharacter"], ctgs["AthenaCharacter"]),
+				perform(source, names["AthenaBackpack"], ctgs["AthenaBackpack"]),
+				perform(source, names["AthenaPickaxe"], ctgs["AthenaPickaxe"]),
+				perform(source, names["AthenaGlider"], ctgs["AthenaGlider"]),
+				perform(source, names["AthenaSkyDiveContrail"], ctgs["AthenaSkyDiveContrail"]),
+				perform(source, names["AthenaDance"], ctgs["AthenaDance"]),
+				perform(source, names["AthenaItemWrap"], ctgs["AthenaItemWrap"]),
+				perform(source, names["AthenaMusicPack"], ctgs["AthenaMusicPack"]),
+				//perform(source, names["AthenaLoadingScreen"], ctgs["AthenaLoadingScreen"])
 			).await()
 			source.complete("✅ All images have been sent successfully.")
 			Command.SINGLE_SUCCESS
 		}
+		.then(argument("type", word())
+			.executes { c ->
+				val source = c.source
+				val type = getString(c, "type")
+				val filterType = when (type.toLowerCase(Locale.ROOT).substringBeforeLast('s')) {
+					"character", "outfit", "skin" -> "AthenaCharacter"
+					"backpack", "backbling" -> "AthenaBackpack"
+					"pickaxe", "harvestingtool" -> "AthenaPickaxe"
+					"glider" -> "AthenaGlider"
+					"skydivecontrail", "contrail" -> "AthenaSkyDiveContrail"
+					"dance", "emote", "spray", "toy" -> "AthenaDance"
+					"itemwrap", "wrap" -> "AthenaItemWrap"
+					"musicpack", "music" -> "AthenaMusicPack"
+					"loadingscreen" -> "AthenaLoadingScreen"
+					else -> throw SimpleCommandExceptionType(LiteralMessage("Unknown cosmetic type $type. Valid values are: (case insensitive)```\nOutfit, BackBling, HarvestingTool, Glider, Contrail, Emote, Wrap, Music, LoadingScreen\n```")).create()
+				}
+				source.ensureSession()
+				source.loading("Getting cosmetics")
+				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+				val athena = source.api.profileManager.getProfileData("athena")
+				val items = athena.items.values.filter { it.primaryAssetType == filterType }
+				if (items.isEmpty()) {
+					throw SimpleCommandExceptionType(LiteralMessage("Nothing here")).create()
+				}
+				source.loading("Generating and uploading image")
+				perform(source, names[filterType], items).await()
+				source.loadingMsg!!.delete().queue()
+				Command.SINGLE_SUCCESS
+			}
+		)
 		.then(literal("fortnitegg")
 			.executes { c ->
 				val source = c.source
@@ -208,13 +254,14 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 				out
 			} else exclusivesOverride
 			val items = athena.items.values.filter { item -> exclusiveTemplateIds.any { it.equals(item.templateId, true) } }
+			source.loading("Generating and uploading image")
 			perform(source, "Exclusives", items).await()
 			source.loadingMsg!!.delete().queue()
 			Command.SINGLE_SUCCESS
 		}
 }
 
-private fun perform(source: CommandSourceStack, name: String, ids: Collection<FortItemStack>?) = CompletableFuture.supplyAsync {
+private fun perform(source: CommandSourceStack, name: String?, ids: Collection<FortItemStack>?) = CompletableFuture.supplyAsync {
 	if (ids.isNullOrEmpty()) {
 		return@supplyAsync null
 	}
