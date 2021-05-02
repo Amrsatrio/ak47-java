@@ -49,9 +49,9 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 	}
 
 	@Throws(HttpException::class, IOException::class)
-	fun login(source: CommandSourceStack?, fields: String, auth: EAuthClient = EAuthClient.FORTNITE_IOS_GAME_CLIENT, sendMessages: Boolean = true): Int {
+	fun login(source: CommandSourceStack?, fields: Map<String, String>, auth: EAuthClient = EAuthClient.FORTNITE_IOS_GAME_CLIENT, sendMessages: Boolean = true): Int {
 		if (source != null) {
-			val grantType = fields.substringBefore('&')
+			val grantType = fields["grant_type"]
 			if (grantType != "device_auth" && grantType != "device_code" && source.isFromType(ChannelType.TEXT) && source.guild.selfMember.hasPermission(Permission.MESSAGE_MANAGE) && sendMessages) {
 				source.message.delete().queue()
 			}
