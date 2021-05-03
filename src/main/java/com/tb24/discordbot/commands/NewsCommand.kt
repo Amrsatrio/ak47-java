@@ -47,7 +47,7 @@ class NewsCommand : BrigadierCommand("news", "Shows the in-game news.") {
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()),
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena")
 		).await()
-		val commonCore = source.api.profileManager.getProfileData("athena")
+		val commonCore = source.api.profileManager.getProfileData("common_core")
 		val commonCoreAttrs = commonCore.stats.attributes as CommonCoreProfileAttributes
 		val athena = source.api.profileManager.getProfileData("athena")
 		val attrs = athena.stats.attributes as AthenaProfileAttributes
