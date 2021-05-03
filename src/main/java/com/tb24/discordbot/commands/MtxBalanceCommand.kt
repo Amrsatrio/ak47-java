@@ -3,6 +3,7 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
@@ -33,7 +34,7 @@ class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the
 			source.complete(null, source.createEmbed()
 				.setTitle(Formatters.num.format(CatalogHelper.countMtxCurrency(commonCore)) + " V-Bucks")
 				.addField("Breakdown", if (breakdown.isEmpty()) "You have no V-Bucks." else breakdown.joinToString("\n"), false)
-				.setFooter("V-Bucks platform: " + current + " (" + source.prefix + "vbucksplatform to change)")
+				.setFooter("V-Bucks platform: " + current + (if (Rune.hasPremium(source)) " (" + source.prefix + "vbucksplatform to change)" else ""))
 				.setThumbnail(Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Items/T-Items-MTX-L.T-Items-MTX-L"))
 				.build())
 			Command.SINGLE_SUCCESS

@@ -1,5 +1,7 @@
 package com.tb24.discordbot.commands
 
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
@@ -24,8 +26,12 @@ import com.tb24.fn.model.priceengine.QueryOfferPricesPayload.LineOfferReq
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.CatalogHelper.isItemOwned
 import com.tb24.fn.util.Formatters
+import com.tb24.fn.util.getString
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Role
+import okhttp3.MediaType
+import okhttp3.Request
+import okhttp3.RequestBody
 import java.text.NumberFormat
 import java.time.Instant
 import java.util.*
@@ -104,7 +110,20 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 			}).exec().body()!!.lineOffers.first().price
 			val priceFormatter = NumberFormat.getCurrencyInstance()
 			priceFormatter.currency = Currency.getInstance(rmPrice.currencyCode)
-			source.complete("Visit this link to purchase the item described below:\n${source.generateUrl("https://launcher-website-prod07.ol.epicgames.com/purchase?namespace=fn&offers=$epicAppStoreId")}", EmbedBuilder().setColor(COLOR_INFO)
+			val purchaseTokenPayload = JsonObject().apply {
+				addProperty("locale", "")
+				add("offers", JsonArray().apply {
+					add(epicAppStoreId)
+				})
+				addProperty("subscriptionSlug", "")
+				addProperty("namespace", "fn")
+			}
+			val purchaseToken = source.api.okHttpClient.newCall(Request.Builder()
+				.url("https://payment-website-pci.ol.epicgames.com/payment/v1/purchaseToken")
+				.post(RequestBody.create(MediaType.get("application/json"), purchaseTokenPayload.toString()))
+				.build()).exec().to<JsonObject>().getString("purchaseToken")
+			val purchaseLink = "https://payment-website-pci.ol.epicgames.com/payment/v1/purchase?purchaseToken=$purchaseToken&uePlatform=FNGame"
+			source.complete("Visit this link to purchase the item shown below:\n${source.generateUrl(purchaseLink)}", EmbedBuilder().setColor(COLOR_INFO)
 				.populateOffer(storeOffer)
 				.addField("Price", priceFormatter.format(rmPrice.discountPrice / 100.0) + (if (rmPrice.originalPrice != rmPrice.discountPrice) " ~~" + priceFormatter.format(rmPrice.originalPrice / 100.0) + "~~" else "") + if (rmPrice.vatRate > 0.0) '\n' + "VAT included if applicable" else "", false)
 				.build())

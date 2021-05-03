@@ -71,8 +71,8 @@ fun EmbedBuilder.populateOffer(codeInfo: StoreOffer?): EmbedBuilder {
 	val thumbnail = codeInfo.keyImages.getOrNull(2)?.url
 	val status = codeInfo.status
 	val created = codeInfo.creationDate.format()
-	val owner = codeInfo.seller?.name ?: "Unknown";
-	setDescription("**Name**: ${name}\n**Description**: ${description}\n**Owner**: ${owner}\n**Status**: ${status}\n**Creation**: ${created}")
+	val seller = codeInfo.seller?.name ?: "Unknown";
+	setDescription("**Name**: ${name}\n**Description**: ${description}\n**Seller**: ${seller}\n**Creation**: ${created}")
 	setImage(image)
 	setThumbnail(thumbnail)
 	return this
