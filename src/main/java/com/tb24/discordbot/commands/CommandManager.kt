@@ -94,6 +94,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(MtxAlertsCommand())
 		register(MtxBalanceCommand())
 		register(MtxPlatformCommand())
+		register(NewsCommand())
 		register(PhoenixCommand())
 		register(PingCommand())
 		register(PrefixCommand())
