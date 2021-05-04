@@ -5,11 +5,7 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.Rune
-import com.tb24.discordbot.util.Utils
-import com.tb24.discordbot.util.await
-import com.tb24.discordbot.util.dispatchClientCommandRequest
-import com.tb24.discordbot.util.getEmoteByName
+import com.tb24.discordbot.util.*
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.ue4.assets.exports.UCurveTable
@@ -28,7 +24,7 @@ class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your 
 			val (current, max) = getQuestCompletion(lastCreativePlaytimeTracker, false)
 			val delta = 15
 			val xpCount = loadObject<UCurveTable>("/Game/Athena/Balance/DataTables/AthenaAccoladeXP.AthenaAccoladeXP")!!.findCurve(FName.dummy("CreativeMode_15mMedal"))!!.eval(1f).toInt()
-			source.complete(if (Rune.isBotDev(source)) getEmoteByName(if (current < max) "yus" else "nu")?.asMention else null, source.createEmbed()
+			source.complete(if (it.commandName == "doihavecreativexp") getEmoteByName(if (current < max) "yus" else "nu")?.asMention else null, source.createEmbed()
 				.setTitle("Creative XP")
 				.setDescription("`%s`\n%,d / %,d minutes played\n%,d / %,d %s".format(
 					Utils.progress(current, max, 32),

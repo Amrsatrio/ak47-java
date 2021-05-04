@@ -24,7 +24,11 @@ class StormShieldCommand : BrigadierCommand("stormshield", "Shows info about you
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "metadata").await()
 			val metadata = source.api.profileManager.getProfileData("metadata")
 			val outposts = sortedMapOf<Int, FortItemStack>()
-			metadata.items.values.associateByTo(outposts) { (it.defData as FortOutpostItemDefinition).TheaterIndex }
+			for (item in metadata.items.values) {
+				if (item.primaryAssetType == "Outpost") {
+					outposts[(item.defData as FortOutpostItemDefinition).TheaterIndex] = item
+				}
+			}
 			if (outposts.isEmpty()) {
 				throw SimpleCommandExceptionType(LiteralMessage("You have no storm shields.")).create()
 			}
