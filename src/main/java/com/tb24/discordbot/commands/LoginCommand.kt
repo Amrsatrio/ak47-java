@@ -7,7 +7,6 @@ import com.mojang.brigadier.arguments.StringArgumentType.*
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.HttpException
-import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.DeviceAuth
 import com.tb24.fn.model.account.GameProfile
@@ -31,7 +30,6 @@ import kotlin.math.min
 
 class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", arrayOf("i", "signin")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires { System.getProperty("freeTierEnabled") == "true" || Rune.hasPremium(it) }
 		.executes { accountPicker(it.source) }
 		.then(literal("new").executes { startDefaultLoginFlow(it.source) })
 		.then(argument("authorization code", greedyString())
