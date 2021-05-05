@@ -52,7 +52,6 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 
 class ExtendedLoginCommand : BrigadierCommand("loginx", "Login with arbitrary parameters.", arrayOf("lx")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires(Rune::hasPremium)
 		.executes { extendedLogin(it.source) }
 		.then(argument("method", word())
 			.executes { extendedLogin(it.source, getString(it, "method")) }

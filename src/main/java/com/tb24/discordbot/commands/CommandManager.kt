@@ -158,6 +158,9 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 	fun handleCommand(command: String, source: CommandSourceStack, prefix: String = "") {
 		val reader = StringReader(command)
 		reader.cursor += prefix.length
+		while (reader.peek().isWhitespace()) {
+			reader.skip()
+		}
 
 		try {
 			val parseResults = dispatcher.parse(reader, source)

@@ -99,7 +99,7 @@ fun executeShopImage(source: CommandSourceStack): Int {
 				entry.h = tileSize.toFloat()
 				entry.draw(ctx)
 			}
-		}.toPngArray()
+		}
 	} else {
 		createAttachmentOfIcons(entries.map {
 			val offer = it.offer
@@ -111,7 +111,7 @@ fun executeShopImage(source: CommandSourceStack): Int {
 				index = offer.__ak47_index
 			)
 		}, "shop")
-	}
+	}.toPngArray()
 	val tz = TimeZone.getTimeZone("UTC")
 	val now = Date()
 	val fileName = "shop-${SimpleDateFormat("dd-MM-yyyy").apply { timeZone = tz }.format(now)}.png"

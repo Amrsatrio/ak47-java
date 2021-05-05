@@ -3,7 +3,6 @@ package com.tb24.discordbot
 import com.tb24.discordbot.util.ResourcesContext
 import com.tb24.discordbot.util.createAndDrawCanvas
 import me.fungames.jfortniteparse.fort.enums.EFortRarity
-import me.fungames.jfortniteparse.util.toPngArray
 import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Font
@@ -14,7 +13,7 @@ import javax.imageio.ImageIO
 import kotlin.math.ceil
 import kotlin.math.sqrt
 
-fun createAttachmentOfIcons(slots: List<GridSlot>, type: String, scale: Float = 1f): ByteArray {
+fun createAttachmentOfIcons(slots: List<GridSlot>, type: String, scale: Float = 1f): BufferedImage {
 	val COLUMNS = ceil(sqrt(slots.size.toDouble())).toInt()
 	val tileSize = (200 * scale).toInt()
 	return createAndDrawCanvas(COLUMNS * tileSize, ceil(slots.size.toDouble() / COLUMNS.toDouble()).toInt() * tileSize) { ctx ->
@@ -57,7 +56,7 @@ fun createAttachmentOfIcons(slots: List<GridSlot>, type: String, scale: Float = 
 				ctx.translate(-tx, -ty)
 			}
 		}
-	}.toPngArray()
+	}
 }
 
 class GridSlot(
