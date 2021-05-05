@@ -24,13 +24,24 @@ class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your 
 			val (current, max) = getQuestCompletion(lastCreativePlaytimeTracker, false)
 			val delta = 15
 			val xpCount = loadObject<UCurveTable>("/Game/Athena/Balance/DataTables/AthenaAccoladeXP.AthenaAccoladeXP")!!.findCurve(FName.dummy("CreativeMode_15mMedal"))!!.eval(1f).toInt()
-			source.complete(if (it.commandName == "doihavecreativexp") getEmoteByName(if (current < max) "yus" else "nu")?.asMention else null, source.createEmbed()
+			val embed = source.createEmbed()
 				.setTitle("Creative XP")
 				.setDescription("`%s`\n%,d / %,d minutes played\n%,d / %,d %s".format(
 					Utils.progress(current, max, 32),
 					current, max,
 					current / delta * xpCount, max / delta * xpCount, getEmoteByName("AthenaSeasonalXP")?.asMention))
-				.build())
+			val hasMoreXp = current < max
+			if (hasMoreXp) {
+				embed.appendDescription("\nLast XP grant at 🕒 " + formatDurationSeconds((235L - (max - current)) * 60L))
+			}
+			source.complete(if (it.commandName == "doihavecreativexp") getEmoteByName(if (hasMoreXp) "yus" else "nu")?.asMention else null, embed.build())
 			Command.SINGLE_SUCCESS
 		}
+
+	private fun formatDurationSeconds(seconds: Long): String {
+		val h = seconds / 3600L
+		val m = (seconds % 3600L) / 60L
+		val s = seconds % 60L
+		return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s);
+	}
 }

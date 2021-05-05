@@ -14,6 +14,7 @@ import com.tb24.discordbot.managers.ChannelsManager.AvatarColor
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.AccountMutationPayload
 import com.tb24.fn.model.account.BackupCodesResponse
+import com.tb24.fn.util.EAuthClient
 import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
 
@@ -46,7 +47,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		source.ensureSession()
 		if (!source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
 				.setTitle("✋ Hold up!")
-				.setDescription("You're about to view the account details of ${source.api.currentLoggedIn.displayName}. Some of the data that we will send here might be sensitive, such as real name or Facebook name. We don't recommend to proceed if this account isn't yours.\n\nAre you sure you want to continue? (❌ in 30s)")
+				.setDescription("You're about to view the account details of ${source.api.currentLoggedIn.displayName}. Some of the data that we will send here might be sensitive, such as real name or Facebook name. We don't recommend to proceed if this account isn't yours.\n\nAre you sure you want to continue? (❌ in 45s)")
 				.build()).yesNoReactions(source.author).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS
@@ -92,13 +93,14 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		val oldName = source.api.currentLoggedIn.epicDisplayName.orDash()
 		if (!source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
 				.setTitle("Change display name?")
-				.setDescription("You're about to change the display name of account `${source.api.currentLoggedIn.id}`:\n\n`${oldName.orDash()}` \u2192 `$newName`\n\nThis action will be recorded in the Account History as `HISTORY_ACCOUNT_UPDATE`. You will not be able to change the display name again for the next 14 days if you proceed. Are you sure you want to continue? (❌ in 30s)")
+				.setDescription("You're about to change the display name of account `${source.api.currentLoggedIn.id}`:\n\n`${oldName.orDash()}` \u2192 `$newName`\n\nThis action will be recorded in the Account History as `HISTORY_ACCOUNT_UPDATE`. You will not be able to change the display name again for the next 14 days if you proceed. Are you sure you want to continue? (❌ in 45s)")
 				.build()).yesNoReactions(source.author).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS
 		}
 		source.loading("Changing display name")
-		val response = source.api.accountService.editAccountDetails(source.api.currentLoggedIn.id, AccountMutationPayload().apply {
+		val cnApi = source.session.getApiForOtherClient(EAuthClient.FORTNITE_CN_GAME_CLIENT)
+		val response = cnApi.accountService.editAccountDetails(cnApi.currentLoggedIn.id, AccountMutationPayload().apply {
 			displayName = newName
 		}).exec().body()!!
 		source.session.handleAccountMutation(response)
@@ -170,7 +172,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		}
 		if (!source.complete(null, source.createEmbed()
 				.setTitle("Unlink $externalAuthType?")
-				.setDescription("You're about to unlink a linked account with the following details:\n\n**Name**: ${externalAuth.externalDisplayName.orDash()}\n**ID(s)**:\n${externalAuth.authIds.joinToString("\n") { "\u2022 ${it.type}: ${it.id}" }}\n**Added**: ${externalAuth.dateAdded.renderWithRelative()}\n\nThis action will be recorded in the Account History as `HISTORY_ACCOUNT_EXTERNAL_AUTH_REMOVE`.\n\n${consoleWarning}Are you sure you want to continue? (❌ in 30s)")
+				.setDescription("You're about to unlink a linked account with the following details:\n\n**Name**: ${externalAuth.externalDisplayName.orDash()}\n**ID(s)**:\n${externalAuth.authIds.joinToString("\n") { "\u2022 ${it.type}: ${it.id}" }}\n**Added**: ${externalAuth.dateAdded.renderWithRelative()}\n\nThis action will be recorded in the Account History as `HISTORY_ACCOUNT_EXTERNAL_AUTH_REMOVE`.\n\n${consoleWarning}Are you sure you want to continue? (❌ in 45s)")
 				.build()).yesNoReactions(source.author).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS

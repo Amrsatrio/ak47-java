@@ -9,7 +9,6 @@ import com.tb24.fn.EpicApi
 import com.tb24.fn.event.ProfileUpdatedEvent
 import com.tb24.fn.model.account.AccountMutationResponse
 import com.tb24.fn.model.account.GameProfile
-import com.tb24.fn.model.account.Token
 import com.tb24.fn.model.mcpprofile.McpLootEntry
 import com.tb24.fn.model.mcpprofile.item.FortGiftBoxItem
 import com.tb24.fn.network.AccountService.GrantType.exchangeCode
@@ -34,14 +33,13 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 	}
 
 	val api = EpicApi(client.okHttpClient)
-	var lastClientService = "fortnite"
 	val otherClientApis = ConcurrentHashMap<EAuthClient, EpicApi>()
 	var channelsManager = ChannelsManager(api)
 	val homebaseManagers = hashMapOf<String, HomebaseManager>()
 
 	init {
 		if (persistent) SessionPersister.get(id)?.apply {
-			setToken(token)
+			api.setToken(token)
 			api.currentLoggedIn = accountData
 		}
 		api.eventBus.register(this)
@@ -67,7 +65,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 			}
 		}
 		val token = api.accountService.getAccessToken(auth.asBasicAuthString(), fields, "eg1", null).exec().body()!!
-		setToken(token)
+		api.setToken(token)
 		val accountData = api.accountService.findAccountsByIds(Collections.singletonList(token.account_id)).exec().body()?.firstOrNull()
 		api.currentLoggedIn = accountData
 		save()
@@ -107,14 +105,6 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		if (persistent) SessionPersister.remove(id)
 	}
 
-	fun setToken(token: Token?) {
-		api.userToken = token
-		if (token != null && token.client_service != lastClientService) {
-			lastClientService = token.client_service
-			api.buildServices()
-		}
-	}
-
 	fun getApiForOtherClient(authClient: EAuthClient) = otherClientApis.getOrPut(authClient) {
 		val exchangeCode = api.accountService.getExchangeCode().exec().body()!!.code
 		val newApi = EpicApi(client.okHttpClient)
@@ -145,9 +135,11 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 	}
 
 	fun handleAccountMutation(response: AccountMutationResponse) {
-		api.currentLoggedIn = response.accountInfo.run { GameProfile(id, epicDisplayName) }
+		val newAccountInfo = response.accountInfo.run { GameProfile(id, epicDisplayName) }
+		api.currentLoggedIn = newAccountInfo
+		otherClientApis.values.forEach { it.currentLoggedIn = newAccountInfo }
 		if (response.oauthSession != null) {
-			setToken(response.oauthSession)
+			api.setToken(response.oauthSession)
 		}
 		save()
 	}

@@ -16,7 +16,7 @@ class LibraryCommand : BrigadierCommand("library", "Shows your Epic Games Store 
 			source.ensureSession()
 			source.loading("Getting your Epic Games Store library")
 			val launcherApi = source.session.getApiForOtherClient(EAuthClient.LAUNCHER_APP_CLIENT_2)
-			var records = launcherApi.libraryService.queryItems(null, null, "ue").exec().body()!!.records
+			val records = launcherApi.libraryService.queryItems(null, null, "ue").exec().body()!!.records
 			val playtimes = launcherApi.libraryService.queryAllPlaytime(launcherApi.currentLoggedIn.id).exec().body()!!
 			val items = launcherApi.catalogService.queryItemsBulk(records.map { it.catalogItemId }, false, false, "US", "en").exec().body()!!
 			val entries = records.filter { items[it.catalogItemId]?.mainGameItem == null }.sortedBy { items[it.catalogItemId]?.title }
