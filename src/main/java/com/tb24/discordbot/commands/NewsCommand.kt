@@ -108,7 +108,7 @@ fun CommonUISimpleMessageBase.createEmbed(source: CommandSourceStack): EmbedBuil
 		if (entryType == "Website" && !websiteURL.isNullOrEmpty()) {
 			var url = websiteURL
 			@Suppress("HttpUrlsUsage")
-			if (!url.startsWith("http://") || !url.startsWith("https://")) {
+			if (!url.startsWith("http://") && !url.startsWith("https://")) {
 				url = "https://$url"
 			}
 			extras.add("[%s](%s)".format(
