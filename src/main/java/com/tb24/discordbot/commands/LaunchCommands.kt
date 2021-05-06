@@ -81,7 +81,7 @@ class LaunchWindowsCommand : BrigadierCommand("launch", "Launches you into Fortn
 		val type: String
 		var authClientArgs = ""
 		if (deviceData != null) {
-			login = source.api.currentLoggedIn.id
+			login = deviceData.accountId
 			password = deviceData.deviceId + ':' + deviceData.secret
 			type = "device_auth"
 			val authClient = deviceData.authClient

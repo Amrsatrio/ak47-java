@@ -375,6 +375,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 	}
 
 	private fun updateAcceptInvites(source: CommandSourceStack, preferredState: Boolean? = null): Int {
+		source.ensureSession()
 		source.loading(if (preferredState != null)
 			"Changing your friend request allowance"
 		else

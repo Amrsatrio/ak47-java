@@ -18,6 +18,7 @@ class StatsPrivacyCommand : BrigadierCommand("statsprivacy", "Toggles or sets yo
 		)
 
 	private fun execute(source: CommandSourceStack, preferredState: Boolean? = null): Int {
+		source.ensureSession()
 		source.loading(if (preferredState != null)
 			"Changing your stats visibility"
 		else

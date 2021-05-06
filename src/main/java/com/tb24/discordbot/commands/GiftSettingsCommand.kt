@@ -95,6 +95,7 @@ class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift s
 	}
 
 	private fun updateReceiveGifts(source: CommandSourceStack, receiveGifts: Boolean? = null): Int {
+		source.ensureSession()
 		source.loading(if (receiveGifts != null)
 			"Changing your gift acceptance"
 		else
