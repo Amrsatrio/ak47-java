@@ -17,7 +17,6 @@ class DeleteMessageCommand : BrigadierCommand("deletemessage", "Deletes my messa
 				throw SimpleCommandExceptionType(LiteralMessage("Not my message, I can't delete it.")).create()
 			}
 			message.delete().complete()
-			it.source.complete("Deleted 1 message!")
 			Command.SINGLE_SUCCESS
 		}
 }

@@ -37,7 +37,6 @@ jar {
 
 repositories {
 	google()
-	jcenter()
 	mavenCentral()
 	maven { url "https://dl.bintray.com/fungamesleaks/mavenRepo" }
 	maven { url 'https://libraries.minecraft.net' }
