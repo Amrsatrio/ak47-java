@@ -22,7 +22,7 @@ import net.dv8tion.jda.api.entities.Message
 
 class ComposeMcpCommand : BrigadierCommand("composemcp", "Perform an arbitrary MCP profile operation. Usually used if such operation is not implemented yet.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires(Rune::isBotDev)
+		.requires(Rune::hasPremium)
 		.then(argument("command", word())
 			.executes { exec(it.source, getString(it, "command")) }
 			.then(argument("profile ID", word())
