@@ -9,7 +9,6 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.HttpException
-import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.format
 import com.tb24.fn.model.account.DeviceAuth
@@ -113,15 +112,7 @@ private fun create(c: CommandContext<CommandSourceStack>): Int {
 	if (dbDevice != null) {
 		throw SimpleCommandExceptionType(LiteralMessage("You already registered a device auth of this account.")).create()
 	}
-	val limit = when {
-		Rune.isBotDev(source) -> 20
-		source.hasPremium() -> 10
-		else -> {
-			val timeCreated = source.author.timeCreated.toEpochSecond()
-			val accountAge = System.currentTimeMillis() / 1000 - timeCreated
-			if (accountAge < 180 * 24 * 60 * 60) 0 else 2
-		}
-	}
+	val limit = source.getSavedAccountsLimit()
 	if (dbDevices.size >= limit) {
 		if (dbDevices.isEmpty() && limit == 0) {
 			throw SimpleCommandExceptionType(LiteralMessage("Your Discord account must be older than 180 days in order to have 2 complimentary saved logins.\nAlternatively, you can buy premium from us to get 7 saved logins regardless of account age.")).create()

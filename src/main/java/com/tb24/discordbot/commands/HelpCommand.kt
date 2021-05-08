@@ -12,7 +12,7 @@ import com.tb24.discordbot.util.replyPaginated
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 
-class HelpCommand : BrigadierCommand("help", "Shows all commands and their infos.", arrayOf("?")) {
+class HelpCommand : BrigadierCommand("help", "Shows all commands and their infos.", arrayOf("?", "commands")) {
 	private val HELP_ERROR = SimpleCommandExceptionType(LiteralMessage("Unknown command or insufficient permissions"))
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()

@@ -6,6 +6,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
+import com.tb24.discordbot.Rune
 import com.tb24.discordbot.Session
 import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.exec
@@ -90,6 +91,16 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 
 	fun hasPremium(): Boolean {
 		return r.table("members").get(author.id).run(client.dbConn).first() != null
+	}
+
+	fun getSavedAccountsLimit() = when {
+		Rune.isBotDev(this) -> 20
+		hasPremium() -> 10
+		else -> {
+			val timeCreated = author.timeCreated.toEpochSecond()
+			val accountAge = System.currentTimeMillis() / 1000 - timeCreated
+			if (accountAge < 180 * 24 * 60 * 60) 0 else 2
+		}
 	}
 }
 
