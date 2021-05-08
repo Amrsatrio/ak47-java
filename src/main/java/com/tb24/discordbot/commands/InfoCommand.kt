@@ -7,6 +7,7 @@ import com.rethinkdb.RethinkDB
 import com.tb24.discordbot.util.StringUtil
 import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.JDAInfo
 import java.lang.management.ManagementFactory
 
 class InfoCommand : BrigadierCommand("info", "Shows general info about the bot.", arrayOf("memory", "mem")) {
@@ -17,9 +18,11 @@ class InfoCommand : BrigadierCommand("info", "Shows general info about the bot."
 				.addField("Sessions (incl. you)", Formatters.num.format(source.client.sessions.size), true)
 				.addField("Premium users", Formatters.num.format(RethinkDB.r.table("members").run(source.client.dbConn).count()), true)
 				.addField("Granters", Formatters.num.format(RethinkDB.r.table("admins").run(source.client.dbConn).count()), true)
-				.addField("Memory", getMemoryInfo(), true)
+				.addField("Servers", Formatters.num.format(source.client.discord.guilds.size), true)
+				.addField("Cached users", Formatters.num.format(source.client.discord.users.size), true)
 				.addField("Uptime", StringUtil.formatElapsedTime(ManagementFactory.getRuntimeMXBean().uptime, true).toString(), true)
-				.addField("Java version", System.getProperty("java.version"), true)
+				.addField("Memory", getMemoryInfo(), true)
+				.addField("Versions", "Java: `%s`\nJDA: `%s`".format(System.getProperty("java.version"), JDAInfo.VERSION), true)
 			source.complete(null, embed.build())
 			Command.SINGLE_SUCCESS
 		}
