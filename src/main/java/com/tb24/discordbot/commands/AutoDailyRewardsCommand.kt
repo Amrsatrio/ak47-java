@@ -16,7 +16,7 @@ import com.tb24.fn.model.mcpprofile.commands.QueryPublicProfile
 import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
 
-class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll your saved accounts for automatic daily rewards claiming.", arrayOf("autostw")) {
+class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll your saved accounts for automatic daily rewards claiming.", arrayOf("autostw", "auto")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires(Rune::hasPremium)
 		.executes {
