@@ -14,6 +14,7 @@ class RedeemPurchasesCommand : BrigadierCommand("redeempurchases", "Redeems Fort
     override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
         .executes { c ->
             val source = c.source
+            source.ensureSession()
             source.loading("Getting purchases to redeem")
             source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
             val attrs = source.api.profileManager.getProfileData("common_core").stats.attributes as CommonCoreProfileAttributes
