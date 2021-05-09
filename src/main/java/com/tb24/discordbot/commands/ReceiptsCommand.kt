@@ -22,7 +22,9 @@ class ReceiptsCommand : BrigadierCommand("receipts", "You asked for it") {
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 			val commonCore = source.api.profileManager.getProfileData("common_core")
 			val receipts = (commonCore.stats.attributes as CommonCoreProfileAttributes).in_app_purchases?.receipts
-				?: throw SimpleCommandExceptionType(LiteralMessage("You have no past Fortnite real money transactions or code redemptions.")).create()
+			if (receipts.isNullOrEmpty()) {
+				throw SimpleCommandExceptionType(LiteralMessage("You have no past Fortnite real money transactions or code redemptions.")).create()
+			}
 			//val receipts = source.api.fortniteService.receipts(source.api.currentLoggedIn.id).exec().body()!! //this returns only Epic Store purchases
 			source.channel.sendFile(receipts.joinToString("\n").toByteArray(), "Receipts-%s-%d.txt".format(source.api.currentLoggedIn.displayName, commonCore.rvn)).complete()
 			source.loadingMsg!!.delete().queue()

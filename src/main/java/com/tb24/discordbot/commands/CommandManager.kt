@@ -102,6 +102,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(PingCommand())
 		register(PrefixCommand())
 		register(PurchaseCommand())
+		register(PurchasesCommand())
 		register(QuestCommand())
 		register(ReceiptsCommand())
 		register(RedeemCodeCommand())

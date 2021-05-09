@@ -101,9 +101,10 @@ inline fun <reified T> okhttp3.Response.to(): T = body()!!.charStream().use { Ep
 
 val CommandContext<*>.commandName: String get() = nodes.first().node.name
 
-private val DF = DateFormat.getDateTimeInstance()
+@JvmField
+val DF = DateFormat.getDateTimeInstance()
 
-fun Date.format(): String = DF.format(this)
+inline fun Date.format(): String = DF.format(this)
 
 fun FortItemStack.render(displayQty: Int = quantity): String {
 	var dn = displayName
