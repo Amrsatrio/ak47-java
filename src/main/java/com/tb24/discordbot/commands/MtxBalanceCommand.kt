@@ -5,15 +5,23 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.Utils
+import com.tb24.discordbot.util.addFieldSeparate
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Formatters
+import com.tb24.fn.util.Utils.sumKV
 import com.tb24.fn.util.getString
+import java.text.DateFormat
+import java.util.regex.Pattern
 
 class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the account owns on all platforms.", arrayOf("bal", "balance", "mtx", "v", "vbucksbalance")) {
+	companion object {
+		val MTX_FULFILLMENT_PATTERN = Pattern.compile("FN_(\\d+)_POINTS")
+	}
+
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
 			val source = it.source
@@ -39,4 +47,29 @@ class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the
 				.build())
 			Command.SINGLE_SUCCESS
 		}
+		.then(literal("totalpurchased")
+			.executes { c ->
+				val source = c.source
+				source.ensureSession()
+				source.loading("Getting fulfillments")
+				source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
+				val commonCore = source.api.profileManager.getProfileData("common_core")
+				val fulfillments = (commonCore.stats.attributes as CommonCoreProfileAttributes).in_app_purchases?.fulfillmentCounts
+				var total = 0
+				val entries = sortedMapOf<Int, Int>()
+				fulfillments?.forEach { (name, count) ->
+					val matcher = MTX_FULFILLMENT_PATTERN.matcher(name)
+					if (matcher.matches()) {
+						val mtxAmount = matcher.group(1).toInt()
+						total += count * mtxAmount
+						sumKV(entries, mtxAmount, count)
+					}
+				}
+				source.complete(null, source.createEmbed()
+					.setDescription("You have purchased/redeemed a total of **%s %,d** since **%s**.".format(Utils.MTX_EMOJI, total, DateFormat.getDateInstance().format(commonCore.created)))
+					.addFieldSeparate("Details", entries.entries, 0) { "%s %,d: %,d %s".format(Utils.MTX_EMOJI, it.key, it.value, if (it.value == 1) "time" else "times") }
+					.build())
+				Command.SINGLE_SUCCESS
+			}
+		)
 }
