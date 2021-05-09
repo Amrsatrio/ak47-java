@@ -33,8 +33,6 @@ import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.CompletableFuture
-import kotlin.math.ceil
-import kotlin.math.sqrt
 
 class ShopCommand : BrigadierCommand("shop", "Sends an image of today's item shop.", arrayOf("s")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -74,44 +72,7 @@ fun executeShopImage(source: CommandSourceStack): Int {
 	source.loading("Getting the shop")
 	source.client.catalogManager.ensureCatalogData(source.api)
 	source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
-	val entries = mutableListOf<FShopEntryContainer>()
-	for (section in source.client.catalogManager.athenaSections.values) {
-		val sectionId = section.sectionData.sectionId
-		if (sectionId != null && sectionId.equals("battlepass", true)) {
-			continue
-		}
-		for (offer in section.items) {
-			if (offer.prices.firstOrNull()?.currencyType == EStoreCurrencyType.RealMoney) {
-				continue
-			}
-			entries.add(FShopEntryContainer(offer, section))
-		}
-	}
-	val image = if (false) {
-		val scale = 1f
-		val COLUMNS = ceil(sqrt(entries.size.toDouble())).toInt()
-		val tileSize = (200 * scale).toInt()
-		createAndDrawCanvas(COLUMNS * tileSize, ceil(entries.size.toDouble() / COLUMNS.toDouble()).toInt() * tileSize) { ctx ->
-			for ((i, entry) in entries.withIndex()) {
-				entry.x = (i % COLUMNS * tileSize).toFloat()
-				entry.y = (i / COLUMNS * tileSize).toFloat()
-				entry.w = tileSize.toFloat()
-				entry.h = tileSize.toFloat()
-				entry.draw(ctx)
-			}
-		}
-	} else {
-		createAttachmentOfIcons(entries.map {
-			val offer = it.offer
-			val displayData = it.displayData
-			GridSlot(
-				image = displayData.image,
-				name = if (displayData.title.isNullOrEmpty()) offer.devName else displayData.title,
-				rarity = if (offer.getMeta("HideRarityBorder").equals("true", true)) null else offer.itemGrants.firstOrNull()?.rarity,
-				index = offer.__ak47_index
-			)
-		}, "shop")
-	}.toPngArray()
+	val image = generateShopImage(source.client.catalogManager, 2).toPngArray()
 	val tz = TimeZone.getTimeZone("UTC")
 	val now = Date()
 	val fileName = "shop-${SimpleDateFormat("dd-MM-yyyy").apply { timeZone = tz }.format(now)}.png"

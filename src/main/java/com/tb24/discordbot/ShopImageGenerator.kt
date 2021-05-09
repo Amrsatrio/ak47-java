@@ -8,6 +8,8 @@ import com.tb24.fn.model.EItemShopTileSize
 import com.tb24.fn.model.FortCmsData
 import com.tb24.fn.model.gamesubcatalog.CatalogDownload
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
+import com.tb24.fn.model.gamesubcatalog.ECatalogOfferType
+import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
 import com.tb24.uasset.AssetManager
@@ -18,6 +20,8 @@ import me.fungames.jfortniteparse.fort.exports.FortRarityData
 import me.fungames.jfortniteparse.fort.objects.FortColorPalette
 import me.fungames.jfortniteparse.ue4.assets.exports.mats.UMaterialInstance
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture
+import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
+import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.ue4.objects.core.math.FVector2D
 import me.fungames.jfortniteparse.util.drawCenteredString
 import me.fungames.jfortniteparse.util.toPngArray
@@ -31,22 +35,72 @@ import java.awt.image.BufferedImage
 import java.io.File
 import java.io.FileReader
 import javax.imageio.ImageIO
+import kotlin.math.ceil
 import kotlin.math.max
+import kotlin.math.sqrt
 import kotlin.system.exitProcess
 
 fun main() {
 	AssetManager.INSTANCE.loadPaks()
 	val catalogManager = CatalogManager()
-	catalogManager.catalogData = FileReader("D:/Downloads/shop-23-02-2021-en.json").use { EpicApi.GSON.fromJson(it, CatalogDownload::class.java) }
+	catalogManager.catalogData = FileReader("D:/Downloads/shop-09-05-2021-en.json").use { EpicApi.GSON.fromJson(it, CatalogDownload::class.java) }
 	catalogManager.sectionsData = OkHttpClient().newCall(Request.Builder().url("https://fortnitecontent-website-prod07.ol.epicgames.com/content/api/pages/fortnite-game/shop-sections").build()).exec().to<FortCmsData.ShopSectionsData>()
 	catalogManager.validate()
-	File("out.png").writeBytes(generateShopImage(catalogManager).toPngArray())
+	File("out.png").writeBytes(generateShopImage(catalogManager, 2).toPngArray())
 	exitProcess(0)
 }
 
 val catalogMessages by lazy { loadObject<CatalogMessaging>("/Game/Athena/UI/Frontend/CatalogMessages.CatalogMessages")!! }
 
-fun generateShopImage(catalogManager: CatalogManager): BufferedImage {
+fun generateShopImage(catalogManager: CatalogManager, grid: Int = 0): BufferedImage {
+	if (grid > 0) {
+		val entries = mutableListOf<FShopEntryContainer>()
+		for (section in catalogManager.athenaSections.values) {
+			val sectionId = section.sectionData.sectionId
+			if (sectionId != null && sectionId.equals("battlepass", true)) {
+				continue
+			}
+			for (offer in section.items) {
+				if (offer.prices.firstOrNull()?.currencyType == EStoreCurrencyType.RealMoney) {
+					continue
+				}
+				entries.add(FShopEntryContainer(offer, section))
+			}
+		}
+		if (grid == 1) {
+			return createAttachmentOfIcons(entries.map {
+				val offer = it.offer
+				val displayData = it.displayData
+				GridSlot(
+					image = displayData.image,
+					name = if (displayData.title.isNullOrEmpty()) offer.devName else displayData.title,
+					rarity = if (offer.getMeta("HideRarityBorder").equals("true", true)) null else offer.itemGrants.firstOrNull()?.rarity,
+					index = offer.__ak47_index
+				)
+			}, "shop")
+		} else if (grid == 2) {
+			val columns = ceil(sqrt(entries.size.toDouble())).toInt()
+			val padding = 6
+			val doublePadding = 2 * padding
+			val tileSize = 256 + doublePadding
+			val imageW = columns * tileSize + doublePadding
+			val imageH = ceil(entries.size.toDouble() / columns.toDouble()).toInt() * tileSize + doublePadding
+			return createAndDrawCanvas(imageW, imageH) { ctx ->
+				/*if (false) {
+					ctx.drawStretchedRadialGradient(0xFF099AFE, 0xFF0942B4, 0, 0, imageW, imageH)
+				} else {
+					ctx.drawStretchedRadialGradient(0xFF272727, 0xFF000000, 0, 0, imageW, imageH)
+				}*/
+				for ((i, entry) in entries.withIndex()) {
+					entry.x = doublePadding + (i % columns * tileSize).toFloat()
+					entry.y = doublePadding + (i / columns * tileSize).toFloat()
+					entry.w = tileSize.toFloat() - padding * 2
+					entry.h = tileSize.toFloat() - padding * 2
+					entry.draw(ctx)
+				}
+			}
+		}
+	}
 	val itemSpacingH = 24f
 	val itemSpacingV = 24f
 	val sectionSpacing = 72f
@@ -178,7 +232,7 @@ fun Graphics2D.drawStretchedRadialGradient(innerColor: Number, outerColor: Numbe
 
 fun Graphics2D.drawTimer(iconX: Int, iconY: Int, iconSize: Int = 28) {
 	val fillColor = color.rgb and 0xFFFFFF
-	val timerIcon = ImageIO.read(File("C:\\Users\\satri\\Desktop\\ui_timer_64x.png"))
+	val timerIcon = ImageIO.read(File("C:\\Users\\satri\\Documents\\AppProjects\\Playground\\app\\src\\main\\res\\drawable\\ui_timer_64x.png"))
 	val tW = timerIcon.width
 	val tH = timerIcon.height
 	val pixels = timerIcon.getRGB(0, 0, tW, tH, null, 0, tW)
@@ -230,6 +284,8 @@ class FShopSectionContainer(val section: CatalogManager.ShopSection) {
 	}
 }
 
+val vkonk by lazy { loadObject<UTexture2D>("/Game/UI/Foundation/Textures/Icons/Items/T-Items-MTX.T-Items-MTX")!! }
+
 class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.ShopSection) {
 	companion object {
 		val violatorPalettes = mapOf(
@@ -271,8 +327,8 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 		val bgColorB = p?.vector?.get("Background_Color_B") ?: 0xFF000000.toInt()
 
 		val gradientSize = p?.scalar?.get("Gradient_Size") ?: 50f
-		val gradientX = p?.scalar?.get("Gradient_Position_X") ?: 0f
-		val gradientY = p?.scalar?.get("Gradient_Position_Y") ?: 0f
+		val gradientX = p?.scalar?.get("Gradient_Position_X") ?: 50f
+		val gradientY = p?.scalar?.get("Gradient_Position_Y") ?: 50f
 
 		/*val spotlightSize = p.scalar["Spotlight_Size"] ?: 50f
 		val spotlightHardness = p.scalar["Spotlight_Hardness"]
@@ -309,33 +365,42 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 		// item image
 		val itemImage = displayData.image
 		if (itemImage != null) {
-			//println("itemImg w/h ${itemImage.width} ${itemImage.height}")
-			val offsetImageX = p?.scalar?.get("OffsetImage_X") ?: 0f
-			val offsetImageY = p?.scalar?.get("OffsetImage_Y") ?: 0f
-			val zoomImagePct = p?.scalar?.get("ZoomImage_Percent") ?: 0f
-			//println("ox=$offsetImageX oy=$offsetImageY zoomPct=$zoomImagePct")
+			if (w != h) {
+				//println("itemImg w/h ${itemImage.width} ${itemImage.height}")
+				val offsetImageX = p?.scalar?.get("OffsetImage_X") ?: 0f
+				val offsetImageY = p?.scalar?.get("OffsetImage_Y") ?: 0f
+				val zoomImagePct = p?.scalar?.get("ZoomImage_Percent") ?: 0f
+				//println("ox=$offsetImageX oy=$offsetImageY zoomPct=$zoomImagePct")
 
-			// centerCrop, needs more research
-			val src = Rectangle(offsetImageX.toInt(), offsetImageY.toInt(), itemImage.width, itemImage.height)
-			val deltaScale = artificialScale //zoomImagePct / 100f
-			if (deltaScale != 0f) {
-				//println("deltaScale $deltaScale")
-				src.growByFac(-deltaScale)
+				// centerCrop, needs more research
+				val src = Rectangle(offsetImageX.toInt(), offsetImageY.toInt(), itemImage.width, itemImage.height)
+				val deltaScale = artificialScale //zoomImagePct / 100f
+				if (deltaScale != 0f) {
+					//println("deltaScale $deltaScale")
+					src.growByFac(-deltaScale)
+				}
+				val cropOffsetRatio = (1f - w / h) / 2f
+				ctx.drawImage(itemImage,
+					x.toInt(), y.toInt(),
+					(x + w).toInt(), (y + h).toInt(),
+					src.x + (cropOffsetRatio * src.width).toInt(), src.y,
+					src.x + ((1f - cropOffsetRatio) * src.width).toInt(), src.y + src.height,
+					Color.GRAY,
+					null
+				)
+			} else { // simple square
+				ctx.drawImage(itemImage, x.toInt(), y.toInt(), w.toInt(), h.toInt(), null)
 			}
-			val cropOffsetRatio = (1f - w / h) / 2f
-			ctx.drawImage(itemImage,
-				x.toInt(), y.toInt(),
-				(x + w).toInt(), (y + h).toInt(),
-				src.x + (cropOffsetRatio * src.width).toInt(), src.y,
-				src.x + ((1f - cropOffsetRatio) * src.width).toInt(), src.y + src.height,
-				Color.GRAY,
-				null
-			)
 		}
 
 		val path = Path2D.Float()
+		drawRarityBorder(ctx, offer, path)
+		drawTitleAndSubtitle(ctx, path)
+		drawPrice(ctx, offer, path)
+		drawViolator(ctx, offer, path)
+	}
 
-		// rarity
+	private inline fun drawRarityBorder(ctx: Graphics2D, offer: CatalogEntryHolder, path: Path2D.Float) {
 		val palette = displayData.palette
 		if (palette != null && !offer.getMeta("HideRarityBorder").equals("true", true)) {
 			ctx.color = palette.Color1.toColor()
@@ -346,8 +411,9 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 			path.closePath()
 			ctx.fill(path)
 		}
+	}
 
-		// text bg
+	private inline fun drawTitleAndSubtitle(ctx: Graphics2D, path: Path2D.Float) {
 		ctx.color = 0x1E1E1E.awtColor()
 		path.reset()
 		path.moveTo(x, y + h - 67)
@@ -357,7 +423,45 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 		path.closePath()
 		ctx.fill(path)
 
-		// bottom
+		var titleText = displayData.title?.toUpperCase().orEmpty()
+		if (offer.__ak47_index != -1) {
+			titleText = (offer.__ak47_index + 1).toString() + ". " + titleText
+		}
+		val subtitleText = displayData.subtitle?.toUpperCase().orEmpty()
+
+		var totalHeight = 0
+		var titleFontSize = 20f
+		var titleFont = ResourcesContext.burbankBigRegularBlack.deriveFont(Font.ITALIC, titleFontSize)
+		var titleFm = ctx.getFontMetrics(titleFont)
+		while (titleFm.stringWidth(titleText) > w) {
+			titleFontSize--
+			titleFont = ResourcesContext.burbankBigRegularBlack.deriveFont(Font.ITALIC, titleFontSize)
+			titleFm = ctx.getFontMetrics(titleFont)
+		}
+		totalHeight += titleFm.height
+		val subtitleFont = ResourcesContext.burbankSmallBlack.deriveFont(16f)
+		val subtitleFm = ctx.getFontMetrics(subtitleFont)
+		if (subtitleText.isNotEmpty()) {
+			totalHeight += -titleFm.descent + subtitleFm.height
+		}
+
+		val contentTop = y + h - 67
+		val contentHeight = 39
+		var cur = contentTop + (contentHeight - totalHeight) / 2
+
+		ctx.color = Color.WHITE
+		ctx.font = titleFont
+		ctx.drawString(titleText, x + (w - titleFm.stringWidth(titleText)) / 2, cur + titleFm.ascent)
+		cur += titleFm.height - titleFm.descent
+
+		if (subtitleText.isNotEmpty()) {
+			ctx.color = 0x7A7A7A.awtColor()
+			ctx.font = subtitleFont
+			ctx.drawString(subtitleText, x + (w - subtitleFm.stringWidth(subtitleText)) / 2, cur + subtitleFm.ascent)
+		}
+	}
+
+	private inline fun drawPrice(ctx: Graphics2D, offer: CatalogEntryHolder, path: Path2D.Float) {
 		ctx.color = 0x0E0E0E.awtColor()
 		path.reset()
 		path.moveTo(x, y + h - 26)
@@ -368,54 +472,77 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 		ctx.fill(path)
 
 		offer.resolve()
+
+		var offset = 0
+		if (offer.price.currencyType == EStoreCurrencyType.MtxCurrency) {
+			offset = 42
+			val iconSize = 40
+			val oldClip = ctx.clip
+			val oldTransform = ctx.transform
+			val oldComposite = ctx.composite
+			val iconX = x + w - 4 - iconSize
+			val iconY = y + h - iconSize + 7
+			ctx.clip = path
+			ctx.rotate(Math.toRadians(17.0), iconX + iconSize / 2.0, iconY + iconSize / 2.0)
+			ctx.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, .7f)
+			ctx.drawImage(vkonk.toBufferedImage(), iconX.toInt(), iconY.toInt(), iconSize, iconSize, null)
+			ctx.clip = oldClip
+			ctx.transform = oldTransform
+			ctx.composite = oldComposite
+		}
+
 		val priceNum = offer.price.basePrice
 		val priceText = Formatters.num.format(priceNum)
-
 		ctx.color = 0xA7B8BC.awtColor()
 		ctx.font = ResourcesContext.burbankBigRegularBlack.deriveFont(Font.ITALIC, 16f)
-		ctx.drawString(priceText, x + w - 8 - ctx.fontMetrics.stringWidth(priceText), y + h - 9)
+		ctx.drawString(priceText, x + w - 8 - offset - ctx.fontMetrics.stringWidth(priceText), y + h - 9)
+	}
 
-		ctx.color = Color.WHITE
-		ctx.font = ctx.font.deriveFont(Font.ITALIC, 20f)
-		val entryTitleText = displayData.title?.toUpperCase().orEmpty()
-		ctx.drawCenteredString(entryTitleText, (x + w / 2).toInt(), (y + h - 40).toInt())
-
+	private inline fun drawViolator(ctx: Graphics2D, offer: CatalogEntryHolder, path: Path2D.Float) {
 		val violatorIntensity = runCatching { EViolatorIntensity.valueOf(offer.getMeta("ViolatorIntensity")!!) }.getOrNull()
-		if (violatorIntensity != null) {
-			check(violatorIntensity != EViolatorIntensity.Medium) {
-				"medium is not implemented"
-			}
-			ctx.font = ResourcesContext.burbankSmallBold.deriveFont(16f)
-
-			val violatorTag = offer.getMeta("ViolatorTag")
-			val violatorText = (catalogMessages.StoreToast_Body[violatorTag]?.format() ?: violatorTag ?: "?!?!?!").toUpperCase()
-			// yeah dynamic bundle later lets get the basic stuff first
-			val xOffsetText = ctx.fontMetrics.stringWidth(violatorText)
-
-			//outline
-			ctx.color = violatorPalettes[violatorIntensity]!!.outline.awtColor()
-			path.reset()
-			path.moveTo(x - 12, y - 9)
-			path.lineTo(x + 22 + xOffsetText, y - 12)
-			path.lineTo(x + 14 + xOffsetText, y + 27)
-			path.lineTo(x - 8, y + 26)
-			path.closePath()
-			ctx.fill(path)
-
-			//inside
-			ctx.color = violatorPalettes[violatorIntensity]!!.inside.awtColor()
-			path.reset()
-			path.moveTo(x - 6, y - 4)
-			path.lineTo(x + 15 + xOffsetText, y - 6)
-			path.lineTo(x + 9 + xOffsetText, y + 22)
-			path.lineTo(x - 3, y + 21)
-			path.closePath()
-			ctx.fill(path)
-
-			//text
-			ctx.color = violatorPalettes[violatorIntensity]!!.text.awtColor()
-			ctx.drawString(violatorText, (x - 6) + (x + 10 + xOffsetText - (x - 6)) / 2, y - 10 + (y + 26 - (y - 10)) / 2 + ctx.fontMetrics.ascent / 2)
+			?: EViolatorIntensity.Low
+		check(violatorIntensity != EViolatorIntensity.Medium) {
+			"medium is not implemented"
 		}
+		var violatorText: String? = null
+		if (offer.ce.offerType == ECatalogOfferType.DynamicBundle && offer.price.regularPrice != offer.price.finalPrice) {
+			val discount = offer.price.regularPrice - offer.price.finalPrice
+			violatorText = "%,d V-Bucks Off".format(discount)
+		}
+		val violatorTag = offer.getMeta("ViolatorTag")
+		if (violatorTag != null) {
+			violatorText = catalogMessages.StoreToast_Body[violatorTag]?.format() ?: violatorTag
+		}
+		violatorText = (violatorText ?: return).toUpperCase()
+
+		ctx.font = ResourcesContext.burbankSmallBlack.deriveFont(Font.ITALIC, 18f)
+		val fm = ctx.fontMetrics
+		val textWidth = fm.stringWidth(violatorText)
+
+		//outline
+		ctx.color = violatorPalettes[violatorIntensity]!!.outline.awtColor()
+		path.reset()
+		path.moveTo(x - 12, y - 9)
+		path.lineTo(x + 22 + textWidth, y - 12)
+		path.lineTo(x + 14 + textWidth, y + 27)
+		path.lineTo(x - 8, y + 26)
+		path.closePath()
+		ctx.fill(path)
+		val bounds = path.bounds
+
+		//inside
+		ctx.color = violatorPalettes[violatorIntensity]!!.inside.awtColor()
+		path.reset()
+		path.moveTo(x - 6, y - 4)
+		path.lineTo(x + 15 + textWidth, y - 6)
+		path.lineTo(x + 9 + textWidth, y + 22)
+		path.lineTo(x - 3, y + 21)
+		path.closePath()
+		ctx.fill(path)
+
+		//text
+		ctx.color = violatorPalettes[violatorIntensity]!!.text.awtColor()
+		ctx.drawString(violatorText, bounds.x + (bounds.width - textWidth) / 2, bounds.y + ((bounds.height - fm.height) / 2) + fm.ascent)
 	}
 }
 

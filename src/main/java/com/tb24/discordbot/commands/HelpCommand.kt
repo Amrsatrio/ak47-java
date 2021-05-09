@@ -12,7 +12,7 @@ import com.tb24.discordbot.util.replyPaginated
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 
-class HelpCommand : BrigadierCommand("help", "Shows all commands and their infos.", arrayOf("?", "commands")) {
+class HelpCommand : BrigadierCommand("help", "Shows all commands and their infos.", arrayOf("?")) {
 	private val HELP_ERROR = SimpleCommandExceptionType(LiteralMessage("Unknown command or insufficient permissions"))
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -63,4 +63,13 @@ class HelpCommand : BrigadierCommand("help", "Shows all commands and their infos
 				smartUsage.size
 			}
 		)
+}
+
+class CommandsCommand : BrigadierCommand("commands", "Shows all commands in one message.") {
+	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.executes { c ->
+			val source = c.source
+			source.complete(source.client.commandManager.commandMap.values.filter { it.registeredNode.canUse(source) }.sortedBy { it.name }.joinToString { it.name })
+			Command.SINGLE_SUCCESS
+		}
 }
