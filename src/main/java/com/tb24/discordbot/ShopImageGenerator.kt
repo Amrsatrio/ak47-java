@@ -86,11 +86,7 @@ fun generateShopImage(catalogManager: CatalogManager, grid: Int = 0): BufferedIm
 			val imageW = columns * tileSize + doublePadding
 			val imageH = ceil(entries.size.toDouble() / columns.toDouble()).toInt() * tileSize + doublePadding
 			return createAndDrawCanvas(imageW, imageH) { ctx ->
-				/*if (false) {
-					ctx.drawStretchedRadialGradient(0xFF099AFE, 0xFF0942B4, 0, 0, imageW, imageH)
-				} else {
-					ctx.drawStretchedRadialGradient(0xFF272727, 0xFF000000, 0, 0, imageW, imageH)
-				}*/
+				ctx.drawStretchedRadialGradient(0xFF099AFE, 0xFF0942B4, 0, 0, imageW, imageH)
 				for ((i, entry) in entries.withIndex()) {
 					entry.x = doublePadding + (i % columns * tileSize).toFloat()
 					entry.y = doublePadding + (i / columns * tileSize).toFloat()
@@ -414,12 +410,14 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 	}
 
 	private inline fun drawTitleAndSubtitle(ctx: Graphics2D, path: Path2D.Float) {
+		val r = x + w
+		val b = y + h
 		ctx.color = 0x1E1E1E.awtColor()
 		path.reset()
-		path.moveTo(x, y + h - 67)
-		path.lineTo(x + w, y + h - 74)
-		path.lineTo(x + w, y + h)
-		path.lineTo(x, y + h)
+		path.moveTo(x, b - 67)
+		path.lineTo(r, b - 74)
+		path.lineTo(r, b)
+		path.lineTo(x, b)
 		path.closePath()
 		ctx.fill(path)
 
@@ -445,7 +443,7 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 			totalHeight += -titleFm.descent + subtitleFm.height
 		}
 
-		val contentTop = y + h - 67
+		val contentTop = b - 67
 		val contentHeight = 39
 		var cur = contentTop + (contentHeight - totalHeight) / 2
 
@@ -462,12 +460,14 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 	}
 
 	private inline fun drawPrice(ctx: Graphics2D, offer: CatalogEntryHolder, path: Path2D.Float) {
+		val r = x + w
+		val b = y + h
 		ctx.color = 0x0E0E0E.awtColor()
 		path.reset()
-		path.moveTo(x, y + h - 26)
-		path.lineTo(x + w, y + h - 28)
-		path.lineTo(x + w, y + h)
-		path.lineTo(x, y + h)
+		path.moveTo(x, b - 26)
+		path.lineTo(r, b - 28)
+		path.lineTo(r, b)
+		path.lineTo(x, b)
 		path.closePath()
 		ctx.fill(path)
 
@@ -480,8 +480,8 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 			val oldClip = ctx.clip
 			val oldTransform = ctx.transform
 			val oldComposite = ctx.composite
-			val iconX = x + w - 4 - iconSize
-			val iconY = y + h - iconSize + 7
+			val iconX = r - 4 - iconSize
+			val iconY = b - iconSize + 7
 			ctx.clip = path
 			ctx.rotate(Math.toRadians(17.0), iconX + iconSize / 2.0, iconY + iconSize / 2.0)
 			ctx.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, .7f)
@@ -491,11 +491,27 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 			ctx.composite = oldComposite
 		}
 
-		val priceNum = offer.price.basePrice
-		val priceText = Formatters.num.format(priceNum)
+		var priceNum = offer.price.basePrice
+		var priceText = Formatters.num.format(priceNum)
 		ctx.color = 0xA7B8BC.awtColor()
 		ctx.font = ResourcesContext.burbankBigRegularBlack.deriveFont(Font.ITALIC, 16f)
-		ctx.drawString(priceText, x + w - 8 - offset - ctx.fontMetrics.stringWidth(priceText), y + h - 9)
+		var cur = r - 8 - offset - ctx.fontMetrics.stringWidth(priceText)
+		ctx.drawString(priceText, cur, b - 9)
+
+		if (offer.price.regularPrice != offer.price.basePrice) {
+			priceNum = offer.price.regularPrice
+			priceText = Formatters.num.format(priceNum)
+			ctx.color = 0xA7B8BC.awtColor()
+			ctx.font = ResourcesContext.burbankBigRegularBlack.deriveFont(Font.ITALIC, 16f)
+			val regPriceTextWidth = ctx.fontMetrics.stringWidth(priceText)
+			cur -= 8 + regPriceTextWidth
+			val oldComposite = ctx.composite
+			ctx.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, .7f)
+			ctx.drawString(priceText, cur, b - 9)
+			ctx.stroke = BasicStroke(2f)
+			ctx.drawLine(cur.toInt() - 2, (b - 8).toInt(), cur.toInt() + regPriceTextWidth + 2, (b - 21).toInt())
+			ctx.composite = oldComposite
+		}
 	}
 
 	private inline fun drawViolator(ctx: Graphics2D, offer: CatalogEntryHolder, path: Path2D.Float) {

@@ -49,7 +49,7 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 			val users = source.queryUsers(devices.map { it.accountId })
 			source.complete(null, EmbedBuilder()
 				.setTitle("Auto STW daily rewards claiming")
-				.setDescription("Enroll/unenroll an account by typing the entry number. ⏱ 30s")
+				.setDescription("Enroll/unenroll an account by typing the account number. ⏱ 30s")
 				.addField("Your saved accounts", devices.mapIndexed { i, it ->
 					val id = devices[i].accountId
 					"${Formatters.num.format(i + 1)}. ${users.firstOrNull { it.id == id }?.displayName ?: id} ${if (autoClaimEntries.any { it.id == id && it.registrantId == discordId }) " ✅" else ""}"

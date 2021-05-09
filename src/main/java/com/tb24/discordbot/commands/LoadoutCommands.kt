@@ -7,6 +7,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType.getInteger
 import com.mojang.brigadier.arguments.IntegerArgumentType.integer
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.util.addFieldSeparate
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.EAthenaCustomizationCategory.*
@@ -46,15 +47,17 @@ private fun summary(source: CommandSourceStack, profileId: String): Int {
 	val embed = source.createEmbed()
 		.setTitle(if (profileId == "athena") "Current BR locker" else "Current STW locker")
 		.populateLoadoutContents(mainLoadoutItem.getAttributes(FortCosmeticLockerItem::class.java), profile)
-	val loadoutLines = mutableListOf<String>()
+	val loadouts = sortedMapOf<Int, String>()
 	for (i in 1 until attrs.loadouts.size) {
 		val loadoutId = attrs.loadouts[i] ?: continue
 		val loadoutItem = profile.items[loadoutId] ?: continue
 		val lockerName = loadoutItem.attributes.getString("locker_name", "")
-		loadoutLines.add("#%,d: %s".format(i, if (lockerName.isNotEmpty()) lockerName else "Unnamed Preset"))
+		loadouts[i] = lockerName.ifEmpty { "Unnamed Preset" }
 	}
-	if (loadoutLines.isNotEmpty()) {
-		embed.addField("Your saved presets", loadoutLines.joinToString("\n"), false)
+	if (loadouts.isNotEmpty()) {
+		embed.addFieldSeparate("Your saved presets", loadouts.entries, 0) {
+			"#%,d: %s".format(it.key, it.value)
+		}
 	}
 	source.complete(null, embed.build())
 	return Command.SINGLE_SUCCESS
