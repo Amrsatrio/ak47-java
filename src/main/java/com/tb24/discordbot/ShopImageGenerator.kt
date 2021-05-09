@@ -525,7 +525,7 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 		violatorText = (violatorText ?: return).toUpperCase()
 
 		val palette = violatorPalettes[violatorIntensity]!!
-		ctx.font = ResourcesContext.burbankSmallBlack.deriveFont(Font.ITALIC, 18f)
+		ctx.font = ResourcesContext.burbankBigRegularBlack.deriveFont(Font.ITALIC, 19f)
 		val fm = ctx.fontMetrics
 		val textWidth = fm.stringWidth(violatorText)
 
@@ -552,7 +552,7 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 
 		//text
 		ctx.color = palette.text.awtColor()
-		ctx.drawString(violatorText, bounds.x + (bounds.width - textWidth) / 2, bounds.y + ((bounds.height - fm.height) / 2) + fm.ascent)
+		ctx.drawString(violatorText, bounds.x + (bounds.width - textWidth) / 2 - 3, bounds.y + ((bounds.height - fm.height) / 2) + fm.ascent)
 	}
 
 	private inline fun drawItemNumber(ctx: Graphics2D) {
