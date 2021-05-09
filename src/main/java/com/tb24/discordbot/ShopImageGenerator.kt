@@ -280,14 +280,14 @@ class FShopSectionContainer(val section: CatalogManager.ShopSection) {
 	}
 }
 
-val vkonk by lazy { loadObject<UTexture2D>("/Game/UI/Foundation/Textures/Icons/Items/T-Items-MTX.T-Items-MTX")!! }
+val mtxIcon by lazy { loadObject<UTexture2D>("/Game/UI/Foundation/Textures/Icons/Items/T-Items-MTX.T-Items-MTX")!! }
 
 class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.ShopSection) {
 	companion object {
 		val violatorPalettes = mapOf(
-			EViolatorIntensity.High to FViolatorColorPalette(0xFFFFFF, 0xFFFF00, 0x00062B),
 			EViolatorIntensity.Low to FViolatorColorPalette(0xFF2C78, 0xCF0067, 0xFFFFFF),
-			// medium is not implemented
+			EViolatorIntensity.Medium to FViolatorColorPalette(0xFF2C78, 0xCF0067, 0xFFFFFF), // TODO test medium
+			EViolatorIntensity.High to FViolatorColorPalette(0xFFFFFF, 0xFFFF00, 0x00062B),
 		)
 	}
 
@@ -394,6 +394,7 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 		drawTitleAndSubtitle(ctx, path)
 		drawPrice(ctx, offer, path)
 		drawViolator(ctx, offer, path)
+		drawItemNumber(ctx)
 	}
 
 	private inline fun drawRarityBorder(ctx: Graphics2D, offer: CatalogEntryHolder, path: Path2D.Float) {
@@ -421,10 +422,7 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 		path.closePath()
 		ctx.fill(path)
 
-		var titleText = displayData.title?.toUpperCase().orEmpty()
-		if (offer.__ak47_index != -1) {
-			titleText = (offer.__ak47_index + 1).toString() + ". " + titleText
-		}
+		val titleText = displayData.title?.toUpperCase().orEmpty()
 		val subtitleText = displayData.subtitle?.toUpperCase().orEmpty()
 
 		var totalHeight = 0
@@ -485,7 +483,7 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 			ctx.clip = path
 			ctx.rotate(Math.toRadians(17.0), iconX + iconSize / 2.0, iconY + iconSize / 2.0)
 			ctx.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, .7f)
-			ctx.drawImage(vkonk.toBufferedImage(), iconX.toInt(), iconY.toInt(), iconSize, iconSize, null)
+			ctx.drawImage(mtxIcon.toBufferedImage(), iconX.toInt(), iconY.toInt(), iconSize, iconSize, null)
 			ctx.clip = oldClip
 			ctx.transform = oldTransform
 			ctx.composite = oldComposite
@@ -501,25 +499,20 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 		if (offer.price.regularPrice != offer.price.basePrice) {
 			priceNum = offer.price.regularPrice
 			priceText = Formatters.num.format(priceNum)
-			ctx.color = 0xA7B8BC.awtColor()
+			ctx.color = 0x5AFFFFFF.awtColor()
 			ctx.font = ResourcesContext.burbankBigRegularBlack.deriveFont(Font.ITALIC, 16f)
 			val regPriceTextWidth = ctx.fontMetrics.stringWidth(priceText)
 			cur -= 8 + regPriceTextWidth
-			val oldComposite = ctx.composite
-			ctx.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, .7f)
 			ctx.drawString(priceText, cur, b - 9)
+			ctx.color = 0x99A7B8BC.awtColor()
 			ctx.stroke = BasicStroke(2f)
-			ctx.drawLine(cur.toInt() - 2, (b - 8).toInt(), cur.toInt() + regPriceTextWidth + 2, (b - 21).toInt())
-			ctx.composite = oldComposite
+			ctx.drawLine(cur.toInt() - 2, (b - 12).toInt(), cur.toInt() + regPriceTextWidth + 4, (b - 18).toInt())
 		}
 	}
 
 	private inline fun drawViolator(ctx: Graphics2D, offer: CatalogEntryHolder, path: Path2D.Float) {
 		val violatorIntensity = runCatching { EViolatorIntensity.valueOf(offer.getMeta("ViolatorIntensity")!!) }.getOrNull()
 			?: EViolatorIntensity.Low
-		check(violatorIntensity != EViolatorIntensity.Medium) {
-			"medium is not implemented"
-		}
 		var violatorText: String? = null
 		if (offer.ce.offerType == ECatalogOfferType.DynamicBundle && offer.price.regularPrice != offer.price.finalPrice) {
 			val discount = offer.price.regularPrice - offer.price.finalPrice
@@ -531,12 +524,13 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 		}
 		violatorText = (violatorText ?: return).toUpperCase()
 
+		val palette = violatorPalettes[violatorIntensity]!!
 		ctx.font = ResourcesContext.burbankSmallBlack.deriveFont(Font.ITALIC, 18f)
 		val fm = ctx.fontMetrics
 		val textWidth = fm.stringWidth(violatorText)
 
 		//outline
-		ctx.color = violatorPalettes[violatorIntensity]!!.outline.awtColor()
+		ctx.color = palette.outline.awtColor()
 		path.reset()
 		path.moveTo(x - 12, y - 9)
 		path.lineTo(x + 22 + textWidth, y - 12)
@@ -547,7 +541,7 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 		val bounds = path.bounds
 
 		//inside
-		ctx.color = violatorPalettes[violatorIntensity]!!.inside.awtColor()
+		ctx.color = palette.inside.awtColor()
 		path.reset()
 		path.moveTo(x - 6, y - 4)
 		path.lineTo(x + 15 + textWidth, y - 6)
@@ -557,19 +551,28 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 		ctx.fill(path)
 
 		//text
-		ctx.color = violatorPalettes[violatorIntensity]!!.text.awtColor()
+		ctx.color = palette.text.awtColor()
 		ctx.drawString(violatorText, bounds.x + (bounds.width - textWidth) / 2, bounds.y + ((bounds.height - fm.height) / 2) + fm.ascent)
+	}
+
+	private inline fun drawItemNumber(ctx: Graphics2D) {
+		val itemNumber = this.offer.__ak47_index
+		if (itemNumber != -1) {
+			ctx.color = 0xB3FFFFFF.awtColor()
+			ctx.font = ResourcesContext.burbankBigRegularBlack.deriveFont(Font.ITALIC, 20f)
+			ctx.drawString((itemNumber + 1).toString(), x + 4, y + h - 6)
+		}
 	}
 }
 
 fun FortRarityData.forRarity(rarity: EFortRarity): FortColorPalette {
-	val h = RarityCollection[rarity.ordinal]
+	val r = RarityCollection[rarity.ordinal]
 	return FortColorPalette().apply {
-		Color1 = h.Color1
-		Color2 = h.Color2
-		Color3 = h.Color3
-		Color4 = h.Color4
-		Color5 = h.Color5
+		Color1 = r.Color1
+		Color2 = r.Color2
+		Color3 = r.Color3
+		Color4 = r.Color4
+		Color5 = r.Color5
 	}
 }
 
