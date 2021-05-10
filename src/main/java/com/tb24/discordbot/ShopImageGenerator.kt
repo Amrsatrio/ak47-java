@@ -552,7 +552,7 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 
 		//text
 		ctx.color = palette.text.awtColor()
-		ctx.drawString(violatorText, bounds.x + (bounds.width - textWidth) / 2 - 3, bounds.y + ((bounds.height - fm.height) / 2) + fm.ascent)
+		ctx.drawString(violatorText, bounds.x + (bounds.width - textWidth) / 2 - 2, bounds.y + ((bounds.height - fm.height) / 2) + fm.ascent)
 	}
 
 	private inline fun drawItemNumber(ctx: Graphics2D) {

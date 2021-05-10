@@ -88,7 +88,8 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 			.executes { c ->
 				val source = c.source
 				val type = getString(c, "type")
-				val filterType = when (type.toLowerCase(Locale.ROOT).substringBeforeLast('s')) {
+				val lowerType = type.toLowerCase(Locale.ROOT)
+				val filterType = when (if (lowerType.endsWith('s')) lowerType.substring(0, lowerType.length - 1) else lowerType) {
 					"character", "outfit", "skin" -> "AthenaCharacter"
 					"backpack", "backbling" -> "AthenaBackpack"
 					"pickaxe", "harvestingtool" -> "AthenaPickaxe"
