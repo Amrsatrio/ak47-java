@@ -86,10 +86,10 @@ public final class DiscordBot {
 		Internals.getInternalMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		dbConn = r.connection(dbUrl).connect();
 		savedLoginsManager = new SavedLoginsManager(dbConn);
-		String port = System.getProperty("apiPort");
+		/*String port = System.getProperty("apiPort");
 		if (port != null) {
 			ApiServerKt.main(new String[]{"", port});
-		}
+		}*/
 		okHttpClient = new OkHttpClient();
 		setupInternalSession();
 		keychainTask.run();

@@ -65,8 +65,9 @@ class ComposeMcpCommand : BrigadierCommand("composemcp", "Perform an arbitrary M
 		}
 
 		if (isQueryProfile) {
-			check(profileUpdate.profileChanges[0]["changeType"].asString == "fullProfileUpdate")
-			result(profileUpdate.profileChanges[0], profileUpdate.profileRevision.toString())
+			val firstProfileChange = profileUpdate.profileChanges[0]
+			check(firstProfileChange["changeType"].asString == "fullProfileUpdate")
+			result(firstProfileChange["profile"], profileUpdate.profileRevision.toString())
 		} else {
 			result(data, if (profileUpdate.profileChangesBaseRevision != profileUpdate.profileRevision) "${profileUpdate.profileChangesBaseRevision}-to-${profileUpdate.profileRevision}" else profileUpdate.profileRevision.toString())
 		}

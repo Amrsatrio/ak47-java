@@ -26,18 +26,26 @@ class InfoCommand : BrigadierCommand("info", "Shows general info about the bot."
 			source.complete(null, embed.build())
 			Command.SINGLE_SUCCESS
 		}
-
-	private fun getMemoryInfo(): String {
-		val runtime = Runtime.getRuntime()
-		val max = runtime.maxMemory()
-		val total = runtime.totalMemory()
-		val free = runtime.freeMemory()
-		val used = total - free
-		val sb = StringBuilder()
-		sb.append("Mem: % 2d%% %03d/%03dMB".format(used * 100L / max, bytesToMb(used), bytesToMb(max))).append("\n")
-		sb.append("Allocated: % 2d%% %03dMB".format(total * 100L / max, bytesToMb(total)))
-		return sb.toString()
-	}
-
-	private inline fun bytesToMb(bytes: Long) = bytes / 1024L / 1024L
 }
+
+class MemoryCommand : BrigadierCommand("memory", "Displays the JVM's current memory usage.", arrayOf("mem")) {
+	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.executes {
+			it.source.complete(getMemoryInfo())
+			Command.SINGLE_SUCCESS
+		}
+}
+
+private fun getMemoryInfo(): String {
+	val runtime = Runtime.getRuntime()
+	val max = runtime.maxMemory()
+	val total = runtime.totalMemory()
+	val free = runtime.freeMemory()
+	val used = total - free
+	val sb = StringBuilder()
+	sb.append("Mem: % 2d%% %03d/%03dMB".format(used * 100L / max, bytesToMb(used), bytesToMb(max))).append("\n")
+	sb.append("Allocated: % 2d%% %03dMB".format(total * 100L / max, bytesToMb(total)))
+	return sb.toString()
+}
+
+private inline fun bytesToMb(bytes: Long) = bytes / 1024L / 1024L

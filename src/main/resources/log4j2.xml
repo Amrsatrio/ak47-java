@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="INFO">
 	<Properties>
-		<Property name="pattern">%c: %p: %m%n%throwable</Property>
+		<Property name="pattern">%c{1}: %p: %m%n%throwable</Property>
 	</Properties>
 	<Appenders>
 		<Console name="stdout" target="SYSTEM_OUT">
-			<PatternLayout disableAnsi="false" pattern="%highlight{${pattern}}" />
+			<PatternLayout disableAnsi="true" pattern="%highlight{${pattern}}" />
 			<ThresholdFilter level="ERROR" onMatch="DENY" onMismatch="ACCEPT"/>
 		</Console>
 		<Console name="stderr" target="SYSTEM_ERR">
@@ -18,5 +18,6 @@
 			<AppenderRef ref="stdout" />
 			<AppenderRef ref="stderr" />
 		</Root>
+		<!--<logger name="net.dv8tion.jda" level="debug" />-->
 	</Loggers>
 </Configuration>
