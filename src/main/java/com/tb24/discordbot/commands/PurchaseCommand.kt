@@ -96,7 +96,7 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 			val epicAppStoreId = offer.appStoreId?.getOrNull(EAppStore.EpicPurchasingService.ordinal)
 				?: throw SimpleCommandExceptionType(LiteralMessage("${sd.friendlyName} can't be purchased using Epic Direct Payment, which is the only payment method supported by ${source.client.discord.selfUser.name}.")).create()
 			val completeAccountData = source.api.accountService.getById(source.api.currentLoggedIn.id).exec().body()!!
-			val storeOffer = source.api.catalogService.queryOffersBulk(listOf(epicAppStoreId), false, completeAccountData.country, "en").exec().body()!!.values.first()
+			val storeOffer = source.api.catalogService.queryOffersBulk(listOf(epicAppStoreId), false, completeAccountData.country, "en").exec().body()!!.values.firstOrNull()
 			val rmPrice = source.api.priceEngineService.queryOfferPrices(QueryOfferPricesPayload().apply {
 				accountId = source.api.currentLoggedIn.id
 				calculateTax = false

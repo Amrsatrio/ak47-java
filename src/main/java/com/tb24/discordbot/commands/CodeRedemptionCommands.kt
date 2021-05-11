@@ -64,7 +64,10 @@ class RedeemCodeCommand : BrigadierCommand("redeem", "Redeems an Epic Games code
 }
 
 fun EmbedBuilder.populateOffer(codeInfo: StoreOffer?): EmbedBuilder {
-	if (codeInfo == null) return this
+	if (codeInfo == null) {
+		setDescription("Offer information unknown")
+		return this
+	}
 	val name = codeInfo.title
 	val description = codeInfo.description
 	val image = codeInfo.keyImages.getOrNull(0)?.url
