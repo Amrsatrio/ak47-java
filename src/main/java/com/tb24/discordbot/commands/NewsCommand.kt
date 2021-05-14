@@ -99,7 +99,7 @@ fun CommonUISimpleMessageBase.createEmbed(source: CommandSourceStack): EmbedBuil
 			val offer = source.client.catalogManager.purchasableCatalogEntries.firstOrNull { it.offerId == offerId }
 			if (offer != null) {
 				extras.add("%s - `%sb %s`".format(
-					if (!buttonTextOverride.isNullOrEmpty()) buttonTextOverride else if (offerButtonText != null) offerButtonText else "View Item",
+					if (!buttonTextOverride.isNullOrEmpty()) buttonTextOverride else offerButtonText ?: "View Item",
 					source.prefix,
 					if (offer.__ak47_index != -1) (offer.__ak47_index + 1).toString() else offer.offerId
 				))
@@ -112,7 +112,7 @@ fun CommonUISimpleMessageBase.createEmbed(source: CommandSourceStack): EmbedBuil
 				url = "https://$url"
 			}
 			extras.add("[%s](%s)".format(
-				if (buttonTextOverride != null) buttonTextOverride else if (websiteButtonText != null) websiteButtonText else "Open Website",
+				if (!buttonTextOverride.isNullOrEmpty()) buttonTextOverride else websiteButtonText ?: "Open Website",
 				url
 			))
 		}

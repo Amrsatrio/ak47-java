@@ -27,6 +27,7 @@ class HeroLoadoutCommand : BrigadierCommand("heroloadout", "Manages your STW her
 
 	private fun execute(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
 		val source = c.source
+		source.ensureCompletedCampaignTutorial(campaign)
 		val attrs = campaign.stats.attributes as CampaignProfileAttributes
 		val loadoutsMap = sortedMapOf<Int, FortItemStack>()
 		for (item in campaign.items.values) {
