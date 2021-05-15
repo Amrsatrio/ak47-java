@@ -16,7 +16,7 @@ class AboutCommand : BrigadierCommand("about", "Shows credits of this bot.") {
 			val embed = EmbedBuilder()
 				.setTitle("${selfUser.name} Kotlin/JVM Rewrite v${DiscordBot.VERSION}")
 				.addField("Developers", "kemo, amrsatrio", false)
-				.addField("Helpers", "a.bakedpotato, Beat YT, FunGames, Liimiitz, Sprayxe", false)
+				.addField("Helpers", "a.bakedpotato, Beat YT, FunGames, Liimiitz, Officer, Sprayxe", false)
 				.addField("Third party libraries", arrayOf(
 					"Brigadier",
 					"ExpiringMap",

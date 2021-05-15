@@ -19,17 +19,19 @@ object SessionPersister {
 		JsonObject()
 	}
 
+	@Synchronized
 	fun get(sessionId: String): PersistedSession? =
 		EpicApi.GSON.fromJson(sessions[sessionId], PersistedSession::class.java)
 
+	@Synchronized
 	fun set(session: Session) {
 		sessions.add(session.id, EpicApi.GSON.toJsonTree(PersistedSession(session.api.userToken, session.api.currentLoggedIn.run { GameProfile(id, epicDisplayName) })))
 		save()
 	}
 
+	@Synchronized
 	fun remove(sessionId: String) = sessions.remove(sessionId).also { save() }
 
-	@Synchronized
 	private fun save() {
 		file.parentFile.mkdirs()
 		try {

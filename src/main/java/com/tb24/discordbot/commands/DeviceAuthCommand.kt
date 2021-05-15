@@ -75,7 +75,7 @@ private fun list(c: CommandContext<CommandSourceStack>): Int {
 				title = "**" + (if (item.deviceInfo.type == item.deviceInfo.model) item.deviceInfo.model else (item.deviceInfo.type + ' ' + item.deviceInfo.model)) + "** \u00b7 ||" + item.deviceId + "||"
 			}
 			line1 = title
-			line2 = "Added: " + item.created.dateTime.format() + '\n' + "Last login: " + (item.lastAccess ?: item.created).dateTime.format()
+			line2 = "Added: " + item.created.render() + '\n' + "Last login: " + (item.lastAccess?.render() ?: "Never used this device to authenticate")
 			try {
 				val versions = userAgent.split(" ")
 				val client = versions[0].split("/")
@@ -97,6 +97,8 @@ private fun list(c: CommandContext<CommandSourceStack>): Int {
 	}
 	return Command.SINGLE_SUCCESS
 }
+
+private fun DeviceAuth.LocationIpDate.render() = "%s, %s (%s)".format(dateTime.format(), ipAddress, location)
 
 private fun create(c: CommandContext<CommandSourceStack>): Int {
 	val source = c.source
