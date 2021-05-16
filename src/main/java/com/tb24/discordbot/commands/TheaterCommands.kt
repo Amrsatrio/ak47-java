@@ -33,26 +33,28 @@ class MissionAlertsCommand : BrigadierCommand("alerts", "Shows today's mission a
 		val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
 		val attrs = campaign.stats.attributes as CampaignProfileAttributes
 		val completedAlerts = attrs.mission_alert_redemption_record?.claimData
-		if (completedAlerts.isNullOrEmpty()) {
-			source.complete(null, source.createEmbed().setColor(COLOR_ERROR)
+		val entries = mutableListOf<Pair<FortMissionAlertClaimData, Pair<String, String>>>()
+		if (!completedAlerts.isNullOrEmpty()) {
+			queryTheaters(source).iterateMissions { theater, mission, missionAlert ->
+				if (missionAlert != null) {
+					val claimData = completedAlerts.firstOrNull { it.missionAlertId == missionAlert.MissionAlertGuid }
+					if (claimData != null) {
+						entries.add(claimData to mission.render(theater, missionAlert, attrs, canReceiveMtxCurrency))
+					}
+				}
+				true
+			}
+		}
+		if (entries.isEmpty()) {
+			source.complete(null, source.createEmbed(campaign.owner).setColor(COLOR_ERROR)
 				.setDescription("❌ No completed mission alerts found.")
 				.build())
 			return Command.SINGLE_SUCCESS
 		}
-		val entries = mutableListOf<Pair<FortMissionAlertClaimData, Pair<String, String>>>()
-		queryTheaters(source).iterateMissions { theater, mission, missionAlert ->
-			if (missionAlert != null) {
-				val claimData = completedAlerts.firstOrNull { it.missionAlertId == missionAlert.MissionAlertGuid }
-				if (claimData != null) {
-					entries.add(claimData to mission.render(theater, missionAlert, attrs, canReceiveMtxCurrency))
-				}
-			}
-			true
-		}
 		source.message.replyPaginated(entries.sortedByDescending { it.first.redemptionDateUtc }, 5, source.loadingMsg) { content, page, pageCount ->
 			val entriesStart = page * 5 + 1
 			val entriesEnd = entriesStart + content.size
-			val embed = source.createEmbed()
+			val embed = source.createEmbed(campaign.owner)
 				.setTitle("Completed mission alerts")
 				.setDescription("Showing %,d to %,d of %,d entries".format(entriesStart, entriesEnd - 1, entries.size))
 				.setFooter("Page %,d of %,d".format(page + 1, pageCount))
