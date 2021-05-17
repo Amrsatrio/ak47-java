@@ -8,9 +8,9 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.util.*
-import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commoncore.RefundMtxPurchase
+import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Formatters
 import java.text.ParsePosition
@@ -24,7 +24,7 @@ class UndoCommand : BrigadierCommand("undo", "Cancel your last purchase.", array
 			val profileManager = source.api.profileManager
 			profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 			val commonCore = profileManager.getProfileData("common_core")
-			val attrs = commonCore.stats.attributes as CommonCoreProfileAttributes
+			val attrs = commonCore.stats as CommonCoreProfileStats
 			val purchase = attrs.mtx_purchase_history?.purchases?.lastOrNull()
 			if (purchase == null || attrs.undo_timeout == "min") {
 				throw SimpleCommandExceptionType(LiteralMessage(L10N.format("undo.failed.nothing_to_undo"))).create()

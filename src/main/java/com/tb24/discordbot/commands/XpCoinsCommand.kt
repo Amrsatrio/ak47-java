@@ -12,8 +12,8 @@ import com.tb24.discordbot.MapProcessor
 import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
-import com.tb24.fn.model.mcpprofile.attributes.AthenaProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
+import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
 import com.tb24.fn.util.Formatters.num
 import com.tb24.uasset.AssetManager
 import com.tb24.uasset.JWPSerializer
@@ -100,7 +100,7 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 		}
 
 		source.complete(null, embed
-			.setTitle("Season ${num.format((athena.stats.attributes as AthenaProfileAttributes).season_num)} XP Coins")
+			.setTitle("Season ${num.format((athena.stats as AthenaProfileStats).season_num)} XP Coins")
 			.setDescription(L10N.format("xpcoins.collected", overallCompleted, overallMax))
 			.build())
 		if (!withMap || overallCompleted >= overallMax) {

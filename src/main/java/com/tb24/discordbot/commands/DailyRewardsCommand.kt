@@ -6,11 +6,11 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.discordbot.util.renderWithIcon
-import com.tb24.fn.model.mcpprofile.attributes.CampaignProfileAttributes
-import com.tb24.fn.model.mcpprofile.attributes.ProfileAttributes.FortDailyLoginRewardStat
 import com.tb24.fn.model.mcpprofile.commands.campaign.ClaimLoginReward
 import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.model.mcpprofile.notifications.DailyRewardsNotification
+import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
+import com.tb24.fn.model.mcpprofile.stats.ProfileStats.FortDailyLoginRewardStat
 import com.tb24.fn.util.Formatters
 
 class DailyRewardsCommand : BrigadierCommand("dailyrewards", "Claims the STW daily reward.", arrayOf("daily", "claimdaily", "d", "claim")) {
@@ -23,7 +23,7 @@ class DailyRewardsCommand : BrigadierCommand("dailyrewards", "Claims the STW dai
 			val response = source.api.profileManager.dispatchClientCommandRequest(ClaimLoginReward(), "campaign").await()
 			val campaign = source.api.profileManager.getProfileData("campaign")
 			notifyDailyRewardsClaimed(source,
-				(campaign.stats.attributes as CampaignProfileAttributes).daily_rewards,
+				(campaign.stats as CampaignProfileStats).daily_rewards,
 				response.notifications.filterIsInstance<DailyRewardsNotification>().firstOrNull())
 			Command.SINGLE_SUCCESS
 		}

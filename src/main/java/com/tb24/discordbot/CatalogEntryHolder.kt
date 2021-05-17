@@ -9,7 +9,7 @@ import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer.CatalogItemPrice
 import com.tb24.fn.model.gamesubcatalog.ECatalogOfferType
 import com.tb24.fn.model.gamesubcatalog.ECatalogSaleType
-import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
+import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Utils
 import com.tb24.uasset.loadObject
@@ -100,7 +100,7 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 			return
 		}
 		val commonCore = profileManager.getProfileData("common_core")
-		val attrs = commonCore.stats.attributes as CommonCoreProfileAttributes
+		val attrs = commonCore.stats as CommonCoreProfileStats
 		try {
 			if (purchaseLimit >= 0) {
 				val purchaseLimitingEventId = getMeta("PurchaseLimitingEventId")

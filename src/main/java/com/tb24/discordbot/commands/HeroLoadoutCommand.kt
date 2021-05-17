@@ -7,9 +7,9 @@ import com.mojang.brigadier.context.CommandContext
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
-import com.tb24.fn.model.mcpprofile.attributes.CampaignProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.campaign.SetActiveHeroLoadout
 import com.tb24.fn.model.mcpprofile.item.FortCampaignHeroLoadoutItem
+import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
 import com.tb24.fn.util.format
 import com.tb24.fn.util.getPreviewImagePath
 import me.fungames.jfortniteparse.fort.exports.FortAbilityKit
@@ -28,7 +28,7 @@ class HeroLoadoutCommand : BrigadierCommand("heroloadout", "Manages your STW her
 	private fun execute(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
 		val source = c.source
 		source.ensureCompletedCampaignTutorial(campaign)
-		val attrs = campaign.stats.attributes as CampaignProfileAttributes
+		val attrs = campaign.stats as CampaignProfileStats
 		val loadoutsMap = sortedMapOf<Int, FortItemStack>()
 		for (item in campaign.items.values) {
 			if (item.primaryAssetType != "CampaignHeroLoadout") {

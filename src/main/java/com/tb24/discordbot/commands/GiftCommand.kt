@@ -16,9 +16,9 @@ import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
-import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commoncore.GiftCatalogEntry
+import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.format
 import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText
@@ -46,7 +46,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 		val profileManager = source.api.profileManager
 		profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 		val commonCore = profileManager.getProfileData("common_core")
-		if (!(commonCore.stats.attributes as CommonCoreProfileAttributes).mfa_enabled) {
+		if (!(commonCore.stats as CommonCoreProfileStats).mfa_enabled) {
 			source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
 				.setTitle("⚠ Hold up before gifting!")
 				.setDescription("You haven't claimed the two-factor authentication reward, which needs to be claimed first before sending gifts. Please enable two-factor authentication and claim its rewards by doing `${source.prefix}claim2fa` or by logging in to the game.\n\n[Enable two-factor authentication on epicgames.com](${source.generateUrl("https://www.epicgames.com/account/password#2fa-signup")})")
@@ -100,7 +100,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 			.setThumbnail(Utils.benBotExportAsset(displayData.imagePath))
 			.setColor(displayData.presentationParams?.vector?.get("Background_Color_B") ?: Role.DEFAULT_COLOR_RAW)
 		if (price.currencyType == EStoreCurrencyType.MtxCurrency) {
-			embed.addField(L10N.format("catalog.mtx_platform"), (commonCore.stats.attributes as CommonCoreProfileAttributes).current_mtx_platform.name, true)
+			embed.addField(L10N.format("catalog.mtx_platform"), (commonCore.stats as CommonCoreProfileStats).current_mtx_platform.name, true)
 				.addField(L10N.format("sac.verb"), CatalogHelper.getAffiliateNameRespectingSetDate(commonCore) ?: L10N.format("common.none"), false)
 		}
 		if (source.complete(null, embed.build()).yesNoReactions(source.author).await()) {

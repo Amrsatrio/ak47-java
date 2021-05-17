@@ -12,8 +12,8 @@ import com.tb24.fn.model.assetdata.FortMissionGenerator
 import com.tb24.fn.model.assetdata.FortTheaterInfo.FortTheaterMapData
 import com.tb24.fn.model.assetdata.FortZoneTheme
 import com.tb24.fn.model.mcpprofile.McpProfile
-import com.tb24.fn.model.mcpprofile.attributes.CampaignProfileAttributes
-import com.tb24.fn.model.mcpprofile.attributes.CampaignProfileAttributes.FortMissionAlertClaimData
+import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
+import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats.FortMissionAlertClaimData
 import com.tb24.fn.util.format
 import com.tb24.fn.util.getPathName
 import com.tb24.uasset.StructJson
@@ -31,7 +31,7 @@ class MissionAlertsCommand : BrigadierCommand("alerts", "Shows today's mission a
 		val source = c.source
 		source.ensureCompletedCampaignTutorial(campaign)
 		val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
-		val attrs = campaign.stats.attributes as CampaignProfileAttributes
+		val attrs = campaign.stats as CampaignProfileStats
 		val completedAlerts = attrs.mission_alert_redemption_record?.claimData
 		val entries = mutableListOf<Pair<FortMissionAlertClaimData, Pair<String, String>>>()
 		if (!completedAlerts.isNullOrEmpty()) {
@@ -75,7 +75,7 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 		val source = c.source
 		source.ensureCompletedCampaignTutorial(campaign)
 		val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
-		val attrs = campaign.stats.attributes as CampaignProfileAttributes
+		val attrs = campaign.stats as CampaignProfileStats
 		var totalMtx = 0
 		val embed = source.createEmbed(campaign.owner)
 		queryTheaters(source).iterateMissions { theater, mission, missionAlert ->
@@ -115,7 +115,7 @@ inline fun FortActiveTheaterInfo.iterateMissions(func: MissionVisitorFunction) {
 	}
 }
 
-private fun FortAvailableMissionData.render(theater: FortTheaterMapData, missionAlert: FortAvailableMissionAlertData, attrs: CampaignProfileAttributes, canReceiveMtxCurrency: Boolean): Pair<String, String> {
+private fun FortAvailableMissionData.render(theater: FortTheaterMapData, missionAlert: FortAvailableMissionAlertData, attrs: CampaignProfileStats, canReceiveMtxCurrency: Boolean): Pair<String, String> {
 	val missionGenerator = loadCDO(MissionGenerator.toString(), FortMissionGenerator::class.java)
 	val difficulty = MissionDifficultyInfo.getRowMapped<GameDifficultyInfo>()
 	val tile = theater.Tiles[TileIndex]

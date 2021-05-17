@@ -6,9 +6,9 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.util.*
-import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
-import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes.MtxPurchaseHistoryEntry
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
+import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats.MtxPurchaseHistoryEntry
 import net.dv8tion.jda.api.MessageBuilder
 import java.text.DateFormat
 import java.util.*
@@ -21,7 +21,7 @@ class PurchasesCommand : BrigadierCommand("purchases", "Shows your purchase hist
 			source.loading("Getting purchase history")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 			val commonCore = source.api.profileManager.getProfileData("common_core")
-			val mtxPurchaseHistory = (commonCore.stats.attributes as CommonCoreProfileAttributes).mtx_purchase_history
+			val mtxPurchaseHistory = (commonCore.stats as CommonCoreProfileStats).mtx_purchase_history
 			val entries = mtxPurchaseHistory?.purchases
 			if (entries.isNullOrEmpty()) {
 				throw SimpleCommandExceptionType(LiteralMessage("You haven't made a V-Bucks transaction.")).create()

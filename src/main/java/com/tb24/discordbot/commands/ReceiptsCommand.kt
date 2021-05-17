@@ -8,8 +8,8 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
-import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 
 // This is actually useless but Carbide started it all ¯\_(ツ)_/¯
 class ReceiptsCommand : BrigadierCommand("receipts", "You asked for it") {
@@ -21,7 +21,7 @@ class ReceiptsCommand : BrigadierCommand("receipts", "You asked for it") {
 			source.loading("Getting receipts")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 			val commonCore = source.api.profileManager.getProfileData("common_core")
-			val receipts = (commonCore.stats.attributes as CommonCoreProfileAttributes).in_app_purchases?.receipts
+			val receipts = (commonCore.stats as CommonCoreProfileStats).in_app_purchases?.receipts
 			if (receipts.isNullOrEmpty()) {
 				throw SimpleCommandExceptionType(LiteralMessage("You have no past Fortnite real money transactions or code redemptions.")).create()
 			}

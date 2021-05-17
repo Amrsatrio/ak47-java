@@ -13,9 +13,9 @@ import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.EAthenaCustomizationCategory.*
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
-import com.tb24.fn.model.mcpprofile.attributes.ILoadoutData
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.item.FortCosmeticLockerItem
+import com.tb24.fn.model.mcpprofile.stats.ILoadoutData
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.getString
 import net.dv8tion.jda.api.EmbedBuilder
@@ -41,7 +41,7 @@ private fun summary(source: CommandSourceStack, profileId: String): Int {
 	source.loading("Getting presets")
 	source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), profileId).await()
 	val profile = source.api.profileManager.getProfileData(profileId)
-	val attrs = profile.stats.attributes as ILoadoutData
+	val attrs = profile.stats as ILoadoutData
 	val mainLoadoutItem = attrs.loadouts.getOrNull(attrs.activeLoadoutIndex)?.let { profile.items[it] }
 		?: throw SimpleCommandExceptionType(LiteralMessage("Main preset not found. Must be a bug.")).create()
 	val embed = source.createEmbed()
@@ -68,7 +68,7 @@ private fun details(source: CommandSourceStack, profileId: String, index: Int): 
 	source.loading("Getting presets")
 	source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), profileId).await()
 	val profile = source.api.profileManager.getProfileData(profileId)
-	val attrs = profile.stats.attributes as ILoadoutData
+	val attrs = profile.stats as ILoadoutData
 	val loadoutItem = (if (index > 0) attrs.loadouts.getOrNull(index)?.let { profile.items[it] } else null)
 		?: throw SimpleCommandExceptionType(LiteralMessage("No preset found with number ${Formatters.num.format(index)}.")).create()
 	val loadoutAttrs = loadoutItem.getAttributes(FortCosmeticLockerItem::class.java)

@@ -17,10 +17,10 @@ import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.assetdata.RewardCategoryTabData
 import com.tb24.fn.model.mcpprofile.McpProfile
-import com.tb24.fn.model.mcpprofile.attributes.IQuestManager
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.subgame.FortRerollDailyQuest
 import com.tb24.fn.model.mcpprofile.item.FortChallengeBundleItem
+import com.tb24.fn.model.mcpprofile.stats.IQuestManager
 import com.tb24.fn.util.format
 import com.tb24.uasset.AssetManager
 import com.tb24.uasset.getProp
@@ -44,7 +44,7 @@ class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manage
 			source.loading("Getting challenges")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 			val athena = source.api.profileManager.getProfileData("athena")
-			val numRerolls = (athena.stats.attributes as IQuestManager).questManager?.dailyQuestRerolls ?: 0
+			val numRerolls = (athena.stats as IQuestManager).questManager?.dailyQuestRerolls ?: 0
 			var description = getAthenaDailyQuests(athena)
 				.mapIndexed { i, it -> renderChallenge(it, "${i + 1}. ", "\u00a0\u00a0\u00a0", isAthenaDaily = true) }
 				.joinToString("\n")
@@ -85,7 +85,7 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 		val source = c.source
 		source.ensureCompletedCampaignTutorial(campaign)
 		val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
-		val numRerolls = (campaign.stats.attributes as IQuestManager).questManager?.dailyQuestRerolls ?: 0
+		val numRerolls = (campaign.stats as IQuestManager).questManager?.dailyQuestRerolls ?: 0
 		var description = getCampaignDailyQuests(campaign)
 			.mapIndexed { i, it -> renderChallenge(it, "${i + 1}. ", "\u00a0\u00a0\u00a0", conditionalCondition = canReceiveMtxCurrency) }
 			.joinToString("\n")
@@ -314,7 +314,7 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 	val currentDailies = questsGetter(profile)
 	val questToReplace = currentDailies.getOrNull(questIndex - 1)
 		?: throw SimpleCommandExceptionType(LiteralMessage("Invalid daily quest number.")).create()
-	val remainingRerolls = (profile.stats.attributes as IQuestManager).questManager?.dailyQuestRerolls ?: 0
+	val remainingRerolls = (profile.stats as IQuestManager).questManager?.dailyQuestRerolls ?: 0
 	if (remainingRerolls <= 0) {
 		throw SimpleCommandExceptionType(LiteralMessage("You ran out of daily quest rerolls for today.")).create()
 	}

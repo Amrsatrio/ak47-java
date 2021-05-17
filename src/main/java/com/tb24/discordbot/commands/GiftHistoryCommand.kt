@@ -5,8 +5,8 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
-import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.MessageBuilder
@@ -20,7 +20,7 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 			source.loading("Getting gift history")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 			val commonCore = source.api.profileManager.getProfileData("common_core")
-			val giftHistory = (commonCore.stats.attributes as CommonCoreProfileAttributes).gift_history
+			val giftHistory = (commonCore.stats as CommonCoreProfileStats).gift_history
 			val sentTo = giftHistory?.sentTo ?: emptyMap()
 			val receivedFrom = giftHistory?.receivedFrom ?: emptyMap()
 			val gifts = giftHistory?.gifts ?: emptyArray()
@@ -77,7 +77,7 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 		source.loading("Getting gift history")
 		source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 		val commonCore = source.api.profileManager.getProfileData("common_core")
-		val giftHistory = (commonCore.stats.attributes as CommonCoreProfileAttributes).gift_history
+		val giftHistory = (commonCore.stats as CommonCoreProfileStats).gift_history
 		val data = (if (isReceive) giftHistory?.receivedFrom else giftHistory?.sentTo) ?: emptyMap()
 		val localUserMap = mutableMapOf<String, GameProfile>()
 		val idsToQuery = mutableSetOf<String>()

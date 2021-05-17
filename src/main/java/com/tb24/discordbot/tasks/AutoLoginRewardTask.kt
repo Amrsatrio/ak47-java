@@ -7,15 +7,15 @@ import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.Session
 import com.tb24.discordbot.commands.CommandSourceStack
-import com.tb24.discordbot.commands.PrivateChannelCommandSource
+import com.tb24.discordbot.commands.OnlyChannelCommandSource
 import com.tb24.discordbot.commands.notifyDailyRewardsClaimed
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.EpicError
-import com.tb24.fn.model.mcpprofile.attributes.CampaignProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.campaign.ClaimLoginReward
 import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.model.mcpprofile.notifications.DailyRewardsNotification
+import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
 import net.dv8tion.jda.api.exceptions.ErrorResponseException
 import net.dv8tion.jda.internal.entities.UserImpl
 import org.slf4j.LoggerFactory
@@ -61,7 +61,7 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 				displayName = client.internalSession.queryUsers(Collections.singleton(epicId)).firstOrNull()?.displayName
 				val user = client.discord.getUserById(discordId) ?: client.discord.retrieveUserById(discordId).complete()
 				val channel = (user as UserImpl).privateChannel ?: user.openPrivateChannel().complete()
-				source = PrivateChannelCommandSource(client, channel)
+				source = OnlyChannelCommandSource(client, channel)
 				if (displayName == null) {
 					disableAutoClaim(epicId)
 					source.complete("Disabled automatic daily rewards claiming of `$epicId` because that account has been deleted or deactivated.")
@@ -92,7 +92,7 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 					session.login(source, savedDevice.generateAuthFields(), savedDevice.authClient, false)
 				}
 				session.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "campaign").await()
-				val dailyRewardStat = (source.api.profileManager.getProfileData("campaign").stats.attributes as CampaignProfileAttributes).daily_rewards
+				val dailyRewardStat = (source.api.profileManager.getProfileData("campaign").stats as CampaignProfileStats).daily_rewards
 				val millisInDay = 24L * 60L * 60L * 1000L
 				if (dailyRewardStat?.lastClaimDate?.time?.let { it / millisInDay == System.currentTimeMillis() / millisInDay } != false) {
 					//if (user.idLong == 624299014388711455L) notifyDailyRewardsClaimed(source, dailyRewardStat, null)
@@ -101,7 +101,7 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 				val response = session.api.profileManager.dispatchClientCommandRequest(ClaimLoginReward(), "campaign").await()
 				notifyDailyRewardsClaimed(
 					source,
-					(source.api.profileManager.getProfileData("campaign").stats.attributes as CampaignProfileAttributes).daily_rewards,
+					(source.api.profileManager.getProfileData("campaign").stats as CampaignProfileStats).daily_rewards,
 					response.notifications.filterIsInstance<DailyRewardsNotification>().firstOrNull()
 				)
 				if (requiresLogin) {

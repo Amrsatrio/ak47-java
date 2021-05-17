@@ -135,7 +135,7 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 						ctx.collected = response.notifications?.filterIsInstance<CollectedResourceResultNotification>()?.firstOrNull()?.loot?.items?.firstOrNull()?.quantity ?: 0
 					} else {
 						val statType = ctx.icons.entries.firstOrNull { it.value.idLong == emote.idLong }?.key ?: return
-						val researchLevel = (campaign.stats.attributes as CampaignProfileAttributes).research_levels[statType]
+						val researchLevel = (campaign.stats as CampaignProfileStats).research_levels[statType]
 						if (researchLevel >= 120 || ctx.points < (ctx.costs[statType] ?: Integer.MAX_VALUE)) return
 						source.api.profileManager.dispatchClientCommandRequest(PurchaseResearchStatUpgrade().apply { statId = statType.name }, "campaign").await()
 					}

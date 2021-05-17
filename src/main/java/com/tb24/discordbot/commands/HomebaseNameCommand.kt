@@ -12,9 +12,9 @@ import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.commandName
 import com.tb24.discordbot.util.dispatchClientCommandRequest
-import com.tb24.fn.model.mcpprofile.attributes.CommonPublicProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commonpublic.SetHomebaseName
+import com.tb24.fn.model.mcpprofile.stats.CommonPublicProfileStats
 import java.text.SimpleDateFormat
 
 class HomebaseNameCommand : BrigadierCommand("homebasename", "Displays or changes the homebase name. (STW owning accounts only)") {
@@ -32,7 +32,7 @@ class HomebaseNameCommand : BrigadierCommand("homebasename", "Displays or change
 		source.loading(if (isQuery) "Getting homebase name" else "Changing homebase name")
 		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "common_public").await()
 		val commonPublic = source.api.profileManager.getProfileData("common_public")
-		val currentHomebaseName = (commonPublic.stats.attributes as CommonPublicProfileAttributes).homebase_name
+		val currentHomebaseName = (commonPublic.stats as CommonPublicProfileStats).homebase_name
 		if (currentHomebaseName.isNullOrEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("You haven't ever assigned a homebase name. Please complete the tutorial if you own Save the World.")).create()
 		}

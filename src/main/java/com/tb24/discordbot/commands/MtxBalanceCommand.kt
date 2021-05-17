@@ -8,8 +8,8 @@ import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.addFieldSeparate
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
-import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.Utils.sumKV
@@ -29,7 +29,7 @@ class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the
 			source.loading("Getting balance")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 			val commonCore = source.api.profileManager.getProfileData("common_core")
-			val current = (commonCore.stats.attributes as CommonCoreProfileAttributes).current_mtx_platform
+			val current = (commonCore.stats as CommonCoreProfileStats).current_mtx_platform
 			val breakdown = mutableListOf<String>()
 			var i = 0
 			for (item in commonCore.items.values) {
@@ -54,7 +54,7 @@ class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the
 				source.loading("Getting fulfillments")
 				source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 				val commonCore = source.api.profileManager.getProfileData("common_core")
-				val fulfillments = (commonCore.stats.attributes as CommonCoreProfileAttributes).in_app_purchases?.fulfillmentCounts
+				val fulfillments = (commonCore.stats as CommonCoreProfileStats).in_app_purchases?.fulfillmentCounts
 				var total = 0
 				val entries = sortedMapOf<Int, Int>()
 				fulfillments?.forEach { (name, count) ->

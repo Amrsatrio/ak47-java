@@ -14,9 +14,9 @@ import com.tb24.discordbot.L10N
 import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
-import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commoncore.SetReceiveGiftsEnabled
+import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.util.format
 import net.dv8tion.jda.api.EmbedBuilder
 
@@ -28,7 +28,7 @@ class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift s
 			source.ensureSession()
 			source.loading("Getting gift settings")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
-			val canReceiveGifts = (source.api.profileManager.getProfileData("common_core").stats.attributes as CommonCoreProfileAttributes).allowed_to_receive_gifts
+			val canReceiveGifts = (source.api.profileManager.getProfileData("common_core").stats as CommonCoreProfileStats).allowed_to_receive_gifts
 			val settings = getGiftSettings(source)
 			source.complete(null, source.createEmbed()
 				.setTitle("Gift Settings")
@@ -101,7 +101,7 @@ class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift s
 		else
 			"Toggling your gift acceptance")
 		source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
-		val canReceiveGifts = (source.api.profileManager.getProfileData("common_core").stats.attributes as CommonCoreProfileAttributes).allowed_to_receive_gifts
+		val canReceiveGifts = (source.api.profileManager.getProfileData("common_core").stats as CommonCoreProfileStats).allowed_to_receive_gifts
 		val newValue = receiveGifts ?: !canReceiveGifts
 		if (newValue == canReceiveGifts) {
 			throw SimpleCommandExceptionType(LiteralMessage(if (canReceiveGifts)

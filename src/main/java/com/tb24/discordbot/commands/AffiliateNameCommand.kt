@@ -8,9 +8,9 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.util.*
-import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commoncore.SetAffiliateName
+import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 
 class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Support a Creator code. Use `clear` to unset the code.", arrayOf("code")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -25,7 +25,7 @@ class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Su
 		if (newCode == null) {
 			source.loading("Getting current Support a Creator code")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
-			val attrs = source.api.profileManager.getProfileData("common_core").stats.attributes as CommonCoreProfileAttributes
+			val attrs = source.api.profileManager.getProfileData("common_core").stats as CommonCoreProfileStats
 			val embed = source.createEmbed()
 				.setTitle("Support a Creator")
 				.addField("Creator Code", attrs.mtx_affiliate ?: L10N.format("common.none"), false)

@@ -9,10 +9,10 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
-import com.tb24.fn.model.mcpprofile.attributes.CampaignProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.campaign.ClaimCollectedResources
 import com.tb24.fn.model.mcpprofile.commands.campaign.PurchaseResearchStatUpgrade
 import com.tb24.fn.model.mcpprofile.notifications.CollectedResourceResultNotification
+import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
 import com.tb24.fn.util.format
 import com.tb24.fn.util.getDateISO
 import com.tb24.uasset.loadObject
@@ -61,7 +61,7 @@ class ResearchCommand : BrigadierCommand("research", "Collect your research poin
 						ctx.collected = response.notifications?.filterIsInstance<CollectedResourceResultNotification>()?.firstOrNull()?.loot?.items?.firstOrNull()?.quantity ?: 0
 					} else {
 						val statType = ctx.icons.entries.firstOrNull { it.value.idLong == emote.idLong }?.key ?: return
-						val researchLevel = (campaign.stats.attributes as CampaignProfileAttributes).research_levels[statType]
+						val researchLevel = (campaign.stats as CampaignProfileStats).research_levels[statType]
 						if (researchLevel >= 120 || ctx.points < (ctx.costs[statType] ?: Integer.MAX_VALUE)) return
 						source.api.profileManager.dispatchClientCommandRequest(PurchaseResearchStatUpgrade().apply { statId = statType.name }, "campaign").await()
 					}
@@ -98,7 +98,7 @@ class ResearchCommand : BrigadierCommand("research", "Collect your research poin
 		}
 		ctx.collected = 0
 		for (statType in arrayOf(Fortitude, Offense, Resistance, Technology)) {
-			val researchLevel = (campaign.stats.attributes as CampaignProfileAttributes).research_levels[statType]
+			val researchLevel = (campaign.stats as CampaignProfileStats).research_levels[statType]
 			val s = statType.name.toLowerCase()
 			val cost = FName.dummy(s + "_cost")
 			val personal = FName.dummy(s + "_personal")

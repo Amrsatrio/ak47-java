@@ -11,10 +11,10 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
-import com.tb24.fn.model.mcpprofile.attributes.AthenaProfileAttributes
-import com.tb24.fn.model.mcpprofile.attributes.CampaignProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commoncore.ClaimMfaEnabled
+import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
+import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
 import java.util.concurrent.CompletableFuture
 
 class ClaimMfaCommand : BrigadierCommand("claimmfa", "Claim 2FA reward (Boogie Down emote for BR) on your account.", arrayOf("claim2fa", "boogiedown")) {
@@ -35,14 +35,14 @@ class ClaimMfaCommand : BrigadierCommand("claimmfa", "Claim 2FA reward (Boogie D
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()),
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), profileId)
 		).await()
-		val attrs = source.api.profileManager.getProfileData(profileId).stats.attributes
+		val attrs = source.api.profileManager.getProfileData(profileId).stats
 		val claimed = if (claimForStw) {
 			if (source.api.profileManager.getProfileData("common_core").items.values.none { it.templateId == "Token:campaignaccess" }) {
 				throw SimpleCommandExceptionType(LiteralMessage("You don't have access to Save the World.")).create()
 			}
-			(attrs as CampaignProfileAttributes).mfa_reward_claimed
+			(attrs as CampaignProfileStats).mfa_reward_claimed
 		} else {
-			(attrs as AthenaProfileAttributes).mfa_reward_claimed
+			(attrs as AthenaProfileStats).mfa_reward_claimed
 		}
 		if (claimed) {
 			throw SimpleCommandExceptionType(LiteralMessage("You have already claimed the 2FA reward for $subGameName, so no need to claim again.")).create()

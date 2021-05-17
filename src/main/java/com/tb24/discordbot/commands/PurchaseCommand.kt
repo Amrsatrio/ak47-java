@@ -17,10 +17,10 @@ import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 import com.tb24.fn.model.gamesubcatalog.EAppStore
 import com.tb24.fn.model.gamesubcatalog.ECatalogOfferType
 import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
-import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commoncore.PurchaseCatalogEntry
 import com.tb24.fn.model.mcpprofile.notifications.CatalogPurchaseNotification
+import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.model.priceengine.QueryOfferPricesPayload
 import com.tb24.fn.model.priceengine.QueryOfferPricesPayload.LineOfferReq
 import com.tb24.fn.util.CatalogHelper
@@ -149,7 +149,7 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 				.setThumbnail(Utils.benBotExportAsset(displayData.imagePath))
 				.setColor(displayData.presentationParams?.vector?.get("Background_Color_B") ?: Role.DEFAULT_COLOR_RAW)
 			if (price.currencyType == EStoreCurrencyType.MtxCurrency) {
-				embed.addField(L10N.format("catalog.mtx_platform"), (commonCore.stats.attributes as CommonCoreProfileAttributes).current_mtx_platform.name, true)
+				embed.addField(L10N.format("catalog.mtx_platform"), (commonCore.stats as CommonCoreProfileStats).current_mtx_platform.name, true)
 					.addField(L10N.format("sac.verb"), CatalogHelper.getAffiliateNameRespectingSetDate(commonCore) ?: L10N.format("common.none"), false)
 			}
 			val warnings = mutableListOf<String>()

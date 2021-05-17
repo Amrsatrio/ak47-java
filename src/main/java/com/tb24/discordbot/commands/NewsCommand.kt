@@ -11,9 +11,9 @@ import com.tb24.discordbot.util.to
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortCmsData.*
 import com.tb24.fn.model.PrmPayload
-import com.tb24.fn.model.mcpprofile.attributes.AthenaProfileAttributes
-import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
+import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import net.dv8tion.jda.api.EmbedBuilder
 import okhttp3.MediaType
 import okhttp3.Request
@@ -48,9 +48,9 @@ class NewsCommand : BrigadierCommand("news", "Shows the in-game news.") {
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena")
 		).await()
 		val commonCore = source.api.profileManager.getProfileData("common_core")
-		val commonCoreAttrs = commonCore.stats.attributes as CommonCoreProfileAttributes
+		val commonCoreAttrs = commonCore.stats as CommonCoreProfileStats
 		val athena = source.api.profileManager.getProfileData("athena")
-		val attrs = athena.stats.attributes as AthenaProfileAttributes
+		val attrs = athena.stats as AthenaProfileStats
 		val p = PrmPayload()
 		if (personalized) {
 			p.platform = "Windows"

@@ -11,8 +11,8 @@ import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.EFortMtxPlatform
-import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.commoncore.SetMtxPlatform
+import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Formatters
 
@@ -30,7 +30,7 @@ class MtxPlatformCommand : BrigadierCommand("vbucksplatform", "Changes the V-Buc
 				source.loading("Changing V-Bucks platform")
 				source.api.profileManager.dispatchClientCommandRequest(SetMtxPlatform().apply { newPlatform = platform }).await()
 				val commonCore = source.api.profileManager.getProfileData("common_core")
-				val attrs = commonCore.stats.attributes as CommonCoreProfileAttributes
+				val attrs = commonCore.stats as CommonCoreProfileStats
 				source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
 					.setTitle("✅ Updated V-Bucks platform to **${attrs.current_mtx_platform}**.")
 					.setDescription("Balance: ${Formatters.num.format(CatalogHelper.countMtxCurrency(commonCore))} V-Bucks on this platform.\nUse `${source.prefix}vbucks` to see all of your V-Bucks.")

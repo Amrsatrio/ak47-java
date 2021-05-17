@@ -7,10 +7,10 @@ import com.mojang.brigadier.context.CommandContext
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
-import com.tb24.fn.model.mcpprofile.attributes.CampaignProfileAttributes
-import com.tb24.fn.model.mcpprofile.attributes.CommonPublicProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryPublicProfile
+import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
+import com.tb24.fn.model.mcpprofile.stats.CommonPublicProfileStats
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
 import me.fungames.jfortniteparse.fort.enums.EFortStatType.*
@@ -23,13 +23,13 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 	private fun execute(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
 		val source = c.source
 		source.ensureCompletedCampaignTutorial(campaign)
-		val attrs = campaign.stats.attributes as CampaignProfileAttributes
+		val attrs = campaign.stats as CampaignProfileStats
 		if (source.api.currentLoggedIn.id == campaign.owner.id) {
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "common_public").await()
 		} else {
 			source.api.profileManager.dispatchPublicCommandRequest(campaign.owner, QueryPublicProfile(), "common_public").await()
 		}
-		val homebaseName = (source.api.profileManager.getProfileData(campaign.owner.id, "common_public").stats.attributes as CommonPublicProfileAttributes).homebase_name
+		val homebaseName = (source.api.profileManager.getProfileData(campaign.owner.id, "common_public").stats as CommonPublicProfileStats).homebase_name
 		val quests = arrayOf(
 			"Quest:achievement_destroygnomes",
 			"Quest:achievement_savesurvivors",

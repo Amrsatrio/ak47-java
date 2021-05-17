@@ -6,9 +6,9 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.discordbot.util.exec
-import com.tb24.fn.model.mcpprofile.attributes.CommonCoreProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commoncore.VerifyRealMoneyPurchase
+import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 
 class RedeemPurchasesCommand : BrigadierCommand("redeempurchases", "Redeems Fortnite purchases made using Epic Games Store.", arrayOf("rp")) {
     override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -17,7 +17,7 @@ class RedeemPurchasesCommand : BrigadierCommand("redeempurchases", "Redeems Fort
             source.ensureSession()
             source.loading("Getting purchases to redeem")
             source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
-            val attrs = source.api.profileManager.getProfileData("common_core").stats.attributes as CommonCoreProfileAttributes
+            val attrs = source.api.profileManager.getProfileData("common_core").stats as CommonCoreProfileStats
             val iap = attrs.in_app_purchases
             val redeemedReceipts = iap?.receipts ?: emptyArray()
             val ignoredReceipts = iap?.ignoredReceipts ?: emptyArray()

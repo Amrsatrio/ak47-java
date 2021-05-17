@@ -5,8 +5,8 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
-import com.tb24.fn.model.mcpprofile.attributes.AthenaProfileAttributes
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.asItemStack
 import com.tb24.fn.util.getPreviewImagePath
@@ -24,7 +24,7 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 			source.ensureSession()
 			source.loading("Getting BR data")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
-			val attrs = source.api.profileManager.getProfileData("athena").stats.attributes as AthenaProfileAttributes
+			val attrs = source.api.profileManager.getProfileData("athena").stats as AthenaProfileStats
 			val seasonData = FortItemStack("AthenaSeason:athenaseason${attrs.season_num}", 1).defData as? AthenaSeasonItemDefinition
 			val xpToNextLevel = getXpToNextLevel(seasonData, attrs.level)
 			val nextLevelReward = getNextLevelReward(seasonData, attrs.level, attrs.book_purchased)
@@ -66,7 +66,7 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 				source.loading("Getting BR data")
 				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 				val athena = source.api.profileManager.getProfileData("athena")
-				val attrs = athena.stats.attributes as AthenaProfileAttributes
+				val attrs = athena.stats as AthenaProfileStats
 				val embed = source.createEmbed()
 				val df = DateFormat.getDateInstance()
 				embed.addField("Dates", "**Creation Date:** %s\n**Last Updated:** %s".format(

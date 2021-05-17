@@ -6,7 +6,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.tb24.discordbot.util.getItemIconEmoji
 import com.tb24.fn.model.mcpprofile.McpProfile
-import com.tb24.fn.model.mcpprofile.attributes.CampaignProfileAttributes
+import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
 import com.tb24.fn.util.Formatters
 
 class ResourcesCommand : BrigadierCommand("resources", "Displays a given user's STW resource items.") {
@@ -69,7 +69,7 @@ class ResourcesCommand : BrigadierCommand("resources", "Displays a given user's 
 				"ConsumableAccountItem:smallxpboost_gift"
 			),
 			"Miscellaneous" to listOf(
-				(campaign.stats.attributes as CampaignProfileAttributes).event_currency.templateId,
+				(campaign.stats as CampaignProfileStats).event_currency.templateId,
 				"AccountResource:currency_xrayllama",
 				"AccountResource:eventcurrency_scaling"
 			)
