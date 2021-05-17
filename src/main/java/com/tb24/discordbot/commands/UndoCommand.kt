@@ -24,15 +24,15 @@ class UndoCommand : BrigadierCommand("undo", "Cancel your last purchase.", array
 			val profileManager = source.api.profileManager
 			profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 			val commonCore = profileManager.getProfileData("common_core")
-			val attrs = commonCore.stats as CommonCoreProfileStats
-			val purchase = attrs.mtx_purchase_history?.purchases?.lastOrNull()
-			if (purchase == null || attrs.undo_timeout == "min") {
+			val stats = commonCore.stats as CommonCoreProfileStats
+			val purchase = stats.mtx_purchase_history?.purchases?.lastOrNull()
+			if (purchase == null || stats.undo_timeout == "min") {
 				throw SimpleCommandExceptionType(LiteralMessage(L10N.format("undo.failed.nothing_to_undo"))).create()
 			}
 			source.client.catalogManager.ensureCatalogData(source.api)
 			val catalogEntry = source.client.catalogManager.purchasableCatalogEntries.firstOrNull { it.offerId == purchase.offerId }
 			val catalogEntryName = catalogEntry?.holder()?.friendlyName ?: "<Item outside of current shop>"
-			if (System.currentTimeMillis() >= ISO8601Utils.parse(attrs.undo_timeout, ParsePosition(0)).time) {
+			if (System.currentTimeMillis() >= ISO8601Utils.parse(stats.undo_timeout, ParsePosition(0)).time) {
 				throw SimpleCommandExceptionType(LiteralMessage(L10N.format("undo.failed.expired", catalogEntryName))).create()
 			}
 			val undoCooldown = CatalogHelper.getUndoCooldown(commonCore, purchase.offerId)

@@ -28,7 +28,7 @@ class HeroLoadoutCommand : BrigadierCommand("heroloadout", "Manages your STW her
 	private fun execute(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
 		val source = c.source
 		source.ensureCompletedCampaignTutorial(campaign)
-		val attrs = campaign.stats as CampaignProfileStats
+		val stats = campaign.stats as CampaignProfileStats
 		val loadoutsMap = sortedMapOf<Int, FortItemStack>()
 		for (item in campaign.items.values) {
 			if (item.primaryAssetType != "CampaignHeroLoadout") {
@@ -40,12 +40,12 @@ class HeroLoadoutCommand : BrigadierCommand("heroloadout", "Manages your STW her
 		val isMine = source.api.currentLoggedIn.id == campaign.owner.id
 		val event = CompletableFuture<FortItemStack?>()
 		val available = loadoutsMap.values.toList()
-		source.message.replyPaginated(available, 1, source.loadingMsg, max(available.indexOfFirst { it.itemId == attrs.selected_hero_loadout }, 0), if (isMine) HeroLoadoutReactions(available, event) else null) { content, page, pageCount ->
+		source.message.replyPaginated(available, 1, source.loadingMsg, max(available.indexOfFirst { it.itemId == stats.selected_hero_loadout }, 0), if (isMine) HeroLoadoutReactions(available, event) else null) { content, page, pageCount ->
 			val loadoutItem = content[0]
 			val loadoutAttrs = loadoutItem.getAttributes(FortCampaignHeroLoadoutItem::class.java)
 			val embed = source.createEmbed(campaign.owner)
 				.setTitle("Hero Loadout %,d".format(loadoutAttrs.loadout_index + 1))
-				.setFooter("%,d of %,d".format(page + 1, pageCount) + if (loadoutItem.itemId == attrs.selected_hero_loadout) " (current)" else "")
+				.setFooter("%,d of %,d".format(page + 1, pageCount) + if (loadoutItem.itemId == stats.selected_hero_loadout) " (current)" else "")
 			val commanderItem = campaign.items[loadoutAttrs.crew_members.commanderslot]
 			if (commanderItem != null) {
 				embed.addField("Commander", commanderItem.displayName, false)

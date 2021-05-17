@@ -41,15 +41,15 @@ private fun summary(source: CommandSourceStack, profileId: String): Int {
 	source.loading("Getting presets")
 	source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), profileId).await()
 	val profile = source.api.profileManager.getProfileData(profileId)
-	val attrs = profile.stats as ILoadoutData
-	val mainLoadoutItem = attrs.loadouts.getOrNull(attrs.activeLoadoutIndex)?.let { profile.items[it] }
+	val stats = profile.stats as ILoadoutData
+	val mainLoadoutItem = stats.loadouts.getOrNull(stats.activeLoadoutIndex)?.let { profile.items[it] }
 		?: throw SimpleCommandExceptionType(LiteralMessage("Main preset not found. Must be a bug.")).create()
 	val embed = source.createEmbed()
 		.setTitle(if (profileId == "athena") "Current BR locker" else "Current STW locker")
 		.populateLoadoutContents(mainLoadoutItem.getAttributes(FortCosmeticLockerItem::class.java), profile)
 	val loadouts = sortedMapOf<Int, String>()
-	for (i in 1 until attrs.loadouts.size) {
-		val loadoutId = attrs.loadouts[i] ?: continue
+	for (i in 1 until stats.loadouts.size) {
+		val loadoutId = stats.loadouts[i] ?: continue
 		val loadoutItem = profile.items[loadoutId] ?: continue
 		val lockerName = loadoutItem.attributes.getString("locker_name", "")
 		loadouts[i] = lockerName.ifEmpty { "Unnamed Preset" }
@@ -68,8 +68,8 @@ private fun details(source: CommandSourceStack, profileId: String, index: Int): 
 	source.loading("Getting presets")
 	source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), profileId).await()
 	val profile = source.api.profileManager.getProfileData(profileId)
-	val attrs = profile.stats as ILoadoutData
-	val loadoutItem = (if (index > 0) attrs.loadouts.getOrNull(index)?.let { profile.items[it] } else null)
+	val stats = profile.stats as ILoadoutData
+	val loadoutItem = (if (index > 0) stats.loadouts.getOrNull(index)?.let { profile.items[it] } else null)
 		?: throw SimpleCommandExceptionType(LiteralMessage("No preset found with number ${Formatters.num.format(index)}.")).create()
 	val loadoutAttrs = loadoutItem.getAttributes(FortCosmeticLockerItem::class.java)
 	source.complete(null, source.createEmbed()

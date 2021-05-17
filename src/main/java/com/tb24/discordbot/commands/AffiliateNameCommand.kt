@@ -25,14 +25,14 @@ class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Su
 		if (newCode == null) {
 			source.loading("Getting current Support a Creator code")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
-			val attrs = source.api.profileManager.getProfileData("common_core").stats as CommonCoreProfileStats
+			val stats = source.api.profileManager.getProfileData("common_core").stats as CommonCoreProfileStats
 			val embed = source.createEmbed()
 				.setTitle("Support a Creator")
-				.addField("Creator Code", attrs.mtx_affiliate ?: L10N.format("common.none"), false)
-				.addField("Set on", attrs.mtx_affiliate_set_time?.format() ?: "Never set", false)
+				.addField("Creator Code", stats.mtx_affiliate ?: L10N.format("common.none"), false)
+				.addField("Set on", stats.mtx_affiliate_set_time?.format() ?: "Never set", false)
 				.setFooter("Use '" + source.prefix + context.commandName + " <new code>' to change it.")
-			if (!attrs.mtx_affiliate.isNullOrEmpty() && attrs.mtx_affiliate_set_time != null) {
-				val expiry = attrs.mtx_affiliate_set_time.time + 14L * 24L * 60L * 60L * 1000L
+			if (!stats.mtx_affiliate.isNullOrEmpty() && stats.mtx_affiliate_set_time != null) {
+				val expiry = stats.mtx_affiliate_set_time.time + 14L * 24L * 60L * 60L * 1000L
 				val expired = System.currentTimeMillis() > expiry
 				embed.addField("Expires", if (expired) "**EXPIRED**" else expiry.relativeFromNow(), true)
 				if (expired) {

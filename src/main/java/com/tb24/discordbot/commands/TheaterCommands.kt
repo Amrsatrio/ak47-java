@@ -31,15 +31,15 @@ class MissionAlertsCommand : BrigadierCommand("alerts", "Shows today's mission a
 		val source = c.source
 		source.ensureCompletedCampaignTutorial(campaign)
 		val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
-		val attrs = campaign.stats as CampaignProfileStats
-		val completedAlerts = attrs.mission_alert_redemption_record?.claimData
+		val stats = campaign.stats as CampaignProfileStats
+		val completedAlerts = stats.mission_alert_redemption_record?.claimData
 		val entries = mutableListOf<Pair<FortMissionAlertClaimData, Pair<String, String>>>()
 		if (!completedAlerts.isNullOrEmpty()) {
 			queryTheaters(source).iterateMissions { theater, mission, missionAlert ->
 				if (missionAlert != null) {
 					val claimData = completedAlerts.firstOrNull { it.missionAlertId == missionAlert.MissionAlertGuid }
 					if (claimData != null) {
-						entries.add(claimData to mission.render(theater, missionAlert, attrs, canReceiveMtxCurrency))
+						entries.add(claimData to mission.render(theater, missionAlert, stats, canReceiveMtxCurrency))
 					}
 				}
 				true
@@ -75,14 +75,14 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 		val source = c.source
 		source.ensureCompletedCampaignTutorial(campaign)
 		val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
-		val attrs = campaign.stats as CampaignProfileStats
+		val stats = campaign.stats as CampaignProfileStats
 		var totalMtx = 0
 		val embed = source.createEmbed(campaign.owner)
 		queryTheaters(source).iterateMissions { theater, mission, missionAlert ->
 			val mtxLoot = missionAlert?.MissionAlertRewards?.items?.firstOrNull { it.itemType == "AccountResource:currency_mtxswap" }
 				?: return@iterateMissions true
 			totalMtx += mtxLoot.quantity
-			val (title, value) = mission.render(theater, missionAlert, attrs, canReceiveMtxCurrency)
+			val (title, value) = mission.render(theater, missionAlert, stats, canReceiveMtxCurrency)
 			embed.addField(title, value, false)
 			true
 		}

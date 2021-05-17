@@ -100,7 +100,7 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 			return
 		}
 		val commonCore = profileManager.getProfileData("common_core")
-		val attrs = commonCore.stats as CommonCoreProfileStats
+		val stats = commonCore.stats as CommonCoreProfileStats
 		try {
 			if (purchaseLimit >= 0) {
 				val purchaseLimitingEventId = getMeta("PurchaseLimitingEventId")
@@ -117,24 +117,24 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 				}
 			} else if (ce.dailyLimit >= 0) {
 				purchaseLimit = ce.dailyLimit
-				if (System.currentTimeMillis() <= attrs.daily_purchases.lastInterval.time + 24L * 60L * 60L * 1000L) {
-					val integer = attrs.daily_purchases.purchaseList[ce.offerId]
+				if (System.currentTimeMillis() <= stats.daily_purchases.lastInterval.time + 24L * 60L * 60L * 1000L) {
+					val integer = stats.daily_purchases.purchaseList[ce.offerId]
 					if (integer != null) {
 						purchasesCount += integer
 					}
 				}
 			} else if (ce.weeklyLimit >= 0) {
 				purchaseLimit = ce.weeklyLimit
-				if (System.currentTimeMillis() <= attrs.weekly_purchases.lastInterval.time + 7L * 24L * 60L * 60L * 1000L) {
-					val integer = attrs.weekly_purchases.purchaseList[ce.offerId]
+				if (System.currentTimeMillis() <= stats.weekly_purchases.lastInterval.time + 7L * 24L * 60L * 60L * 1000L) {
+					val integer = stats.weekly_purchases.purchaseList[ce.offerId]
 					if (integer != null) {
 						purchasesCount += integer
 					}
 				}
 			} else if (ce.monthlyLimit >= 0) {
 				purchaseLimit = ce.monthlyLimit
-				if (System.currentTimeMillis() <= attrs.weekly_purchases.lastInterval.time + 30L * 24L * 60L * 60L * 1000L) {
-					val integer = attrs.weekly_purchases.purchaseList[ce.offerId]
+				if (System.currentTimeMillis() <= stats.weekly_purchases.lastInterval.time + 30L * 24L * 60L * 60L * 1000L) {
+					val integer = stats.weekly_purchases.purchaseList[ce.offerId]
 					if (integer != null) {
 						purchasesCount += integer
 					}

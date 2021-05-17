@@ -48,18 +48,18 @@ class NewsCommand : BrigadierCommand("news", "Shows the in-game news.") {
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena")
 		).await()
 		val commonCore = source.api.profileManager.getProfileData("common_core")
-		val commonCoreAttrs = commonCore.stats as CommonCoreProfileStats
+		val commonCoreStats = commonCore.stats as CommonCoreProfileStats
 		val athena = source.api.profileManager.getProfileData("athena")
-		val attrs = athena.stats as AthenaProfileStats
+		val athenaStats = athena.stats as AthenaProfileStats
 		val p = PrmPayload()
 		if (personalized) {
 			p.platform = "Windows"
 			p.language = "en"
 			p.country = completeAccountData.country
 			//p.serverRegion
-			p.subscription = !commonCoreAttrs.subscriptions.isNullOrEmpty()
-			p.battlepass = attrs.book_purchased
-			p.battlepassLevel = attrs.book_level
+			p.subscription = !commonCoreStats.subscriptions.isNullOrEmpty()
+			p.battlepass = athenaStats.book_purchased
+			p.battlepassLevel = athenaStats.book_level
 		}
 		val prmResponse = source.api.okHttpClient.newCall(Request.Builder()
 			.url("https://prm-dialogue-public-api-prod.edea.live.use1a.on.epicgames.com/api/v1/fortnite-br/surfaces/motd/target")

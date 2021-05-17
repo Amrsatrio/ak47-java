@@ -23,7 +23,7 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 	private fun execute(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
 		val source = c.source
 		source.ensureCompletedCampaignTutorial(campaign)
-		val attrs = campaign.stats as CampaignProfileStats
+		val stats = campaign.stats as CampaignProfileStats
 		if (source.api.currentLoggedIn.id == campaign.owner.id) {
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "common_public").await()
 		} else {
@@ -53,7 +53,7 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 		}
 		val embed = source.createEmbed(campaign.owner)
 			.setDescription("**Commander Level:** %,d\n**Days Logged in:** %,d\n**Homebase Name:** %s"
-				.format(attrs.level, attrs.daily_rewards?.totalDaysLoggedIn ?: 0, homebaseName))
+				.format(stats.level, stats.daily_rewards?.totalDaysLoggedIn ?: 0, homebaseName))
 		embed.addField("Achievements", quests.joinToString("\n") { questTemplateId ->
 			val questItem = campaign.items.values.firstOrNull { it.templateId == questTemplateId }
 				?: FortItemStack(questTemplateId, 1)
@@ -67,14 +67,14 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 		}, true)
 		val sb = StringBuilder()
 		for (statType in arrayOf(Fortitude, Offense, Resistance, Technology)) {
-			sb.append("%s **%s:** Lv %,d\n".format(textureEmote(statType.icon)?.asMention, statType.displayName.format(), attrs.research_levels[statType]))
+			sb.append("%s **%s:** Lv %,d\n".format(textureEmote(statType.icon)?.asMention, statType.displayName.format(), stats.research_levels[statType]))
 		}
 		sb.append("%s **Stored Research:** %,d".format(textureEmote("/Game/UI/Foundation/Textures/Icons/Currency/T-Icon-ResearchPoint-128.T-Icon-ResearchPoint-128")?.asMention, researchPoints))
 		embed.addField("Research", sb.toString(), true)
 		embed.addField("Collection Book", "**Level:** %,d\n**Unslot Cost:** %s %,d".format(
-			attrs.collection_book.maxBookXpLevelAchieved,
+			stats.collection_book.maxBookXpLevelAchieved,
 			Utils.MTX_EMOJI,
-			attrs.unslot_mtx_spend
+			stats.unslot_mtx_spend
 		), true)
 		val df = DateFormat.getDateInstance()
 		embed.addField("Dates", "**Creation Date:** %s\n**Last Updated:** %s".format(
@@ -84,7 +84,7 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 		embed.addField("Miscellaneous", "**Mythic Schematics:** %,d\n**Revisions:** %,d\n**Zones Completed:** %,d".format(
 			mythicSchematics.size,
 			campaign.rvn,
-			attrs.gameplay_stats?.firstOrNull { it.statName == "zonescompleted" }?.statValue?.toIntOrNull() ?: 0
+			stats.gameplay_stats?.firstOrNull { it.statName == "zonescompleted" }?.statValue?.toIntOrNull() ?: 0
 		), true)
 		if (canReceiveMtxCurrency) {
 			embed.setFooter("Founders Account", Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Items/T-Items-MTX.T-Items-MTX"))

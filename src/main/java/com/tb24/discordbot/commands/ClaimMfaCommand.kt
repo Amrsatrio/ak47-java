@@ -35,14 +35,14 @@ class ClaimMfaCommand : BrigadierCommand("claimmfa", "Claim 2FA reward (Boogie D
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()),
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), profileId)
 		).await()
-		val attrs = source.api.profileManager.getProfileData(profileId).stats
+		val stats = source.api.profileManager.getProfileData(profileId).stats
 		val claimed = if (claimForStw) {
 			if (source.api.profileManager.getProfileData("common_core").items.values.none { it.templateId == "Token:campaignaccess" }) {
 				throw SimpleCommandExceptionType(LiteralMessage("You don't have access to Save the World.")).create()
 			}
-			(attrs as CampaignProfileStats).mfa_reward_claimed
+			(stats as CampaignProfileStats).mfa_reward_claimed
 		} else {
-			(attrs as AthenaProfileStats).mfa_reward_claimed
+			(stats as AthenaProfileStats).mfa_reward_claimed
 		}
 		if (claimed) {
 			throw SimpleCommandExceptionType(LiteralMessage("You have already claimed the 2FA reward for $subGameName, so no need to claim again.")).create()

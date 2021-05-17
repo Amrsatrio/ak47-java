@@ -30,9 +30,9 @@ class MtxPlatformCommand : BrigadierCommand("vbucksplatform", "Changes the V-Buc
 				source.loading("Changing V-Bucks platform")
 				source.api.profileManager.dispatchClientCommandRequest(SetMtxPlatform().apply { newPlatform = platform }).await()
 				val commonCore = source.api.profileManager.getProfileData("common_core")
-				val attrs = commonCore.stats as CommonCoreProfileStats
+				val stats = commonCore.stats as CommonCoreProfileStats
 				source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
-					.setTitle("✅ Updated V-Bucks platform to **${attrs.current_mtx_platform}**.")
+					.setTitle("✅ Updated V-Bucks platform to **${stats.current_mtx_platform}**.")
 					.setDescription("Balance: ${Formatters.num.format(CatalogHelper.countMtxCurrency(commonCore))} V-Bucks on this platform.\nUse `${source.prefix}vbucks` to see all of your V-Bucks.")
 					.build())
 				Command.SINGLE_SUCCESS

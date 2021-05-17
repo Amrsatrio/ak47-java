@@ -24,36 +24,36 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 			source.ensureSession()
 			source.loading("Getting BR data")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
-			val attrs = source.api.profileManager.getProfileData("athena").stats as AthenaProfileStats
-			val seasonData = FortItemStack("AthenaSeason:athenaseason${attrs.season_num}", 1).defData as? AthenaSeasonItemDefinition
-			val xpToNextLevel = getXpToNextLevel(seasonData, attrs.level)
-			val nextLevelReward = getNextLevelReward(seasonData, attrs.level, attrs.book_purchased)
+			val stats = source.api.profileManager.getProfileData("athena").stats as AthenaProfileStats
+			val seasonData = FortItemStack("AthenaSeason:athenaseason${stats.season_num}", 1).defData as? AthenaSeasonItemDefinition
+			val xpToNextLevel = getXpToNextLevel(seasonData, stats.level)
+			val nextLevelReward = getNextLevelReward(seasonData, stats.level, stats.book_purchased)
 			val inventory = source.api.fortniteService.inventorySnapshot(source.api.currentLoggedIn.id).exec().body()!!
 			val embed = source.createEmbed()
-				.setTitle("Season " + attrs.season_num)
-				.addField("%s Level %,d".format(if (attrs.book_purchased) "Battle Pass" else "Free Pass", attrs.level), "`%s`\n%,d / %,d".format(Utils.progress(attrs.xp, xpToNextLevel, 32), attrs.xp, xpToNextLevel), false)
+				.setTitle("Season " + stats.season_num)
+				.addField("%s Level %,d".format(if (stats.book_purchased) "Battle Pass" else "Free Pass", stats.level), "`%s`\n%,d / %,d".format(Utils.progress(stats.xp, xpToNextLevel, 32), stats.xp, xpToNextLevel), false)
 			if (nextLevelReward != null) {
 				val rewardItem = nextLevelReward.asItemStack()
-				embed.addField("Rewards for level %,d".format(attrs.level + 1), rewardItem.render(), false)
+				embed.addField("Rewards for level %,d".format(stats.level + 1), rewardItem.render(), false)
 				embed.setThumbnail(Utils.benBotExportAsset(rewardItem.getPreviewImagePath(true)?.toString()))
 			}
-			if (attrs.xp_overflow > 0) {
-				embed.addField("XP Overflow", Formatters.num.format(attrs.xp_overflow), false)
+			if (stats.xp_overflow > 0) {
+				embed.addField("XP Overflow", Formatters.num.format(stats.xp_overflow), false)
 			}
-			if (attrs.rested_xp > 0) {
+			if (stats.rested_xp > 0) {
 				val restedXpMaxAccrue = seasonData?.RestedXpMaxAccrue ?: 0
 				var restedXpText = "`%s`\n%,d / %,d\nMultiplier: %,.2f\u00d7 \u00b7 Exchange: %,.2f \u00b7 Overflow: %,d".format(
-					Utils.progress(attrs.rested_xp, restedXpMaxAccrue, 32),
-					attrs.rested_xp, restedXpMaxAccrue,
-					attrs.rested_xp_mult, attrs.rested_xp_exchange, attrs.rested_xp_overflow)
-				if (restedXpMaxAccrue > 0 && attrs.rested_xp >= restedXpMaxAccrue) {
+					Utils.progress(stats.rested_xp, restedXpMaxAccrue, 32),
+					stats.rested_xp, restedXpMaxAccrue,
+					stats.rested_xp_mult, stats.rested_xp_exchange, stats.rested_xp_overflow)
+				if (restedXpMaxAccrue > 0 && stats.rested_xp >= restedXpMaxAccrue) {
 					restedXpText += "\n⚠ " + "Your supercharged XP is at maximum. You won't be granted more supercharged XP if you don't complete your daily challenges until you deplete it."
 				}
 				embed.addField("Supercharged XP", restedXpText, false)
 			}
-			embed.addField("Account Level", Formatters.num.format(attrs.accountLevel), false)
+			embed.addField("Account Level", Formatters.num.format(stats.accountLevel), false)
 			embed.addField("Bars", "%s %,d".format(barsEmote?.asMention, inventory.stash["globalcash"] ?: 0), false)
-			attrs.last_match_end_datetime?.apply {
+			stats.last_match_end_datetime?.apply {
 				embed.setFooter("Last match end").setTimestamp(toInstant())
 			}
 			source.complete(null, embed.build())
@@ -66,16 +66,16 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 				source.loading("Getting BR data")
 				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 				val athena = source.api.profileManager.getProfileData("athena")
-				val attrs = athena.stats as AthenaProfileStats
+				val stats = athena.stats as AthenaProfileStats
 				val embed = source.createEmbed()
 				val df = DateFormat.getDateInstance()
 				embed.addField("Dates", "**Creation Date:** %s\n**Last Updated:** %s".format(
 					df.format(athena.created),
 					df.format(athena.updated)
 				), true)
-				embed.addField("Lifetime wins", Formatters.num.format(attrs.lifetime_wins), true)
-				embed.addField("2FA reward claimed", if (attrs.mfa_reward_claimed) "✅" else "❌", true)
-				embed.addFieldSeparate("Past seasons", attrs.past_seasons.toList(), 0) {
+				embed.addField("Lifetime wins", Formatters.num.format(stats.lifetime_wins), true)
+				embed.addField("2FA reward claimed", if (stats.mfa_reward_claimed) "✅" else "❌", true)
+				embed.addFieldSeparate("Past seasons", stats.past_seasons.toList(), 0) {
 					if (it.seasonNumber >= 11) {
 						"Season %,d: %s level %,d, %,d wins".format(it.seasonNumber, if (it.purchasedVIP) "Battle Pass" else "Free Pass", it.seasonLevel, it.numWins)
 					} else {

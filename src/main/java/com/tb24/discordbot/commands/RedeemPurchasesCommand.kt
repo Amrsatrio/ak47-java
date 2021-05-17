@@ -17,8 +17,8 @@ class RedeemPurchasesCommand : BrigadierCommand("redeempurchases", "Redeems Fort
             source.ensureSession()
             source.loading("Getting purchases to redeem")
             source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
-            val attrs = source.api.profileManager.getProfileData("common_core").stats as CommonCoreProfileStats
-            val iap = attrs.in_app_purchases
+            val stats = source.api.profileManager.getProfileData("common_core").stats as CommonCoreProfileStats
+            val iap = stats.in_app_purchases
             val redeemedReceipts = iap?.receipts ?: emptyArray()
             val ignoredReceipts = iap?.ignoredReceipts ?: emptyArray()
             var attempted = 0
