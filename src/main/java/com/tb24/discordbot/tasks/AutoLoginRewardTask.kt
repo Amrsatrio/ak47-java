@@ -101,7 +101,7 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 				val response = session.api.profileManager.dispatchClientCommandRequest(ClaimLoginReward(), "campaign").await()
 				notifyDailyRewardsClaimed(
 					source,
-					(source.api.profileManager.getProfileData("campaign").stats as CampaignProfileStats).daily_rewards,
+					source.api.profileManager.getProfileData("campaign"),
 					response.notifications.filterIsInstance<DailyRewardsNotification>().firstOrNull()
 				)
 				if (requiresLogin) {

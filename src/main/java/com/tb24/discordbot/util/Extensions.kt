@@ -118,9 +118,9 @@ fun FortItemStack.render(displayQty: Int = quantity): String {
 	return (if (displayQty > 1) Formatters.num.format(displayQty) + " \u00d7 " else "") + dn
 }
 
-fun FortItemStack.renderWithIcon(displayQty: Int = quantity): String {
+fun FortItemStack.renderWithIcon(displayQty: Int = quantity, bypassWhitelist: Boolean = false): String {
 	transformedDefData // resolves this item if it is FortConditionalResourceItemDefinition
-	return (getItemIconEmoji(templateId)?.run { "$asMention " } ?: "") + render(displayQty)
+	return (getItemIconEmoji(templateId, this, bypassWhitelist)?.run { "$asMention " } ?: "") + render(displayQty)
 }
 
 fun CatalogItemPrice.icon(): String = when (currencyType) {
@@ -136,7 +136,7 @@ fun CatalogItemPrice.emote(): Emote? = when (currencyType) {
 }
 
 @Synchronized
-fun getItemIconEmoji(templateId: String): Emote? {
+fun getItemIconEmoji(templateId: String, itemIfNotFound: FortItemStack? = null, bypassWhitelist: Boolean = false): Emote? {
 	val client = DiscordBot.instance.discord
 	if (templateId.toLowerCase().contains(":mtx")) {
 		return client.getEmoteById(Utils.MTX_EMOJI_ID)
@@ -144,11 +144,11 @@ fun getItemIconEmoji(templateId: String): Emote? {
 	val split = templateId.split(":")
 	val type = split[0]
 	val name = split[1]
-	if (type !in WHITELIST_ICON_EMOJI_ITEM_TYPES) {
+	if (!bypassWhitelist && type !in WHITELIST_ICON_EMOJI_ITEM_TYPES) {
 		return null
 	}
 	getEmoteByName(name.run { substring(0, min(32, length)) })?.let { return it }
-	val item = FortItemStack(templateId, 1)
+	val item = itemIfNotFound ?: FortItemStack(templateId, 1)
 	val defData = item.transformedDefData ?: return null
 	val icon = (item.getPreviewImagePath(true) ?: item.getPreviewImagePath())?.load<UTexture2D>()?.toBufferedImage() ?: return null
 	return createEmote(defData.name.run { substring(0, min(32, length)) }, icon)

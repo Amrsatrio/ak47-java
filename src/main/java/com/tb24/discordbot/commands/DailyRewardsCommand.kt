@@ -2,16 +2,27 @@ package com.tb24.discordbot.commands
 
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.discordbot.util.renderWithIcon
+import com.tb24.fn.model.FortItemStack
+import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.commands.campaign.ClaimLoginReward
 import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.model.mcpprofile.notifications.DailyRewardsNotification
 import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
-import com.tb24.fn.model.mcpprofile.stats.ProfileStats.FortDailyLoginRewardStat
-import com.tb24.fn.util.Formatters
+import com.tb24.fn.util.getPreviewImagePath
+import com.tb24.uasset.loadObject
+import me.fungames.jfortniteparse.fort.exports.FortItemDefinition
+import me.fungames.jfortniteparse.fort.objects.rows.FortLoginReward
+import me.fungames.jfortniteparse.ue4.assets.exports.UDataTable
+import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
+
+val defaultScheduleRewards by lazy { loadObject<UDataTable>("/SaveTheWorld/Balance/DataTables/DailyRewards")!!.rows.map { it.value.mapToClass(FortLoginReward::class.java) } }
 
 class DailyRewardsCommand : BrigadierCommand("dailyrewards", "Claims the STW daily reward.", arrayOf("daily", "claimdaily", "d", "claim")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -22,23 +33,49 @@ class DailyRewardsCommand : BrigadierCommand("dailyrewards", "Claims the STW dai
 			source.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "campaign").await()
 			val response = source.api.profileManager.dispatchClientCommandRequest(ClaimLoginReward(), "campaign").await()
 			val campaign = source.api.profileManager.getProfileData("campaign")
-			notifyDailyRewardsClaimed(source,
-				(campaign.stats as CampaignProfileStats).daily_rewards,
-				response.notifications.filterIsInstance<DailyRewardsNotification>().firstOrNull())
+			notifyDailyRewardsClaimed(source, campaign, response.notifications.filterIsInstance<DailyRewardsNotification>().firstOrNull())
 			Command.SINGLE_SUCCESS
 		}
 }
 
-fun notifyDailyRewardsClaimed(source: CommandSourceStack, stat: FortDailyLoginRewardStat?, notification: DailyRewardsNotification?) {
-	val item = notification?.items?.firstOrNull()
-	val daysLoggedIn = Formatters.num.format(stat?.totalDaysLoggedIn ?: 0)
-	source.complete(null, if (item != null) source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS)
-		.setTitle("✅ Daily rewards claimed")
-		.addField("Days logged in", daysLoggedIn, true)
-		.addField("Reward", item.asItemStack().renderWithIcon(), true)
-		.build()
-	else source.createEmbed()
-		.setTitle("Daily rewards already claimed")
-		.addField("Days logged in", daysLoggedIn, true)
-		.build())
-} // TODO since you got assets working, please make a comprehensive rewards info
+fun notifyDailyRewardsClaimed(source: CommandSourceStack, campaign: McpProfile, notification: DailyRewardsNotification?) {
+	val daysLoggedIn = (campaign.stats as CampaignProfileStats).daily_rewards?.totalDaysLoggedIn
+		?: throw SimpleCommandExceptionType(LiteralMessage("Daily rewards data not found.")).create()
+	val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
+	val claimedIndex = daysLoggedIn - 1
+	val todaysReward = defaultScheduleRewards[claimedIndex % defaultScheduleRewards.size]
+	val todaysRewardItem = todaysReward.asItemStack().apply { setConditionForConditionalItem(canReceiveMtxCurrency) }
+	val preview = mutableListOf<String>()
+	repeat(7) {
+		val currentIndex = claimedIndex + it
+		val reward = defaultScheduleRewards[currentIndex % defaultScheduleRewards.size]
+		preview.add(reward.render(currentIndex, claimedIndex, canReceiveMtxCurrency))
+	}
+	val embed = source.createEmbed()
+		.setThumbnail(Utils.benBotExportAsset(todaysRewardItem.getPreviewImagePath(true)?.toString()))
+		.setDescription("**%,d** days logged in".format(daysLoggedIn))
+		.addField("Rewards", preview.joinToString("\n"), true)
+	var currentIndex = daysLoggedIn // start from next day (claimedIndex + 1)
+	while (true) {
+		val entry = defaultScheduleRewards[currentIndex % defaultScheduleRewards.size]
+		if (entry.bIsMajorReward && (!entry.ItemDefinition.toString().endsWith("Currency_MtxSwap") || entry.ItemCount >= 300)) {
+			embed.addField("Next Epic reward", entry.render(currentIndex, claimedIndex, canReceiveMtxCurrency), true)
+			break
+		}
+		++currentIndex
+	}
+	if (notification?.items?.isNotEmpty() == true) {
+		embed.setColor(BrigadierCommand.COLOR_SUCCESS).setTitle("✅ Daily rewards claimed")
+	} else {
+		embed.setTitle("Daily rewards already claimed")
+	}
+	source.complete(null, embed.build())
+}
+
+private fun FortLoginReward.render(currentIndex: Int, claimedIndex: Int, canReceiveMtxCurrency: Boolean): String {
+	val renderedItem = asItemStack().apply { setConditionForConditionalItem(canReceiveMtxCurrency) }.renderWithIcon(bypassWhitelist = true)
+	val s = "`%,d` %s".format(currentIndex + 1, if (bIsMajorReward) "**$renderedItem**" else renderedItem)
+	return if (currentIndex <= claimedIndex) "~~$s~~" else s
+}
+
+private fun FortLoginReward.asItemStack() = FortItemStack(ItemDefinition.load<FortItemDefinition>(), ItemCount)
