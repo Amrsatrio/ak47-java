@@ -520,7 +520,7 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 		}
 		val violatorTag = offer.getMeta("ViolatorTag")
 		if (violatorTag != null) {
-			violatorText = catalogMessages.StoreToast_Body[violatorTag]?.format() ?: violatorTag
+			violatorText = catalogMessages.Banners[violatorTag]?.format() ?: violatorTag
 		}
 		violatorText = (violatorText ?: return).toUpperCase()
 
