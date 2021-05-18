@@ -25,6 +25,7 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.regex.Pattern
 import kotlin.concurrent.schedule
 import kotlin.math.min
 
@@ -81,7 +82,7 @@ fun doLogin(source: CommandSourceStack, grantType: EGrantType, params: String, a
 	var params = params
 	return when (grantType) {
 		EGrantType.authorization_code -> {
-			params = params.replace("[&/\\\\#,+()$~%.'\":*?<>{}]".toRegex(), "").replace("code", "")
+			params = extractCode(params)
 			if (params.length != 32) {
 				throw SimpleCommandExceptionType(LiteralMessage("That is not an authorization code.\nHere's how to use the command correctly: When you open ${Utils.login(Utils.redirect(authClient))} you will see this text:\n```json\n{\"redirectUrl\":\"https://accounts.epicgames.com/fnauth?code=*aabbccddeeff11223344556677889900*\",\"sid\":null}```You only need to input exactly the text surrounded between *'s into the command, so it becomes:\n`${source.prefix}login aabbccddeeff11223344556677889900`")).create()
 			}
@@ -96,7 +97,7 @@ fun doLogin(source: CommandSourceStack, grantType: EGrantType, params: String, a
 		}
 		EGrantType.device_code -> deviceCode(source, authClient ?: EAuthClient.FORTNITE_SWITCH_GAME_CLIENT)
 		EGrantType.exchange_code -> {
-			params = params.replace("[&/\\\\#,+()$~%.'\":*?<>{}]".toRegex(), "").replace("code", "")
+			params = extractCode(params)
 			if (params.length != 32) {
 				throw SimpleCommandExceptionType(LiteralMessage("That is not an exchange code.")).create()
 			}
@@ -108,12 +109,20 @@ fun doLogin(source: CommandSourceStack, grantType: EGrantType, params: String, a
 	}
 }
 
+@JvmField
+val EPIC_HEX_PATTERN = Pattern.compile(".*([0-9a-f]{32}).*")
+
+private fun extractCode(s: String): String {
+	val matcher = EPIC_HEX_PATTERN.matcher(s)
+	return if (matcher.matches()) matcher.group(1) else ""
+}
+
 private inline fun accountPicker(source: CommandSourceStack): Int {
 	val devices = source.client.savedLoginsManager.getAll(source.author.id)
 	if (devices.isEmpty()) {
 		return startDefaultLoginFlow(source)
 	}
-	val numberEmojis = arrayOf("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "0️⃣")
+	val numberEmojis = arrayOf("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟")
 	source.loading("Preparing your login")
 	source.session = source.client.internalSession
 	val users = source.queryUsers(devices.map { it.accountId })
