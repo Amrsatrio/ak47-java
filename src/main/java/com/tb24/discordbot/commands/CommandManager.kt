@@ -13,6 +13,8 @@ import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.util.CollectorEndReason
 import com.tb24.discordbot.util.CollectorException
 import com.tb24.discordbot.util.Utils
+import com.tb24.fn.network.AccountService.GrantType
+import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.ChannelType
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -254,24 +256,42 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		if (isEpicGames) {
 			val session = source.session
 			if ((e.code() == HttpURLConnection.HTTP_UNAUTHORIZED || (e.code() == HttpURLConnection.HTTP_FORBIDDEN && e.epicError.errorCode == "com.epicgames.common.token_verify_failed") /*special case for events service*/) && session.api.userToken?.account_id != null) {
-				val savedDevice = client.savedLoginsManager.get(session.id, session.api.userToken.account_id)
+				val invalidToken = session.api.userToken
 				session.api.userToken = null
 				session.otherClientApis.clear()
+
+				// Attempt token renewal using refresh_token
+				if (System.currentTimeMillis() < invalidToken.refresh_expires_at.time) {
+					try {
+						source.session.login(source, GrantType.refreshToken(invalidToken.refresh_token), EAuthClient.getByClientId(invalidToken.client_id), false)
+						source.session = source.initialSession
+						return true
+					} catch (e: HttpException) {
+						if (e.epicError.errorCode != "errors.com.epicgames.account.auth_token.invalid_refresh_token") {
+							httpError(source, e, "Failed to renew session using refresh token")
+						}
+					}
+				}
+
+				// Attempt token renewal using device_auth
+				val savedDevice = client.savedLoginsManager.get(session.id, invalidToken.account_id)
 				if (savedDevice != null) {
 					try {
 						doDeviceAuthLogin(source, savedDevice, sendMessages = false)
 						source.session = source.initialSession
 						return true
 					} catch (e: HttpException) {
-						httpError(source, e, "Login Failed")
+						httpError(source, e, "Failed to renew session using device auth")
 					} catch (e: CommandSyntaxException) {
 						source.complete(null, EmbedBuilder().setColor(0xF04947).setDescription("❌ " + e.rawMessage.string).build())
 					}
 				}
+
+				// No more ways to renew token, clear session and inform user
 				session.clear()
 				source.complete(null, EmbedBuilder().setColor(BrigadierCommand.COLOR_ERROR)
 					.setTitle("🚫 Logged out")
-					.setDescription("You have been logged out due to one of the following reasons:\n\u2022 Account logged in elsewhere.\n\u2022 Been more than 8 hours since login.\n\u2022 Logged in using exchange code or authorization code but the originating session has been logged out.\n\u2022 Logged in using a saved login but got it removed.\n\u2022 Account's password changed.\n\u2022 Password reset initiated by Epic Games.\n\nYou don't have a saved login for this account, so we cannot log you back in automatically.")
+					.setDescription("You have been logged out due to one of the following reasons:\n\u2022 Account logged in elsewhere.\n\u2022 Been more than 24 hours since login.\n\u2022 Logged in using exchange code or authorization code but the originating session has been logged out.\n\u2022 Logged in using a saved login but got it removed.\n\u2022 Account's password changed.\n\u2022 Password reset initiated by Epic Games.\n\nYou don't have a saved login for this account, so we cannot log you back in automatically.")
 					.build())
 				return false
 			}
