@@ -34,7 +34,6 @@ import java.awt.geom.Path2D
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.FileReader
-import javax.imageio.ImageIO
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.sqrt
@@ -228,7 +227,7 @@ fun Graphics2D.drawStretchedRadialGradient(innerColor: Number, outerColor: Numbe
 
 fun Graphics2D.drawTimer(iconX: Int, iconY: Int, iconSize: Int = 28) {
 	val fillColor = color.rgb and 0xFFFFFF
-	val timerIcon = ImageIO.read(File("C:\\Users\\satri\\Documents\\AppProjects\\Playground\\app\\src\\main\\res\\drawable\\ui_timer_64x.png"))
+	val timerIcon = loadObject<UTexture2D>("/Game/UI/Icons/T_UI_Timer_64x.T_UI_Timer_64x")!!.toBufferedImage()
 	val tW = timerIcon.width
 	val tH = timerIcon.height
 	val pixels = timerIcon.getRGB(0, 0, tW, tH, null, 0, tW)

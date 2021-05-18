@@ -48,14 +48,14 @@ fun main() {
 }
 
 class RollCommand : BrigadierCommand("roll", "Simulate a given loot pool.", arrayOf("r")) {
-	val context = LootContext()
-
-	init {
+	val context by lazy {
+		val context = LootContext()
 		context.addLootPackages(loadObject<UDataTable>("/Game/Items/DataTables/AthenaLootPackages_Client.AthenaLootPackages_Client"))
 		context.addLootTiers(loadObject<UDataTable>("/Game/Items/DataTables/AthenaLootTierData_Client.AthenaLootTierData_Client"))
 		context.addLootPackages(loadObject<UDataTable>("/PrimalGameplay/DataTables/AthenaLootPackages_Client.AthenaLootPackages_Client"))
 		context.addLootTiers(loadObject<UDataTable>("/PrimalGameplay/DataTables/AthenaLootTierData_Client.AthenaLootTierData_Client"))
 		// TODO don't hardcode the game feature paths by enumerating the plugins
+		context
 	}
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()

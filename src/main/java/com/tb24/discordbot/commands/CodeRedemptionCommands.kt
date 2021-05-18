@@ -38,7 +38,7 @@ class CheckCodeCommand : BrigadierCommand("checkcode", "Evaluates an Epic Games 
 		)
 }
 
-class RedeemCodeCommand : BrigadierCommand("redeem", "Redeems an Epic Games code.") {
+class RedeemCodeCommand : BrigadierCommand("redeemcode", "Redeems an Epic Games code.", arrayOf("redeem")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.then(argument("code", greedyString())
 			.executes {
