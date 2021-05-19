@@ -261,22 +261,9 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				session.api.userToken = null
 				session.otherClientApis.clear()
 
-				// Attempt token renewal using refresh_token
-				if (System.currentTimeMillis() < invalidToken.refresh_expires_at.time) {
-					try {
-						source.session.login(source, GrantType.refreshToken(invalidToken.refresh_token), EAuthClient.getByClientId(invalidToken.client_id), false)
-						source.session = source.initialSession
-						return true
-					} catch (e: HttpException) {
-						if (e.epicError.errorCode != "errors.com.epicgames.account.auth_token.invalid_refresh_token") {
-							httpError(source, e, "Failed to renew session using refresh token")
-						}
-					}
-				}
-
-				// Attempt token renewal using device_auth
 				val savedDevice = client.savedLoginsManager.get(session.id, invalidToken.account_id)
 				if (savedDevice != null) {
+					// Attempt token renewal using device_auth
 					try {
 						doDeviceAuthLogin(source, savedDevice, sendMessages = false)
 						source.session = source.initialSession
@@ -285,6 +272,17 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 						httpError(source, e, "Failed to renew session using device auth")
 					} catch (e: CommandSyntaxException) {
 						source.complete(null, EmbedBuilder().setColor(0xF04947).setDescription("❌ " + e.rawMessage.string).build())
+					}
+				} else if (System.currentTimeMillis() < invalidToken.refresh_expires_at.time) {
+					// Attempt token renewal using refresh_token
+					try {
+						source.session.login(source, GrantType.refreshToken(invalidToken.refresh_token), EAuthClient.getByClientId(invalidToken.client_id), false)
+						source.session = source.initialSession
+						return true
+					} catch (e: HttpException) {
+						if (e.epicError.errorCode != "errors.com.epicgames.account.auth_token.invalid_refresh_token") {
+							httpError(source, e, "Failed to renew session using refresh token")
+						}
 					}
 				}
 

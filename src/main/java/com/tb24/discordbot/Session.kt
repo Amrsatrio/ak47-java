@@ -161,9 +161,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		CompletableFuture.allOf(*futures.toTypedArray()).await()
 		val results = hashMapOf<String, GameProfile>()
 		for (future in futures) {
-			for (user in future.get().body()!!) {
-				results[user.id] = user
-			}
+			future.get().body()!!.associateByTo(results) { it.id }
 		}
 		return results
 	}
