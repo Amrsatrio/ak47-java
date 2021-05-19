@@ -124,13 +124,15 @@ public final class DiscordBot {
 		}
 		Runnable task = () -> {
 			try {
+				setupInternalSession();
 				TextChannel itemShopChannel = discord.getTextChannelById(ITEM_SHOP_CHANNEL_ID);
 				if (itemShopChannel != null) {
 					ShopCommandsKt.executeShopText(new OnlyChannelCommandSource(this, itemShopChannel), ESubGame.Athena);
 					ShopCommandsKt.executeShopImage(new OnlyChannelCommandSource(this, itemShopChannel));
 				}
 			} catch (Throwable e) {
-				e.printStackTrace();
+				dlog("__**Failed to auto post item shop**__\n```\n" + Throwables.getStackTraceAsString(e) + "```", null);
+				return;
 			}
 			try {
 				autoLoginRewardTask.run();

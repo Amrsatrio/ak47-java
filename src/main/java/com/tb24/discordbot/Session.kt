@@ -155,6 +155,19 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		.apply { CompletableFuture.allOf(*toTypedArray()).await() }
 		.flatMap { it.get().body()!!.toList() }
 
+	@Throws(HttpException::class)
+	fun queryUsersMap(ids: Iterable<String>): Map<String, GameProfile> {
+		val futures = ids.chunked(100).map { api.accountService.findAccountsByIds(it).future() }
+		CompletableFuture.allOf(*futures.toTypedArray()).await()
+		val results = hashMapOf<String, GameProfile>()
+		for (future in futures) {
+			for (user in future.get().body()!!) {
+				results[user.id] = user
+			}
+		}
+		return results
+	}
+
 	fun getHomebase(accountId: String) = homebaseManagers.getOrPut(accountId) {
 		val hb = HomebaseManager(accountId, api)
 		val campaign = api.profileManager.getProfileData(accountId, "campaign")

@@ -12,6 +12,7 @@ import com.tb24.discordbot.commands.notifyDailyRewardsClaimed
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.EpicError
+import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.commands.campaign.ClaimLoginReward
 import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.model.mcpprofile.notifications.DailyRewardsNotification
@@ -38,11 +39,12 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 		}
 		TASK_IS_RUNNING.set(true)
 		val autoClaimEntries = r.table("auto_claim").run(client.dbConn, AutoClaimEntry::class.java).shuffled(random)
+		val users = client.internalSession.queryUsersMap(autoClaimEntries.map { it.id })
 		for (entry in autoClaimEntries) {
 			var attempts = 5
 			while (attempts-- > 0) {
 				logger.info("Performing auto claiming for account ${entry.id}, attempt ${5 - attempts}")
-				if (perform(entry)) {
+				if (perform(entry, users)) {
 					break
 				}
 			}
@@ -51,14 +53,14 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 		TASK_IS_RUNNING.set(false)
 	}
 
-	private fun perform(entry: AutoClaimEntry): Boolean {
+	private fun perform(entry: AutoClaimEntry, users: Map<String, GameProfile>): Boolean {
 		val epicId = entry.id
 		val discordId = entry.registrantId
 		var source: CommandSourceStack? = null
 		var displayName: String? = null
 		try {
 			try {
-				displayName = client.internalSession.queryUsers(Collections.singleton(epicId)).firstOrNull()?.displayName
+				displayName = users[epicId]?.displayName
 				val user = client.discord.getUserById(discordId) ?: client.discord.retrieveUserById(discordId).complete()
 				val channel = (user as UserImpl).privateChannel ?: user.openPrivateChannel().complete()
 				source = OnlyChannelCommandSource(client, channel)
