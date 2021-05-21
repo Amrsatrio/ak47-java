@@ -2,9 +2,12 @@ package com.tb24.discordbot.commands
 
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.LiteralMessage
+import com.mojang.brigadier.arguments.StringArgumentType.getString
+import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.tb24.discordbot.util.await
-import com.tb24.discordbot.util.dispatchClientCommandRequest
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.util.*
 import com.tb24.fn.ProfileManager
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
@@ -24,20 +27,11 @@ val CATEGORY_COMPARATOR = Comparator<CollectionBookCategory> { o1, o2 -> o1.back
 val PAGE_COMPARATOR = Comparator<CollectionBookPage> { o1, o2 -> o1.backing.SortPriority - o2.backing.SortPriority }
 val collectionBookData by lazy { loadObject<FortCollectionBookData>("/SaveTheWorld/CollectionBook/Data/CollectionBookData")!! }
 
-class CollectionBookCommand : BrigadierCommand("craft", "Crafts an item into your backpack.") {
+class CollectionBookCommand : BrigadierCommand("collectionbook", "Shows your collection book.", arrayOf("cb")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { c ->
 			val source = c.source
-			source.ensureSession()
-			source.loading("Loading collection book")
-			val profileManager = source.api.profileManager
-			CompletableFuture.allOf(
-				profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign"),
-				profileManager.dispatchClientCommandRequest(QueryProfile(), "collection_book_people0"),
-				profileManager.dispatchClientCommandRequest(QueryProfile(), "collection_book_schematics0")
-			).await()
-			val context = CollectionBookContext()
-			context.populateFromProfiles(profileManager)
+			val context = obtainContext(source)
 			val embed = source.createEmbed().setTitle("Collection Book")
 			for (category in context.categories.values.sortedWith(CATEGORY_COMPARATOR)) {
 				val ctgName = category.backing.Name.format()
@@ -67,21 +61,52 @@ class CollectionBookCommand : BrigadierCommand("craft", "Crafts an item into you
 			source.complete(null, embed.build())
 			Command.SINGLE_SUCCESS
 		}
+		.then(argument("page", greedyString())
+			.executes { c ->
+				val source = c.source
+				val context = obtainContext(source)
+				val page = context.pages.search(getString(c, "page")) { it.backing.Name.format()!! }
+					?: throw SimpleCommandExceptionType(LiteralMessage("Can't find a page of that name. You can see all the page names in `${source.prefix}${c.commandName}`.")).create()
+				val embed = source.createEmbed().setTitle("Collection Book / " + page.backing.Name.format())
+				for (section in page.sections) {
+					embed.addField(section.backing.Name.format(), section.slots.joinToString("\n") { it.profileItem?.render() ?: "Unslotted" }, true)
+				}
+				source.complete(null, embed.build())
+				Command.SINGLE_SUCCESS
+			}
+		)
+
+	private fun obtainContext(source: CommandSourceStack): CollectionBookContext {
+		source.ensureSession()
+		source.loading("Loading collection book")
+		val profileManager = source.api.profileManager
+		CompletableFuture.allOf(
+			profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign"),
+			profileManager.dispatchClientCommandRequest(QueryProfile(), "collection_book_people0"),
+			profileManager.dispatchClientCommandRequest(QueryProfile(), "collection_book_schematics0")
+		).await()
+		val context = CollectionBookContext()
+		context.populateFromProfiles(profileManager)
+		return context
+	}
 }
 
 class CollectionBookContext {
 	val categories = hashMapOf<String, CollectionBookCategory>()
+	val pages = hashSetOf<CollectionBookPage>()
 	val slots = mutableListOf<CollectionBookSlot>()
 	val slotItemsIndex = hashMapOf<String, CollectionBookSlot>()
 
 	init {
-		for ((pageId, page) in collectionBookData.PageData.value.rows.mapValues { it.value.mapToClass(FortCollectionBookPageData::class.java) }) {
-			val categoryId = page.CategoryId
+		for ((pageId, pageData) in collectionBookData.PageData.value.rows.mapValues { it.value.mapToClass(FortCollectionBookPageData::class.java) }) {
+			val categoryId = pageData.CategoryId
 			val category = categories.getOrPut(categoryId.text) {
 				val categoryData = collectionBookData.PageCategoryData.value.findRowMapped<FortCollectionBookPageCategoryTableRow>(categoryId)!!
 				CollectionBookCategory(categoryId.text, categoryData)
 			}
-			category.pages.add(CollectionBookPage(pageId.text, page, this))
+			val page = CollectionBookPage(pageId.text, pageData, this)
+			category.pages.add(page)
+			pages.add(page)
 		}
 	}
 

@@ -347,6 +347,39 @@ fun String.shortenUrl(source: CommandSourceStack): String {
 	return shortenerResponse.getString("shortLink")!!
 }
 
+inline fun <T> Iterable<T>.search(query: String, minimumSimilarity: Float = .33f, extractor: (T) -> String = { it.toString() }): T? {
+	val query = query.toLowerCase()
+	var maxSim = minimumSimilarity
+	var result: T? = null
+	for (item in this) {
+		val key = extractor(item).toLowerCase()
+		if (key == query) {
+			return item
+		}
+		val sim = similarity(key, query)
+		//println("sim $key, $query = $sim")
+		if (sim > maxSim) {
+			maxSim = sim
+			result = item
+		}
+	}
+	return result
+}
+
+fun similarity(s1: String, s2: String): Float {
+	var longer = s1
+	var shorter = s2
+	if (s1.length < s2.length) {
+		longer = s2
+		shorter = s1
+	}
+	val longerLength = longer.length
+	if (longerLength == 0) {
+		return 1f
+	}
+	return (longerLength - Utils.damerauLevenshteinDistance(longer, shorter)) / longerLength.toFloat()
+}
+
 fun Number.awtColor(hasAlpha: Boolean = toInt() ushr 24 != 0) = Color(toInt(), hasAlpha)
 
 inline fun createAndDrawCanvas(w: Int, h: Int, draw: (ctx: Graphics2D) -> Unit): BufferedImage {
