@@ -6,7 +6,6 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
-import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.Rune
 import com.tb24.discordbot.commands.arguments.MentionArgument.Companion.getMention
 import com.tb24.discordbot.commands.arguments.MentionArgument.Companion.mention
@@ -134,5 +133,4 @@ fun premium(source: CommandSourceStack, target: User, remove: Boolean/*, secret:
 	return Command.SINGLE_SUCCESS
 }
 
-inline fun prodAndBotDev(source: CommandSourceStack) =
-	DiscordBot.ENV != "dev" && source.client.discord.selfUser.idLong == 563753712376479754L && Rune.isBotDev(source)
+inline fun prodAndBotDev(source: CommandSourceStack) = source.client.isProd && Rune.isBotDev(source)

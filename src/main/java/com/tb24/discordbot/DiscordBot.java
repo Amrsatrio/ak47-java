@@ -208,6 +208,10 @@ public final class DiscordBot {
 		}
 	}
 
+	public boolean isProd() {
+		return !ENV.equals("dev") && discord.getSelfUser().getIdLong() == 563753712376479754L;
+	}
+
 	public static class PrefixConfig {
 		public String server;
 		public String prefix;
