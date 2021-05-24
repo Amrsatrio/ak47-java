@@ -86,6 +86,9 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 
 	private fun setDisplayName(source: CommandSourceStack, newName: String): Int {
 		source.ensureSession()
+		if (newName.length < 3 || newName.length > 16) {
+			throw SimpleCommandExceptionType(LiteralMessage("Display name must be between 3 and 16 characters long.")).create()
+		}
 		source.loading("Checking `$newName` for validity")
 		runCatching { source.api.accountService.getByDisplayName(newName).exec() }.getOrNull()?.body()?.apply {
 			throw SimpleCommandExceptionType(LiteralMessage("The Epic display name `$displayName` has already been taken. Please choose another name.")).create()

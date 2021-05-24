@@ -6,6 +6,8 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
+import com.tb24.discordbot.DiscordBot
+import com.tb24.discordbot.Rune
 import com.tb24.discordbot.commands.arguments.MentionArgument.Companion.getMention
 import com.tb24.discordbot.commands.arguments.MentionArgument.Companion.mention
 import com.tb24.discordbot.util.Utils
@@ -40,11 +42,11 @@ class RevokeCommand : BrigadierCommand("revoke", "Revokes a user's premium acces
 
 class GrantRoledCommand : BrigadierCommand("grantroled", "Grants premium to everyone with premium role.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires { r.table("admins").get(it.author.id).run(it.client.dbConn).first() != null }
+		.requires(::prodAndBotDev)
 		.executes { c ->
 			val source = c.source
 			val guild = source.client.discord.getGuildById(Utils.HOMEBASE_GUILD_ID)
-				?: throw SimpleCommandExceptionType(LiteralMessage("Guild not found.")).create()
+				?: throw SimpleCommandExceptionType(LiteralMessage("Home guild not found.")).create()
 			val membersWithRole = guild.loadMembers().get().filter { m -> m.roles.any { it.name.equals("premium", true) } }
 			val granted = r.table("members").run(source.client.dbConn).toList()
 			val hasRoleButNotGranted = membersWithRole.filter { m -> !granted.any { (it as Map<*, *>)["id"] == m.id } }
@@ -53,6 +55,38 @@ class GrantRoledCommand : BrigadierCommand("grantroled", "Grants premium to ever
 			}
 			r.table("members").insert(hasRoleButNotGranted.map { mapOf("id" to it.id) }).run(source.client.dbConn)
 			source.complete("✅ Granted premium to ${Formatters.num.format(hasRoleButNotGranted.size)} members")
+			Command.SINGLE_SUCCESS
+		}
+}
+
+class SyncPremiumRoleCommand : BrigadierCommand("syncpremiumrole", "Internal command.") {
+	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.requires(::prodAndBotDev)
+		.executes { c ->
+			val source = c.source
+			val guild = source.client.discord.getGuildById(Utils.HOMEBASE_GUILD_ID)
+				?: throw SimpleCommandExceptionType(LiteralMessage("Home guild not found.")).create()
+			val role = guild.getRolesByName("premium", true).firstOrNull()
+				?: throw SimpleCommandExceptionType(LiteralMessage("No role in ${guild.name} named Premium.")).create()
+			var added = 0
+			var removed = 0
+			source.loading("Syncing roles")
+			val granted = r.table("members").run(source.client.dbConn).map { (it as Map<*, *>)["id"] }
+			for (member in guild.loadMembers().get()) {
+				if (member.user.isBot) {
+					continue
+				}
+				val hasRole = role in member.roles
+				val hasPremium = member.id in granted
+				if (!hasRole && hasPremium) {
+					guild.addRoleToMember(member, role).reason("AK47 role sync: Has premium but doesn't have role").complete()
+					++added
+				} else if (hasRole && !hasPremium) {
+					guild.removeRoleFromMember(member, role).reason("AK47 role sync: Has role but doesn't have premium anymore").complete()
+					++removed
+				}
+			}
+			source.complete("✅ Added role to $added member(s) and removed role from $removed member(s).")
 			Command.SINGLE_SUCCESS
 		}
 }
@@ -99,3 +133,6 @@ fun premium(source: CommandSourceStack, target: User, remove: Boolean/*, secret:
 	}
 	return Command.SINGLE_SUCCESS
 }
+
+inline fun prodAndBotDev(source: CommandSourceStack) =
+	DiscordBot.ENV != "dev" && source.client.discord.selfUser.idLong == 563753712376479754L && Rune.isBotDev(source)
