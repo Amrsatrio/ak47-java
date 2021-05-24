@@ -21,6 +21,10 @@ import java.awt.Color
 import java.net.URLEncoder
 
 open class CommandSourceStack(val client: DiscordBot, val message: Message, sessionId: String?) {
+	companion object {
+		val IS_DEBUG = System.getProperty("intellij.debug.agent") == "true"
+	}
+
 	// Message delegates
 	inline val author get() = message.author
 	inline val channel get() = message.channel
@@ -41,7 +45,10 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 	var loadingMsg: Message? = null
 
 	fun loading(text: String?): Message {
-		val loadingText = Utils.loadingText(text ?: "Loading")
+		var loadingText = Utils.loadingText(text ?: "Loading")
+		if (IS_DEBUG) {
+			loadingText = "[DEBUGGER ATTACHED] $loadingText"
+		}
 		return (loadingMsg?.editMessage(loadingText) ?: channel.sendMessage(loadingText)).override(true).complete().also { loadingMsg = it }
 	}
 

@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
 import static com.rethinkdb.RethinkDB.r;
 
 public final class DiscordBot {
-	public static final String VERSION = "6.3.8";
+	public static final String VERSION = "6.3.9";
 	public static final Logger LOGGER = LoggerFactory.getLogger("DiscordBot");
 	public static final boolean LOAD_PAKS = System.getProperty("loadPaks", "false").equals("true");
 	public static final String ENV = System.getProperty("env", "dev");
@@ -92,7 +92,7 @@ public final class DiscordBot {
 		}*/
 		okHttpClient = new OkHttpClient();
 		setupInternalSession();
-		keychainTask.run();
+		if (LOAD_PAKS) keychainTask.run();
 		catalogManager = new CatalogManager();
 		LOGGER.info("Connecting to Discord...");
 		JDABuilder builder = JDABuilder.createDefault(token).setHttpClient(okHttpClient);
@@ -112,7 +112,7 @@ public final class DiscordBot {
 		discord.getPresence().setActivity(Activity.playing(".help \u00b7 v" + VERSION));
 		if (!ENV.equals("dev")) {
 			scheduleUtcMidnightTask();
-			scheduleKeychainTask();
+			if (LOAD_PAKS) scheduleKeychainTask();
 		}
 	}
 

@@ -72,7 +72,7 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 		sb.append("%s **Stored Research:** %,d".format(textureEmote("/Game/UI/Foundation/Textures/Icons/Currency/T-Icon-ResearchPoint-128.T-Icon-ResearchPoint-128")?.asMention, researchPoints))
 		embed.addField("Research", sb.toString(), true)
 		embed.addField("Collection Book", "**Level:** %,d\n**Unslot Cost:** %s %,d".format(
-			stats.collection_book.maxBookXpLevelAchieved,
+			stats.collection_book.maxBookXpLevelAchieved ?: 0,
 			Utils.MTX_EMOJI,
 			stats.unslot_mtx_spend
 		), true)
