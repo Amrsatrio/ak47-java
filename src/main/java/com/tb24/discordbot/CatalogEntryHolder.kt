@@ -10,8 +10,10 @@ import com.tb24.fn.model.gamesubcatalog.CatalogOffer.CatalogItemPrice
 import com.tb24.fn.model.gamesubcatalog.ECatalogOfferType
 import com.tb24.fn.model.gamesubcatalog.ECatalogSaleType
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
+import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats.PurchaseList
 import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Utils
+import com.tb24.fn.util.getInt
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.exports.FortMtxOfferData
 import org.slf4j.Logger
@@ -43,7 +45,7 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 				fromDevName.getOrNull(i) ?: item.templateId
 			} else {
 				val displayName = item.displayName ?: item.primaryAssetName
-				if (displayName.isNotEmpty()) displayName else item.templateId
+				displayName.ifEmpty { item.templateId }
 			}
 			compiledNames.add(if (item.quantity != 1) "(x%,d) %s".format(item.quantity, name) else name)
 		}
@@ -56,7 +58,7 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 	fun getMeta(key: String) = metaInfo[key.toLowerCase(Locale.ROOT)]
 
 	@Throws(CommandSyntaxException::class)
-	fun resolve(profileManager: ProfileManager? = null, priceIndex: Int = 0) {
+	fun resolve(profileManager: ProfileManager? = null, priceIndex: Int = 0, resolveOwnership: Boolean = true) {
 		owned = false
 		ownedItems = hashSetOf()
 		price = CatalogItemPrice.NO_PRICE
@@ -64,7 +66,7 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 			if (ce.prices.isNotEmpty()) {
 				price = ce.prices.safeGetOneIndexed(priceIndex + 1)
 			}
-			owned = if (profileManager != null) CatalogHelper.isStaticPriceCtlgEntryOwned(profileManager, ce) else false
+			owned = if (resolveOwnership && profileManager != null) CatalogHelper.isStaticPriceCtlgEntryOwned(profileManager, ce) else false
 		} else if (ce.offerType == ECatalogOfferType.DynamicBundle) {
 			price = CatalogItemPrice()
 			price.regularPrice = ce.dynamicBundleInfo.regularBasePrice
@@ -74,77 +76,45 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 			for (bundleItem in ce.dynamicBundleInfo.bundleItems) {
 				price.regularPrice += bundleItem.regularPrice
 				price.basePrice += bundleItem.discountedPrice
-				if (profileManager != null && CatalogHelper.isItemOwned(profileManager, bundleItem.item.templateId, bundleItem.item.quantity)) {
+				if (resolveOwnership && profileManager != null && CatalogHelper.isItemOwned(profileManager, bundleItem.item.templateId, bundleItem.item.quantity)) {
 					ownedItems!!.add(bundleItem.item.templateId)
-					price.regularPrice -= bundleItem.alreadyOwnedPriceReduction // TODO maybe this is wrong, additional research is required
+					price.regularPrice -= bundleItem.alreadyOwnedPriceReduction
 					price.basePrice -= bundleItem.alreadyOwnedPriceReduction
 				}
 			}
-			price.regularPrice = max(if (ce.dynamicBundleInfo.floorPrice != null) ce.dynamicBundleInfo.floorPrice else 0, price.regularPrice)
-			price.finalPrice = max(if (ce.dynamicBundleInfo.floorPrice != null) ce.dynamicBundleInfo.floorPrice else 0, price.basePrice)
+			val floorPrice = ce.dynamicBundleInfo.floorPrice ?: 0
+			price.regularPrice = max(floorPrice, price.regularPrice)
+			price.finalPrice = max(floorPrice, price.basePrice)
 			price.basePrice = price.finalPrice
 			if (price.saleType == ECatalogSaleType.NotOnSale && price.regularPrice != price.basePrice) {
 				price.saleType = ce.dynamicBundleInfo.displayType
 			}
 			owned = ownedItems!!.size == ce.dynamicBundleInfo.bundleItems.size
 		}
-		purchaseLimit = -1
+		purchaseLimit = getMeta("EventLimit")?.toIntOrNull() ?: -1
 		purchasesCount = 0
-		getMeta("EventLimit")?.apply {
-			try {
-				purchaseLimit = toInt()
-			} catch (ignored: NumberFormatException) {
-			}
-		}
-		if (profileManager == null) {
-			return
-		}
-		val commonCore = profileManager.getProfileData("common_core")
+		val commonCore = profileManager?.getProfileData("common_core") ?: return
 		val stats = commonCore.stats as CommonCoreProfileStats
-		try {
-			if (purchaseLimit >= 0) {
-				val purchaseLimitingEventId = getMeta("PurchaseLimitingEventId")
-				if (purchaseLimitingEventId != null) {
-					for (item in commonCore.items.values) {
-						if (item.templateId == "EventPurchaseTracker:generic_instance" && purchaseLimitingEventId == item.attributes["event_instance_id"].asString) {
-							val intAsElement = item.attributes.getAsJsonObject("event_purchases")[ce.offerId]
-							if (intAsElement != null) {
-								purchasesCount += intAsElement.asInt
-							}
-							break
-						}
-					}
-				}
-			} else if (ce.dailyLimit >= 0) {
-				purchaseLimit = ce.dailyLimit
-				if (System.currentTimeMillis() <= stats.daily_purchases.lastInterval.time + 24L * 60L * 60L * 1000L) {
-					val integer = stats.daily_purchases.purchaseList[ce.offerId]
-					if (integer != null) {
-						purchasesCount += integer
-					}
-				}
-			} else if (ce.weeklyLimit >= 0) {
-				purchaseLimit = ce.weeklyLimit
-				if (System.currentTimeMillis() <= stats.weekly_purchases.lastInterval.time + 7L * 24L * 60L * 60L * 1000L) {
-					val integer = stats.weekly_purchases.purchaseList[ce.offerId]
-					if (integer != null) {
-						purchasesCount += integer
-					}
-				}
-			} else if (ce.monthlyLimit >= 0) {
-				purchaseLimit = ce.monthlyLimit
-				if (System.currentTimeMillis() <= stats.weekly_purchases.lastInterval.time + 30L * 24L * 60L * 60L * 1000L) {
-					val integer = stats.weekly_purchases.purchaseList[ce.offerId]
-					if (integer != null) {
-						purchasesCount += integer
-					}
-				}
+		if (purchaseLimit >= 0) { // from EventLimit
+			val purchaseLimitingEventId = getMeta("PurchaseLimitingEventId")
+			if (purchaseLimitingEventId != null) {
+				val eventPurchaseTracker = commonCore.items.values.firstOrNull { it.templateId == "EventPurchaseTracker:generic_instance" && it.attributes["event_instance_id"].asString == purchaseLimitingEventId }
+				purchasesCount += eventPurchaseTracker?.attributes?.getAsJsonObject("event_purchases")?.getInt(ce.offerId) ?: 0
 			}
-		} catch (e: NullPointerException) {
-			LOGGER.warn("Failed getting purchase limits", e)
-		} catch (e: ClassCastException) {
-			LOGGER.warn("Failed getting purchase limits", e)
+		} else if (ce.dailyLimit >= 0) {
+			purchaseLimit = ce.dailyLimit
+			purchasesCount += stats.daily_purchases.getPurchasesCount(1L)
+		} else if (ce.weeklyLimit >= 0) {
+			purchaseLimit = ce.weeklyLimit
+			purchasesCount += stats.weekly_purchases.getPurchasesCount(7L)
+		} else if (ce.monthlyLimit >= 0) {
+			purchaseLimit = ce.monthlyLimit
+			purchasesCount += stats.weekly_purchases.getPurchasesCount(30L)
 		}
+	}
+
+	private inline fun PurchaseList.getPurchasesCount(hours: Long): Int {
+		return if (System.currentTimeMillis() <= (lastInterval?.time ?: return 0) + hours * 24L * 60L * 60L * 1000L) purchaseList?.get(ce.offerId) ?: 0 else 0
 	}
 
 	val displayAsset by lazy { if (!Utils.isNone(ce.displayAssetPath)) loadObject<FortMtxOfferData>(ce.displayAssetPath) else null }

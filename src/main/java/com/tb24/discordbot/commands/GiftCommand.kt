@@ -24,23 +24,23 @@ import com.tb24.fn.util.format
 import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Role
-import kotlin.math.min
 
-class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry from current Battle Royale item shop.", arrayOf("g")) {
-	val FAILED_FORMATS = arrayOf(FText("{0}"), L10N.GiftFailedTwoAccounts, L10N.GiftFailedThreeAccounts, L10N.GiftFailedFourAccounts, L10N.GiftFailedFivePlusAccounts)
-
+class GiftCommand : BrigadierCommand("gift", "Gifts a friend an offer from the item shop.", arrayOf("g")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires(Rune::hasPremium)
 		.then(argument("item number", catalogOffer())
-			.then(argument("recipients", users(4))
-				.executes { execute(it.source, getCatalogEntry(it, "item number"), getUsers(it, "recipients")) }
+			.then(argument("recipients", users(1))
+				.executes { execute(it.source, getCatalogEntry(it, "item number"), getUsers(it, "recipients").values.first()) }
 			)
 		)
 
-	private fun execute(source: CommandSourceStack, catalogOffer: CatalogOffer, recipients: Map<String, GameProfile>): Int {
+	private fun execute(source: CommandSourceStack, catalogOffer: CatalogOffer, recipient: GameProfile): Int {
 		val ce = catalogOffer.holder()
 		if (catalogOffer.giftInfo == null || !catalogOffer.giftInfo.bIsEnabled) {
 			throw SimpleCommandExceptionType(LiteralMessage("${ce.friendlyName} is not giftable.")).create()
+		}
+		if (recipient.id == source.api.currentLoggedIn.id) {
+			throw SimpleCommandExceptionType(LiteralMessage("Please use `${source.prefix}buy ${catalogOffer.__ak47_index + 1}` instead of gifting ${ce.friendlyName} to yourself.")).create()
 		}
 		source.loading("Preparing your gift")
 		val profileManager = source.api.profileManager
@@ -53,49 +53,33 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 				.build())
 			return 0
 		}
-		if (recipients.size == 1) {
-			try {
-				source.loading("Checking eligibility")
-				source.api.fortniteService.checkGiftEligibility(recipients.values.first().id, catalogOffer.offerId).exec()
-			} catch (e: HttpException) {
-				var errorTitle: FText? = null
-				var errorText: FText? = null
-				when (e.epicError.errorCode) {
-					"errors.com.epicgames.modules.gamesubcatalog.purchase_not_allowed" -> {
-						errorTitle = L10N.AlreadyOwned
-						errorText = L10N.AlreadyOwnedText
-					}
-					"errors.com.epicgames.modules.gamesubcatalog.receiver_will_not_accept_gifts" -> {
-						errorTitle = L10N.GiftDeclined
-						errorText = L10N.OwnedText
-					}
-					"errors.com.epicgames.modules.profile.profile_not_found" -> {
-						errorTitle = L10N.NotFortnitePlayer
-						errorText = L10N.NotPlayerText
-					}
-				}
-				if (errorTitle != null) {
-					source.complete(null, EmbedBuilder().setColor(COLOR_WARNING)
-						.setTitle("⚠ ${errorTitle.format()}")
-						.setDescription(errorText.format())
-						.build())
-					return 0
-				}
-				throw e
-			}
+		val eligibilityResponse = try {
+			source.loading("Checking eligibility")
+			source.api.fortniteService.checkGiftEligibility(recipient.id, catalogOffer.offerId).exec().body()!!
+		} catch (e: HttpException) {
+			when (e.epicError.errorCode) {
+				"errors.com.epicgames.modules.gamesubcatalog.purchase_not_allowed" -> L10N.AlreadyOwned to L10N.AlreadyOwnedText
+				"errors.com.epicgames.modules.gamesubcatalog.receiver_will_not_accept_gifts" -> L10N.GiftDeclined to L10N.OwnedText
+				"errors.com.epicgames.modules.profile.profile_not_found" -> L10N.NotFortnitePlayer to L10N.NotPlayerText
+				else -> null
+			}?.run { source.completeError(first.format(), second.format()); return 0 }
+			throw e
 		}
 		val settings = getGiftSettings(source)
-		val giftMessage = if (settings.message.isEmpty()) L10N.MESSAGE_BOX_DEFAULT_MSG.format() else settings.message
-		ce.resolve(profileManager)
-		val price = ce.price
+		val giftMessage = settings.message.ifEmpty { L10N.MESSAGE_BOX_DEFAULT_MSG.format() }
+		val price = eligibilityResponse.price
 		val displayData = OfferDisplayData(catalogOffer)
 		val embed = source.createEmbed()
 			.setTitle("Confirm your Gift")
 			.setDescription(L10N.CANT_BE_REFUNDED.format())
-			.addField(L10N.format("catalog.items"), ce.compiledNames.joinToString("\n"), false)
-			.addField("Recipients", recipients.values.mapIndexed { i, v -> "${i + 1}. ${v.displayName} - ${v.id}" }.joinToString("\n"), false)
+			.addField(L10N.format("catalog.items"), ce.compiledNames.mapIndexed { i, s ->
+				val correspondingItemGrant = catalogOffer.itemGrants[i]
+				val strike = if (eligibilityResponse.items.none { it.templateId == correspondingItemGrant.templateId }) "~~" else ""
+				strike + s + strike
+			}.joinToString("\n"), false)
+			.addField("Recipient", recipient.displayName?.run { escapeMarkdown() + " - " } + "`${recipient.id}`", false)
 			.addField("Gift message", giftMessage, false)
-			.addField(L10N.format("catalog.total_price"), price.render(recipients.size), true)
+			.addField(L10N.format("catalog.total_price"), price.render(), true)
 			.addField(L10N.format("catalog.balance"), price.getAccountBalanceText(profileManager), true)
 			.setThumbnail(Utils.benBotExportAsset(displayData.imagePath))
 			.setColor(displayData.presentationParams?.vector?.get("Background_Color_B") ?: Role.DEFAULT_COLOR_RAW)
@@ -103,45 +87,31 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 			embed.addField(L10N.format("catalog.mtx_platform"), (commonCore.stats as CommonCoreProfileStats).current_mtx_platform.name, true)
 				.addField(L10N.format("sac.verb"), CatalogHelper.getAffiliateNameRespectingSetDate(commonCore) ?: L10N.format("common.none"), false)
 		}
-		if (source.complete(null, embed.build()).yesNoReactions(source.author).await()) {
-			source.errorTitle = "Gift Failed"
-			source.loading("Sending gifts")
-			try {
-				profileManager.dispatchClientCommandRequest(GiftCatalogEntry().apply {
-					offerId = catalogOffer.offerId
-					currency = price.currencyType
-					currencySubType = price.currencySubType
-					expectedTotalPrice = recipients.size * price.basePrice
-					gameContext = "Frontend.ItemShopScreen"
-					receiverAccountIds = recipients.keys.toTypedArray()
-					giftWrapTemplateId = "GiftBox:gb_default"
-					personalMessage = giftMessage
-				}).await()
-				source.complete("✅ All gifts were delivered successfully. Now you have ${price.getAccountBalanceText(profileManager)} left.")
-				return Command.SINGLE_SUCCESS
-			} catch (e: HttpException) {
-				val epicError = e.epicError
-				if (epicError.errorCode == "errors.com.epicgames.modules.gamesubcatalog.gift_recipient_not_eligible") {
-					val failedAccIds = epicError.messageVars[0].substring(1, epicError.messageVars[0].length - 1).split(", ")
-					val failedReasons = epicError.messageVars[1].substring(1, epicError.messageVars[1].length - 1).split(", ")
-					val fmt = arrayOfNulls<String>(4)
-					for (i in failedAccIds.indices) {
-						val errorMsg = getErrorMsg(failedReasons[i])
-						if (i < 4) {
-							val gameProfile = recipients[failedAccIds[i]]
-							fmt[i] = errorMsg.format(gameProfile?.displayName ?: failedAccIds[i]) + if (errorMsg == L10N.GiftFailedGeneric) " (${failedReasons[i]})" else ""
-						}
-					}
-					source.complete(null, EmbedBuilder().setColor(COLOR_WARNING)
-						.setTitle("⚠ ${source.errorTitle}")
-						.setDescription(FAILED_FORMATS[min(failedAccIds.size, 5) - 1].format(*(fmt as Array<String>)))
-						.build())
-					return 0
-				}
-				throw e
-			}
-		} else {
+		if (!source.complete(null, embed.build()).yesNoReactions(source.author).await()) {
 			throw SimpleCommandExceptionType(LiteralMessage("Gift canceled.")).create()
+		}
+		source.errorTitle = "Gift Failed"
+		source.loading("Sending gifts")
+		try {
+			profileManager.dispatchClientCommandRequest(GiftCatalogEntry().apply {
+				offerId = catalogOffer.offerId
+				currency = price.currencyType
+				currencySubType = price.currencySubType
+				expectedTotalPrice = price.basePrice
+				gameContext = "Frontend.ItemShopScreen"
+				receiverAccountIds = arrayOf(recipient.id)
+				giftWrapTemplateId = "GiftBox:gb_default"
+				personalMessage = giftMessage
+			}).await()
+			source.complete("✅ All gifts were delivered successfully. Now you have ${price.getAccountBalanceText(profileManager)} left.")
+			return Command.SINGLE_SUCCESS
+		} catch (e: HttpException) {
+			val epicError = e.epicError
+			if (epicError.errorCode == "errors.com.epicgames.modules.gamesubcatalog.gift_recipient_not_eligible") {
+				source.completeError(source.errorTitle, getErrorMsg(epicError.messageVars[0]).format(recipient.displayName?.escapeMarkdown() ?: "`${recipient.id}`"))
+				return 0
+			}
+			throw e
 		}
 	}
 
@@ -153,4 +123,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts up to 4 friends a shop entry
 		"errors.com.epicgames.modules.gamesubcatalog.receiver_will_not_accept_gifts" -> L10N.GiftFailedOptOut
 		else -> L10N.GiftFailedGeneric
 	}
+
+	private inline fun CommandSourceStack.completeError(title: String?, body: String? = null, footer: String? = null) =
+		complete(null, EmbedBuilder().setColor(COLOR_WARNING).setTitle("⚠ $title").setDescription(body).setFooter(body).build())
 }

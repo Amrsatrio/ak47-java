@@ -17,7 +17,6 @@ import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.friends.FriendV2
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer.CatalogItemPrice
-import com.tb24.fn.model.gamesubcatalog.ECatalogSaleType
 import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.model.mcpprofile.ProfileUpdate
 import com.tb24.fn.util.*
@@ -197,7 +196,7 @@ private fun createEmote(name: String, icon: BufferedImage): Emote? {
 	throw SimpleCommandExceptionType(LiteralMessage("Failed to find a server with free emoji slots.")).create()
 }
 
-fun CatalogItemPrice.render(quantity: Int = 1) = icon() + ' ' + Formatters.num.format(quantity * basePrice) + if (saleType != ECatalogSaleType.NotOnSale) " ~~${Formatters.num.format(quantity * regularPrice)}~~" else ""
+fun CatalogItemPrice.render(quantity: Int = 1) = icon() + ' ' + (if (basePrice != -1) Formatters.num.format(quantity * basePrice) else "<unresolved>") + if (regularPrice != basePrice) " ~~${Formatters.num.format(quantity * regularPrice)}~~" else ""
 
 fun CatalogItemPrice.getAccountBalance(profileManager: ProfileManager): Int {
 	if (currencyType == EStoreCurrencyType.MtxCurrency) {
