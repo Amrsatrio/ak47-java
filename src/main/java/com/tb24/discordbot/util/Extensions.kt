@@ -55,8 +55,9 @@ import kotlin.math.min
 
 val WHITELIST_ICON_EMOJI_ITEM_TYPES = arrayOf("AccountResource", "ConsumableAccountItem", "Currency", "Gadget", "Stat")
 val EMOJI_GUILDS = arrayOf(
+	845586443106517012L, // tee 1
+	845586502922010635L, // tee 2
 	805121146214940682L, // add ur emoji idc 2
-	805122305701314570L, // add ur emoji idc 3
 	677515124373979155L, // Epic Server Version Status
 	Utils.HOMEBASE_GUILD_ID, // AK Facility
 	612383214962606081L, // AS Development
@@ -120,46 +121,41 @@ fun FortItemStack.render(displayQty: Int = quantity): String {
 
 fun FortItemStack.renderWithIcon(displayQty: Int = quantity, bypassWhitelist: Boolean = false): String {
 	transformedDefData // resolves this item if it is FortConditionalResourceItemDefinition
-	return (getItemIconEmoji(templateId, this, bypassWhitelist)?.run { "$asMention " } ?: "") + render(displayQty)
+	return (getItemIconEmoji(this, bypassWhitelist)?.run { "$asMention " } ?: "") + render(displayQty)
 }
 
 fun CatalogItemPrice.icon(): String = when (currencyType) {
 	EStoreCurrencyType.MtxCurrency -> Utils.MTX_EMOJI
-	EStoreCurrencyType.GameItem -> getItemIconEmoji(currencySubType)?.asMention ?: currencySubType
+	EStoreCurrencyType.GameItem -> getItemIconEmoji(FortItemStack(currencySubType, 1))?.asMention ?: currencySubType
 	else -> currencyType.name
 }
 
 fun CatalogItemPrice.emote(): Emote? = when (currencyType) {
 	EStoreCurrencyType.MtxCurrency -> DiscordBot.instance.discord.getEmoteById(751101530626588713L)
-	EStoreCurrencyType.GameItem -> getItemIconEmoji(currencySubType)
+	EStoreCurrencyType.GameItem -> getItemIconEmoji(FortItemStack(currencySubType, 1))
 	else -> null
 }
 
-@Synchronized
-fun getItemIconEmoji(templateId: String, itemIfNotFound: FortItemStack? = null, bypassWhitelist: Boolean = false): Emote? {
+fun getItemIconEmoji(item: FortItemStack, bypassWhitelist: Boolean = false): Emote? {
 	val client = DiscordBot.instance.discord
-	if (templateId.toLowerCase().contains(":mtx")) {
+	val type = item.primaryAssetType
+	val name = item.primaryAssetName
+	if (name == "mtxcomplimentary" || name == "mtxgiveaway" || name == "mtxpurchasebonus" || name == "mtxpurchased") {
 		return client.getEmoteById(Utils.MTX_EMOJI_ID)
 	}
-	val split = templateId.split(":")
-	val type = split[0]
-	val name = split[1]
 	if (!bypassWhitelist && type !in WHITELIST_ICON_EMOJI_ITEM_TYPES) {
 		return null
 	}
-	getEmoteByName(name.run { substring(0, min(32, length)) })?.let { return it }
-	val item = itemIfNotFound ?: FortItemStack(templateId, 1)
-	val defData = item.transformedDefData ?: return null
-	val icon = (item.getPreviewImagePath(true) ?: item.getPreviewImagePath())?.load<UTexture2D>()?.toBufferedImage() ?: return null
-	return createEmote(defData.name.run { substring(0, min(32, length)) }, icon)
+	return textureEmote((item.getPreviewImagePath(true) ?: item.getPreviewImagePath()).toString())
 }
 
+@Synchronized
 fun textureEmote(texturePath: String?): Emote? {
 	if (texturePath == null || texturePath == "None") {
 		return null
 	}
 	var name = texturePath.substringAfterLast('.').replace('-', '_')
-	if (name.startsWith("T_", true)) {
+	while (name.startsWith("T_", true)) {
 		name = name.substring(2)
 	}
 	if (name.startsWith("Icon_", true)) {

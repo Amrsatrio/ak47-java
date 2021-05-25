@@ -53,8 +53,8 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 	private fun display(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
 		val source = c.source
 		source.ensureCompletedCampaignTutorial(campaign)
-		val xpQuantity = campaign.items.values.firstOrNull { it.templateId == "AccountResource:phoenixxp" }?.quantity
-			?: 0
+		val xpItem = campaign.items.values.firstOrNull { it.templateId == "AccountResource:phoenixxp" } ?: FortItemStack("AccountResource:phoenixxp", 0)
+		val xpQuantity = xpItem.quantity
 		val currentEvent = ObjectRef<EventRecord>()
 		val levels = getLevelRewards(source, currentEvent)
 		var levelData: FortPhoenixLevelRewardData? = null
@@ -76,7 +76,7 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 		val nextMajorData = levels.getOrNull(nextMajorIdx)
 		val embed = source.createEmbed(campaign.owner, true)
 			.setTitle("Ventures: ${currentEvent.element.eventType.substringAfterLast('.')}")
-			.setDescription("**Level %,d** - %s%,d\n%s".format(levelIdx + 1, getItemIconEmoji("AccountResource:phoenixxp")?.run { "$asMention " } ?: "", xpQuantity, if (nextLevelData != null) {
+			.setDescription("**Level %,d** - %s%,d\n%s".format(levelIdx + 1, getItemIconEmoji(xpItem)?.run { "$asMention " } ?: "", xpQuantity, if (nextLevelData != null) {
 				val current = xpQuantity - levelData.TotalRequiredXP
 				val delta = nextLevelData.TotalRequiredXP - levelData.TotalRequiredXP
 				val lastLevel = levels.last()

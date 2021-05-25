@@ -5,6 +5,7 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.tb24.discordbot.util.getItemIconEmoji
+import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
 import com.tb24.fn.util.Formatters
@@ -75,7 +76,8 @@ class ResourcesCommand : BrigadierCommand("resources", "Displays a given user's 
 			)
 		)) {
 			embed.addField(categoryName, categoryItemTypes.joinToString("\n") { tid ->
-				(getItemIconEmoji(tid)?.asMention ?: tid) + ' ' + Formatters.num.format(campaign.items.values.firstOrNull { it.templateId == tid }?.quantity ?: 0)
+				val item = campaign.items.values.firstOrNull { it.templateId == tid } ?: FortItemStack(tid, 0)
+				(getItemIconEmoji(item)?.asMention ?: tid) + ' ' + Formatters.num.format(item.quantity)
 			}, true)
 		}
 		source.complete(null, embed.build())
