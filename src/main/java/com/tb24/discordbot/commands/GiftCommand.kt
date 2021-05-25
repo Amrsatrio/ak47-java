@@ -62,7 +62,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts a friend an offer from the i
 				"errors.com.epicgames.modules.gamesubcatalog.receiver_will_not_accept_gifts" -> L10N.GiftDeclined to L10N.OwnedText
 				"errors.com.epicgames.modules.profile.profile_not_found" -> L10N.NotFortnitePlayer to L10N.NotPlayerText
 				else -> null
-			}?.run { source.completeError(first.format(), second.format()); return 0 }
+			}?.run { source.completeWarning(first.format(), second.format()); return 0 }
 			throw e
 		}
 		val settings = getGiftSettings(source)
@@ -108,7 +108,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts a friend an offer from the i
 		} catch (e: HttpException) {
 			val epicError = e.epicError
 			if (epicError.errorCode == "errors.com.epicgames.modules.gamesubcatalog.gift_recipient_not_eligible") {
-				source.completeError(source.errorTitle, getErrorMsg(epicError.messageVars[0]).format(recipient.displayName?.escapeMarkdown() ?: "`${recipient.id}`"))
+				source.completeWarning(source.errorTitle, getErrorMsg(epicError.messageVars[0]).format(recipient.displayName?.escapeMarkdown() ?: "`${recipient.id}`"))
 				return 0
 			}
 			throw e
@@ -124,6 +124,6 @@ class GiftCommand : BrigadierCommand("gift", "Gifts a friend an offer from the i
 		else -> L10N.GiftFailedGeneric
 	}
 
-	private inline fun CommandSourceStack.completeError(title: String?, body: String? = null, footer: String? = null) =
+	private inline fun CommandSourceStack.completeWarning(title: String?, body: String? = null, footer: String? = null) =
 		complete(null, EmbedBuilder().setColor(COLOR_WARNING).setTitle("⚠ $title").setDescription(body).setFooter(body).build())
 }
