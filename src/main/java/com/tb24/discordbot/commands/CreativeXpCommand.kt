@@ -29,7 +29,7 @@ class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your 
 				.setDescription("`%s`\n%,d / %,d minutes played\n%,d / %,d %s".format(
 					Utils.progress(current, max, 32),
 					current, max,
-					current / delta * xpCount, max / delta * xpCount, getEmoteByName("AthenaSeasonalXP")?.asMention))
+					current / delta * xpCount, max / delta * xpCount, textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-XPSmall-L.T-FNBR-XPSmall-L")?.asMention))
 			val hasMoreXp = current < max
 			if (hasMoreXp) {
 				embed.appendDescription("\nLast XP grant at 🕒 " + formatDurationSeconds((235L - (max - current)) * 60L))
