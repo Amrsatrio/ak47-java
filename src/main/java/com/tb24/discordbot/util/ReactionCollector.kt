@@ -79,6 +79,13 @@ class ReactionCollector : Collector<MessageReaction, ReactionCollectorOptions> {
 		}
 		return /*if (item.count > 0)*/ null //else item.key() TODO figure out how to get the number of reactions within an event stack
 	}
+
+	override fun endReason() = when {
+		options.max != null && options.max!! > 0 && total >= options.max!! -> LIMIT
+		options.maxEmojis != null && options.maxEmojis!! > 0 && collected.size >= options.maxEmojis!! -> EMOJI_LIMIT
+		options.maxUsers != null && options.maxUsers!! > 0 && users.size >= options.maxUsers!! -> USER_LIMIT
+		else -> null
+	}
 	// endregion
 
 	fun empty() {
@@ -88,17 +95,10 @@ class ReactionCollector : Collector<MessageReaction, ReactionCollectorOptions> {
 		checkEnd()
 	}
 
-	override fun endReason() = when {
-		options.max != null && options.max!! > 0 && total >= options.max!! -> LIMIT
-		options.maxEmojis != null && options.maxEmojis!! > 0 && collected.size >= options.maxEmojis!! -> EMOJI_LIMIT
-		options.maxUsers != null && options.maxUsers!! > 0 && users.size >= options.maxUsers!! -> USER_LIMIT
-		else -> null
-	}
-
 	private inline fun MessageReaction.key() = reactionEmote.run { if (isEmote) idLong else emoji }
 }
 
-inline fun Message.createReactionCollector(noinline filter: CollectorFilter<MessageReaction>, options: ReactionCollectorOptions = ReactionCollectorOptions()): ReactionCollector =
+inline fun Message.createReactionCollector(noinline filter: CollectorFilter<MessageReaction>, options: ReactionCollectorOptions = ReactionCollectorOptions()) =
 	ReactionCollector(this, filter, options)
 
 class AwaitReactionsOptions : ReactionCollectorOptions() {
@@ -115,7 +115,7 @@ fun Message.awaitReactions(filter: CollectorFilter<MessageReaction>, options: Aw
 		override fun onDispose(item: MessageReaction, user: User?) {}
 
 		override fun onEnd(collected: Map<Any, MessageReaction>, reason: CollectorEndReason) {
-			if (options.errors != null && reason in options.errors!!) future.completeExceptionally(CollectorException(collector, reason))
+			if (options.errors?.contains(reason) == true) future.completeExceptionally(CollectorException(collector, reason))
 			else future.complete(collected.values)
 		}
 	}

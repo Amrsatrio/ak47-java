@@ -66,7 +66,7 @@ class MessageCollector : Collector<Message, MessageCollectorOptions> {
 	// endregion
 }
 
-inline fun MessageChannel.createMessageCollector(noinline filter: CollectorFilter<Message>, options: MessageCollectorOptions = MessageCollectorOptions()): MessageCollector =
+inline fun MessageChannel.createMessageCollector(noinline filter: CollectorFilter<Message>, options: MessageCollectorOptions = MessageCollectorOptions()) =
 	MessageCollector(this, filter, options)
 
 class AwaitMessagesOptions : MessageCollectorOptions() {
@@ -83,7 +83,7 @@ fun MessageChannel.awaitMessages(filter: CollectorFilter<Message>, options: Awai
 		override fun onDispose(item: Message, user: User?) {}
 
 		override fun onEnd(collected: Map<Any, Message>, reason: CollectorEndReason) {
-			if (options.errors != null && reason in options.errors!!) future.completeExceptionally(CollectorException(collector, reason))
+			if (options.errors?.contains(reason) == true) future.completeExceptionally(CollectorException(collector, reason))
 			else future.complete(collected.values)
 		}
 	}

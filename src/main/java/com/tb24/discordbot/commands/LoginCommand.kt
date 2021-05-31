@@ -16,8 +16,11 @@ import com.tb24.fn.util.EAuthClient
 import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
+import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.entities.MessageReaction
 import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.interactions.components.ActionRow
+import net.dv8tion.jda.api.interactions.components.Button
 import okhttp3.MediaType
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -31,7 +34,7 @@ import kotlin.math.min
 
 class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", arrayOf("i", "signin")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { accountPicker(it.source) }
+		.executes { accountPicker_buttons(it.source) }
 		.then(literal("new").executes { startDefaultLoginFlow(it.source) })
 		.then(argument("authorization code", greedyString())
 			.executes {
@@ -163,6 +166,38 @@ private inline fun accountPicker(source: CommandSourceStack): Int {
 			throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
 		}
 		doDeviceAuthLogin(source, devices[choiceIndex], lazy { users })
+	}
+}
+
+private inline fun accountPicker_buttons(source: CommandSourceStack): Int {
+	val devices = source.client.savedLoginsManager.getAll(source.author.id)
+	if (devices.isEmpty()) {
+		return startDefaultLoginFlow(source)
+	}
+	source.loading("Preparing your login")
+	source.session = source.client.internalSession
+	val users = source.queryUsers(devices.map { it.accountId })
+	val buttons = mutableListOf<Button>()
+	devices.mapTo(buttons) { device ->
+		val accountId = device.accountId
+		Button.primary(accountId, users.firstOrNull { it.id == accountId }?.displayName ?: accountId)
+	}
+	buttons.add(Button.secondary("new", "Login to another account").withEmoji(Emoji.ofUnicode("✨")))
+	val botMessage = source.complete("**Pick an account**", null, buttons.chunked(5, ActionRow::of))
+	val interaction = botMessage.awaitMessageComponentInteractions({ _, user, _ -> user == source.author }, AwaitMessageComponentInteractionsOptions().apply {
+		max = 1
+		time = 30000
+		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
+	}).await().first()
+	interaction.deferEdit().queue()
+	val choice = interaction.componentId
+	source.session = source.initialSession
+	return if (choice == "new") {
+		startDefaultLoginFlow(source)
+	} else {
+		val device = devices.firstOrNull { it.accountId == choice }
+			?: throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
+		doDeviceAuthLogin(source, device, lazy { users })
 	}
 }
 

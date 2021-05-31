@@ -16,6 +16,7 @@ import com.tb24.fn.model.mcpprofile.McpProfile
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.*
+import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.internal.entities.ReceivedMessage
 import java.awt.Color
 import java.net.URLEncoder
@@ -52,8 +53,8 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 		return (loadingMsg?.editMessage(loadingText) ?: channel.sendMessage(loadingText)).override(true).complete().also { loadingMsg = it }
 	}
 
-	fun complete(text: String?, embed: MessageEmbed? = null): Message {
-		val message = MessageBuilder().setContent(text).setEmbed(embed).build()
+	fun complete(text: String?, embed: MessageEmbed? = null, actionRows: Collection<ActionRow>? = null): Message {
+		val message = MessageBuilder().setContent(text).setEmbed(embed).setActionRows(actionRows).build()
 		val complete = (loadingMsg?.editMessage(message) ?: channel.sendMessage(message)).override(true).complete()
 		loadingMsg = null
 		return complete
@@ -128,6 +129,7 @@ class OnlyChannelCommandSource(client: DiscordBot, channel: MessageChannel) : Co
 	null,
 	null,
 	null,
+	emptyList(),
 	emptyList(),
 	emptyList(),
 	emptyList(),

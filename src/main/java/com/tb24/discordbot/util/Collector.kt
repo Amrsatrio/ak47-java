@@ -19,6 +19,7 @@ enum class CollectorEndReason {
 	IDLE,
 	USER,
 	LIMIT,
+	COMPONENT_LIMIT,
 	EMOJI_LIMIT,
 	PROCESSED_LIMIT,
 	USER_LIMIT,

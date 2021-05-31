@@ -124,12 +124,7 @@ public final class DiscordBot {
 		}
 		Runnable task = () -> {
 			try {
-				setupInternalSession();
-				TextChannel itemShopChannel = discord.getTextChannelById(ITEM_SHOP_CHANNEL_ID);
-				if (itemShopChannel != null) {
-					ShopCommandsKt.executeShopText(new OnlyChannelCommandSource(this, itemShopChannel), ESubGame.Athena);
-					ShopCommandsKt.executeShopImage(new OnlyChannelCommandSource(this, itemShopChannel));
-				}
+				postItemShop();
 			} catch (Throwable e) {
 				dlog("__**Failed to auto post item shop**__\n```\n" + Throwables.getStackTraceAsString(e) + "```", null);
 				return;
@@ -142,6 +137,15 @@ public final class DiscordBot {
 			}
 		};
 		scheduledExecutor.scheduleAtFixedRate(task, Duration.between(now, nextRun).getSeconds(), TimeUnit.DAYS.toSeconds(1), TimeUnit.SECONDS);
+	}
+
+	public void postItemShop() {
+		setupInternalSession();
+		TextChannel itemShopChannel = discord.getTextChannelById(ITEM_SHOP_CHANNEL_ID);
+		if (itemShopChannel != null) {
+			ShopCommandsKt.executeShopText(new OnlyChannelCommandSource(this, itemShopChannel), ESubGame.Athena);
+			ShopCommandsKt.executeShopImage(new OnlyChannelCommandSource(this, itemShopChannel));
+		}
 	}
 
 	private void scheduleKeychainTask() {
