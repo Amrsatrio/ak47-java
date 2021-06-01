@@ -120,7 +120,7 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 		message.addReaction(survivorEmote).queue()
 		message.addReaction(typeEmote).queue()
 		val collector = message.createReactionCollector({ _, user, _ -> user == source.author }, ReactionCollectorOptions().apply {
-			idle = 45000L
+			idle = 120000L
 		})
 		collector.callback = object : CollectorListener<MessageReaction> {
 			override fun onCollect(item: MessageReaction, user: User?) {

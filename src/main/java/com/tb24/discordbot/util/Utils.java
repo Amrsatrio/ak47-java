@@ -76,7 +76,7 @@ public class Utils {
 		if (objectPath.startsWith("/SaveTheWorld/")) {
 			objectPath = "FortniteGame/Plugins/GameFeatures/SaveTheWorld/Content/" + objectPath.substring("/SaveTheWorld/".length());
 		}
-		return "https://benbotfn.tk/api/v1/exportAsset?path=" + objectPath;
+		return "https://benbot.app/api/v1/exportAsset?path=" + objectPath;
 	}
 
 	public static int getCompletion(FortMcpQuestObjectiveInfo objective, FortItemStack item) {

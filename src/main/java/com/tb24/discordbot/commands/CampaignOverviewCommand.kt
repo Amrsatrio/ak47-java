@@ -51,9 +51,12 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 				item.templateId in quests -> questItems[item.templateId] = item
 			}
 		}
+		val hb = source.session.getHomebase(campaign.owner.id)
+		val fort = arrayOf(Fortitude, Offense, Resistance, Technology)
+		val fortStr = fort.joinToString(" ") { "%s %,d".format(textureEmote(it.icon), hb.getStatBonus(it)) }
 		val embed = source.createEmbed(campaign.owner)
-			.setDescription("**Commander Level:** %,d\n**Days Logged in:** %,d\n**Homebase Name:** %s"
-				.format(stats.level, stats.daily_rewards?.totalDaysLoggedIn ?: 0, homebaseName))
+			.setDescription("%s\n**Commander Level:** %,d\n**Days Logged in:** %,d\n**Homebase Name:** %s"
+				.format(fortStr, stats.level, stats.daily_rewards?.totalDaysLoggedIn ?: 0, homebaseName))
 		embed.addField("Achievements", quests.joinToString("\n") { questTemplateId ->
 			val questItem = campaign.items.values.firstOrNull { it.templateId == questTemplateId }
 				?: FortItemStack(questTemplateId, 1)

@@ -6,6 +6,7 @@ import com.mojang.brigadier.arguments.ArgumentType
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.commands.CommandSourceStack
+import com.tb24.discordbot.util.search
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
 
@@ -36,7 +37,7 @@ class ItemArgument(private val greedy: Boolean, private vararg val itemTypes: St
 		fun resolve(profile: McpProfile): FortItemStack {
 			var item = profile.items[search]
 			if (item == null) {
-				item = profile.items.values.firstOrNull { it.primaryAssetType in itemTypes && it.displayName.trim().equals(search, true) }
+				item = profile.items.values.search(search) { it.displayName.trim() }
 			}
 			if (item == null || item.primaryAssetType !in itemTypes) {
 				throw SimpleCommandExceptionType(LiteralMessage("Item not found.")).create()
