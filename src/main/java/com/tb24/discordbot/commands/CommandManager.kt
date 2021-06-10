@@ -239,7 +239,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				handleCommand(command, source, prefix)
 			}
 		} catch (e: Throwable) {
-			val additional = "\nCommand: ${reader.string}"
+			val additional = "\nCommand: ${reader.string}\nProxy: ${source.session.api.okHttpClient.proxy()}"
 			System.err.println("Unhandled exception while executing command$additional")
 			e.printStackTrace()
 			unhandledException(source, e, additional)

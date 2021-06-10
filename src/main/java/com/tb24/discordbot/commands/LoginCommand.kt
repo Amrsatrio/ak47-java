@@ -47,7 +47,7 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 					val deviceData = devices.safeGetOneIndexed(accountIndex)
 					doDeviceAuthLogin(source, deviceData)
 				} else {
-					doLogin(source, EGrantType.authorization_code, arg, EAuthClient.FORTNITE_IOS_GAME_CLIENT)
+					doLogin(source, EGrantType.authorization_code, arg, EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
 				}
 			}
 		)
@@ -90,7 +90,7 @@ fun doLogin(source: CommandSourceStack, grantType: EGrantType, params: String, a
 			if (params.length != 32) {
 				throw SimpleCommandExceptionType(LiteralMessage("That is not an authorization code.\nHere's how to use the command correctly: When you open ${Utils.login(Utils.redirect(authClient))} you will see this text:\n```json\n{\"redirectUrl\":\"https://accounts.epicgames.com/fnauth?code=*aabbccddeeff11223344556677889900*\",\"sid\":null}```You only need to input exactly the text surrounded between *'s into the command, so it becomes:\n`${source.prefix}login aabbccddeeff11223344556677889900`")).create()
 			}
-			source.session.login(source, authorizationCode(params), authClient ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT)
+			source.session.login(source, authorizationCode(params), authClient ?: EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
 		}
 		EGrantType.device_auth -> {
 			val split = params.split(":")
@@ -105,10 +105,10 @@ fun doLogin(source: CommandSourceStack, grantType: EGrantType, params: String, a
 			if (params.length != 32) {
 				throw SimpleCommandExceptionType(LiteralMessage("That is not an exchange code.")).create()
 			}
-			source.session.login(source, exchangeCode(params), authClient ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT)
+			source.session.login(source, exchangeCode(params), authClient ?: EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
 		}
 		EGrantType.token_to_token -> {
-			source.session.login(source, tokenToToken(params), authClient ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT)
+			source.session.login(source, tokenToToken(params), authClient ?: EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
 		}
 	}
 }
@@ -219,10 +219,11 @@ fun doDeviceAuthLogin(source: CommandSourceStack, deviceData: DeviceAuth, users:
 }
 
 private inline fun startDefaultLoginFlow(source: CommandSourceStack) =
-	//authorizationCodeHint(source, EAuthClient.FORTNITE_IOS_GAME_CLIENT)
-	deviceCode(source, EAuthClient.FORTNITE_SWITCH_GAME_CLIENT)
+	authorizationCodeHint(source, EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
+	//deviceCode(source, EAuthClient.FORTNITE_SWITCH_GAME_CLIENT)
 
 fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
+	if (true) throw SimpleCommandExceptionType(LiteralMessage("Device code is disabled until further notice.")).create()
 	val timer = Timer()
 	if (source.api.userToken != null) {
 		source.session.logout(source.message)
