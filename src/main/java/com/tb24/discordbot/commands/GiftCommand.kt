@@ -72,11 +72,11 @@ class GiftCommand : BrigadierCommand("gift", "Gifts a friend an offer from the i
 		val embed = source.createEmbed()
 			.setTitle("Confirm your Gift")
 			.setDescription(L10N.CANT_BE_REFUNDED.format())
-			.addField(L10N.format("catalog.items"), ce.compiledNames.mapIndexed { i, s ->
+			.addField(L10N.format("catalog.items"), if (ce.compiledNames.isNotEmpty()) ce.compiledNames.mapIndexed { i, s ->
 				val correspondingItemGrant = catalogOffer.itemGrants[i]
 				val strike = if (eligibilityResponse.items.none { it.templateId == correspondingItemGrant.templateId }) "~~" else ""
 				strike + s + strike
-			}.joinToString("\n"), false)
+			}.joinToString("\n") else catalogOffer.devName ?: catalogOffer.offerId, false)
 			.addField("Recipient", recipient.displayName?.run { escapeMarkdown() + " - " } + "`${recipient.id}`", false)
 			.addField("Gift message", giftMessage, false)
 			.addField(L10N.format("catalog.total_price"), price.render(), true)
@@ -85,7 +85,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts a friend an offer from the i
 			.setColor(displayData.presentationParams?.vector?.get("Background_Color_B") ?: Role.DEFAULT_COLOR_RAW)
 		if (price.currencyType == EStoreCurrencyType.MtxCurrency) {
 			embed.addField(L10N.format("catalog.mtx_platform"), (commonCore.stats as CommonCoreProfileStats).current_mtx_platform.name, true)
-				.addField(L10N.format("sac.verb"), getAffiliateNameRespectingSetDate(commonCore) ?: L10N.format("common.none"), false)
+				.addField(L10N.format("sac.verb"), getAffiliateNameRespectingSetDate(commonCore) ?: "🚫 " + L10N.format("common.none"), false)
 		}
 		if (!source.complete(null, embed.build()).yesNoReactions(source.author).await()) {
 			throw SimpleCommandExceptionType(LiteralMessage("Gift canceled.")).create()

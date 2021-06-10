@@ -23,6 +23,7 @@ import kotlin.math.max
 class CatalogEntryHolder(val ce: CatalogOffer) {
 	var owned = false
 	var eligible = true
+	val canPurchase get() = !owned && eligible
 	var ownedItems = hashSetOf<String>()
 	var price = CatalogItemPrice.NO_PRICE
 	val compiledNames by lazy {

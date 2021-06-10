@@ -89,7 +89,7 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 		throw SimpleCommandExceptionType(LiteralMessage(L10N.format("purchase.failed.owned", sd.friendlyName))).create()
 	}
 	if (!sd.eligible) {
-		throw SimpleCommandExceptionType(LiteralMessage(L10N.format("purchase.failed.not_eligible", sd.friendlyName))).create()
+		throw SimpleCommandExceptionType(LiteralMessage(L10N.format("purchase.failed.ineligible", sd.friendlyName))).create()
 	}
 	if (price.currencyType == EStoreCurrencyType.RealMoney) {
 		if (sd.getMeta("IsSubscription").equals("true", true)) {
@@ -141,10 +141,10 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 	if (sd.price.basePrice > 0) {
 		val embed = source.createEmbed()
 			.setTitle(L10N.format("purchase.confirmation.title"))
-			.addField(L10N.format("catalog.items"), sd.compiledNames.mapIndexed { i, s ->
+			.addField(L10N.format("catalog.items"), if (sd.compiledNames.isNotEmpty()) sd.compiledNames.mapIndexed { i, s ->
 				val strike = if (offer.offerType == ECatalogOfferType.DynamicBundle && profileManager.isItemOwned(offer.itemGrants[i].templateId, offer.itemGrants[i].quantity)) "~~" else ""
 				strike + s + strike
-			}.joinToString("\n"), false)
+			}.joinToString("\n") else offer.devName ?: offer.offerId, false)
 			.addField(L10N.format("catalog.quantity"), Formatters.num.format(quantity), false)
 			.addField(L10N.format("catalog.total_price"), price.render(quantity), true)
 			.addField(L10N.format("catalog.balance"), price.getAccountBalanceText(profileManager), true)
@@ -152,7 +152,7 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 			.setColor(displayData.presentationParams?.vector?.get("Background_Color_B") ?: Role.DEFAULT_COLOR_RAW)
 		if (price.currencyType == EStoreCurrencyType.MtxCurrency) {
 			embed.addField(L10N.format("catalog.mtx_platform"), (commonCore.stats as CommonCoreProfileStats).current_mtx_platform.name, true)
-				.addField(L10N.format("sac.verb"), getAffiliateNameRespectingSetDate(commonCore) ?: L10N.format("common.none"), false)
+				.addField(L10N.format("sac.verb"), getAffiliateNameRespectingSetDate(commonCore) ?: "🚫 " + L10N.format("common.none"), false)
 		}
 		val warnings = mutableListOf<String>()
 		if (isUndoUnderCooldown(profileManager.getProfileData("common_core"), offer.offerId)) {
