@@ -220,7 +220,7 @@ fun doDeviceAuthLogin(source: CommandSourceStack, deviceData: DeviceAuth, users:
 
 private inline fun startDefaultLoginFlow(source: CommandSourceStack) =
 	authorizationCodeHint(source, EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
-	//deviceCode(source, EAuthClient.FORTNITE_SWITCH_GAME_CLIENT)
+//deviceCode(source, EAuthClient.FORTNITE_SWITCH_GAME_CLIENT)
 
 fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 	if (true) throw SimpleCommandExceptionType(LiteralMessage("Device code is disabled until further notice.")).create()
@@ -299,12 +299,14 @@ fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 }
 
 fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): Int {
+	val link = Utils.login(Utils.redirect(authClient))
 	source.complete(null, EmbedBuilder()
-		.setTitle("📲 Log in to your Epic Games account", Utils.login(Utils.redirect(authClient)))
+		.setTitle("📲 Log in to your Epic Games account", link)
 		.setDescription("""
 1. Visit the link above to get your login code.
 2. Copy the 32 character code that looks like `aabbccddeeff11223344556677889900`, located after `?code=`.
 3. Send `${source.prefix}login <32 character code>` to complete your login.""")
+		.addField("Need to switch accounts?", "[Open this link instead]($link&prompt=login)", false)
 		.setColor(0x8AB4F8)
 		.build())
 	return Command.SINGLE_SUCCESS

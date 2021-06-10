@@ -9,29 +9,22 @@ import com.tb24.discordbot.Rune
 import com.tb24.discordbot.commands.arguments.ItemArgument.Companion.getItem
 import com.tb24.discordbot.commands.arguments.ItemArgument.Companion.item
 import com.tb24.discordbot.item.GameplayTagPredicate
-import com.tb24.discordbot.managers.HomebaseManager
+import com.tb24.discordbot.ui.ExpeditionBuildSquadViewController
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
-import com.tb24.fn.model.mcpprofile.commands.campaign.StartExpedition
 import com.tb24.fn.model.mcpprofile.item.FortExpeditionItem
 import com.tb24.fn.util.Formatters
-import com.tb24.fn.util.Utils.sumKV
 import com.tb24.fn.util.asItemStack
 import com.tb24.fn.util.format
-import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.exports.FortExpeditionItemDefinition
-import me.fungames.jfortniteparse.fort.objects.rows.FortCriteriaRequirementData
 import me.fungames.jfortniteparse.fort.objects.rows.Recipe
-import me.fungames.jfortniteparse.ue4.assets.exports.UDataTable
 import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText
 import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
-import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.MessageReaction
 import net.dv8tion.jda.api.entities.User
-import java.util.*
 import kotlin.math.max
 import kotlin.math.min
 
@@ -93,7 +86,7 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 	}
 
 	private fun prepare(source: CommandSourceStack, expedition: FortItemStack): Int {
-		val ctx = ExpeditionBuildSquadContext(expedition, source.session.getHomebase(source.api.currentLoggedIn.id))
+		val ctx = ExpeditionBuildSquadViewController(expedition, source.session.getHomebase(source.api.currentLoggedIn.id))
 		val survivorEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/ItemTypes/T-Icon-Survivor-128.T-Icon-Survivor-128")!!
 		val typeIconPath = expeditionTypeIcon(ctx.type)
 		val typeEmote = textureEmote(typeIconPath)!!
@@ -166,7 +159,7 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 		val defData = expedition.defData as FortExpeditionItemDefinition
 		val attrs = expedition.getAttributes(FortExpeditionItem::class.java)
 		attrs.expedition_success_chance = .5f // TODO dummy data
-		val recipe = defData.ExpeditionRules.getRowMapped<Recipe>()
+		val recipe = defData.ExpeditionRules.getRowMapped<Recipe>()!!
 		val embed = source.createEmbed().setTitle("AN EXPEDITION HAS RETURNED!").setColor(COLOR_WARNING)
 			.setDescription("**%s**\n%s Chance of Success".format(
 				expedition.displayName,
@@ -200,7 +193,7 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 	private fun render(expedition: FortItemStack): String {
 		val defData = expedition.defData as FortExpeditionItemDefinition
 		val attrs = expedition.getAttributes(FortExpeditionItem::class.java)
-		val recipe = defData.ExpeditionRules.getRowMapped<Recipe>()
+		val recipe = defData.ExpeditionRules.getRowMapped<Recipe>()!!
 		val startTime = attrs.expedition_start_time.time
 		val max = attrs.expedition_end_time.time - startTime
 		val progress = min(System.currentTimeMillis() - startTime, max)
@@ -243,97 +236,6 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 		"Homebase.Class.IsNinja" -> FText("", "1016C3544CD42273AAD330B608A2D55F", "Ninja")
 		"Homebase.Class.IsOutlander" -> FText("", "40A39DC04A7B281E3B0D31844EA6C6AC", "Outlander")
 		else -> FText("???")
-	}
-
-	class ExpeditionBuildSquadContext(val expedition: FortItemStack, homebase: HomebaseManager) {
-		val attrs = expedition.getAttributes(FortExpeditionItem::class.java)
-		val defData = expedition.defData as FortExpeditionItemDefinition
-		val recipe = defData.ExpeditionRules.getRowMapped<Recipe>()
-		val type = recipe.RequiredCatalysts.first().toString()
-		val criteriaRequirements by lazy {
-			val criteriaRequirementsTable = loadObject<UDataTable>("/SaveTheWorld/Expeditions/CriteriaRequirements/ExpeditionCriteriaRequirements")!!
-			attrs.expedition_criteria.map { criteriaRequirementsTable.findRowMapped<FortCriteriaRequirementData>(FName.dummy(it))!! }
-		}
-		val squadChoices = mutableListOf<HomebaseManager.Squad>()
-		lateinit var squadController: SquadController
-			private set
-		val squad get() = squadController.squad
-
-		init {
-			val squadIds = when (type) {
-				"Expedition.Land" -> arrayOf("Squad_Expedition_ExpeditionSquadOne", "Squad_Expedition_ExpeditionSquadTwo")
-				"Expedition.Sea" -> arrayOf("Squad_Expedition_ExpeditionSquadThree", "Squad_Expedition_ExpeditionSquadFour")
-				"Expedition.Air" -> arrayOf("Squad_Expedition_ExpeditionSquadFive", "Squad_Expedition_ExpeditionSquadSix")
-				else -> throw AssertionError()
-			}
-			for (squadId in squadIds) {
-				val squad = homebase.squads[squadId.toLowerCase(Locale.ROOT)]!!
-				val unlockedStates = BooleanArray(squad.slots.size)
-				var hasUnlockedSlot = false
-				var occupied = false
-				squad.slots.forEachIndexed { i, slot ->
-					unlockedStates[i] = slot.unlocked
-					hasUnlockedSlot = hasUnlockedSlot || slot.unlocked
-					occupied = occupied || slot.item != null
-				}
-				if (hasUnlockedSlot && !occupied) {
-					val clonedSquad = HomebaseManager.Squad(squadId, squad.backing)
-					clonedSquad.slots.forEachIndexed { i, slot ->
-						slot.unlocked = unlockedStates[i]
-					}
-					squadChoices.add(clonedSquad)
-				}
-			}
-		}
-
-		fun setSquad(squad: HomebaseManager.Squad) {
-			if (squad !in squadChoices) {
-				throw IllegalArgumentException("Given squad ${squad.squadId} is not a valid choice")
-			}
-			this.squadController = SquadController(squad)
-		}
-
-		fun getSquadRating(): Int {
-			val out = hashMapOf<String, Int>()
-			for (slot in squad.slots) {
-				val item = slot.item ?: continue
-				val rating = item.powerLevel
-				for (slottingBonus in slot.backing.SlottingBonuses) {
-					val attributeName = slottingBonus.AttributeGranted.AttributeName
-					val attributeValue = slottingBonus.BonusCurve.eval(rating).toInt()
-					sumKV(out, attributeName, attributeValue)
-				}
-			}
-			check(out.size == 1)
-			return out.values.first()
-		}
-
-		fun getSuccessChance(squadRating: Int = getSquadRating()) = squadRating / attrs.expedition_max_target_power
-
-		fun generatePayload(): StartExpedition {
-			val itemIds = mutableListOf<String>()
-			val slotIndices = mutableListOf<Int>()
-			var i = 0
-			squad.slots.forEach {
-				val item = it.item
-				if (item != null) {
-					itemIds.add(item.itemId)
-					slotIndices.add(i++)
-				}
-			}
-			val payload = StartExpedition()
-			payload.expeditionId = expedition.itemId
-			payload.squadId = squad.squadId
-			payload.itemIds = itemIds.toTypedArray()
-			payload.slotIndices = slotIndices.toIntArray()
-			return payload
-		}
-	}
-
-	class SquadController(val squad: HomebaseManager.Squad) {
-		fun slot(item: FortItemStack) {
-
-		}
 	}
 
 	private class ExpeditionTagPredicate(matchGameplayTag: String) : GameplayTagPredicate(matchGameplayTag) {

@@ -1,6 +1,6 @@
 import com.google.gson.JsonParser
-import com.tb24.discordbot.commands.ExpeditionsCommand
 import com.tb24.discordbot.managers.HomebaseManager
+import com.tb24.discordbot.ui.ExpeditionBuildSquadViewController
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.util.getString
@@ -30,7 +30,7 @@ internal class ExpeditionsTest {
 	fun abc() {
 		val campaign = api.profileManager.getProfileData("campaign")
 		val expedition = campaign.items.values.first { it.templateId == "Expedition:expedition_choppingwood_t00" }
-		val context = ExpeditionsCommand.ExpeditionBuildSquadContext(expedition, homebase)
+		val context = ExpeditionBuildSquadViewController(expedition, homebase)
 		//context.
 		assertNotNull(expedition)
 	}

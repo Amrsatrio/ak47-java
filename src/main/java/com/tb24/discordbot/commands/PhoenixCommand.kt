@@ -107,7 +107,7 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 				return Command.SINGLE_SUCCESS
 			}
 		}
-		val venturesQuests = campaign.items.values.filter { it.primaryAssetType == "Quest" && it.attributes["quest_state"]?.asString == "Active" && (it.defData as? FortQuestItemDefinition)?.Category?.RowName?.text?.startsWith("Phoenix_") == true }
+		val venturesQuests = campaign.items.values.filter { it.primaryAssetType == "Quest" && it.attributes["quest_state"]?.asString == "Active" && (it.defData as? FortQuestItemDefinition)?.Category?.rowName?.text?.startsWith("Phoenix_") == true }
 			.sortedByDescending { (it.defData as FortQuestItemDefinition).SortPriority ?: 0 }
 		for (item in venturesQuests) {
 			val defData = item.defData as FortQuestItemDefinition

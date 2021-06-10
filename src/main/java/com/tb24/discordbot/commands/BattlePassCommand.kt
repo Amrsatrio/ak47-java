@@ -1,26 +1,85 @@
 package com.tb24.discordbot.commands
 
+import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.commands.BattlePassCommand.EBattlePassPurchaseOption.*
+import com.tb24.discordbot.ui.BattlePassViewController
 import com.tb24.discordbot.util.*
+import com.tb24.fn.model.FortItemStack
+import com.tb24.fn.model.assetdata.AthenaSeasonItemEntryReward
+import com.tb24.fn.model.assetdata.rows.AthenaBattlePassOfferPriceRow
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
+import com.tb24.fn.util.asItemStack
 import com.tb24.fn.util.countMtxCurrency
+import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.Button
 import java.util.concurrent.CompletableFuture
 import kotlin.math.min
 
+val lockEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Locks/T-Icon-Lock-128.T-Icon-Lock-128")
+
 class BattlePassCommand : BrigadierCommand("battlepass", "Battle pass.", arrayOf("bp")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.then(literal("rewards").executes { rewards(it.source) })
 		.then(literal("buy").executes { purchaseBattlePass(it.source) })
 
-	private fun purchaseBattlePass(source: CommandSourceStack): Int {
+	private inline fun rewards(source: CommandSourceStack): Int {
+		source.ensureSession()
+		source.loading("Getting BR data")
+		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+		val context = BattlePassViewController(source.api.profileManager.getProfileData("athena"))
+		source.message.replyPaginated(context.rewards.pages, 1, source.loadingMsg) { (page), pageNum, pageCount ->
+			val embed = EmbedBuilder().setColor(if (context.stats.book_purchased) 0xE1784D else 0x55C5FF)
+				.setAuthor("Season 7 / Battle Pass", null, Utils.benBotExportAsset(if (context.stats.book_purchased) {
+					"/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass.T-FNBR-BattlePass"
+				} else {
+					"/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass-Default.T-FNBR-BattlePass-Default"
+				}))
+				.setTitle("Page %,d".format(pageNum + 1))
+				.setDescription(if (page.isUnlocked) {
+					"**%,d** / %,d claimed\n`%s`".format(page.purchased, page.entries.size, Utils.progress(page.purchased, page.entries.size, 32))
+				} else {
+					"%s Claim **%,d more rewards** or reach **Level %,d** to unlock page!".format(lockEmote?.asMention, page.backing.RewardsNeededForUnlock - page.section.purchased, page.backing.LevelsNeededForUnlock)
+				})
+				.addField("Offers", page.entries.joinToString("\n") { it.render(context.stats) }, false)
+				.addField("Balance", "%s %,d".format(battleStarEmote?.asMention, context.stats.battlestars), false)
+				.setFooter("Page %,d of %,d".format(pageNum + 1, pageCount))
+			MessageBuilder(embed).build()
+		}
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun BattlePassViewController.Entry.render(stats: AthenaProfileStats): String {
+		if (backing is AthenaSeasonItemEntryReward) {
+			val locked = !page.isUnlocked || (!backing.bIsFreePassReward && !stats.book_purchased) // TODO RequiredItems
+			val offer = backing.BattlePassOffer
+			val item = offer.RewardItem.asItemStack()
+			val price = offer.OfferPriceRowHandle.getRowMapped<AthenaBattlePassOfferPriceRow>()!!
+			val priceText = if (price.Cost != -1) {
+				val priceItem = price.asItemStack()
+				"%s %,d".format(getItemIconEmoji(priceItem)?.asMention, priceItem.quantity)
+			} else {
+				"Included!"
+			}
+			return "`%d` %s%s [%s]".format(index + 1, if (locked) lockEmote?.asMention + " " else "", item.renderWithIcon(), priceText) + if (purchaseRecord != null) " ✅" else ""
+		}
+		return "Can't render: " + backing.javaClass.simpleName
+	}
+
+	private fun AthenaBattlePassOfferPriceRow.asItemStack() = FortItemStack(
+		CurrencyItemTemplate.PrimaryAssetType.Name.toString(),
+		CurrencyItemTemplate.PrimaryAssetName.toString().toLowerCase(),
+		Cost)
+
+	private inline fun purchaseBattlePass(source: CommandSourceStack): Int {
 		source.ensureSession()
 		source.loading("Getting BR data")
 		CompletableFuture.allOf(

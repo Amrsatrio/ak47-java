@@ -127,7 +127,7 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 		}
 		var paid = seasonDef.BookXpSchedulePaid
 		var free = seasonDef.BookXpScheduleFree
-		val levelData = seasonDef.AdditionalSeasonData?.firstOrNull { it.value is AthenaSeasonItemData_Level }?.value as AthenaSeasonItemData_Level?
+		val levelData = seasonDef.getAdditionalDataOfType<AthenaSeasonItemData_Level>()
 		if (levelData != null) {
 			paid = levelData.BattlePassXpSchedulePaid
 			free = levelData.BattlePassXpScheduleFree

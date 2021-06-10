@@ -2,12 +2,10 @@ package com.tb24.discordbot.commands
 
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
-import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
-import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.ui.ResearchViewController
 import com.tb24.discordbot.util.*
-import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.commands.campaign.ClaimCollectedResources
 import com.tb24.fn.model.mcpprofile.commands.campaign.PurchaseResearchStatUpgrade
@@ -16,12 +14,10 @@ import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
 import com.tb24.fn.util.format
 import com.tb24.fn.util.getDateISO
 import com.tb24.uasset.loadObject
-import me.fungames.jfortniteparse.fort.enums.EFortStatType
 import me.fungames.jfortniteparse.fort.enums.EFortStatType.*
 import me.fungames.jfortniteparse.ue4.assets.exports.UCurveTable
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import net.dv8tion.jda.api.Permission
-import net.dv8tion.jda.api.entities.Emote
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.MessageReaction
 import net.dv8tion.jda.api.entities.User
@@ -36,7 +32,7 @@ class ResearchCommand : BrigadierCommand("research", "Collect your research poin
 	private fun execute(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
 		val source = c.source
 		source.ensureCompletedCampaignTutorial(campaign)
-		val ctx = ResearchContext(campaign)
+		val ctx = ResearchViewController(campaign)
 		val message = source.complete(null, renderEmbed(source, campaign, ctx))
 		if (campaign.owner.id != source.api.currentLoggedIn.id) {
 			return Command.SINGLE_SUCCESS
@@ -87,7 +83,7 @@ class ResearchCommand : BrigadierCommand("research", "Collect your research poin
 		return Command.SINGLE_SUCCESS
 	}
 
-	private fun renderEmbed(source: CommandSourceStack, campaign: McpProfile, ctx: ResearchContext): MessageEmbed {
+	private fun renderEmbed(source: CommandSourceStack, campaign: McpProfile, ctx: ResearchViewController): MessageEmbed {
 		val embed = source.createEmbed(campaign.owner)
 			.setTitle("Research")
 			.setDescription("%s **%,d**".format(researchPointIcon?.asMention, ctx.points) + if (ctx.collected > 0) " (+%,d)".format(ctx.collected) else "")
@@ -120,32 +116,5 @@ class ResearchCommand : BrigadierCommand("research", "Collect your research poin
 			embed.addField(name, value, true)
 		}
 		return embed.build()
-	}
-
-	class ResearchContext {
-		@JvmField var resourceCollectorItem: FortItemStack? = null
-		@JvmField var points = 0
-		@JvmField var collected = 0
-		@JvmField val costs = mutableMapOf<EFortStatType, Int>()
-		@JvmField val icons = mutableMapOf<EFortStatType, Emote>()
-
-		constructor(campaign: McpProfile) {
-			populateItems(campaign)
-		}
-
-		@Synchronized
-		fun populateItems(campaign: McpProfile) {
-			points = 0
-			for (item in campaign.items.values) {
-				if (item.templateId == "CollectedResource:Token_collectionresource_nodegatetoken01") {
-					resourceCollectorItem = item
-				} else if (item.templateId == "Token:collectionresource_nodegatetoken01") {
-					points += item.quantity
-				}
-			}
-			if (resourceCollectorItem == null) {
-				throw SimpleCommandExceptionType(LiteralMessage("Please complete the Audition quest (one quest after Stonewood SSD 3) to unlock Research.")).create()
-			}
-		}
 	}
 }

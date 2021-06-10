@@ -12,6 +12,8 @@ import com.tb24.fn.EpicApi
 import com.tb24.fn.ProfileManager
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.account.GameProfile
+import com.tb24.fn.model.assetdata.AthenaSeasonItemData
+import com.tb24.fn.model.assetdata.AthenaSeasonItemDefinition
 import com.tb24.fn.model.friends.FriendV2
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer.CatalogItemPrice
@@ -296,6 +298,8 @@ fun similarity(s1: String, s2: String): Float {
 	}
 	return (longerLength - Utils.damerauLevenshteinDistance(longer, shorter)) / longerLength.toFloat()
 }
+
+inline fun <reified T : AthenaSeasonItemData> AthenaSeasonItemDefinition.getAdditionalDataOfType() = AdditionalSeasonData?.firstOrNull { it.value is T }?.value as T?
 
 fun Number.awtColor(hasAlpha: Boolean = toInt() ushr 24 != 0) = Color(toInt(), hasAlpha)
 

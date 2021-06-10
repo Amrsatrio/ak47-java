@@ -117,7 +117,7 @@ inline fun FortActiveTheaterInfo.iterateMissions(func: MissionVisitorFunction) {
 
 private fun FortAvailableMissionData.render(theater: FortTheaterMapData, missionAlert: FortAvailableMissionAlertData, attrs: CampaignProfileStats, canReceiveMtxCurrency: Boolean): Pair<String, String> {
 	val missionGenerator = loadCDO(MissionGenerator.toString(), FortMissionGenerator::class.java)
-	val difficulty = MissionDifficultyInfo.getRowMapped<GameDifficultyInfo>()
+	val difficulty = MissionDifficultyInfo.getRowMapped<GameDifficultyInfo>()!!
 	val tile = theater.Tiles[TileIndex]
 	val zoneTheme = loadCDO(tile.ZoneTheme.toString(), FortZoneTheme::class.java)
 	val hasCompletedMissionAlert = attrs.mission_alert_redemption_record?.claimData?.any { it.missionAlertId == missionAlert.MissionAlertGuid } == true
