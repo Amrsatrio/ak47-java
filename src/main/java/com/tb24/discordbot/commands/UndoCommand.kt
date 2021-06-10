@@ -11,8 +11,9 @@ import com.tb24.discordbot.util.*
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commoncore.RefundMtxPurchase
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
-import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Formatters
+import com.tb24.fn.util.countMtxCurrency
+import com.tb24.fn.util.getUndoCooldown
 import java.text.ParsePosition
 
 class UndoCommand : BrigadierCommand("undo", "Cancel your last purchase.", arrayOf("cancelpurchase", "refund")) {
@@ -35,7 +36,7 @@ class UndoCommand : BrigadierCommand("undo", "Cancel your last purchase.", array
 			if (System.currentTimeMillis() >= ISO8601Utils.parse(stats.undo_timeout, ParsePosition(0)).time) {
 				throw SimpleCommandExceptionType(LiteralMessage(L10N.format("undo.failed.expired", catalogEntryName))).create()
 			}
-			val undoCooldown = CatalogHelper.getUndoCooldown(commonCore, purchase.offerId)
+			val undoCooldown = getUndoCooldown(commonCore, purchase.offerId)
 			if (undoCooldown != null && System.currentTimeMillis() < undoCooldown.cooldownExpires.time) {
 				throw SimpleCommandExceptionType(LiteralMessage(L10N.format("undo.failed.cooldown", catalogEntryName, StringUtil.formatElapsedTime(undoCooldown.cooldownExpires.time - System.currentTimeMillis(), false)))).create()
 			}
@@ -56,7 +57,7 @@ class UndoCommand : BrigadierCommand("undo", "Cancel your last purchase.", array
 					purchaseId = purchase.purchaseId
 					quickReturn = true
 				}).await()
-				source.complete("✅ Purchase canceled. Now you have ${Utils.MTX_EMOJI} ${Formatters.num.format(CatalogHelper.countMtxCurrency(profileManager.getProfileData("common_core")))}.")
+				source.complete("✅ Purchase canceled. Now you have ${Utils.MTX_EMOJI} ${Formatters.num.format(countMtxCurrency(profileManager.getProfileData("common_core")))}.")
 				Command.SINGLE_SUCCESS
 			} else {
 				throw SimpleCommandExceptionType(LiteralMessage("Purchase cancellation canceled.")).create()

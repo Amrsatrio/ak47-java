@@ -183,7 +183,7 @@ private inline fun accountPicker_buttons(source: CommandSourceStack): Int {
 		val accountId = device.accountId
 		Button.primary(accountId, "%,d. %s".format(i + 1, users.firstOrNull { it.id == accountId }?.displayName ?: accountId))
 	}
-	buttons.add(Button.secondary("new", "Login to another account").withEmoji(Emoji.ofUnicode("✨")))
+	buttons.add(Button.secondary("new", "Login to another account").withEmoji(Emoji.fromUnicode("✨")))
 	val botMessage = source.complete("**Pick an account**", null, buttons.chunked(5, ActionRow::of))
 	val interaction = botMessage.awaitMessageComponentInteractions({ _, user, _ -> user == source.author }, AwaitMessageComponentInteractionsOptions().apply {
 		max = 1

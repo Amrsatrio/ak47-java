@@ -196,7 +196,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		val propName = if (note) "note" else "nickname"
 		val old = friend.alias
 		source.complete("The current $propName is: `${old.orUnset()}`\nEnter the new $propName: (⏱ 45s)")
-		var new = source.channel.awaitMessages({ collected, _, _ -> collected.author.idLong == source.author.idLong }, AwaitMessagesOptions().apply {
+		var new = source.channel.awaitMessages({ collected, _, _ -> collected.author == source.author }, AwaitMessagesOptions().apply {
 			max = 1
 			time = 45000L
 			errors = arrayOf(CollectorEndReason.TIME)

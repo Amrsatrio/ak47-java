@@ -19,8 +19,8 @@ import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commoncore.GiftCatalogEntry
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
-import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.format
+import com.tb24.fn.util.getAffiliateNameRespectingSetDate
 import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Role
@@ -85,7 +85,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts a friend an offer from the i
 			.setColor(displayData.presentationParams?.vector?.get("Background_Color_B") ?: Role.DEFAULT_COLOR_RAW)
 		if (price.currencyType == EStoreCurrencyType.MtxCurrency) {
 			embed.addField(L10N.format("catalog.mtx_platform"), (commonCore.stats as CommonCoreProfileStats).current_mtx_platform.name, true)
-				.addField(L10N.format("sac.verb"), CatalogHelper.getAffiliateNameRespectingSetDate(commonCore) ?: L10N.format("common.none"), false)
+				.addField(L10N.format("sac.verb"), getAffiliateNameRespectingSetDate(commonCore) ?: L10N.format("common.none"), false)
 		}
 		if (!source.complete(null, embed.build()).yesNoReactions(source.author).await()) {
 			throw SimpleCommandExceptionType(LiteralMessage("Gift canceled.")).create()

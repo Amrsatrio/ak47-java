@@ -13,8 +13,8 @@ import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.EFortMtxPlatform
 import com.tb24.fn.model.mcpprofile.commands.commoncore.SetMtxPlatform
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
-import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Formatters
+import com.tb24.fn.util.countMtxCurrency
 
 class MtxPlatformCommand : BrigadierCommand("vbucksplatform", "Changes the V-Bucks platform.", arrayOf("vp", "mtxplatform")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -33,7 +33,7 @@ class MtxPlatformCommand : BrigadierCommand("vbucksplatform", "Changes the V-Buc
 				val stats = commonCore.stats as CommonCoreProfileStats
 				source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
 					.setTitle("✅ Updated V-Bucks platform to **${stats.current_mtx_platform}**.")
-					.setDescription("Balance: ${Formatters.num.format(CatalogHelper.countMtxCurrency(commonCore))} V-Bucks on this platform.\nUse `${source.prefix}vbucks` to see all of your V-Bucks.")
+					.setDescription("Balance: ${Formatters.num.format(countMtxCurrency(commonCore))} V-Bucks on this platform.\nUse `${source.prefix}vbucks` to see all of your V-Bucks.")
 					.build())
 				Command.SINGLE_SUCCESS
 			}

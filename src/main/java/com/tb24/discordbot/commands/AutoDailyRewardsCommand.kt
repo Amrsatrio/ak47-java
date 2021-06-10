@@ -56,7 +56,7 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 				}.joinToString("\n"), false)
 				.setColor(0x8AB4F8)
 				.build())
-			val choice = source.channel.awaitMessages({ _, user, _ -> user?.idLong == source.message.author.idLong }, AwaitMessagesOptions().apply {
+			val choice = source.channel.awaitMessages({ _, user, _ -> user == source.author }, AwaitMessagesOptions().apply {
 				max = 1
 				time = 30000
 				errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)

@@ -7,8 +7,8 @@ import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
-import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Formatters
+import com.tb24.fn.util.getSentGiftsWithin24H
 import net.dv8tion.jda.api.MessageBuilder
 import java.util.*
 
@@ -33,7 +33,7 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 				source.queryUsers(idsToQuery).forEach { localUserMap[it.id] = it }
 			}
 			source.client.catalogManager.ensureCatalogData(source.api)
-			val within24h = CatalogHelper.getSentGiftsWithin24H(giftHistory)
+			val within24h = getSentGiftsWithin24H(giftHistory)
 			val sb = StringBuilder(if (within24h.size < 5) {
 				"**%,d** daily gifts remaining.".format(5 - within24h.size)
 			} else {

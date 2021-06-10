@@ -13,6 +13,7 @@ import com.tb24.discordbot.L10N
 import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.catalogOffer
 import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.getCatalogEntry
 import com.tb24.discordbot.util.*
+import com.tb24.discordbot.util.Utils
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 import com.tb24.fn.model.gamesubcatalog.EAppStore
 import com.tb24.fn.model.gamesubcatalog.ECatalogOfferType
@@ -23,10 +24,7 @@ import com.tb24.fn.model.mcpprofile.notifications.CatalogPurchaseNotification
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.model.priceengine.QueryOfferPricesPayload
 import com.tb24.fn.model.priceengine.QueryOfferPricesPayload.LineOfferReq
-import com.tb24.fn.util.CatalogHelper
-import com.tb24.fn.util.CatalogHelper.isItemOwned
-import com.tb24.fn.util.Formatters
-import com.tb24.fn.util.getString
+import com.tb24.fn.util.*
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Role
 import okhttp3.MediaType
@@ -90,6 +88,9 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 	if (sd.owned) {
 		throw SimpleCommandExceptionType(LiteralMessage(L10N.format("purchase.failed.owned", sd.friendlyName))).create()
 	}
+	if (!sd.eligible) {
+		throw SimpleCommandExceptionType(LiteralMessage(L10N.format("purchase.failed.not_eligible", sd.friendlyName))).create()
+	}
 	if (price.currencyType == EStoreCurrencyType.RealMoney) {
 		if (sd.getMeta("IsSubscription").equals("true", true)) {
 			throw SimpleCommandExceptionType(LiteralMessage("${sd.friendlyName} is a subscription offer. Support for subscription offers will be added in a future update.")).create()
@@ -141,7 +142,7 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 		val embed = source.createEmbed()
 			.setTitle(L10N.format("purchase.confirmation.title"))
 			.addField(L10N.format("catalog.items"), sd.compiledNames.mapIndexed { i, s ->
-				val strike = if (offer.offerType == ECatalogOfferType.DynamicBundle && isItemOwned(profileManager, offer.itemGrants[i].templateId, offer.itemGrants[i].quantity)) "~~" else ""
+				val strike = if (offer.offerType == ECatalogOfferType.DynamicBundle && profileManager.isItemOwned(offer.itemGrants[i].templateId, offer.itemGrants[i].quantity)) "~~" else ""
 				strike + s + strike
 			}.joinToString("\n"), false)
 			.addField(L10N.format("catalog.quantity"), Formatters.num.format(quantity), false)
@@ -151,10 +152,10 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 			.setColor(displayData.presentationParams?.vector?.get("Background_Color_B") ?: Role.DEFAULT_COLOR_RAW)
 		if (price.currencyType == EStoreCurrencyType.MtxCurrency) {
 			embed.addField(L10N.format("catalog.mtx_platform"), (commonCore.stats as CommonCoreProfileStats).current_mtx_platform.name, true)
-				.addField(L10N.format("sac.verb"), CatalogHelper.getAffiliateNameRespectingSetDate(commonCore) ?: L10N.format("common.none"), false)
+				.addField(L10N.format("sac.verb"), getAffiliateNameRespectingSetDate(commonCore) ?: L10N.format("common.none"), false)
 		}
 		val warnings = mutableListOf<String>()
-		if (CatalogHelper.isUndoUnderCooldown(profileManager.getProfileData("common_core"), offer.offerId)) {
+		if (isUndoUnderCooldown(profileManager.getProfileData("common_core"), offer.offerId)) {
 			warnings.add(L10N.format("purchase.undo_cooldown_warning"))
 		}
 		if (!offer.refundable) {
@@ -181,7 +182,7 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 			.addFieldSeparate(L10N.format("purchase.success.received"), results.toList(), 0) { it.asItemStack().render() }
 			.addField(L10N.format("purchase.success.final_balance"), price.getAccountBalanceText(profileManager), false)
 			.setTimestamp(Instant.now())
-		if (offer.refundable && !CatalogHelper.isUndoUnderCooldown(commonCore, offer.offerId)) {
+		if (offer.refundable && !isUndoUnderCooldown(commonCore, offer.offerId)) {
 			successEmbed.setDescription(L10N.format("purchase.success.undo_instruction", source.prefix))
 		}
 		source.complete(null, successEmbed.build())

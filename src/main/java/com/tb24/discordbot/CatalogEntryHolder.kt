@@ -11,25 +11,20 @@ import com.tb24.fn.model.gamesubcatalog.ECatalogOfferType
 import com.tb24.fn.model.gamesubcatalog.ECatalogSaleType
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats.PurchaseList
-import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Utils
 import com.tb24.fn.util.getInt
+import com.tb24.fn.util.isItemOwned
+import com.tb24.fn.util.isOwnedAndEligible
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.exports.FortMtxOfferData
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.util.*
 import kotlin.math.max
 
 class CatalogEntryHolder(val ce: CatalogOffer) {
-	companion object {
-		val LOGGER: Logger = LoggerFactory.getLogger("CatalogEntryHolder")
-	}
-
-	private var offerData: FortMtxOfferData? = null
 	var owned = false
-	var ownedItems: MutableSet<String>? = null
-	var price: CatalogItemPrice = CatalogItemPrice.NO_PRICE
+	var eligible = true
+	var ownedItems = hashSetOf<String>()
+	var price = CatalogItemPrice.NO_PRICE
 	val compiledNames by lazy {
 		val fromDevName = try {
 			ce.devName.substring("[VIRTUAL]".length, ce.devName.lastIndexOf(" for ")).replace("1 x ", "").replace(" x ", " \u00d7 ").split(", ")
@@ -60,13 +55,18 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 	@Throws(CommandSyntaxException::class)
 	fun resolve(profileManager: ProfileManager? = null, priceIndex: Int = 0, resolveOwnership: Boolean = true) {
 		owned = false
-		ownedItems = hashSetOf()
+		eligible = true
+		ownedItems.clear()
 		price = CatalogItemPrice.NO_PRICE
 		if (ce.offerType == ECatalogOfferType.StaticPrice) {
 			if (ce.prices.isNotEmpty()) {
 				price = ce.prices.safeGetOneIndexed(priceIndex + 1)
 			}
-			owned = if (resolveOwnership && profileManager != null) CatalogHelper.isStaticPriceCtlgEntryOwned(profileManager, ce) else false
+			if (resolveOwnership && profileManager != null) {
+				val result = ce.isOwnedAndEligible(profileManager)
+				owned = result.first
+				eligible = result.second
+			}
 		} else if (ce.offerType == ECatalogOfferType.DynamicBundle) {
 			price = CatalogItemPrice()
 			price.regularPrice = ce.dynamicBundleInfo.regularBasePrice
@@ -76,8 +76,8 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 			for (bundleItem in ce.dynamicBundleInfo.bundleItems) {
 				price.regularPrice += bundleItem.regularPrice
 				price.basePrice += bundleItem.discountedPrice
-				if (resolveOwnership && profileManager != null && CatalogHelper.isItemOwned(profileManager, bundleItem.item.templateId, bundleItem.item.quantity)) {
-					ownedItems!!.add(bundleItem.item.templateId)
+				if (resolveOwnership && profileManager?.isItemOwned(bundleItem.item.templateId, bundleItem.item.quantity) == true) {
+					ownedItems.add(bundleItem.item.templateId)
 					price.regularPrice -= bundleItem.alreadyOwnedPriceReduction
 					price.basePrice -= bundleItem.alreadyOwnedPriceReduction
 				}
@@ -89,7 +89,7 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 			if (price.saleType == ECatalogSaleType.NotOnSale && price.regularPrice != price.basePrice) {
 				price.saleType = ce.dynamicBundleInfo.displayType
 			}
-			owned = ownedItems!!.size == ce.dynamicBundleInfo.bundleItems.size
+			owned = ownedItems.size == ce.dynamicBundleInfo.bundleItems.size
 		}
 		purchaseLimit = getMeta("EventLimit")?.toIntOrNull() ?: -1
 		purchasesCount = 0

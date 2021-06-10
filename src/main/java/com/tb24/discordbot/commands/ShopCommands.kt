@@ -113,7 +113,7 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 			}*/
 			if (catalogEntry.offerType == ECatalogOfferType.StaticPrice && (catalogEntry.prices.isEmpty() || catalogEntry.prices.first().currencyType == EStoreCurrencyType.RealMoney)) continue
 			val sd = catalogEntry.holder().apply { resolve(profileManager) }
-			lines.add("%,d. %s%s".format(catalogEntry.__ak47_index + 1, sd.friendlyName, if (showAccInfo && (sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit)) " ✅" else ""))
+			lines.add("%,d. %s%s".format(catalogEntry.__ak47_index + 1, sd.friendlyName, if (showAccInfo && (sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit)) " ✅" else if (showAccInfo && !sd.eligible) " ❌" else ""))
 			catalogEntry.prices.forEach { prices.putIfAbsent(it.currencyType.name + ' ' + it.currencySubType, it) }
 		}
 		contents[i] = lines

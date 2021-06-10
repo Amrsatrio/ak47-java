@@ -122,7 +122,7 @@ fun CatalogItemPrice.render(quantity: Int = 1) = icon() + ' ' + (if (basePrice !
 
 fun CatalogItemPrice.getAccountBalance(profileManager: ProfileManager): Int {
 	if (currencyType == EStoreCurrencyType.MtxCurrency) {
-		return CatalogHelper.countMtxCurrency(profileManager.getProfileData("common_core"))
+		return countMtxCurrency(profileManager.getProfileData("common_core"))
 	} else if (currencyType == EStoreCurrencyType.GameItem) {
 		for (profile in profileManager.profiles.values) {
 			for (item in profile.items.values) {

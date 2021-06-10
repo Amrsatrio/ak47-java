@@ -10,10 +10,11 @@ import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
-import com.tb24.fn.util.CatalogHelper
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.Utils.sumKV
+import com.tb24.fn.util.countMtxCurrency
 import com.tb24.fn.util.getString
+import com.tb24.fn.util.isApplicableOn
 import java.text.DateFormat
 import java.util.regex.Pattern
 
@@ -36,11 +37,11 @@ class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the
 				if (item.primaryAssetType == "Currency") {
 					val platform = item.attributes.getString("platform", "Shared")
 					val entryStr = String.format("%,d. %,d \u00d7 %s %s", ++i, item.quantity, platform, item.templateId.replace("Currency:Mtx", ""))
-					breakdown.add(if (CatalogHelper.applicable(current, platform)) "**$entryStr**" else entryStr)
+					breakdown.add(if (current.isApplicableOn(platform)) "**$entryStr**" else entryStr)
 				}
 			}
 			source.complete(null, source.createEmbed()
-				.setTitle(Formatters.num.format(CatalogHelper.countMtxCurrency(commonCore)) + " V-Bucks")
+				.setTitle(Formatters.num.format(countMtxCurrency(commonCore)) + " V-Bucks")
 				.addField("Breakdown", if (breakdown.isEmpty()) "You have no V-Bucks." else breakdown.joinToString("\n"), false)
 				.setFooter("V-Bucks platform: " + current + (if (Rune.hasPremium(source)) " (" + source.prefix + "vbucksplatform to change)" else ""))
 				.setThumbnail(Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Items/T-Items-MTX-L.T-Items-MTX-L"))
