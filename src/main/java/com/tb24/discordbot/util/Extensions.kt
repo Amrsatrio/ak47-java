@@ -1,11 +1,9 @@
 package com.tb24.discordbot.util
 
 import com.google.gson.JsonObject
-import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.StringReader
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.CommandSyntaxException
-import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
@@ -21,16 +19,15 @@ import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.model.mcpprofile.ProfileUpdate
 import com.tb24.fn.util.*
 import com.tb24.uasset.AssetManager
-import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.exports.FortWorkerType
 import me.fungames.jfortniteparse.fort.objects.FortItemQuantityPair
 import me.fungames.jfortniteparse.fort.objects.rows.FortQuestRewardTableRow
-import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
-import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import net.dv8tion.jda.api.EmbedBuilder
-import net.dv8tion.jda.api.Permission
-import net.dv8tion.jda.api.entities.*
+import net.dv8tion.jda.api.entities.Emote
+import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.entities.MessageEmbed
+import net.dv8tion.jda.api.entities.User
 import okhttp3.HttpUrl
 import okhttp3.Request
 import retrofit2.Call
@@ -41,27 +38,13 @@ import java.awt.Graphics2D
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.text.DateFormat
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
-import javax.imageio.ImageIO
 import kotlin.math.abs
-import kotlin.math.min
-
-val WHITELIST_ICON_EMOJI_ITEM_TYPES = arrayOf("AccountResource", "ConsumableAccountItem", "Currency", "Gadget", "Stat")
-val EMOJI_GUILDS = arrayOf(
-	845586443106517012L, // tee 1
-	845586502922010635L, // tee 2
-	805121146214940682L, // add ur emoji idc 2
-	677515124373979155L, // Epic Server Version Status
-	Utils.HOMEBASE_GUILD_ID, // AK Facility
-	612383214962606081L, // AS Development
-	784128953387974736L, // add ur emoji idc
-)
 
 @Throws(HttpException::class, IOException::class)
 fun ProfileManager.dispatchClientCommandRequest(payload: Any, profileId: String = "common_core"): CompletableFuture<ProfileUpdate> =
@@ -133,67 +116,6 @@ fun CatalogItemPrice.emote(): Emote? = when (currencyType) {
 	EStoreCurrencyType.MtxCurrency -> DiscordBot.instance.discord.getEmoteById(751101530626588713L)
 	EStoreCurrencyType.GameItem -> getItemIconEmoji(FortItemStack(currencySubType, 1))
 	else -> null
-}
-
-fun getItemIconEmoji(item: FortItemStack, bypassWhitelist: Boolean = false): Emote? {
-	val client = DiscordBot.instance.discord
-	val type = item.primaryAssetType
-	val name = item.primaryAssetName
-	if (name == "mtxcomplimentary" || name == "mtxgiveaway" || name == "mtxpurchasebonus" || name == "mtxpurchased") {
-		return client.getEmoteById(Utils.MTX_EMOJI_ID)
-	}
-	if (!bypassWhitelist && type !in WHITELIST_ICON_EMOJI_ITEM_TYPES) {
-		return null
-	}
-	return textureEmote((item.getPreviewImagePath(true) ?: item.getPreviewImagePath()).toString())
-}
-
-@Synchronized
-fun textureEmote(texturePath: String?): Emote? {
-	if (texturePath == null || texturePath == "None") {
-		return null
-	}
-	var name = texturePath.substringAfterLast('.').replace('-', '_')
-	while (name.startsWith("T_", true)) {
-		name = name.substring(2)
-	}
-	if (name.startsWith("Icon_", true)) {
-		name = name.substring(5)
-	}
-	name = name.substring(0, min(32, name.length))
-	getEmoteByName(name)?.let { return it }
-	return loadObject<UTexture2D>(texturePath)?.toBufferedImage()?.let { createEmote(name, it) }
-}
-
-fun getEmoteByName(name: String): Emote? {
-	val client = DiscordBot.instance.discord
-	var existing: Emote? = null
-	for (guildId in EMOJI_GUILDS) {
-		val guild = client.getGuildById(guildId) ?: continue
-		existing = guild.getEmotesByName(name, true).firstOrNull()
-		if (existing != null) {
-			break
-		}
-	}
-	return existing
-}
-
-private fun createEmote(name: String, icon: BufferedImage): Emote? {
-	val client = DiscordBot.instance.discord
-	for (guildId in EMOJI_GUILDS) {
-		val guild = client.getGuildById(guildId)
-		if (guild == null || guild.emotes.size >= 50) { // server boosts can expire, hardcode it to 50 which is the regular limit
-			continue
-		}
-		if (!guild.selfMember.hasPermission(Permission.MANAGE_EMOTES)) {
-			DiscordBot.LOGGER.warn("Insufficient permissions to add emoji :{}: into {}", name, guild)
-			continue
-		}
-		val baos = ByteArrayOutputStream()
-		ImageIO.write(icon, "png", baos)
-		return guild.createEmote(name, Icon.from(baos.toByteArray(), Icon.IconType.PNG)).complete()
-	}
-	throw SimpleCommandExceptionType(LiteralMessage("Failed to find a server with free emoji slots.")).create()
 }
 
 fun CatalogItemPrice.render(quantity: Int = 1) = icon() + ' ' + (if (basePrice != -1) Formatters.num.format(quantity * basePrice) else "<unresolved>") + if (regularPrice != basePrice) " ~~${Formatters.num.format(quantity * regularPrice)}~~" else ""

@@ -17,6 +17,7 @@ import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.campaign.StartExpedition
 import com.tb24.fn.model.mcpprofile.item.FortExpeditionItem
 import com.tb24.fn.util.Formatters
+import com.tb24.fn.util.Utils.sumKV
 import com.tb24.fn.util.asItemStack
 import com.tb24.fn.util.format
 import com.tb24.uasset.loadObject
@@ -244,7 +245,7 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 		else -> FText("???")
 	}
 
-	private class ExpeditionBuildSquadContext(val expedition: FortItemStack, homebase: HomebaseManager) {
+	class ExpeditionBuildSquadContext(val expedition: FortItemStack, homebase: HomebaseManager) {
 		val attrs = expedition.getAttributes(FortExpeditionItem::class.java)
 		val defData = expedition.defData as FortExpeditionItemDefinition
 		val recipe = defData.ExpeditionRules.getRowMapped<Recipe>()
@@ -254,8 +255,9 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 			attrs.expedition_criteria.map { criteriaRequirementsTable.findRowMapped<FortCriteriaRequirementData>(FName.dummy(it))!! }
 		}
 		val squadChoices = mutableListOf<HomebaseManager.Squad>()
-		var squadChoiceIndex = 0
-		val squad get() = squadChoices[squadChoiceIndex]
+		lateinit var squadController: SquadController
+			private set
+		val squad get() = squadController.squad
 
 		init {
 			val squadIds = when (type) {
@@ -284,6 +286,30 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 			}
 		}
 
+		fun setSquad(squad: HomebaseManager.Squad) {
+			if (squad !in squadChoices) {
+				throw IllegalArgumentException("Given squad ${squad.squadId} is not a valid choice")
+			}
+			this.squadController = SquadController(squad)
+		}
+
+		fun getSquadRating(): Int {
+			val out = hashMapOf<String, Int>()
+			for (slot in squad.slots) {
+				val item = slot.item ?: continue
+				val rating = item.powerLevel
+				for (slottingBonus in slot.backing.SlottingBonuses) {
+					val attributeName = slottingBonus.AttributeGranted.AttributeName
+					val attributeValue = slottingBonus.BonusCurve.eval(rating).toInt()
+					sumKV(out, attributeName, attributeValue)
+				}
+			}
+			check(out.size == 1)
+			return out.values.first()
+		}
+
+		fun getSuccessChance(squadRating: Int = getSquadRating()) = squadRating / attrs.expedition_max_target_power
+
 		fun generatePayload(): StartExpedition {
 			val itemIds = mutableListOf<String>()
 			val slotIndices = mutableListOf<Int>()
@@ -301,6 +327,12 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 			payload.itemIds = itemIds.toTypedArray()
 			payload.slotIndices = slotIndices.toIntArray()
 			return payload
+		}
+	}
+
+	class SquadController(val squad: HomebaseManager.Squad) {
+		fun slot(item: FortItemStack) {
+
 		}
 	}
 

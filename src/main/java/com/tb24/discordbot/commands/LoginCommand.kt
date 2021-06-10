@@ -7,6 +7,7 @@ import com.mojang.brigadier.arguments.StringArgumentType.*
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.HttpException
+import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.DeviceAuth
 import com.tb24.fn.model.account.GameProfile
@@ -34,7 +35,7 @@ import kotlin.math.min
 
 class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", arrayOf("i", "signin")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { accountPicker_buttons(it.source) }
+		.executes { if (Rune.isBotDev(it.source)) accountPicker_buttons(it.source) else accountPicker(it.source) }
 		.then(literal("new").executes { startDefaultLoginFlow(it.source) })
 		.then(argument("authorization code", greedyString())
 			.executes {
@@ -178,9 +179,9 @@ private inline fun accountPicker_buttons(source: CommandSourceStack): Int {
 	source.session = source.client.internalSession
 	val users = source.queryUsers(devices.map { it.accountId })
 	val buttons = mutableListOf<Button>()
-	devices.mapTo(buttons) { device ->
+	devices.mapIndexedTo(buttons) { i, device ->
 		val accountId = device.accountId
-		Button.primary(accountId, users.firstOrNull { it.id == accountId }?.displayName ?: accountId)
+		Button.primary(accountId, "%,d. %s".format(i + 1, users.firstOrNull { it.id == accountId }?.displayName ?: accountId))
 	}
 	buttons.add(Button.secondary("new", "Login to another account").withEmoji(Emoji.ofUnicode("✨")))
 	val botMessage = source.complete("**Pick an account**", null, buttons.chunked(5, ActionRow::of))

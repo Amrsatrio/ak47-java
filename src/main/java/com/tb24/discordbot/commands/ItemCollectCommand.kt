@@ -15,7 +15,6 @@ import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
 import com.tb24.fn.util.Formatters.num
-import com.tb24.uasset.AssetManager
 import com.tb24.uasset.JWPSerializer
 import me.fungames.jfortniteparse.ue4.objects.core.math.FVector2D
 import me.fungames.jfortniteparse.util.toPngArray
@@ -26,32 +25,52 @@ import java.io.FileWriter
 import java.util.*
 import java.util.regex.Pattern
 import javax.imageio.ImageIO
-import kotlin.system.exitProcess
 
-class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't collected this season.") {
+class ItemCollectCommand : BrigadierCommand("collectibles", "Shows collectibles you haven't collected this season.", arrayOf("xpcoins", "alienartifacts", "artifacts")) {
+	companion object {
+		private val WEEKLY_QUEST_PATTERN = Pattern.compile("quest_s(\\d+)_w(\\d+)_(\\w+)_(\\w+)")
+	}
+
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.requires(Rune::isBotDev)
 		.executes { execute(it.source, true) }
 		.then(literal("nomap")
 			.executes { execute(it.source, false) }
 		)
+		.then(literal("generate")
+			.requires(Rune::isBotDev)
+			.executes { generate(it.source) }
+		)
 
 	private fun execute(source: CommandSourceStack, withMap: Boolean): Int {
 		source.ensureSession()
-		source.loading("Getting XP coins data")
+		source.loading("Getting collectibles data")
 		source.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "athena").await()
 		val athena = source.api.profileManager.getProfileData("athena")
 		val processed = TreeMap<Int, MutableMap<String, MutableMap<Int, Int>>>()
 		val uncollected = mutableListOf<String>()
 
 		for (item in athena.items.values) {
-			val tidMatch = Pattern.compile("quest_s(\\d+)_w(\\d+)_xpcoins_(\\w+)").matcher(item.primaryAssetName)
+			val tidMatch = WEEKLY_QUEST_PATTERN.matcher(item.primaryAssetName)
 			if (!tidMatch.matches()) continue
 
 			//val season = tidMatch.group(1).toInt() - 1;
 			val week = tidMatch.group(2).toInt() - 1
 			val type = tidMatch.group(3)
+			val subType = tidMatch.group(4)
+			if (type != "xpcoins" && type != "alienartifact") {
+				continue
+			}
 
-			val weekData = processed.getOrPut(week) { mutableMapOf("green" to TreeMap(), "blue" to TreeMap(), "purple" to TreeMap(), "gold" to TreeMap()) }
+			val weekData = processed.getOrPut(week) {
+				mutableMapOf(
+					"xpcoins_green" to TreeMap(),
+					"xpcoins_blue" to TreeMap(),
+					"xpcoins_purple" to TreeMap(),
+					"xpcoins_gold" to TreeMap(),
+					"alienartifact_purple" to TreeMap()
+				)
+			}
 			val prefix = "completion_" + item.primaryAssetName + "_obj"
 
 			for (entry in item.attributes.entrySet()) {
@@ -61,10 +80,11 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 				val index = attrName.substring(prefix.length).toInt() // starts from 0 since season 14, 1 before
 				// val index = attrName.substring(prefix.length).toInt() - 1;
 				val completionValue = entry.value.asInt
-				weekData[type]!![index] = completionValue
-
-				if (completionValue == 0) {
-					uncollected.add(attrName.substring("completion_".length))
+				weekData[type + '_' + subType]?.let {
+					it[index] = completionValue
+					if (completionValue == 0) {
+						uncollected.add(attrName.substring("completion_".length))
+					}
 				}
 			}
 		}
@@ -91,17 +111,17 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 
 				weekCompleted += typeCompleted
 				weekMax += typeData.size
-				lines.add(L10N.format("xpcoins.entry", L10N.format("xpcoins.$type"), num.format(typeCompleted), num.format(typeData.size), if (completionStr.isNotEmpty()) completionStr else "-"))
+				lines.add(L10N.format("collectibles.entry", L10N.format("collectibles.$type"), num.format(typeCompleted), num.format(typeData.size), if (completionStr.isNotEmpty()) completionStr else "-"))
 			}
 
 			overallCompleted += weekCompleted
 			overallMax += weekMax
-			embed.addField(L10N.format("xpcoins.week", num.format(weekNum + 1), num.format(weekCompleted), num.format(weekMax)), if (lines.isEmpty()) "No entries" else lines.joinToString("\n"), true)
+			embed.addField(L10N.format("collectibles.week", num.format(weekNum + 1), num.format(weekCompleted), num.format(weekMax)), if (lines.isEmpty()) "No entries" else lines.joinToString("\n"), true)
 		}
 
 		source.complete(null, embed
-			.setTitle("Season ${num.format((athena.stats as AthenaProfileStats).season_num)} XP Coins")
-			.setDescription(L10N.format("xpcoins.collected", overallCompleted, overallMax))
+			.setTitle(L10N.format("collectibles.title", num.format((athena.stats as AthenaProfileStats).season_num)))
+			.setDescription(L10N.format("collectibles.collected", num.format(overallCompleted), num.format(overallMax)))
 			.build())
 		if (!withMap || overallCompleted >= overallMax) {
 			return Command.SINGLE_SUCCESS
@@ -118,6 +138,7 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 		val icBlue = ImageIO.read(File("canvas/202.png"))
 		val icPurple = ImageIO.read(File("canvas/203.png"))
 		val icGold = ImageIO.read(File("canvas/204.png"))
+		val icArtifactPurple = ImageIO.read(File("canvas/567.png"))
 
 		for (xpCoin_ in FileReader(dataFile).use(JsonParser::parseReader).asJsonArray) {
 			val xpCoin = xpCoin_.asJsonObject
@@ -131,6 +152,7 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 					firstTag.startsWith("Athena.Quests.ItemCollect.XPCoin.Blue") -> icBlue
 					firstTag.startsWith("Athena.Quests.ItemCollect.XPCoin.Purple") -> icPurple
 					firstTag.startsWith("Athena.Quests.ItemCollect.XPCoin.Gold") -> icGold
+					firstTag.startsWith("Athena.Quests.ItemCollect.AlienArtifact.Purple") -> icArtifactPurple
 					else -> icGreen
 				}
 				val originalComposite = ctx.composite
@@ -147,53 +169,18 @@ class XpCoinsCommand : BrigadierCommand("xpcoins", "Shows XP coins you haven't c
 		source.loadingMsg!!.delete().queue()
 		return Command.SINGLE_SUCCESS
 	}
-}
 
-class GenXpCoinsDataCommand : BrigadierCommand("genxpcoinsdata", "Generate XP coins data based on the current loaded game files.") {
-	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires(Rune::isBotDev)
-		.executes { c ->
-			c.source.loading("Generating XP coins data")
-			val start = System.currentTimeMillis()
-			var mapPath = "/Game/Athena/Apollo/Maps/Apollo_Terrain"
-			mapPath = "/BattlepassS15/Maps/Apollo_ItemCollect_S15_Overlay" // all s15 w7+ xp coins are contained in this map
-			val entries = MapProcessor().processMap(mapPath)
-			FileWriter(File("config/xp_coins_data.json").apply { parentFile.mkdirs() }).use {
-				JWPSerializer.GSON.toJson(entries, it)
-			}
-			c.source.complete("✅ XP coins data has been generated in `${num.format(System.currentTimeMillis() - start)}ms`. Enjoy :)")
-			Command.SINGLE_SUCCESS
+	private inline fun generate(source: CommandSourceStack): Int {
+		source.loading("Generating collectibles data")
+		val start = System.currentTimeMillis()
+		var mapPath = "/Game/Athena/Apollo/Maps/Apollo_Terrain"
+		mapPath = "/BattlepassS15/Maps/Apollo_ItemCollect_S15_Overlay" // all s15 w7+ xp coins are contained in this map
+		mapPath = "/BattlepassS17/Maps/Apollo_ItemCollect_S17_Overlay"
+		val entries = MapProcessor().processMap(mapPath)
+		FileWriter(File("config/xp_coins_data.json").apply { parentFile.mkdirs() }).use {
+			JWPSerializer.GSON.toJson(entries, it)
 		}
-}
-
-fun main() {
-	AssetManager.INSTANCE.loadPaks()
-	val dataFile = File("config/xp_coins_data.json")
-	arrayOf(12, 13, 14, 15, 16).forEach { n ->
-		val map = MapImageGenerator()
-		val icGreen = ImageIO.read(File("canvas/201.png"))
-		val icBlue = ImageIO.read(File("canvas/202.png"))
-		val icPurple = ImageIO.read(File("canvas/203.png"))
-		val icGold = ImageIO.read(File("canvas/204.png"))
-
-		for (xpCoin_ in FileReader(dataFile).use(JsonParser::parseReader).asJsonArray) {
-			val xpCoin = xpCoin_.asJsonObject
-			if (!xpCoin["questBackendName"].asString.contains("w%02d".format(n))) continue
-
-			map.markers.add(MapImageGenerator.MapMarker(xpCoin["loc"].asJsonObject.run { FVector2D(get("x").asFloat, get("y").asFloat) }) { ctx, x, y ->
-				val firstTag = xpCoin["objStatTag"].asJsonArray[0].asString
-				val ic = when {
-					firstTag.startsWith("Athena.Quests.ItemCollect.XPCoin.Green") -> icGreen
-					firstTag.startsWith("Athena.Quests.ItemCollect.XPCoin.Blue") -> icBlue
-					firstTag.startsWith("Athena.Quests.ItemCollect.XPCoin.Purple") -> icPurple
-					firstTag.startsWith("Athena.Quests.ItemCollect.XPCoin.Gold") -> icGold
-					else -> icGreen
-				}
-				val s = 56
-				ctx.drawImage(ic, x - s / 2, y - s / 2, s, s, null)
-			})
-		}
-		File("xp_coins_w$n.png").writeBytes(map.draw().toPngArray())
+		source.complete("✅ Collectibles data has been generated in `${num.format(System.currentTimeMillis() - start)}ms`. Enjoy :)")
+		return Command.SINGLE_SUCCESS
 	}
-	exitProcess(0)
 }

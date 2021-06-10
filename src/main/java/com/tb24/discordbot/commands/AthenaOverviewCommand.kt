@@ -5,17 +5,21 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
+import com.tb24.fn.model.assetdata.AthenaSeasonItemData_Level
+import com.tb24.fn.model.assetdata.AthenaSeasonItemDefinition
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.asItemStack
 import com.tb24.fn.util.getPreviewImagePath
-import me.fungames.jfortniteparse.fort.exports.AthenaSeasonItemDefinition
-import me.fungames.jfortniteparse.fort.objects.AthenaRewardItemReference
+import me.fungames.jfortniteparse.fort.exports.FortItemDefinition
 import me.fungames.jfortniteparse.fort.objects.rows.AthenaExtendedXPCurveEntry
 import me.fungames.jfortniteparse.fort.objects.rows.AthenaSeasonalXPCurveEntry
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import java.text.DateFormat
+
+val battleStarEmote = textureEmote("/Game/Athena/UI/Frontend/Art/T_UI_BP_BattleStar_L.T_UI_BP_BattleStar_L")
+val alienCurrencyEmote = textureEmote("/Game/Athena/UI/Frontend/Art/T_UI_BP_AlienCurrency_L.T_UI_BP_AlienCurrency_L")
 
 class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of current season.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -33,9 +37,8 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 				.setTitle("Season " + stats.season_num)
 				.addField("%s Level %,d".format(if (stats.book_purchased) "Battle Pass" else "Free Pass", stats.level), "`%s`\n%,d / %,d".format(Utils.progress(stats.xp, xpToNextLevel, 32), stats.xp, xpToNextLevel), false)
 			if (nextLevelReward != null) {
-				val rewardItem = nextLevelReward.asItemStack()
-				embed.addField("Rewards for level %,d".format(stats.level + 1), rewardItem.render(), false)
-				embed.setThumbnail(Utils.benBotExportAsset(rewardItem.getPreviewImagePath(true)?.toString()))
+				embed.addField("Rewards for level %,d".format(stats.level + 1), nextLevelReward.renderWithIcon(), false)
+				embed.setThumbnail(Utils.benBotExportAsset(nextLevelReward.getPreviewImagePath(true)?.toString()))
 			}
 			if (stats.xp_overflow > 0) {
 				embed.addField("XP Overflow", Formatters.num.format(stats.xp_overflow), false)
@@ -52,7 +55,11 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 				embed.addField("Supercharged XP", restedXpText, false)
 			}
 			embed.addField("Account Level", Formatters.num.format(stats.accountLevel), false)
-			embed.addField("Bars", "%s %,d".format(barsEmote?.asMention, inventory.stash["globalcash"] ?: 0), false)
+			embed.addField("Season Resources", "%s %s **%,d** (%,d total)\n%s %s **%,d**\n%s %s **%,d**".format(
+				"Battle Stars", battleStarEmote?.asMention, stats.battlestars ?: 0, stats.battlestars_season_total ?: 0,
+				"Alien Artifacts", alienCurrencyEmote?.asMention, stats.alien_style_points ?: 0,
+				"Bars", barsEmote?.asMention, inventory.stash["globalcash"] ?: 0
+			), false)
 			stats.last_match_end_datetime?.apply {
 				embed.setFooter("Last match end").setTimestamp(toInstant())
 			}
@@ -103,14 +110,33 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 		return 0
 	}
 
-	private fun getNextLevelReward(defData: AthenaSeasonItemDefinition?, level: Int, vip: Boolean): AthenaRewardItemReference? {
-		if (defData == null) return null
+	private fun getNextLevelReward(seasonDef: AthenaSeasonItemDefinition?, level: Int, vip: Boolean): FortItemStack? {
+		if (seasonDef == null) return null
 		val lookupLevel = level + 1
-		val determinedLevelsArray = (if (vip) defData.BookXpSchedulePaid else defData.BookXpScheduleFree)?.Levels ?: return null
-		determinedLevelsArray.getOrNull(lookupLevel)?.Rewards?.firstOrNull()?.let { return it }
+		if (seasonDef.bGenerateBookRewards == true) {
+			if (level >= seasonDef.NumBookLevels ?: 100) {
+				seasonDef.SeasonXpOnlyExtendedCurve?.value
+					?.findRowMapped<AthenaExtendedXPCurveEntry>(FName.dummy(level.toString()))
+					?.let { return FortItemStack(it.RewardItemAssetPerLevel.load<FortItemDefinition>(), it.RewardItemCountPerLevel) }
+			} else {
+				seasonDef.SeasonXpCurve?.value
+					?.findRowMapped<AthenaSeasonalXPCurveEntry>(FName.dummy(level.toString()))
+					?.let { return FortItemStack(it.RewardItemAsset.load<FortItemDefinition>(), it.RewardItemCount) }
+			}
+			return null
+		}
+		var paid = seasonDef.BookXpSchedulePaid
+		var free = seasonDef.BookXpScheduleFree
+		val levelData = seasonDef.AdditionalSeasonData?.firstOrNull { it.value is AthenaSeasonItemData_Level }?.value as AthenaSeasonItemData_Level?
+		if (levelData != null) {
+			paid = levelData.BattlePassXpSchedulePaid
+			free = levelData.BattlePassXpScheduleFree
+		}
+		val determinedLevelsArray = (if (vip) paid else free)?.Levels ?: return null
+		determinedLevelsArray.getOrNull(lookupLevel)?.Rewards?.firstOrNull()?.let { return it.asItemStack() }
 		if (!vip) {
 			return null // free pass, already queried from BookXpScheduleFree
 		} // else battle pass, previously it was queried from BookXpSchedulePaid, now query from BookXpScheduleFree
-		return defData.BookXpScheduleFree.Levels.getOrNull(lookupLevel)?.Rewards?.firstOrNull()
+		return seasonDef.BookXpScheduleFree.Levels.getOrNull(lookupLevel)?.Rewards?.firstOrNull()?.asItemStack()
 	}
 }

@@ -14,10 +14,7 @@ import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.QueryMultipleUserStats
-import com.tb24.fn.model.assetdata.FortAthenaPatrolPath
-import com.tb24.fn.model.assetdata.FortAthenaPatrolPathPointProvider
-import com.tb24.fn.model.assetdata.FortQuestIndicatorData
-import com.tb24.fn.model.assetdata.GameDataBR
+import com.tb24.fn.model.assetdata.*
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.item.FortMcpCollectionBase
 import com.tb24.fn.model.mcpprofile.item.FortMcpCollectionBase.*
@@ -56,7 +53,7 @@ private val locationTagToDisplayName by lazy {
 	}
 	map
 }
-private val seasonNum = 16
+private val seasonNum = 17
 
 class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Shows your character collection.", arrayOf("characters", "npcs")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -329,7 +326,7 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 
 fun main() {
 	INSTANCE.loadPaks()
-	val tandems = loadObject<FortCollectionDataCharacter>("/BattlepassS16/SeasonData/CollectionDataCharacter")!!.Entries.map { (it.value as FortCollectionDataEntryCharacter).CharacterData.load<FortTandemCharacterData>()!! }
+	val tandems = loadObject<FortCollectionDataCharacter>("/BattlepassS$seasonNum/SeasonData/CollectionDataCharacter")!!.Entries.map { (it.value as FortCollectionDataEntryCharacter).CharacterData.load<FortTandemCharacterData>()!! }
 	val actors = arrayOf(
 		"/NPCLibrary/LevelOverlays/Apollo_Terrain_NPCLibrary_Overlay",
 		"/NPCLibrary/LevelOverlays/Apollo_Terrain_NPCLibraryBoss_Overlay",

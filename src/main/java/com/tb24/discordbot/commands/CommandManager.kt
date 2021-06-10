@@ -78,7 +78,6 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(ExtendedLoginCommand())
 		register(FishCollectionCommand())
 		register(FriendsCommand())
-		register(GenXpCoinsDataCommand())
 		register(GiftCommand())
 		register(GiftHistoryCommand())
 		register(GiftSettingsCommand())
@@ -90,6 +89,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(HomebaseNameCommand())
 		register(InfoCommand())
 		register(InviteBotCommand())
+		register(ItemCollectCommand())
 		register(LaunchAndroidCommand())
 		register(LaunchWindowsCommand())
 		register(LibraryCommand())
@@ -129,7 +129,6 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(UndoCommand())
 		register(WorkersCommand())
 		register(WorthCommand())
-		register(XpCoinsCommand())
 		register(FortniteAndroidApkCommand())
 	}
 

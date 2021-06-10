@@ -2,6 +2,7 @@ package com.tb24.discordbot
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
+import com.tb24.fn.model.assetdata.BuildingGameplayActorPropQuest
 import com.tb24.uasset.JWPSerializer
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.exceptions.ParserException
@@ -40,15 +41,11 @@ class MapProcessor {
 			val objectRot = parentRot + relativeRotation
 			val objectScale = parentScale * relativeScale3D
 			if (actor.exportType.startsWith("BP_ItemCollection_")) {
-				val questBackendName: FName? = actor.get("QuestBackendName")
-				val objStatTag: FGameplayTagContainer? = actor.get("ObjStatTag")
-				if (objStatTag != null) {
-					entries.add(JsonObject().apply {
-						addProperty("questBackendName", questBackendName?.text)
-						add("objStatTag", JWPSerializer.GSON.toJsonTree(objStatTag.gameplayTags))
-						add("loc", JWPSerializer.GSON.toJsonTree(objectLoc))
-					})
-				}
+				addEntry(actor.getOrNull<FName>("QuestBackendName"), actor.getOrNull<FGameplayTagContainer>("ObjStatTag"), objectLoc)
+			}
+			if (actor is BuildingGameplayActorPropQuest && actor.exportType == "BP_S17_AlienArtifact_Variant1_C") {
+				val consolidatedQuestComponent = actor.ConsolidatedQuestComponent?.value ?: continue
+				addEntry(consolidatedQuestComponent.ObjectiveBackendName, actor.StaticGameplayTags, objectLoc)
 			}
 			if (actor is BuildingFoundation) {
 				actor.AdditionalWorlds?.forEach {
@@ -62,5 +59,14 @@ class MapProcessor {
 			}
 		}
 		return entries
+	}
+
+	private fun addEntry(questBackendName: FName?, tags: FGameplayTagContainer?, location: FVector) {
+		if (tags == null) return
+		entries.add(JsonObject().apply {
+			addProperty("questBackendName", questBackendName?.text)
+			add("objStatTag", JWPSerializer.GSON.toJsonTree(tags.gameplayTags))
+			add("loc", JWPSerializer.GSON.toJsonTree(location))
+		})
 	}
 }
