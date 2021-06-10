@@ -13,7 +13,7 @@ import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats.BattlePassOfferPurc
 
 class BattlePassViewController(val athena: McpProfile) {
 	val stats = athena.stats as AthenaProfileStats
-	val purchasedBpOffers = stats.purchased_bp_offers.associateBy { it.offerId }
+	val purchasedBpOffers = stats.purchased_bp_offers?.associateBy { it.offerId } ?: emptyMap()
 	val seasonData = FortItemStack("AthenaSeason:athenaseason${stats.season_num}", 1).defData as? AthenaSeasonItemDefinition ?: error("Season data not found.")
 	val battleStarData = seasonData.getAdditionalDataOfType<AthenaSeasonItemData_BattleStar>()!!
 
