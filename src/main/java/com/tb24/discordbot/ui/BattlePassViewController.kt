@@ -1,6 +1,8 @@
 package com.tb24.discordbot.ui;
 
+import com.google.gson.JsonArray
 import com.tb24.discordbot.util.getAdditionalDataOfType
+import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.assetdata.AthenaSeasonItemData_BattleStar
 import com.tb24.fn.model.assetdata.AthenaSeasonItemData_BattleStar.AthenaSeasonPageGrid
@@ -13,7 +15,7 @@ import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats.BattlePassOfferPurc
 
 class BattlePassViewController(val athena: McpProfile) {
 	val stats = athena.stats as AthenaProfileStats
-	val purchasedBpOffers = stats.purchased_bp_offers?.associateBy { it.offerId } ?: emptyMap()
+	val purchasedBpOffers = (stats.purchased_bp_offers as? JsonArray)?.let { EpicApi.GSON.fromJson(it, Array<BattlePassOfferPurchaseRecord>::class.java).associateBy { it.offerId } } ?: emptyMap()
 	val seasonData = FortItemStack("AthenaSeason:athenaseason${stats.season_num}", 1).defData as? AthenaSeasonItemDefinition ?: error("Season data not found.")
 	val battleStarData = seasonData.getAdditionalDataOfType<AthenaSeasonItemData_BattleStar>()!!
 
