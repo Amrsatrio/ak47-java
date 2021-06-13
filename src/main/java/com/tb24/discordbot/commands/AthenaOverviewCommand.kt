@@ -23,8 +23,8 @@ val alienCurrencyEmote = textureEmote("/Game/Athena/UI/Frontend/Art/T_UI_BP_Alie
 
 class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of current season.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes {
-			val source = it.source
+		.executes { c ->
+			val source = c.source
 			source.ensureSession()
 			source.loading("Getting BR data")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
@@ -55,9 +55,15 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 				embed.addField("Supercharged XP", restedXpText, false)
 			}
 			embed.addField("Account Level", Formatters.num.format(stats.accountLevel), false)
-			embed.addField("Season Resources", "%s %s **%,d** (%,d total)\n%s %s **%,d**\n%s %s **%,d**".format(
-				"Battle Stars", battleStarEmote?.asMention, stats.battlestars ?: 0, stats.battlestars_season_total ?: 0,
-				"Alien Artifacts", alienCurrencyEmote?.asMention, stats.alien_style_points ?: 0,
+			val currentBattleStars = stats.battlestars ?: 0
+			val totalBattleStars = stats.battlestars_season_total ?: 0
+			val spentBattleStars = totalBattleStars - currentBattleStars
+			val currentAlienStylePoints = stats.alien_style_points ?: 0
+			val spentAlienStylePoints = stats.purchasedBpOffers.values.sumOf { if (it.currencyType == "alien_style_points") it.totalCurrencyPaid else 0 }
+			val totalAlienStylePoints = currentAlienStylePoints + spentAlienStylePoints
+			embed.addField("Season Resources", "%s %s **%,d** (%,d spent, %,d total)\n%s %s **%,d** (%,d spent, %,d total)\n%s %s **%,d**".format(
+				"Battle Stars", battleStarEmote?.asMention, currentBattleStars, spentBattleStars, totalBattleStars,
+				"Alien Artifacts", alienCurrencyEmote?.asMention, currentAlienStylePoints, spentAlienStylePoints, totalAlienStylePoints,
 				"Bars", barsEmote?.asMention, inventory.stash["globalcash"] ?: 0
 			), false)
 			stats.last_match_end_datetime?.apply {

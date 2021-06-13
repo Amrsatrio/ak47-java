@@ -8,6 +8,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
+import com.tb24.discordbot.util.relativeFromNow
 import com.tb24.fn.model.assetdata.FortFriendChestItemDefinition
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.item.FortFriendChestItem
@@ -30,12 +31,12 @@ class FriendChestCommand : BrigadierCommand("friendchest", "Check your weekly al
 				.setTitle("Friend Chest: Alien Artifacts")
 				.addProgressField("This period", attrs.granted_this_period, itemDef.GrantsPerPeriod)
 				.addProgressField("This season", attrs.granted_this_season, itemDef.GrantsPerSeason)
-				.setFooter("Period resets")
+				.setFooter("Period resets " + attrs.period_reset_time.relativeFromNow())
 				.setTimestamp(attrs.period_reset_time.toInstant())
 				.build())
 			Command.SINGLE_SUCCESS
 		}
 
 	private inline fun EmbedBuilder.addProgressField(title: String, progress: Int, max: Int) =
-		addField((if (progress >= max) "✅ " else "") + title, "`%s`\n%,d / %,d".format(Utils.progress(progress, max, 32), progress, max), true)
+		addField(title, "`%s`\n%,d / %,d%s".format(Utils.progress(progress, max, 32), progress, max, (if (progress >= max) " ✅" else "")), true)
 }

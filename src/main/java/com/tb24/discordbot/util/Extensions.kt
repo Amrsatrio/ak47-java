@@ -1,5 +1,6 @@
 package com.tb24.discordbot.util
 
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.mojang.brigadier.StringReader
 import com.mojang.brigadier.context.CommandContext
@@ -19,6 +20,7 @@ import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer.CatalogItemPrice
 import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.model.mcpprofile.ProfileUpdate
+import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
 import com.tb24.fn.util.*
 import com.tb24.uasset.AssetManager
 import me.fungames.jfortniteparse.fort.exports.FortWorkerType
@@ -300,6 +302,8 @@ fun similarity(s1: String, s2: String): Float {
 }
 
 inline fun <reified T : AthenaSeasonItemData> AthenaSeasonItemDefinition.getAdditionalDataOfType() = AdditionalSeasonData?.firstOrNull { it.value is T }?.value as T?
+
+val AthenaProfileStats.purchasedBpOffers get() = (purchased_bp_offers as? JsonArray)?.let { EpicApi.GSON.fromJson(it, Array<AthenaProfileStats.BattlePassOfferPurchaseRecord>::class.java).associateBy { it.offerId } } ?: emptyMap()
 
 fun Number.awtColor(hasAlpha: Boolean = toInt() ushr 24 != 0) = Color(toInt(), hasAlpha)
 
