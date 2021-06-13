@@ -28,11 +28,11 @@ import javax.imageio.ImageIO
 
 class ItemCollectCommand : BrigadierCommand("collectibles", "Shows collectibles you haven't collected this season.", arrayOf("xpcoins", "alienartifacts", "artifacts")) {
 	companion object {
-		private val WEEKLY_QUEST_PATTERN = Pattern.compile("quest_s(\\d+)_w(\\d+)_(\\w+)_(\\w+)")
+		private val XP_COINS_PATTERN = Pattern.compile("quest_s(\\d+)_w(\\d+)_xpcoins_(\\w+)")
+		private val ALIEN_ARTIFACTS_PATTERN = Pattern.compile("quest_s(\\d+)_w(\\d+)_alienartifact_(\\w+)_(\\d+)")
 	}
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires(Rune::isBotDev)
 		.executes { execute(it.source, true) }
 		.then(literal("nomap")
 			.executes { execute(it.source, false) }
@@ -51,15 +51,26 @@ class ItemCollectCommand : BrigadierCommand("collectibles", "Shows collectibles 
 		val uncollected = mutableListOf<String>()
 
 		for (item in athena.items.values) {
-			val tidMatch = WEEKLY_QUEST_PATTERN.matcher(item.primaryAssetName)
-			if (!tidMatch.matches()) continue
-
-			//val season = tidMatch.group(1).toInt() - 1;
-			val week = tidMatch.group(2).toInt() - 1
-			val type = tidMatch.group(3)
-			val subType = tidMatch.group(4)
-			if (type != "xpcoins" && type != "alienartifact") {
-				continue
+			val week: Int
+			val questType: String
+			val type: String
+			val questIndex: Int
+			var matcher = XP_COINS_PATTERN.matcher(item.primaryAssetName)
+			if (matcher.matches()) {
+				week = matcher.group(2).toInt() - 1
+				questType = "xpcoins"
+				type = matcher.group(3)
+				questIndex = -1
+			} else {
+				matcher = ALIEN_ARTIFACTS_PATTERN.matcher(item.primaryAssetName)
+				if (matcher.matches()) {
+					week = matcher.group(2).toInt() - 1
+					questType = "alienartifact"
+					type = matcher.group(3)
+					questIndex = matcher.group(4).toInt() - 1
+				} else {
+					continue
+				}
 			}
 
 			val weekData = processed.getOrPut(week) {
@@ -77,10 +88,12 @@ class ItemCollectCommand : BrigadierCommand("collectibles", "Shows collectibles 
 				val attrName = entry.key
 				if (!attrName.startsWith(prefix)) continue
 
-				val index = attrName.substring(prefix.length).toInt() // starts from 0 since season 14, 1 before
-				// val index = attrName.substring(prefix.length).toInt() - 1;
+				val index = if (questIndex != -1) questIndex else {
+					attrName.substring(prefix.length).toInt() // starts from 0 since season 14, 1 before
+					// val index = attrName.substring(prefix.length).toInt() - 1;
+				}
 				val completionValue = entry.value.asInt
-				weekData[type + '_' + subType]?.let {
+				weekData[questType + '_' + type]?.let {
 					it[index] = completionValue
 					if (completionValue == 0) {
 						uncollected.add(attrName.substring("completion_".length))
