@@ -86,7 +86,7 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 					df.format(athena.created),
 					df.format(athena.updated)
 				), true)
-				embed.addField("Lifetime wins", Formatters.num.format(stats.lifetime_wins), true)
+				embed.addField("Wins", "**Season:** %,d\n**Lifetime:** %,d".format(stats.season?.numWins, stats.lifetime_wins), true)
 				embed.addField("2FA reward claimed", if (stats.mfa_reward_claimed) "✅" else "❌", true)
 				embed.addFieldSeparate("Past seasons", stats.past_seasons.toList(), 0) {
 					if (it.seasonNumber >= 11) {

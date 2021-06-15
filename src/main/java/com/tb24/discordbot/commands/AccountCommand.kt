@@ -57,7 +57,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		val data = source.api.accountService.getById(source.api.currentLoggedIn.id).exec().body()!!
 		val message = source.complete(null, EmbedBuilder()
 			.setTitle("Epic Account Summary")
-			.addField("Account ID", "||${data.id}||", false)
+			.addField("Account ID", data.id, false)
 			.addField("Name", "||${data.name} ${data.lastName}||", true)
 			.addField("Email", "||${data.email}||${if (data.emailVerified) " ✅" else " (unverified)"}", true)
 			.addField("Display Name", StringBuilder("Current: ${data.epicDisplayName.orDash()}")

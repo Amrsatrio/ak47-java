@@ -14,7 +14,7 @@ import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.item.FortFriendChestItem
 import net.dv8tion.jda.api.EmbedBuilder
 
-class FriendChestCommand : BrigadierCommand("friendchest", "Check your weekly alien artifacts progress.") {
+class FriendChestCommand : BrigadierCommand("friendchest", "Check your weekly alien artifacts progress.", arrayOf("fc")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { c ->
 			val source = c.source
@@ -23,7 +23,8 @@ class FriendChestCommand : BrigadierCommand("friendchest", "Check your weekly al
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 			val athena = source.api.profileManager.getProfileData("athena")
 			val items = athena.items.values.filter { it.primaryAssetType == "FriendChest" }
-			val friendChestItem = items.first { it.primaryAssetName == "friendchest_s17_alienstylepoint" } // TODO figure out other friend chests
+			val friendChestItem = items.firstOrNull { it.primaryAssetName == "friendchest_s17_alienstylepoint" } // TODO figure out other friend chests
+				?: throw SimpleCommandExceptionType(LiteralMessage("You haven't earned an Alien Artifact from Cosmic Chests.")).create()
 			val attrs = friendChestItem.getAttributes(FortFriendChestItem::class.java)
 			val itemDef = friendChestItem.defData as? FortFriendChestItemDefinition
 				?: throw SimpleCommandExceptionType(LiteralMessage("Friend chest item definition failed to load.")).create()

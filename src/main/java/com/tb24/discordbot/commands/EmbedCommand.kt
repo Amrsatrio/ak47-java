@@ -83,7 +83,7 @@ class EmbedCommand : BrigadierCommand("embed", "Shiver me embeds!") {
 					updateMessage()
 				}
 				"📩" -> {
-					channel.sendMessage(MessageBuilder().setContent(content).setEmbed(embed.build()).setAllowedMentions(setOf()).build()).complete()
+					channel.sendMessage(MessageBuilder().setContent(content).setEmbeds(embed.build()).setAllowedMentions(setOf()).build()).complete()
 					source.complete("✅ ${source.author.asMention}, successfully sent embed! Interaction design by a.bakedpotato.")
 					break
 				}
