@@ -42,6 +42,6 @@ class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your 
 		val h = seconds / 3600L
 		val m = (seconds % 3600L) / 60L
 		val s = seconds % 60L
-		return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s);
+		return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
 	}
 }

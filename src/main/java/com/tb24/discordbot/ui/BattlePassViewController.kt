@@ -1,4 +1,4 @@
-package com.tb24.discordbot.ui;
+package com.tb24.discordbot.ui
 
 import com.tb24.discordbot.util.getAdditionalDataOfType
 import com.tb24.discordbot.util.purchasedBpOffers
@@ -42,7 +42,7 @@ class BattlePassViewController(val athena: McpProfile) {
 			entry
 		}
 		var purchased = 0
-		val isUnlocked get() = stats.level >= backing.LevelsNeededForUnlock && section.purchased >= backing.RewardsNeededForUnlock
+		val isUnlocked get() = stats.level >= backing.LevelsNeededForUnlock || section.purchased >= backing.RewardsNeededForUnlock
 	}
 
 	inner class Entry(val backing: AthenaSeasonItemEntryBase, val page: Page) {

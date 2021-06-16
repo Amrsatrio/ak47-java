@@ -22,9 +22,6 @@ import net.dv8tion.jda.api.entities.MessageReaction
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.Button
-import okhttp3.MediaType
-import okhttp3.Request
-import okhttp3.RequestBody
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.CompletableFuture
@@ -99,7 +96,7 @@ fun doLogin(source: CommandSourceStack, grantType: EGrantType, params: String, a
 			}
 			source.session.login(source, deviceAuth(split[0], split[1], split[2]), authClient ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT)
 		}
-		EGrantType.device_code -> deviceCode(source, authClient ?: EAuthClient.FORTNITE_SWITCH_GAME_CLIENT)
+		EGrantType.device_code -> deviceCode(source, authClient ?: EAuthClient.FORTNITE_NEW_SWITCH_GAME_CLIENT)
 		EGrantType.exchange_code -> {
 			params = extractCode(params)
 			if (params.length != 32) {
@@ -220,20 +217,23 @@ fun doDeviceAuthLogin(source: CommandSourceStack, deviceData: DeviceAuth, users:
 
 private inline fun startDefaultLoginFlow(source: CommandSourceStack) =
 	authorizationCodeHint(source, EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
-//deviceCode(source, EAuthClient.FORTNITE_SWITCH_GAME_CLIENT)
+	//deviceCode(source, EAuthClient.FORTNITE_NEW_SWITCH_GAME_CLIENT)
 
 fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
-	if (true) throw SimpleCommandExceptionType(LiteralMessage("Device code is disabled until further notice.")).create()
+	//if (true) throw SimpleCommandExceptionType(LiteralMessage("Device code is disabled until further notice.")).create()
 	val timer = Timer()
 	if (source.api.userToken != null) {
 		source.session.logout(source.message)
 	}
 	source.loading("Preparing your login")
 	val ccLoginResponse = source.api.accountService.getAccessToken(authClient.asBasicAuthString(), clientCredentials(), "eg1", null).exec().body()!!
-	val deviceCodeResponse = source.client.okHttpClient.newCall(Request.Builder()
+	/*val deviceCodeResponse = source.client.okHttpClient.newCall(Request.Builder()
 		.url("https://api.epicgames.dev/epic/oauth/v1/deviceAuthorization")
 		.header("Authorization", ccLoginResponse.token_type + ' ' + ccLoginResponse.access_token)
-		.post(RequestBody.create(MediaType.get("application/x-www-form-urlencoded"), "prompt=login"))
+		.post(RequestBody.create(MediaType.get("application/x-www-form-urlencoded"), "prompt=login"))*/
+	val deviceCodeResponse = source.client.okHttpClient.newCall(source.api.accountService.initiatePinAuth("login")
+		.request().newBuilder()
+		.header("Authorization", ccLoginResponse.token_type + ' ' + ccLoginResponse.access_token)
 		.build()).exec().to<PinGrantInfo>()
 	deviceCodeResponse.expiration = System.currentTimeMillis() + min(300L, deviceCodeResponse.expires_in) * 1000L
 	source.complete(null, EmbedBuilder()
