@@ -54,7 +54,7 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 	}
 
 	fun complete(text: String?, embed: MessageEmbed? = null, actionRows: Collection<ActionRow>? = null): Message {
-		val message = MessageBuilder().setContent(text).setEmbeds(mutableListOf(embed)).setActionRows(actionRows).build()
+		val message = MessageBuilder().setContent(text).setEmbed(embed).setActionRows(actionRows).build()
 		val complete = (loadingMsg?.editMessage(message) ?: channel.sendMessage(message)).override(true).complete()
 		loadingMsg = null
 		return complete
