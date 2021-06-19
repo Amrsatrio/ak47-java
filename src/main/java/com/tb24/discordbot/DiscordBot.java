@@ -208,7 +208,11 @@ public final class DiscordBot {
 	public void dlog(String content, MessageEmbed embed) {
 		TextChannel tc = discord.getTextChannelById(708832031848661072L);
 		if (tc != null) {
-			tc.sendMessage(new MessageBuilder(content).setEmbeds(embed).build()).queue();
+			MessageBuilder builder = new MessageBuilder(content);
+			if (embed != null) {
+				builder.setEmbeds(embed);
+			}
+			tc.sendMessage(builder.build()).queue();
 		}
 	}
 

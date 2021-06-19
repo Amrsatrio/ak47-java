@@ -54,7 +54,11 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 	}
 
 	fun complete(text: String?, embed: MessageEmbed? = null, actionRows: Collection<ActionRow>? = null): Message {
-		val message = MessageBuilder().setContent(text).setEmbed(embed).setActionRows(actionRows).build()
+		val builder = MessageBuilder().setContent(text)
+		if (embed != null) {
+			builder.setEmbeds(embed)
+		}
+		val message = builder.setActionRows(actionRows).build()
 		val complete = (loadingMsg?.editMessage(message) ?: channel.sendMessage(message)).override(true).complete()
 		loadingMsg = null
 		return complete
@@ -102,7 +106,7 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 	}
 
 	fun getSavedAccountsLimit() = when {
-		Rune.isBotDev(this) || author.idLong == 720148351626248192L || author.idLong == 529158207265046530L || author.idLong == 125616041417113600L -> 20
+		Rune.isBotDev(this) || author.idLong == 854421774028374026L || author.idLong == 529158207265046530L || author.idLong == 125616041417113600L -> 20
 		hasPremium() -> 4
 		else -> {
 			val timeCreated = author.timeCreated.toEpochSecond()

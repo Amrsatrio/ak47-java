@@ -20,6 +20,7 @@ import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.internal.entities.UserImpl
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.awt.Color
 import java.io.IOException
@@ -29,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, private var persistent: Boolean = true) {
 	companion object {
-		val LOGGER = LoggerFactory.getLogger("Session")
+		val LOGGER: Logger = LoggerFactory.getLogger("Session")
 	}
 
 	val api = EpicApi(client.okHttpClient)
@@ -43,11 +44,11 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 			api.currentLoggedIn = accountData
 		}
 		api.eventBus.register(this)
-		LOGGER.info("Created session $id")
+		LOGGER.info("$id: Created")
 	}
 
 	@Throws(HttpException::class, IOException::class)
-	fun login(source: CommandSourceStack?, fields: Map<String, String>, auth: EAuthClient = EAuthClient.FORTNITE_IOS_GAME_CLIENT, sendMessages: Boolean = true): Int {
+	fun login(source: CommandSourceStack?, fields: Map<String, String>, auth: EAuthClient = EAuthClient.FORTNITE_ANDROID_GAME_CLIENT, sendMessages: Boolean = true): Int {
 		if (source != null) {
 			val grantType = fields["grant_type"]
 			if (grantType != "device_auth" && grantType != "device_code" && source.isFromType(ChannelType.TEXT) && source.guild.selfMember.hasPermission(Permission.MESSAGE_MANAGE) && sendMessages) {
