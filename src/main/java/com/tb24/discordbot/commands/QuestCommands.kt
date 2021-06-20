@@ -6,8 +6,6 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.IntegerArgumentType.getInteger
 import com.mojang.brigadier.arguments.IntegerArgumentType.integer
-import com.mojang.brigadier.arguments.StringArgumentType.getString
-import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
@@ -19,7 +17,6 @@ import com.tb24.fn.model.assetdata.RewardCategoryTabData
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.subgame.FortRerollDailyQuest
-import com.tb24.fn.model.mcpprofile.item.FortChallengeBundleItem
 import com.tb24.fn.model.mcpprofile.stats.IQuestManager
 import com.tb24.fn.util.format
 import com.tb24.uasset.AssetManager
@@ -111,9 +108,9 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR quests.", arrayOf("challenges", "chals")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it.source) }
-		.then(argument("tab", greedyString())
-			.executes { execute(it.source, getString(it, "tab").toLowerCase()) }
-		)
+	/*.then(argument("tab", greedyString())
+		.executes { execute(it.source, getString(it, "tab").toLowerCase()) }
+	)*/
 
 	private fun execute(source: CommandSourceStack, search: String? = null): Int {
 		source.ensureSession()
@@ -226,48 +223,6 @@ class QuestCommand : BrigadierCommand("quest", "Shows the details of a quest by 
 		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS
 	}
-}
-
-class MilestonesCommand : BrigadierCommand("milestones", "Shows your milestone quests in Fortnite.GG", arrayOf("rarequests")) {
-	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { c ->
-			val source = c.source
-			source.ensureSession()
-			source.loading("Getting challenges")
-			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
-			val athena = source.api.profileManager.getProfileData("athena")
-			val payload = sortedMapOf<String, Int>(String.CASE_INSENSITIVE_ORDER)
-			for (item in athena.items.values) {
-				if (item.primaryAssetType != "ChallengeBundle") {
-					continue
-				}
-				val trigger = "_milestone_"
-				val milestoneIdx = item.primaryAssetName.indexOf(trigger)
-				if (milestoneIdx == -1) {
-					continue
-				}
-				val attrs = item.getAttributes(FortChallengeBundleItem::class.java)
-				val bundleDef = item.defData as FortChallengeBundleItemDefinition
-				val lastQuestName = bundleDef.QuestInfos.last().QuestDefinition.toString().substringAfterLast('.')
-				for (questId in attrs.grantedquestinstanceids) {
-					val questItem = athena.items[questId]
-					if (questItem != null && questItem.primaryAssetName.equals(lastQuestName, true)) {
-						val progress = getQuestCompletion(questItem).first
-						payload[item.primaryAssetName.substring(milestoneIdx + trigger.length)] = progress
-						break
-					}
-				}
-			}
-			if (payload.isEmpty()) {
-				throw SimpleCommandExceptionType(LiteralMessage("No milestone quests detected")).create()
-			}
-			var url = "https://fortnite.gg/quests?progress=1&" + payload.entries.sortedBy { it.key }.joinToString("&") { it.key + '=' + it.value.toString() }
-			url = url.shortenUrl(source)
-			source.complete(null, source.createEmbed()
-				.setTitle("View your milestones on Fortnite.GG", url)
-				.build())
-			Command.SINGLE_SUCCESS
-		}
 }
 
 fun renderQuestObjectives(item: FortItemStack, short: Boolean = false): String {

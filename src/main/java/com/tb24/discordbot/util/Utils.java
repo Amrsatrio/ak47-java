@@ -1,8 +1,8 @@
 package com.tb24.discordbot.util;
 
-import com.google.gson.JsonElement;
 import com.tb24.fn.model.FortItemStack;
 import com.tb24.fn.util.EAuthClient;
+import com.tb24.fn.util.JsonUtils;
 import me.fungames.jfortniteparse.fort.objects.FortMcpQuestObjectiveInfo;
 
 import java.io.UnsupportedEncodingException;
@@ -85,8 +85,7 @@ public class Utils {
 		}
 
 		String backendName = "completion_" + objective.BackendName.toString().toLowerCase(Locale.ROOT);
-		JsonElement element = item.attributes.get(backendName);
-		return element.isJsonPrimitive() ? element.getAsInt() : -1;
+		return JsonUtils.getIntOr(backendName, item.attributes, -1);
 	}
 
 	public static int mod(int a, int b) {
