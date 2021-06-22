@@ -70,8 +70,8 @@ fun EmbedBuilder.populateOffer(codeInfo: StoreOffer?): EmbedBuilder {
 	}
 	val name = codeInfo.title
 	val description = codeInfo.description
-	val image = codeInfo.keyImages.getOrNull(0)?.url
-	val thumbnail = codeInfo.keyImages.getOrNull(2)?.url
+	val image = codeInfo.keyImages?.getOrNull(0)?.url
+	val thumbnail = codeInfo.keyImages?.getOrNull(2)?.url
 	val status = codeInfo.status
 	val created = codeInfo.creationDate.format()
 	val seller = codeInfo.seller?.name ?: "Unknown"

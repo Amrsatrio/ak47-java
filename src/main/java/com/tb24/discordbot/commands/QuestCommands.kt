@@ -6,6 +6,8 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.IntegerArgumentType.getInteger
 import com.mojang.brigadier.arguments.IntegerArgumentType.integer
+import com.mojang.brigadier.arguments.StringArgumentType.getString
+import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
@@ -19,8 +21,8 @@ import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.subgame.FortRerollDailyQuest
 import com.tb24.fn.model.mcpprofile.stats.IQuestManager
 import com.tb24.fn.util.format
-import com.tb24.uasset.AssetManager
 import com.tb24.uasset.getProp
+import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.enums.EFortRarity
 import me.fungames.jfortniteparse.fort.exports.AthenaDailyQuestDefinition
 import me.fungames.jfortniteparse.fort.exports.FortChallengeBundleItemDefinition
@@ -28,6 +30,7 @@ import me.fungames.jfortniteparse.fort.exports.FortQuestItemDefinition
 import me.fungames.jfortniteparse.fort.exports.FortQuestItemDefinition.EFortQuestType
 import me.fungames.jfortniteparse.fort.exports.FortTandemCharacterData
 import me.fungames.jfortniteparse.fort.objects.rows.FortQuestRewardTableRow
+import me.fungames.jfortniteparse.ue4.assets.exports.UObject
 import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
 import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
 import net.dv8tion.jda.api.EmbedBuilder
@@ -108,9 +111,9 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR quests.", arrayOf("challenges", "chals")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it.source) }
-	/*.then(argument("tab", greedyString())
-		.executes { execute(it.source, getString(it, "tab").toLowerCase()) }
-	)*/
+		.then(argument("tab", greedyString())
+			.executes { execute(it.source, getString(it, "tab").toLowerCase()) }
+		)
 
 	private fun execute(source: CommandSourceStack, search: String? = null): Int {
 		source.ensureSession()
@@ -186,7 +189,7 @@ class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR q
 	}
 
 	private fun getTabs(): List<RewardCategoryTabData> {
-		val d = AssetManager.INSTANCE.loadGameFile("/Game/Athena/HUD/Minimap/AthenaMapGamePanel_BP")?.exportsLazy?.get(7)?.value
+		val d = loadObject<UObject>("/Game/Athena/HUD/Minimap/AthenaMapGamePanel_BP.TabList_QuestCategories") /*AthenaMapGamePanel_BP_C:WidgetTree.TabList_QuestCategories*/
 			?: throw SimpleCommandExceptionType(LiteralMessage("Object defining categories not found.")).create()
 		return d.getProp<List<RewardCategoryTabData>>("RewardTabsData", TypeToken.getParameterized(List::class.java, RewardCategoryTabData::class.java).type)!!
 	}
