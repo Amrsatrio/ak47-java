@@ -123,12 +123,12 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 			if (lookupLevel >= seasonDef.NumBookLevels ?: 100) {
 				val row = seasonDef.SeasonXpOnlyExtendedCurve?.value?.findRowMapped<AthenaExtendedXPCurveEntry>(FName.dummy(lookupLevel.toString()))
 				if (row != null) {
-					return row.RewardItemAssetPerLevel?.let { FortItemStack(it.load<FortItemDefinition>(), row.RewardItemCountPerLevel) }
+					return row.RewardItemAssetPerLevel.load<FortItemDefinition>()?.let { FortItemStack(it, row.RewardItemCountPerLevel) }
 				}
 			} else {
 				val row = seasonDef.SeasonXpCurve?.value?.findRowMapped<AthenaSeasonalXPCurveEntry>(FName.dummy(lookupLevel.toString()))
 				if (row != null) {
-					return row.RewardItemAsset?.let { FortItemStack(it.load<FortItemDefinition>(), row.RewardItemCount) }
+					return row.RewardItemAsset.load<FortItemDefinition>()?.let { FortItemStack(it, row.RewardItemCount) }
 				}
 			}
 			return null
