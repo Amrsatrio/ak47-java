@@ -7,9 +7,11 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.ue4.assets.exports.UCurveTable
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
+import java.time.ZoneOffset
 
 class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your daily creative XP.", arrayOf("doihavecreativexp", "cxp")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -30,6 +32,15 @@ class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your 
 					Utils.progress(current, max, 32),
 					current, max,
 					current / delta * xpCount, max / delta * xpCount, textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-XPSmall-L.T-FNBR-XPSmall-L")?.asMention))
+			val loginTime = (athena.stats as AthenaProfileStats).quest_manager?.dailyLoginInterval
+			if (loginTime != null) {
+				val now = loginTime.toInstant().atOffset(ZoneOffset.UTC)
+				var next = now.withHour(14).withMinute(0).withSecond(0)
+				if (now > next) {
+					next = next.plusDays(1)
+				}
+				embed.setFooter("Resets").setTimestamp(next)
+			}
 			val hasMoreXp = current < max
 			if (hasMoreXp) {
 				embed.appendDescription("\nLast XP grant at 🕒 " + formatDurationSeconds((235L - (max - current)) * 60L))
