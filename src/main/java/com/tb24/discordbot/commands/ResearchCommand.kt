@@ -96,11 +96,11 @@ class ResearchCommand : BrigadierCommand("research", "Collect your research poin
 		for (statType in arrayOf(Fortitude, Offense, Resistance, Technology)) {
 			val researchLevel = (campaign.stats as CampaignProfileStats).research_levels[statType]
 			val s = statType.name.toLowerCase()
-			val cost = FName.dummy(s + "_cost")
-			val personal = FName.dummy(s + "_personal")
-			val personal_cumulative = FName.dummy(s + "_personal_cumulative")
-			val team = FName.dummy(s + "_team")
-			val team_cumulative = FName.dummy(s + "_team_cumulative")
+			val cost = FName(s + "_cost")
+			val personal = FName(s + "_personal")
+			val personal_cumulative = FName(s + "_personal_cumulative")
+			val team = FName(s + "_team")
+			val team_cumulative = FName(s + "_team_cumulative")
 			val gainToNextLevel = researchSystem.findCurve(personal)!!.eval(researchLevel + 1f).toInt() + researchSystem.findCurve(team)!!.eval(researchLevel + 1f).toInt()
 			val currentBonusPersonal = researchSystem.findCurve(personal_cumulative)!!.eval(researchLevel.toFloat()).toInt()
 			val currentBonusTeam = researchSystem.findCurve(team_cumulative)!!.eval(researchLevel.toFloat()).toInt()

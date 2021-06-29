@@ -20,7 +20,7 @@ class ExpeditionBuildSquadViewController(val expedition: FortItemStack, homebase
 	val type = recipe.RequiredCatalysts.first().toString()
 	val criteriaRequirements by lazy {
 		val criteriaRequirementsTable = loadObject<UDataTable>("/SaveTheWorld/Expeditions/CriteriaRequirements/ExpeditionCriteriaRequirements")!!
-		attrs.expedition_criteria.map { criteriaRequirementsTable.findRowMapped<FortCriteriaRequirementData>(FName.dummy(it))!! }
+		attrs.expedition_criteria.map { criteriaRequirementsTable.findRowMapped<FortCriteriaRequirementData>(FName(it))!! }
 	}
 	val squadChoices = mutableListOf<HomebaseManager.Squad>()
 	lateinit var squadController: SquadViewController

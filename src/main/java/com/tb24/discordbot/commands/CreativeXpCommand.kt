@@ -25,7 +25,7 @@ class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your 
 				?: throw SimpleCommandExceptionType(LiteralMessage("No playtime tracker")).create()
 			val (current, max) = getQuestCompletion(lastCreativePlaytimeTracker, false)
 			val delta = 15
-			val xpCount = loadObject<UCurveTable>("/Game/Athena/Balance/DataTables/AthenaAccoladeXP.AthenaAccoladeXP")!!.findCurve(FName.dummy("CreativeMode_15mMedal"))!!.eval(1f).toInt()
+			val xpCount = loadObject<UCurveTable>("/Game/Athena/Balance/DataTables/AthenaAccoladeXP.AthenaAccoladeXP")!!.findCurve(FName("CreativeMode_15mMedal"))!!.eval(1f).toInt()
 			val embed = source.createEmbed()
 				.setTitle("Creative XP")
 				.setDescription("`%s`\n%,d / %,d minutes played\n%,d / %,d %s".format(

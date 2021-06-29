@@ -21,7 +21,7 @@ import java.util.*
 
 @JvmField val squadsDataTable = loadObject<UDataTable>("/SaveTheWorld/CommandConsole/CCSquads")!!
 @JvmField val managerData = loadObject<FortHomebaseManager>("/SaveTheWorld/CommandConsole/CommandConsole_Manager")!!
-@JvmField val powerPointToRatingConversion = loadObject<UCurveTable>("/SaveTheWorld/Characters/Enemies/DataTables/HomebaseRatingMapping")!!.findCurve(FName.dummy("UIMonsterRating"))
+@JvmField val powerPointToRatingConversion = loadObject<UCurveTable>("/SaveTheWorld/Characters/Enemies/DataTables/HomebaseRatingMapping")!!.findCurve(FName("UIMonsterRating"))
 
 class HomebaseManager(val accountId: String, api: EpicApi) {
 	@JvmField val squads = LinkedHashMap<String, Squad>(squadsDataTable.rows.size).apply {

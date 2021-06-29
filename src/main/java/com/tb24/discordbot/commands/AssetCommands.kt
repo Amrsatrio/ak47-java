@@ -96,7 +96,7 @@ class ExportObjectCommand : BrigadierCommand("export", "Export an object from th
 
 class DumpClassCommand : BrigadierCommand("dumpclass", "Class dump.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires { it.author.idLong in arrayOf(624299014388711455L, 299693897859465228L, 129267551673909249L, 476930709227962389L) }
+		.requires { it.author.idLong in arrayOf(624299014388711455L, 299693897859465228L, 129267551673909249L, 476930709227962389L, 227316686288715786L) }
 		.then(argument("path", string2())
 			.executes { dumpClass(it.source, getString2(it, "path")) }
 			.then(argument("function body option", word())

@@ -7,7 +7,7 @@ import java.util.*
 import java.util.function.Predicate
 
 open class GameplayTagPredicate(matchGameplayTag: String) : Predicate<FortItemStack> {
-	private val matchGameplayTag = FGameplayTag(FName.dummy(matchGameplayTag.toLowerCase(Locale.ROOT)))
+	private val matchGameplayTag = FGameplayTag(FName(matchGameplayTag.toLowerCase(Locale.ROOT)))
 
 	override fun test(input: FortItemStack) = getGameplayTags(input)
 		?.any { it.toString().toLowerCase(Locale.ROOT).startsWith(matchGameplayTag.toString()) } == true
