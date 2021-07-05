@@ -28,6 +28,7 @@ import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
 import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.util.toPngArray
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.entities.MessageEmbed
 import java.awt.image.BufferedImage
 import java.text.DateFormat
 import java.text.SimpleDateFormat
@@ -130,6 +131,14 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 			continue
 		}
 		embed.addFieldSeparate(section.sectionData.sectionDisplayName ?: "", contents[i], 0)
+	}
+	// Replace V-Bucks emote with V character to try to reduce the length
+	if (embed.length() > MessageEmbed.EMBED_MAX_LENGTH_BOT) {
+		val iterator = embed.fields.listIterator()
+		while (iterator.hasNext()) {
+			val field = iterator.next()
+			iterator.set(MessageEmbed.Field(field.name, field.value?.replace(Utils.MTX_EMOJI, "V"), field.isInline))
+		}
 	}
 	val message = source.complete(null, embed.build())
 	if (!showAccInfo) {
