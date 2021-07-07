@@ -8,7 +8,7 @@ import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
-import com.tb24.discordbot.DiscordBot
+import com.tb24.discordbot.DiscordBot.PrefixConfig
 import net.dv8tion.jda.api.Permission
 import java.nio.charset.StandardCharsets
 
@@ -27,17 +27,17 @@ class PrefixCommand : BrigadierCommand("prefix", "Change prefix for the server/u
 				}
 				val source = it.source
 				val guildId = source.guild.idLong
-				val defaultPrefix = source.client.defaultPrefix
-				val currentPrefix = source.client.prefixMap[guildId]?.prefix ?: defaultPrefix
+				val savedPrefix = r.table("prefix").get(guildId).run(source.client.dbConn, PrefixConfig::class.java).first()?.prefix
+				val currentPrefix = savedPrefix ?: source.client.defaultPrefix
 				if (newPrefix == currentPrefix) {
 					throw SimpleCommandExceptionType(LiteralMessage("The prefix is already $newPrefix.")).create()
 				}
-				val newPrefixObj = DiscordBot.PrefixConfig().apply {
+				val newPrefixObj = PrefixConfig().apply {
 					server = source.guild.id
 					prefix = newPrefix
 				}
 				source.client.prefixMap[guildId] = newPrefixObj
-				if (currentPrefix != null) {
+				if (savedPrefix != null) {
 					r.table("prefix").update(newPrefixObj)
 				} else {
 					r.table("prefix").insert(newPrefixObj)
