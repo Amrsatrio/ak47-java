@@ -183,7 +183,7 @@ public final class DiscordBot {
 	}
 
 	public String getCommandPrefix(Message message) {
-		if (!message.isFromGuild() || ENV.equals("dev")) {
+		if (!message.isFromGuild() /*|| ENV.equals("dev")*/) {
 			return getDefaultPrefix();
 		}
 		long guildId = message.getGuild().getIdLong();

@@ -26,8 +26,7 @@ class PrefixCommand : BrigadierCommand("prefix", "Change prefix for the server/u
 					throw SimpleCommandExceptionType(LiteralMessage("No special characters allowed.")).create()
 				}
 				val source = it.source
-				val guildId = source.guild.idLong
-				val savedPrefix = r.table("prefix").get(guildId).run(source.client.dbConn, PrefixConfig::class.java).first()?.prefix
+				val savedPrefix = r.table("prefix").get(source.guild.id).run(source.client.dbConn, PrefixConfig::class.java).first()?.prefix
 				val currentPrefix = savedPrefix ?: source.client.defaultPrefix
 				if (newPrefix == currentPrefix) {
 					throw SimpleCommandExceptionType(LiteralMessage("The prefix is already $newPrefix.")).create()
@@ -36,7 +35,7 @@ class PrefixCommand : BrigadierCommand("prefix", "Change prefix for the server/u
 					server = source.guild.id
 					prefix = newPrefix
 				}
-				source.client.prefixMap[guildId] = newPrefixObj
+				source.client.prefixMap[source.guild.idLong] = newPrefixObj
 				if (savedPrefix != null) {
 					r.table("prefix").update(newPrefixObj)
 				} else {
