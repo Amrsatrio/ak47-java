@@ -303,6 +303,7 @@ fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): 
 	source.complete(null, EmbedBuilder()
 		.setTitle("📲 Log in to your Epic Games account", link)
 		.setDescription("""
+⚠ **We recommend that you only log into accounts that you have email access to!**
 1. Visit the link above to get your login code.
 2. Copy the 32 character code that looks like `aabbccddeeff11223344556677889900`, located after `?code=`.
 3. Send `${source.prefix}login <32 character code>` to complete your login.""")

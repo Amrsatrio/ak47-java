@@ -12,10 +12,11 @@ import java.io.FileReader
 
 internal class ExpeditionsTest {
 	val api = EpicApi(OkHttpClient())
-	val homebase = HomebaseManager("", api)
+	val homebase: HomebaseManager
 
 	init {
 		AssetManager.INSTANCE.loadPaks()
+		homebase = HomebaseManager("", api)
 		loadProfile("ComposeMCP-amrsatrio-queryprofile-campaign-106248")
 	}
 

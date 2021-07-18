@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
 import static com.rethinkdb.RethinkDB.r;
 
 public final class DiscordBot {
-	public static final String VERSION = "6.4.4";
+	public static final String VERSION = "6.4.5";
 	public static final Logger LOGGER = LoggerFactory.getLogger("DiscordBot");
 	public static final boolean LOAD_PAKS = System.getProperty("loadPaks", "false").equals("true");
 	public static final String ENV = System.getProperty("env", "dev");
@@ -71,7 +71,7 @@ public final class DiscordBot {
 			return;
 		}
 		LOGGER.info("Starting Discord Bot...");
-		if (LOAD_PAKS) AssetManager.INSTANCE.loadPaks(false, 0);
+		if (LOAD_PAKS) AssetManager.INSTANCE.loadPaks(true, 0);
 		try {
 			instance = new DiscordBot(args[0]);
 		} catch (Throwable e) {
@@ -81,10 +81,7 @@ public final class DiscordBot {
 	}
 
 	public DiscordBot(String token) throws LoginException, InterruptedException {
-		String dbUrl = "rethinkdb://localhost:28015/ak47";
-		LOGGER.info("Connecting to database {}...", dbUrl);
-		Internals.getInternalMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);
-		dbConn = r.connection(dbUrl).connect();
+		setupDatabase();
 		savedLoginsManager = new SavedLoginsManager(dbConn);
 		/*String port = System.getProperty("apiPort");
 		if (port != null) {
@@ -114,6 +111,13 @@ public final class DiscordBot {
 			scheduleUtcMidnightTask();
 			if (LOAD_PAKS) scheduleKeychainTask();
 		}
+	}
+
+	private void setupDatabase() {
+		String dbUrl = "rethinkdb://localhost:28015/ak47";
+		LOGGER.info("Connecting to database {}...", dbUrl);
+		Internals.getInternalMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);
+		dbConn = r.connection(dbUrl).connect();
 	}
 
 	private void scheduleUtcMidnightTask() {
