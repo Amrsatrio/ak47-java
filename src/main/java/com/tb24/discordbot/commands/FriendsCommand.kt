@@ -264,10 +264,11 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 	}
 
 	private fun promptToSendFriendRequest(source: CommandSourceStack, user: GameProfile): Int {
-		val message = source.complete(null, source.createEmbed()
+		val embed = source.createEmbed()
 			.setTitle("You're not friends with ${user.displayName}")
 			.setDescription("📩 Send friend request\n🚫 Block")
-			.build())
+			.addField("Account ID", user.id, false)
+		val message = source.complete(null, embed.build())
 		message.addReaction("📩").queue()
 		message.addReaction("🚫").queue()
 		return when (message.awaitOneReaction(source)) {
