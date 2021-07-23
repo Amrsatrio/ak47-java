@@ -10,7 +10,6 @@ import com.tb24.discordbot.Rune
 import com.tb24.discordbot.Session
 import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.exec
-import com.tb24.fn.EpicApi
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.McpProfile
 import net.dv8tion.jda.api.EmbedBuilder
@@ -18,7 +17,6 @@ import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.*
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.internal.entities.ReceivedMessage
-import java.awt.Color
 import java.net.URLEncoder
 
 open class CommandSourceStack(val client: DiscordBot, val message: Message, sessionId: String?) {
@@ -76,10 +74,10 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 	fun createEmbed(user: GameProfile = api.currentLoggedIn, phoenixRating: Boolean = false): EmbedBuilder {
 		val hasCampaign = session.api.profileManager.hasProfileData(user.id, "campaign")
 		val authorName = if (hasCampaign) "[%,d] %s".format(session.getHomebase(user.id).calcEnergyByFORT(phoenixRating).toInt(), user.displayName) else user.displayName
-		val (avatar, avatarBackground) = session.channelsManager.getUserSettings(user.id, "avatar", "avatarBackground")
-		return EmbedBuilder()
-			.setAuthor(authorName, null, avatar?.let { "https://cdn2.unrealengine.com/Kairos/portraits/$it.png?preview=1" })
-			.setColor(Color.decode(EpicApi.GSON.fromJson(avatarBackground, Array<String>::class.java)[1]))
+		//val (avatar, avatarBackground) = session.channelsManager.getUserSettings(user.id, "avatar", "avatarBackground")
+		return EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
+			.setAuthor(authorName/*, null, avatar?.let { "https://cdn2.unrealengine.com/Kairos/portraits/$it.png?preview=1" }*/)
+			//.setColor(Color.decode(EpicApi.GSON.fromJson(avatarBackground, Array<String>::class.java)[1]))
 	}
 
 	@Throws(HttpException::class)

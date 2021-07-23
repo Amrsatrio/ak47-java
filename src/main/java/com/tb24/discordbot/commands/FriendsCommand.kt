@@ -28,7 +28,6 @@ import okhttp3.MediaType
 import okhttp3.RequestBody
 import retrofit2.Call
 import java.net.HttpURLConnection
-import java.util.concurrent.CompletableFuture
 
 class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", arrayOf("f")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -41,7 +40,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		.then(literal("rejectall").requires(Rune::hasPremium).executes { bulk(it.source, "reject", null, FriendsService::queryIncomingFriendRequests, FriendsService::deleteFriendOrRejectInvite) })
 		.then(literal("cancelall").requires(Rune::hasPremium).executes { bulk(it.source, "cancel", null, FriendsService::queryOutgoingFriendRequests, FriendsService::deleteFriendOrRejectInvite) })
 		.then(literal("unblockall").requires(Rune::hasPremium).executes { bulk(it.source, "unblock", null, FriendsService::queryBlockedPlayers, FriendsService::sendUnblock) })
-		.then(literal("avatarids").executes { c ->
+		/*.then(literal("avatarids").executes { c ->
 			val source = c.source
 			source.ensureSession()
 			val friends = source.api.friendsService.queryFriends(source.api.currentLoggedIn.id, null).exec().body()!!
@@ -55,7 +54,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 				.joinToString("\n")
 			source.channel.sendFile(ids.toByteArray(), "avatar_ids_${source.api.currentLoggedIn.displayName}.txt").complete()
 			Command.SINGLE_SUCCESS
-		})
+		})*/
 		.then(literal("allowrequests")
 			.executes { updateAcceptInvites(it.source) }
 			.then(argument("can receive requests?", bool())

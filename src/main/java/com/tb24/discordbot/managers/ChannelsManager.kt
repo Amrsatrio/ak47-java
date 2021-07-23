@@ -61,6 +61,7 @@ class ChannelsManager(private val client: EpicApi) {
 
 	private val avatars = mutableMapOf<String, MutableMap<String, String>>()
 
+	@Deprecated("Party Hub has fully shut down as of July 23, 2021")
 	@Throws(HttpException::class, IOException::class)
 	fun getUserSettings(accountId: String, vararg settingKeys: String): Array<String?> {
 		val result = arrayOfNulls<String>(settingKeys.size)

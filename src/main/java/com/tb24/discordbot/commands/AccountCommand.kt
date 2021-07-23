@@ -9,8 +9,6 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.Rune
-import com.tb24.discordbot.managers.ChannelsManager
-import com.tb24.discordbot.managers.ChannelsManager.AvatarColor
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.AccountMutationPayload
 import com.tb24.fn.model.account.BackupCodesResponse
@@ -53,9 +51,9 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 			return Command.SINGLE_SUCCESS
 		}
 		source.loading("Getting account data")
-		val avatarKeys = source.session.channelsManager.getUserSettings(source.api.currentLoggedIn.id, ChannelsManager.KEY_AVATAR, ChannelsManager.KEY_AVATAR_BACKGROUND)
+		//val avatarKeys = source.session.channelsManager.getUserSettings(source.api.currentLoggedIn.id, ChannelsManager.KEY_AVATAR, ChannelsManager.KEY_AVATAR_BACKGROUND)
 		val data = source.api.accountService.getById(source.api.currentLoggedIn.id).exec().body()!!
-		val message = source.complete(null, EmbedBuilder()
+		val message = source.complete(null, EmbedBuilder().setColor(COLOR_INFO)
 			.setTitle("Epic Account Summary")
 			.addField("Account ID", data.id, false)
 			.addField("Name", "||${data.name} ${data.lastName}||", true)
@@ -72,8 +70,8 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 				"__${it.type}: ||**${it.externalDisplayName.orDash()}**||__\nAdded: ${it.dateAdded?.run { renderWithRelative() } ?: "\u2014"}"
 			} ?: "No linked accounts", false)
 			.setFooter("React with anything within 2 minutes to remove this embed")
-			.setThumbnail("https://cdn2.unrealengine.com/Kairos/portraits/${avatarKeys[0]}.png?preview=1")
-			.setColor(AvatarColor(avatarKeys[1]!!).dark)
+			//.setThumbnail("https://cdn2.unrealengine.com/Kairos/portraits/${avatarKeys[0]}.png?preview=1")
+			//.setColor(AvatarColor(avatarKeys[1]!!).dark)
 			.build())
 		if (message.awaitReactions({ _, _, _ -> true }, AwaitReactionsOptions().apply {
 				max = 1

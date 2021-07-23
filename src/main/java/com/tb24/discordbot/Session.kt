@@ -1,6 +1,7 @@
 package com.tb24.discordbot
 
 import com.mojang.brigadier.Command
+import com.tb24.discordbot.commands.BrigadierCommand
 import com.tb24.discordbot.commands.CommandSourceStack
 import com.tb24.discordbot.managers.ChannelsManager
 import com.tb24.discordbot.managers.HomebaseManager
@@ -22,8 +23,9 @@ import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.awt.Color
 import java.io.IOException
+import java.net.InetSocketAddress
+import java.net.Proxy
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
@@ -119,12 +121,12 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		if (user == null) {
 			return
 		}
-		val avatarKeys = channelsManager.getUserSettings(user.id, ChannelsManager.KEY_AVATAR, ChannelsManager.KEY_AVATAR_BACKGROUND)
-		val embed = EmbedBuilder()
+		//val avatarKeys = channelsManager.getUserSettings(user.id, ChannelsManager.KEY_AVATAR, ChannelsManager.KEY_AVATAR_BACKGROUND)
+		val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
 			.setTitle("👋 Welcome, %s".format(user.displayName ?: "Unknown"))
 			.addField("Account ID", user.id, false)
-			.setThumbnail("https://cdn2.unrealengine.com/Kairos/portraits/${avatarKeys[0]}.png?preview=1")
-			.setColor(Color.decode(EpicApi.GSON.fromJson(avatarKeys[1], Array<String>::class.java)[1]))
+			//.setThumbnail("https://cdn2.unrealengine.com/Kairos/portraits/${avatarKeys[0]}.png?preview=1")
+			//.setColor(Color.decode(EpicApi.GSON.fromJson(avatarKeys[1], Array<String>::class.java)[1]))
 		user.externalAuths?.run {
 			values.forEach {
 				if (it.type == "psn" || it.type == "xbl" || it.type == "nintendo") {
@@ -213,7 +215,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 							"gb_stwgift" -> {
 								title = "You received a gift!"
 								attrs.fromAccountId?.apply {
-									icon = "https://cdn2.unrealengine.com/Kairos/portraits/${channelsManager.getUserSettings(this, "avatar")[0]}.png?preview=1"
+									//icon = "https://cdn2.unrealengine.com/Kairos/portraits/${channelsManager.getUserSettings(this, "avatar")[0]}.png?preview=1"
 									line1 = "From: ${fromAccount?.displayName ?: attrs.fromAccountId}"
 								}
 								attrs.params["userMessage"]?.apply {
