@@ -6,8 +6,12 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.tb24.discordbot.*
+import com.tb24.discordbot.managers.CatalogManager
 import com.tb24.discordbot.util.*
+import com.tb24.fn.EpicApi
+import com.tb24.fn.model.FortCmsData
 import com.tb24.fn.model.assetdata.ESubGame
+import com.tb24.fn.model.gamesubcatalog.CatalogDownload
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer.CatalogItemPrice
 import com.tb24.fn.model.gamesubcatalog.ECatalogOfferType
@@ -29,7 +33,10 @@ import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.util.toPngArray
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.awt.image.BufferedImage
+import java.io.InputStreamReader
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -66,6 +73,17 @@ class ShopDumpCommand : BrigadierCommand("shopdump", "Sends the current item sho
 }
 
 fun executeShopImage(source: CommandSourceStack): Int {
+	val attachedFile = source.message.attachments.firstOrNull()
+	if (attachedFile != null) {
+		source.loading("Processing your request")
+		val catalogManager = CatalogManager()
+		catalogManager.catalogData = InputStreamReader(attachedFile.retrieveInputStream().await()).use { EpicApi.GSON.fromJson(it, CatalogDownload::class.java) }
+		catalogManager.sectionsData = OkHttpClient().newCall(Request.Builder().url("https://fortnitecontent-website-prod07.ol.epicgames.com/content/api/pages/fortnite-game/shop-sections").build()).exec().to<FortCmsData.ShopSectionsData>()
+		catalogManager.validate()
+		source.channel.sendFile(generateShopImage(catalogManager, 2).toPngArray(), attachedFile.fileName.substringBeforeLast('.') + ".png").complete()
+		source.loadingMsg!!.delete().queue()
+		return Command.SINGLE_SUCCESS
+	}
 	if (isUserAnIdiot(source)) {
 		return Command.SINGLE_SUCCESS
 	}
