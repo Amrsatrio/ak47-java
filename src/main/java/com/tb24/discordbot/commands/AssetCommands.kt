@@ -11,6 +11,7 @@ import com.tb24.uasset.*
 import me.fungames.jfortniteparse.fort.converters.createContainer
 import me.fungames.jfortniteparse.fort.exports.FortItemDefinition
 import me.fungames.jfortniteparse.ue4.assets.exports.UClass
+import me.fungames.jfortniteparse.ue4.assets.exports.USkeletalMesh
 import me.fungames.jfortniteparse.ue4.assets.exports.USoundWave
 import me.fungames.jfortniteparse.ue4.assets.exports.UStaticMesh
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
@@ -72,15 +73,24 @@ class ExportObjectCommand : BrigadierCommand("export", "Export an object from th
 						data = converted.data
 						fileName = obj.name + '.' + converted.format.toLowerCase()
 					}
+					is USkeletalMesh -> {
+						val converted = obj.convertMesh().export(exportLods = false, exportMaterials = false)!!
+						data = converted.data
+						fileName = converted.fileName
+					}
 					is UStaticMesh -> {
 						val converted = obj.convertMesh().export(exportLods = false, exportMaterials = false)!!
-						data = converted.pskx
+						data = converted.data
 						fileName = converted.fileName
 					}
 					is UTexture2D -> {
 						data = obj.toBufferedImage().toPngArray()
 						fileName = obj.name + ".png"
 					}
+					/*is FortChallengeBundleItemDefinition -> {
+						data = obj.createChallengeBundleContainer().getImage(AssetManager.INSTANCE.locres).toPngArray()
+						fileName = obj.name + ".png"
+					}*/
 					is FortItemDefinition -> {
 						data = obj.createContainer().getImage(AssetManager.INSTANCE.locres).toPngArray()
 						fileName = obj.name + ".png"

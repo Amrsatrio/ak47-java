@@ -1,19 +1,17 @@
 buildscript {
 	repositories {
-		google()
-		jcenter()
+		mavenCentral()
 	}
 	dependencies {
-		classpath 'com.guardsquare:proguard-gradle:7.0.0'
-		classpath 'com.github.jengelman.gradle.plugins:shadow:6.0.0'
+		classpath 'com.guardsquare:proguard-gradle:7.1.0'
 	}
 }
 
 plugins {
 	id 'application'
 	id 'java'
-	id 'org.jetbrains.kotlin.jvm' version '1.5.0'
-	id 'com.github.johnrengelman.shadow' version '6.0.0'
+	id 'org.jetbrains.kotlin.jvm' version '1.5.30-M1'
+	id 'com.github.johnrengelman.shadow' version '7.0.0'
 }
 
 group 'com.tb24'
@@ -38,7 +36,7 @@ jar {
 repositories {
 	google()
 	mavenCentral()
-	maven { url 'https://dl.bintray.com/fungamesleaks/mavenRepo' }
+	maven { url 'https://jitpack.io' }
 	maven { url 'https://libraries.minecraft.net' }
 	maven {
 		name 'm2-dv8tion'
@@ -48,8 +46,8 @@ repositories {
 
 dependencies {
 	implementation fileTree(dir: 'libs', include: ['*.jar'])
-	implementation 'com.google.code.gson:gson:2.8.6'
-	implementation 'com.google.guava:guava:28.2-jre'
+	implementation 'com.google.code.gson:gson:2.8.7'
+	implementation 'com.google.guava:guava:30.1.1-jre'
 	implementation 'com.mojang:brigadier:1.0.17'
 	implementation 'com.rethinkdb:rethinkdb-driver:2.4.4'
 	//implementation 'com.sparkjava:spark-kotlin:1.0.0-alpha'
@@ -58,14 +56,14 @@ dependencies {
 	implementation 'com.tb24:epic-api:+'
 	implementation 'me.fungames:JFortniteParse:+'
 	implementation('net.dv8tion:JDA:+') { exclude module: 'opus-java' }
-	implementation 'net.jodah:expiringmap:0.5.9'
+	implementation 'net.jodah:expiringmap:0.5.10'
 	implementation 'net.sf.trove4j:trove4j:3.0.3'
-	implementation 'org.apache.logging.log4j:log4j-api:2.13.3'
-	implementation 'org.apache.logging.log4j:log4j-core:2.13.3'
-	implementation 'org.apache.logging.log4j:log4j-slf4j-impl:2.13.3'
+	implementation 'org.apache.logging.log4j:log4j-api:2.14.1'
+	implementation 'org.apache.logging.log4j:log4j-core:2.14.1'
+	implementation 'org.apache.logging.log4j:log4j-slf4j-impl:2.14.1'
 	implementation 'org.greenrobot:eventbus:3.2.0'
 	implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
-	implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.9'
+	implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1-native-mt'
 	implementation 'org.quartz-scheduler:quartz:2.3.2'
 	testImplementation 'junit:junit:4.13.2'
 }
