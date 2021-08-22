@@ -105,11 +105,11 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 
 	fun getSavedAccountsLimit() = when {
 		Rune.isBotDev(this) || author.idLong == 854421774028374026L || author.idLong == 529158207265046530L || author.idLong == 125616041417113600L -> 20
-		hasPremium() -> 4
+		hasPremium() -> 5
 		else -> {
 			val timeCreated = author.timeCreated.toEpochSecond()
 			val accountAge = System.currentTimeMillis() / 1000 - timeCreated
-			if (accountAge < 180 * 24 * 60 * 60) 0 else 2
+			if (accountAge < 90 * 24 * 60 * 60) 0 else 3
 		}
 	}
 }

@@ -135,7 +135,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 			}
 		}
 		val dbDevices = client.savedLoginsManager.getAll(id)
-		if (dbDevices.none { it.accountId == user.id } && dbDevices.size < source.getSavedAccountsLimit()) {
+		if (System.getProperty("disallowDeviceAuthCreation") != "true" && dbDevices.none { it.accountId == user.id } && dbDevices.size < source.getSavedAccountsLimit()) {
 			embed.setFooter("Tip: do %ssavelogin to keep yourself logged in in the future".format(source.prefix))
 		}
 		source.complete(null, embed.build())

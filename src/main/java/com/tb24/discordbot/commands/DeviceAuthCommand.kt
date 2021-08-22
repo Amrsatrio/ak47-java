@@ -117,7 +117,7 @@ private fun create(c: CommandContext<CommandSourceStack>): Int {
 	val limit = source.getSavedAccountsLimit()
 	if (dbDevices.size >= limit) {
 		if (dbDevices.isEmpty() && limit == 0) {
-			throw SimpleCommandExceptionType(LiteralMessage("Your Discord account must be older than 180 days in order to have 2 complimentary saved logins.\nAlternatively, you can buy premium from us to get 4 saved logins regardless of account age.")).create()
+			throw SimpleCommandExceptionType(LiteralMessage("Your Discord account must be older than 90 days in order to have 3 complimentary saved logins.\nAlternatively, you can buy premium from us to get 4 saved logins regardless of account age.")).create()
 		} else {
 			throw SimpleCommandExceptionType(LiteralMessage("Maximum number of saved logins has been reached.")).create()
 		}
@@ -135,6 +135,7 @@ private fun create(c: CommandContext<CommandSourceStack>): Int {
 	})
 	val embed = source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS)
 		.setTitle("✅ Device auth created and registered to ${source.client.discord.selfUser.name}")
+		.setFooter("Use ${source.prefix}deletesavedlogin to reverse the process")
 	if (inDMs) {
 		source.complete(null, embed.populateDeviceAuthDetails(response).build())
 	} else {
