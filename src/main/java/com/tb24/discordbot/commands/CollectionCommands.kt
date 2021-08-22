@@ -6,10 +6,10 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.MapImageGenerator
-import com.tb24.discordbot.MapImageGenerator.MapMarker
-import com.tb24.discordbot.MapImageGenerator.MapPath
-import com.tb24.discordbot.MapImageGenerator.MapPath.EPathOp
+import com.tb24.discordbot.images.MapImageGenerator
+import com.tb24.discordbot.images.MapImageGenerator.MapMarker
+import com.tb24.discordbot.images.MapImageGenerator.MapPath
+import com.tb24.discordbot.images.MapImageGenerator.MapPath.EPathOp
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack

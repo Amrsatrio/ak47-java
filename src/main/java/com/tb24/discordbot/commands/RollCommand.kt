@@ -10,10 +10,10 @@ import com.mojang.brigadier.arguments.StringArgumentType.*
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.forRarity
 import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.addFieldSeparate
 import com.tb24.discordbot.util.commandName
+import com.tb24.discordbot.util.forRarity
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.getPreviewImagePath

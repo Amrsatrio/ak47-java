@@ -5,7 +5,10 @@ import com.google.gson.JsonParser
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.tb24.discordbot.*
+import com.tb24.discordbot.DiscordBot
+import com.tb24.discordbot.L10N
+import com.tb24.discordbot.images.FMergedMaterialParams
+import com.tb24.discordbot.images.generateShopImage
 import com.tb24.discordbot.managers.CatalogManager
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi

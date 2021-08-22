@@ -23,7 +23,10 @@ import com.tb24.fn.model.mcpprofile.ProfileUpdate
 import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
 import com.tb24.fn.util.*
 import com.tb24.uasset.AssetManager
+import me.fungames.jfortniteparse.fort.enums.EFortRarity
+import me.fungames.jfortniteparse.fort.exports.FortRarityData
 import me.fungames.jfortniteparse.fort.exports.FortWorkerType
+import me.fungames.jfortniteparse.fort.objects.FortColorPalette
 import me.fungames.jfortniteparse.fort.objects.FortItemQuantityPair
 import me.fungames.jfortniteparse.fort.objects.rows.FortQuestRewardTableRow
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
@@ -304,6 +307,17 @@ fun similarity(s1: String, s2: String): Float {
 inline fun <reified T : AthenaSeasonItemData> AthenaSeasonItemDefinition.getAdditionalDataOfType() = AdditionalSeasonData?.firstOrNull { it.value is T }?.value as T?
 
 val AthenaProfileStats.purchasedBpOffers get() = (purchased_bp_offers as? JsonArray)?.let { EpicApi.GSON.fromJson(it, Array<AthenaProfileStats.BattlePassOfferPurchaseRecord>::class.java).associateBy { it.offerId } } ?: emptyMap()
+
+fun FortRarityData.forRarity(rarity: EFortRarity): FortColorPalette {
+	val r = RarityCollection[rarity.ordinal]
+	return FortColorPalette().apply {
+		Color1 = r.Color1
+		Color2 = r.Color2
+		Color3 = r.Color3
+		Color4 = r.Color4
+		Color5 = r.Color5
+	}
+}
 
 fun Number.awtColor(hasAlpha: Boolean = toInt() ushr 24 != 0) = Color(toInt(), hasAlpha)
 

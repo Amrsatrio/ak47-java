@@ -1,5 +1,6 @@
-package com.tb24.discordbot
+package com.tb24.discordbot.images
 
+import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.util.createAndDrawCanvas
 import com.tb24.discordbot.util.exec
 import com.tb24.uasset.loadObject

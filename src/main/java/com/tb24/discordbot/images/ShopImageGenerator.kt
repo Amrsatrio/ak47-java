@@ -1,5 +1,6 @@
-package com.tb24.discordbot
+package com.tb24.discordbot.images
 
+import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.commands.OfferDisplayData
 import com.tb24.discordbot.managers.CatalogManager
 import com.tb24.discordbot.util.*
@@ -14,10 +15,7 @@ import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
 import com.tb24.uasset.AssetManager
 import com.tb24.uasset.loadObject
-import me.fungames.jfortniteparse.fort.enums.EFortRarity
 import me.fungames.jfortniteparse.fort.exports.CatalogMessaging
-import me.fungames.jfortniteparse.fort.exports.FortRarityData
-import me.fungames.jfortniteparse.fort.objects.FortColorPalette
 import me.fungames.jfortniteparse.ue4.assets.exports.mats.UMaterialInstance
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
@@ -561,17 +559,6 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 			ctx.font = ResourcesContext.burbankBigRegularBlack.deriveFont(Font.ITALIC, 20f)
 			ctx.drawString((itemNumber + 1).toString(), x + 4, y + h - 6)
 		}
-	}
-}
-
-fun FortRarityData.forRarity(rarity: EFortRarity): FortColorPalette {
-	val r = RarityCollection[rarity.ordinal]
-	return FortColorPalette().apply {
-		Color1 = r.Color1
-		Color2 = r.Color2
-		Color3 = r.Color3
-		Color4 = r.Color4
-		Color5 = r.Color5
 	}
 }
 

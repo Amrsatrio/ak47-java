@@ -143,7 +143,7 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 								}
 								if (result == null) {
 									val sb = StringBuilder(errorMessage)
-									val searchResults = source.api.userSearchService.queryUsers(query, externalAuthType).exec().body()!!
+									val searchResults = source.api.userSearchService.queryUsers(source.api.currentLoggedIn.id, query, externalAuthType).exec().body()!!
 									if (searchResults.isNotEmpty()) {
 										sb.append("\nDo you mean:")
 										for ((i, entry) in searchResults.withIndex()) {

@@ -1,4 +1,4 @@
-package com.tb24.discordbot
+package com.tb24.discordbot.images
 
 import com.tb24.discordbot.util.ResourcesContext
 import com.tb24.discordbot.util.createAndDrawCanvas

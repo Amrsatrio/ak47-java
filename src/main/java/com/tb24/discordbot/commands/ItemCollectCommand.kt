@@ -7,9 +7,9 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.L10N
-import com.tb24.discordbot.MapImageGenerator
 import com.tb24.discordbot.MapProcessor
 import com.tb24.discordbot.Rune
+import com.tb24.discordbot.images.MapImageGenerator
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin

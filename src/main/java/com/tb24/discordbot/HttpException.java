@@ -3,10 +3,9 @@ package com.tb24.discordbot;
 import com.google.gson.JsonSyntaxException;
 import com.tb24.fn.EpicApi;
 import com.tb24.fn.model.EpicError;
+import okhttp3.Response;
 
 import java.io.IOException;
-
-import okhttp3.Response;
 
 public class HttpException extends RuntimeException {
 	public okhttp3.Response response;

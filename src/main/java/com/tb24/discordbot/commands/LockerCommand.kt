@@ -9,8 +9,8 @@ import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.word
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.GridSlot
-import com.tb24.discordbot.createAttachmentOfIcons
+import com.tb24.discordbot.images.GridSlot
+import com.tb24.discordbot.images.createAttachmentOfIcons
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
