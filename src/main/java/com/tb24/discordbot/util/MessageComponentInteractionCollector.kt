@@ -7,7 +7,10 @@ import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.events.channel.text.TextChannelDeleteEvent
 import net.dv8tion.jda.api.events.interaction.GenericInteractionCreateEvent
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent
+import net.dv8tion.jda.api.interactions.components.ActionRow
+import net.dv8tion.jda.api.interactions.components.Button
 import net.dv8tion.jda.api.interactions.components.ComponentInteraction
+import net.dv8tion.jda.api.interactions.components.selections.SelectionMenu
 import java.util.concurrent.CompletableFuture
 
 open class MessageComponentInteractionCollectorOptions : CollectorOptions() {
@@ -113,6 +116,15 @@ fun Message.awaitMessageComponentInteractions(filter: CollectorFilter<ComponentI
 		override fun onEnd(collected: Map<Any, ComponentInteraction>, reason: CollectorEndReason) {
 			if (options.errors?.contains(reason) == true) future.completeExceptionally(CollectorException(collector, reason))
 			else future.complete(collected.values)
+			editMessageComponents(actionRows.map { row ->
+				ActionRow.of(*row.components.map {
+					when (it) {
+						is Button -> it.asDisabled()
+						is SelectionMenu -> it.asDisabled()
+						else -> throw AssertionError()
+					}
+				}.toTypedArray())
+			}).queue()
 		}
 	}
 	return future
