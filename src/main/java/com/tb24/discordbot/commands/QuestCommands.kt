@@ -269,9 +269,6 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 	var profile = source.api.profileManager.getProfileData(profileId)
 	val canReceiveMtxCurrency = profile.items.values.any { it.templateId == "Token:receivemtxcurrency" }
 	val currentDailies = questsGetter(profile)
-	if (currentDailies.isEmpty()) {
-		throw SimpleCommandExceptionType(LiteralMessage("You have no active daily quests")).create()
-	}
 	val questToReplace = if (questIndex != -1) {
 		currentDailies.getOrNull(questIndex - 1) ?: throw SimpleCommandExceptionType(LiteralMessage("Invalid daily quest number.")).create()
 	} else {
@@ -289,6 +286,7 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 			val isLocationQuest = quest.defData?.GameplayTags?.any { it.toString().startsWith("Athena.Location") } == true
 			if (isLocationQuest) {
 				optimalQuestToReplace = quest
+				break
 			}
 		}
 		optimalQuestToReplace ?: firstReducedXpQuest ?: throw SimpleCommandExceptionType(LiteralMessage("Can't find a quest that's good to replace.")).create()
