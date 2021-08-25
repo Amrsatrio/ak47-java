@@ -61,6 +61,7 @@ class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manage
 			Command.SINGLE_SUCCESS
 		}
 		.then(literal("replace")
+			.executes { replaceQuest(it.source, "athena", -1, ::getAthenaDailyQuests) }
 			.then(argument("daily challenge #", integer())
 				.executes { replaceQuest(it.source, "athena", getInteger(it, "daily challenge #"), ::getAthenaDailyQuests) }
 			)
@@ -268,8 +269,30 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 	var profile = source.api.profileManager.getProfileData(profileId)
 	val canReceiveMtxCurrency = profile.items.values.any { it.templateId == "Token:receivemtxcurrency" }
 	val currentDailies = questsGetter(profile)
-	val questToReplace = currentDailies.getOrNull(questIndex - 1)
-		?: throw SimpleCommandExceptionType(LiteralMessage("Invalid daily quest number.")).create()
+	if (currentDailies.isEmpty()) {
+		throw SimpleCommandExceptionType(LiteralMessage("You have no active daily quests")).create()
+	}
+	val questToReplace = if (questIndex != -1) {
+		currentDailies.getOrNull(questIndex - 1) ?: throw SimpleCommandExceptionType(LiteralMessage("Invalid daily quest number.")).create()
+	} else {
+		var firstReducedXpQuest: FortItemStack? = null
+		var optimalQuestToReplace: FortItemStack? = null
+		for (quest in currentDailies) {
+			val isReducedXp = (quest.attributes["xp_reward_scalar"]?.asFloat ?: 1f) < 1f
+			if (!isReducedXp) {
+				continue
+			}
+			if (firstReducedXpQuest == null) {
+				firstReducedXpQuest = quest
+			}
+			// I usually replace location based daily quests
+			val isLocationQuest = quest.defData?.GameplayTags?.any { it.toString().startsWith("Athena.Location") } == true
+			if (isLocationQuest) {
+				optimalQuestToReplace = quest
+			}
+		}
+		optimalQuestToReplace ?: firstReducedXpQuest ?: throw SimpleCommandExceptionType(LiteralMessage("Can't find a quest that's good to replace.")).create()
+	}
 	val remainingRerolls = (profile.stats as IQuestManager).questManager?.dailyQuestRerolls ?: 0
 	if (remainingRerolls <= 0) {
 		throw SimpleCommandExceptionType(LiteralMessage("You ran out of daily quest rerolls for today.")).create()
