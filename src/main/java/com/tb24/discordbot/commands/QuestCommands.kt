@@ -35,6 +35,7 @@ import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
 import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
+import net.dv8tion.jda.api.entities.Message
 
 class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manages your active BR daily challenges.", arrayOf("dailychals", "brdailies", "bd")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -295,23 +296,27 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 	if (remainingRerolls <= 0) {
 		throw SimpleCommandExceptionType(LiteralMessage("You ran out of daily quest rerolls for today.")).create()
 	}
-	val embed = source.createEmbed().setColor(BrigadierCommand.COLOR_WARNING)
-		.setTitle("Replace?")
-		.setDescription(renderChallenge(questToReplace, conditionalCondition = canReceiveMtxCurrency))
-	val confirmationEmbed = source.complete(null, embed.build())
-	if (!confirmationEmbed.yesNoReactions(source.author).await()) {
-		source.complete("👌 Alright.")
-		return Command.SINGLE_SUCCESS
+	val embed = source.createEmbed()
+	var confirmationMessage: Message? = null
+	if (questIndex != -1) {
+		confirmationMessage = source.complete(null, embed.setColor(BrigadierCommand.COLOR_WARNING)
+			.setTitle("Replace?")
+			.setDescription(renderChallenge(questToReplace, conditionalCondition = canReceiveMtxCurrency))
+			.build())
+		if (!confirmationMessage.yesNoReactions(source.author).await()) {
+			source.complete("👌 Alright.")
+			return Command.SINGLE_SUCCESS
+		}
 	}
 	source.api.profileManager.dispatchClientCommandRequest(FortRerollDailyQuest().apply { questId = questToReplace.itemId }, profileId).await()
 	profile = source.api.profileManager.getProfileData(profileId)
-	confirmationEmbed.editMessage(embed.setColor(BrigadierCommand.COLOR_SUCCESS)
+	embed.setColor(BrigadierCommand.COLOR_SUCCESS)
 		.setTitle("✅ Replaced")
 		.addField("Here are your daily quests now:", questsGetter(profile)
 			.mapIndexed { i, it -> renderChallenge(it, "${i + 1}. ", "\u00a0\u00a0\u00a0", conditionalCondition = canReceiveMtxCurrency) }
 			.joinToString("\n")
 			.takeIf { it.isNotEmpty() } ?: "You have no active daily quests", false)
-		.build()).complete()
+	confirmationMessage?.editMessageEmbeds(embed.build())?.complete() ?: source.complete(null, embed.build())
 	return Command.SINGLE_SUCCESS
 }
 
