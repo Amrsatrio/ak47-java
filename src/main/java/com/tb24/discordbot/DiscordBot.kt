@@ -13,6 +13,7 @@ import com.tb24.discordbot.managers.CatalogManager
 import com.tb24.discordbot.managers.SavedLoginsManager
 import com.tb24.discordbot.tasks.AutoLoginRewardTask
 import com.tb24.discordbot.tasks.KeychainTask
+import com.tb24.discordbot.util.exec
 import com.tb24.fn.model.assetdata.ESubGame
 import com.tb24.uasset.AssetManager
 import net.dv8tion.jda.api.JDA
@@ -25,6 +26,7 @@ import net.dv8tion.jda.api.requests.GatewayIntent
 import net.jodah.expiringmap.ExpirationPolicy
 import net.jodah.expiringmap.ExpiringMap
 import okhttp3.OkHttpClient
+import org.quartz.impl.StdSchedulerFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException
@@ -55,7 +57,7 @@ class DiscordBot(token: String) {
 			}
 			LOGGER.info("Starting Discord Bot...")
 			if (BotConfig.get().loadGameFiles) {
-				AssetManager.INSTANCE.loadPaks(true, 0)
+				AssetManager.INSTANCE.loadPaks(false, 0)
 			}
 			try {
 				instance = DiscordBot(token)
@@ -87,8 +89,15 @@ class DiscordBot(token: String) {
 	val autoLoginRewardTask = AutoLoginRewardTask(this)
 	val keychainTask = KeychainTask(this)
 	private val scheduledExecutor = ScheduledThreadPoolExecutor(2)
+	val scheduler = StdSchedulerFactory.getDefaultScheduler()
 
 	init {
+		// Init Quartz scheduler
+		scheduler.start()
+		Runtime.getRuntime().addShutdownHook(Thread { // TODO properly register the shutdown hook plugin
+			scheduler.shutdown()
+		})
+
 		// Setup database
 		val dbUrl = "rethinkdb://localhost:28015/ak47"
 		LOGGER.info("Connecting to database {}...", dbUrl)
@@ -126,8 +135,7 @@ class DiscordBot(token: String) {
 		discord.awaitReady()
 		LOGGER.info("Logged in as {}! v{}", discord.selfUser.asTag, VERSION)
 		Runtime.getRuntime().addShutdownHook(Thread {
-			internalSession.logout(null)
-			discord.shutdown()
+			internalSession.logout()
 		})
 		discord.presence.activity = Activity.playing(".help \u00b7 v$VERSION")
 
@@ -138,6 +146,7 @@ class DiscordBot(token: String) {
 				scheduleKeychainTask()
 			}
 		}
+		catalogManager.initialize(this)
 	}
 
 	// region Scheduled tasks
@@ -150,12 +159,12 @@ class DiscordBot(token: String) {
 			nextRun = nextRun.plusDays(1)
 		}
 		val task = Runnable {
-			try {
+			/*try {
 				postItemShop()
 			} catch (e: Throwable) {
 				dlog("__**Failed to auto post item shop**__\n```\n${Throwables.getStackTraceAsString(e)}```", null)
 				return@Runnable
-			}
+			}*/
 			try {
 				autoLoginRewardTask.run()
 			} catch (e: Throwable) {
@@ -169,7 +178,10 @@ class DiscordBot(token: String) {
 	/** Decoupled and public, so you can manually invoke this through eval */
 	@Suppress("MemberVisibilityCanBePrivate")
 	fun postItemShop() {
-		setupInternalSession()
+		if (ENV == "dev") {
+			return
+		}
+		ensureInternalSession()
 		val itemShopChannel = discord.getTextChannelById(BotConfig.get().itemShopChannelId)
 		if (itemShopChannel != null) {
 			executeShopText(OnlyChannelCommandSource(this, itemShopChannel), ESubGame.Athena)
@@ -202,6 +214,16 @@ class DiscordBot(token: String) {
 			LOGGER.info("Logged in to internal account: {} {}", internalSession.api.currentLoggedIn.displayName, internalSession.api.currentLoggedIn.id)
 		} catch (e: IOException) {
 			e.printStackTrace()
+		}
+	}
+
+	@Synchronized
+	fun ensureInternalSession() {
+		val response = internalSession.api.accountService.verify(null).exec()
+		if (response.code() == 401) {
+			setupInternalSession()
+		} else if (response.code() != 200) {
+			throw HttpException(response)
 		}
 	}
 

@@ -88,7 +88,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		return Command.SINGLE_SUCCESS
 	}
 
-	fun logout(message: Message?): Boolean {
+	fun logout(message: Message? = null): Boolean {
 		val logoutMsg = message?.run {
 			if (author.idLong == client.discord.selfUser.idLong) {
 				editMessage(Utils.loadingText("Logging out")).complete()
@@ -269,7 +269,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 							.build()
 						val user = client.discord.getUserById(id) ?: client.discord.retrieveUserById(id).complete()
 						val channel = (user as UserImpl).privateChannel ?: user.openPrivateChannel().complete()
-						channel.sendMessage(embed).complete()
+						channel.sendMessageEmbeds(embed).complete()
 					}
 				}
 			}

@@ -89,7 +89,7 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Battle pass.", arrayOf
 		val balance = countMtxCurrency(source.api.profileManager.getProfileData("common_core"))
 		val athena = source.api.profileManager.getProfileData("athena")
 		val stats = athena.stats as AthenaProfileStats
-		source.client.catalogManager.ensureCatalogData(source.api)
+		source.client.catalogManager.ensureCatalogData(source.client.internalSession.api)
 		val storefront = source.client.catalogManager.catalogData!!.storefronts.first { it.name == "BRSeason" + stats.season_num }
 		val offers = mutableListOf<CatalogEntryHolder>()
 		val buttons = mutableListOf<Button>()

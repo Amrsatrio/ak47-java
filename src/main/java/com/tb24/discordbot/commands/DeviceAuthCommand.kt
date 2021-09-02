@@ -146,7 +146,7 @@ private fun create(c: CommandContext<CommandSourceStack>): Int {
 	} else {
 		source.complete(null, embed.setDescription("Check your DMs for details.").build())
 		val channel = (source.author as UserImpl).privateChannel ?: runCatching { source.author.openPrivateChannel().complete() }.getOrNull()
-		channel?.sendMessage(embed.setDescription(null).populateDeviceAuthDetails(response).build())?.complete()
+		channel?.sendMessageEmbeds(embed.setDescription(null).populateDeviceAuthDetails(response).build())?.complete()
 	}
 	return Command.SINGLE_SUCCESS
 }

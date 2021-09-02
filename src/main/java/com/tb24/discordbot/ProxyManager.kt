@@ -21,8 +21,8 @@ class ProxyManager {
 		val LOGGER: Logger = LoggerFactory.getLogger("ProxyManager")
 		val PROXY_AUTHENTICATOR = Authenticator { route, response ->
 			val builder = response.request().newBuilder()
-			val proxyUsername: String? = BotConfig.get().proxyUsername
-			val proxyPassword: String? = BotConfig.get().proxyPassword
+			val proxyUsername = BotConfig.get().proxyUsername
+			val proxyPassword = BotConfig.get().proxyPassword
 			if (proxyUsername != null && proxyPassword != null) {
 				builder.header("Proxy-Authorization", Credentials.basic(proxyUsername, proxyPassword))
 			}

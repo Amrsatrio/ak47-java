@@ -4,29 +4,21 @@ import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
 import com.tb24.uasset.AssetManager
 import me.fungames.jfortniteparse.ue4.objects.core.misc.FGuid
-import retrofit2.Response
 import java.util.*
 
 class KeychainTask(val client: DiscordBot) : Runnable {
 	override fun run() {
 		DiscordBot.LOGGER.info("[FMcpKeychainHelper] Refresh")
-		var response: Response<Array<String>>
-		while (true) {
-			response = client.internalSession.api.fortniteService.storefrontKeychain(0).execute()
-			when {
-				response.code() == 401 -> client.setupInternalSession()
-				response.code() != 200 -> {
-					val ex = HttpException(response)
-					DiscordBot.LOGGER.warn("Unable to refresh keychain: ${ex.epicError.displayText} (HTTP ${response.code()})")
-					throw ex
-				}
-				else -> {
-					DiscordBot.LOGGER.info("RefreshKeychain complete (HTTP ${response.code()})")
-					break
-				}
-			}
+		client.ensureInternalSession()
+		val response = client.internalSession.api.fortniteService.storefrontKeychain(0).execute()
+		if (response.isSuccessful) {
+			DiscordBot.LOGGER.info("RefreshKeychain complete (HTTP ${response.code()})")
+			response.body()!!.forEach(::handle)
+		} else {
+			val ex = HttpException(response)
+			DiscordBot.LOGGER.warn("Unable to refresh keychain: ${ex.epicError.displayText} (HTTP ${response.code()})")
+			throw ex
 		}
-		response.body()!!.forEach(::handle)
 	}
 
 	fun handle(keyData: String) {

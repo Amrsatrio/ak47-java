@@ -107,7 +107,7 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 					response.notifications.filterIsInstance<DailyRewardsNotification>().firstOrNull()
 				)
 				if (requiresLogin) {
-					source.session.logout(null)
+					source.session.logout()
 				}
 				return true
 			} catch (e: HttpException) {

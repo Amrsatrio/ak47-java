@@ -33,7 +33,7 @@ class CatalogOfferArgument : ArgumentType<Result> {
 			return Result { s, loadingText ->
 				s.client.catalogManager.apply {
 					s.ensureSession()
-					if (ensureCatalogData(s.api)) {
+					if (ensureCatalogData(s.client.internalSession.api)) {
 						s.loading(loadingText)
 					}
 				}.purchasableCatalogEntries.safeGetOneIndexed(result, reader, start)
@@ -43,7 +43,7 @@ class CatalogOfferArgument : ArgumentType<Result> {
 		return Result { s, loadingText ->
 			s.client.catalogManager.apply {
 				s.ensureSession()
-				if (ensureCatalogData(s.api)) {
+				if (ensureCatalogData(s.client.internalSession.api)) {
 					s.loading(loadingText)
 				}
 			}.catalogData!!.storefronts.flatMap { it.catalogEntries.toSet() }.firstOrNull { it.offerId == query }

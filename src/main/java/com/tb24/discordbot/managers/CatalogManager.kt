@@ -1,5 +1,6 @@
 package com.tb24.discordbot.managers
 
+import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.to
@@ -10,41 +11,71 @@ import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.gamesubcatalog.CatalogDownload
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 import okhttp3.Request
+import org.quartz.*
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.util.*
 
 class CatalogManager {
+	companion object {
+		private val LOGGER: Logger = LoggerFactory.getLogger("CatalogManager")
+	}
+
+	var client: DiscordBot? = null
 	var catalogData: CatalogDownload? = null
 	var sectionsData: ShopSectionsData? = null
-	val stwEvent = ShopSection("Event Store")
-	val stwWeekly = ShopSection("Weekly Store")
-	val llamas = ShopSection("Llamas")
+	private val stwEvent = ShopSection("Event Store")
+	private val stwWeekly = ShopSection("Weekly Store")
+	private val llamas = ShopSection("Llamas")
 	val athenaSections = mutableMapOf<String, ShopSection>()
-	val campaignSections = listOf(stwEvent, stwWeekly, llamas)
+	val campaignSections = mutableMapOf("Event" to stwEvent, "Weekly" to stwWeekly, "Llamas" to llamas)
 	val purchasableCatalogEntries = mutableListOf<CatalogOffer>()
+	private var athenaHash = 0
+	private var campaignHash = 0
+	private val updateJob = JobBuilder.newJob(UpdateCatalogJob::class.java).withIdentity("updateCatalog").build()
+
+	fun initialize(client: DiscordBot?) {
+		this.client = client
+		if (client != null) {
+			try {
+				ensureCatalogData(client.internalSession.api)
+			} catch (e: Exception) {
+				LOGGER.warn("An error occurred when fetching the catalog for the first time", e)
+			}
+			updateJob.jobDataMap["client"] = client
+			client.scheduler.scheduleJob(updateJob, TriggerBuilder.newTrigger()
+				.startAt(Date(DateBuilder.evenHourDateAfterNow().time + 10L * 1000L)) // Give it 10 seconds delay as client time may vary slightly from server
+				.withSchedule(SimpleScheduleBuilder.repeatHourlyForever()) // Catalog refreshes hourly
+				.build())
+		}
+	}
 
 	@Synchronized
 	fun ensureCatalogData(api: EpicApi, force: Boolean = false): Boolean {
-		if (force || catalogData == null || System.currentTimeMillis() >= catalogData!!.expiration.time) {
+		val firstLoad = catalogData == null
+		if (force || firstLoad || System.currentTimeMillis() >= catalogData!!.expiration.time) {
+			LOGGER.info("Fetching catalog")
 			catalogData = api.fortniteService.storefrontCatalog("en").exec().body()
 			sectionsData = api.okHttpClient.newCall(Request.Builder().url("https://fortnitecontent-website-prod07.ol.epicgames.com/content/api/pages/fortnite-game/shop-sections").build()).exec().to<ShopSectionsData>()
-			validate()
+			validate(firstLoad)
 			return true
 		}
 		return false
 	}
 
-	fun validate() {
+	fun validate(firstLoad: Boolean = true) {
 		athenaSections.clear()
 		sectionsData!!.sectionList.sections.associateTo(athenaSections) {
 			val section = ShopSection(it)
 			section.sectionData.sectionId to section
 		}
-		campaignSections.forEach { it.items.clear() }
+		campaignSections.values.forEach { it.items.clear() }
 		for (storefront in catalogData!!.storefronts) {
 			for (offer in storefront.catalogEntries) {
 				offer.__ak47_storefront = storefront.name
 				offer.getMeta("EncryptionKey")?.let {
-					DiscordBot.LOGGER.info("[FortStorefront]: Adding key $it to keychain through store offer ${offer.offerId}")
-					DiscordBot.getInstanceOrNull()?.keychainTask?.handle(it)
+					LOGGER.info("[FortStorefront]: Adding key $it to keychain through store offer ${offer.offerId}")
+					client?.keychainTask?.handle(it)
 				}
 				(athenaSections[offer.getMeta("SectionId") ?: continue] ?: continue).items.add(offer)
 				if (offer.getMeta("IsLevelBundle").equals("true", true)) {
@@ -65,15 +96,53 @@ class CatalogManager {
 			section.items.sortByDescending { it.sortPriority ?: 0 }
 			purchasableCatalogEntries.addAll(section.items)
 		}
-		campaignSections.forEach { purchasableCatalogEntries.addAll(it.items) }
+		campaignSections.values.forEach { purchasableCatalogEntries.addAll(it.items) }
 		for (i in purchasableCatalogEntries.indices) { // assign indices
 			purchasableCatalogEntries[i].__ak47_index = i
 		}
+
+		// Check for changes and invoke the callbacks when necessary
+		val currentAthenaHash = hashSections(athenaSections.filter { it.value.items.isNotEmpty() })
+		val currentCampaignHash = hashSections(campaignSections)
+		if (!firstLoad) {
+			if (athenaHash != currentAthenaHash) {
+				onAthenaCatalogUpdated()
+			}
+			if (campaignHash != currentCampaignHash) {
+				onCampaignCatalogUpdated()
+			}
+		}
+		athenaHash = currentAthenaHash
+		campaignHash = currentCampaignHash
+	}
+
+	private fun hashSections(map: Map<String, ShopSection>) = map.entries.joinToString(",") { (sectionId, section) ->
+		sectionId + section.items.joinToString(",", "[", "]") { it.offerId }
+	}.hashCode()
+
+	private fun onAthenaCatalogUpdated() {
+		client?.postItemShop()
+		// TODO wishlist feature where users are reminded when the item(s) they want enter the shop
+	}
+
+	private fun onCampaignCatalogUpdated() {
+		val freeLlamas = llamas.items.filter { it.devName == "RandomFree.FreePack.01" || it.title == "Upgrade Llama (Seasonal Sale Freebie!)" }
+		client?.discord?.getTextChannelById(BotConfig.get().itemShopChannelId)?.sendMessage("STW shop change detected, free llamas: " + freeLlamas.joinToString { "#%,d".format(it.__ak47_index + 1) }.ifEmpty { "none :(" })?.queue()
+		// TODO auto claim free llamas
 	}
 
 	class ShopSection(val sectionData: FortCmsData.ShopSection) {
 		val items = mutableListOf<CatalogOffer>()
 
-		constructor(title: String) : this(FortCmsData.ShopSection().also { it.sectionDisplayName = title })
+		constructor(title: String) : this(FortCmsData.ShopSection().apply { sectionDisplayName = title })
+	}
+
+	class UpdateCatalogJob : Job {
+		override fun execute(context: JobExecutionContext) {
+			val client = context.mergedJobDataMap["client"] as DiscordBot
+			client.catalogManager.ensureCatalogData(client.internalSession.api)
+			// Note: Don't reschedule the job using catalogData.expiration since it can prevent subsequent scheduled jobs
+			// from being executed whenever an exception occurs
+		}
 	}
 }

@@ -92,7 +92,7 @@ fun executeShopImage(source: CommandSourceStack): Int {
 	}
 	source.ensureSession()
 	source.loading("Getting the shop")
-	source.client.catalogManager.ensureCatalogData(source.api)
+	source.client.catalogManager.ensureCatalogData(source.client.internalSession.api)
 	source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 	val image = generateShopImage(source.client.catalogManager, 2).toPngArray()
 	val tz = TimeZone.getTimeZone("UTC")
@@ -114,7 +114,7 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 	source.loading("Getting the shop")
 	val catalogManager = source.client.catalogManager
 	val profileManager = source.api.profileManager
-	catalogManager.ensureCatalogData(source.api)
+	catalogManager.ensureCatalogData(source.client.internalSession.api)
 	CompletableFuture.allOf(
 		profileManager.dispatchClientCommandRequest(QueryProfile()),
 		if (subGame == ESubGame.Campaign) {
@@ -124,7 +124,7 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 		}
 	).await()
 	val showAccInfo = source.channel.idLong != BotConfig.get().itemShopChannelId && source.session.id != "__internal__"
-	val sections = if (subGame == ESubGame.Campaign) catalogManager.campaignSections else catalogManager.athenaSections.values
+	val sections = if (subGame == ESubGame.Campaign) catalogManager.campaignSections.values else catalogManager.athenaSections.values
 	val contents = arrayOfNulls<List<String>>(sections.size)
 	val prices = mutableMapOf<String, CatalogItemPrice>()
 	for ((i, section) in sections.withIndex()) {

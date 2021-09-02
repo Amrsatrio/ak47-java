@@ -73,7 +73,7 @@ class NewsCommand : BrigadierCommand("news", "Shows the in-game news.") {
 	private fun displayNews(motds: List<CommonUISimpleMessageBase>, source: CommandSourceStack) {
 		if (motds.any { it is CommonUISimpleMessageMOTD && it.entryType == "Item" }) {
 			source.session = source.client.internalSession
-			source.client.catalogManager.ensureCatalogData(source.api)
+			source.client.catalogManager.ensureCatalogData(source.client.internalSession.api)
 		}
 		motds.forEach { source.complete(null, it.createEmbed(source).build()) }
 	}

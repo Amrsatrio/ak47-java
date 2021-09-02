@@ -30,7 +30,7 @@ class UndoCommand : BrigadierCommand("undo", "Cancel your last purchase.", array
 			if (purchase == null || stats.undo_timeout == "min") {
 				throw SimpleCommandExceptionType(LiteralMessage(L10N.format("undo.failed.nothing_to_undo"))).create()
 			}
-			source.client.catalogManager.ensureCatalogData(source.api)
+			source.client.catalogManager.ensureCatalogData(source.client.internalSession.api)
 			val catalogEntry = source.client.catalogManager.purchasableCatalogEntries.firstOrNull { it.offerId == purchase.offerId }
 			val catalogEntryName = catalogEntry?.holder()?.friendlyName ?: "<Item outside of current shop>"
 			if (System.currentTimeMillis() >= ISO8601Utils.parse(stats.undo_timeout, ParsePosition(0)).time) {

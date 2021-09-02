@@ -32,7 +32,7 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 			if (idsToQuery.size > 0) {
 				source.queryUsers(idsToQuery).forEach { localUserMap[it.id] = it }
 			}
-			source.client.catalogManager.ensureCatalogData(source.api)
+			source.client.catalogManager.ensureCatalogData(source.client.internalSession.api)
 			val within24h = getSentGiftsWithin24H(giftHistory)
 			val sb = StringBuilder(if (within24h.size < 5) {
 				"**%,d** daily gifts remaining.".format(5 - within24h.size)
