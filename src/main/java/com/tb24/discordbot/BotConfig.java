@@ -59,7 +59,7 @@ public class BotConfig {
 	public static class DeviceAuthQuota {
 		public int maxForPrivileged = 20;
 		public int maxForPremium = 5;
-		public int maxForComplimentary = 90;
+		public int maxForComplimentary = 3;
 		public int minAccountAgeInDaysForComplimentary = 90;
 		public List<Long> additionalPrivilegedUserIds = Collections.emptyList();
 	}

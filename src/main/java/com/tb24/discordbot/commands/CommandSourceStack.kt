@@ -90,7 +90,7 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 
 	@Throws(CommandSyntaxException::class)
 	fun ensureCompletedCampaignTutorial(campaign: McpProfile) {
-		val completedTutorial = campaign.items.values.firstOrNull { it.templateId == "Quest:homebaseonboarding" }?.attributes?.get("completion_hbonboarding_completezone")?.asInt ?: 0 > 0
+		val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:homebaseonboarding" }?.attributes?.get("completion_hbonboarding_completezone")?.asInt ?: 0) > 0
 		if (!completedTutorial) {
 			throw SimpleCommandExceptionType(LiteralMessage("To continue, the account must own Save the World and completed the tutorial.")).create()
 		}
@@ -108,7 +108,7 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 			else -> {
 				val timeCreated = author.timeCreated.toEpochSecond()
 				val accountAge = System.currentTimeMillis() / 1000 - timeCreated
-				if (accountAge < quotaSettings.minAccountAgeInDaysForComplimentary * 24 * 60 * 60) 0 else 3
+				if (accountAge >= quotaSettings.minAccountAgeInDaysForComplimentary * 24 * 60 * 60) quotaSettings.maxForComplimentary else 0
 			}
 		}
 	}
