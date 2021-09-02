@@ -63,7 +63,7 @@ class MapImageGenerator(var background: BufferedImage?, var backgroundMask: Buff
 			val (mx, my) = mapToImagePos(vec)
 			it.draw(ctx, mx.toInt(), my.toInt())
 		}
-		DiscordBot.instance?.discord?.selfUser?.avatarUrl?.let {
+		DiscordBot.getInstanceOrNull()?.discord?.selfUser?.avatarUrl?.let {
 			val pad = 32
 			val sz = 384
 			val originalComposite = ctx.composite

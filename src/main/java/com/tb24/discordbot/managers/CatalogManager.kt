@@ -44,7 +44,7 @@ class CatalogManager {
 				offer.__ak47_storefront = storefront.name
 				offer.getMeta("EncryptionKey")?.let {
 					DiscordBot.LOGGER.info("[FortStorefront]: Adding key $it to keychain through store offer ${offer.offerId}")
-					DiscordBot.instance?.keychainTask?.handle(it)
+					DiscordBot.getInstanceOrNull()?.keychainTask?.handle(it)
 				}
 				(athenaSections[offer.getMeta("SectionId") ?: continue] ?: continue).items.add(offer)
 				if (offer.getMeta("IsLevelBundle").equals("true", true)) {
