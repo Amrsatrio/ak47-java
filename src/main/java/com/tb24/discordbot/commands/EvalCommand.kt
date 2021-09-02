@@ -8,6 +8,7 @@ import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.Rune
 import com.tb24.uasset.AssetManager
 import javax.script.ScriptEngineManager
@@ -15,7 +16,7 @@ import javax.script.ScriptException
 
 class EvalCommand : BrigadierCommand("eval", "Evaluate an expression for debugging purposes.") {
 	private val engine = ScriptEngineManager().getEngineByName("js").apply {
-		put("A", AssetManager.INSTANCE)
+		put("provider", AssetManager.INSTANCE)
 	}
 	private val detailMessageField = Throwable::class.java.getDeclaredField("detailMessage").apply { ReflectionAccessor.getInstance().makeAccessible(this) }
 
@@ -28,8 +29,9 @@ class EvalCommand : BrigadierCommand("eval", "Evaluate an expression for debuggi
 	private fun handle(source: CommandSourceStack, code: String): Int {
 		try {
 			synchronized(engine) {
-				engine.put("M", source.client)
-				engine.put("S", source)
+				engine.put("client", source.client)
+				engine.put("source", source)
+				engine.put("config", BotConfig.get())
 				source.complete("```\n${engine.eval(code)}```", null)
 			}
 		} catch (e: Throwable) {

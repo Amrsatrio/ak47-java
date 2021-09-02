@@ -4,29 +4,63 @@ import com.tb24.fn.EpicApi;
 
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 
 public class BotConfig {
-	public static final BotConfig INSTANCE;
+	private static final BotConfig INSTANCE;
 
 	static {
 		try (FileReader reader = new FileReader("config_" + DiscordBot.ENV + ".json")) {
 			INSTANCE = EpicApi.GSON.fromJson(reader, BotConfig.class);
+			INSTANCE.applyAssetReaderProperties();
 		} catch (IOException e) {
 			throw new RuntimeException("Unable to load configuration", e);
 		}
 	}
 
-	public String token;
-	public String defaultPrefix;
-	public long homeGuild;
-	public String homeGuildInviteLink;
-	public long itemShopChannel;
-	public long logsChannel;
-	public long[] emojiGuilds;
+	public static BotConfig get() {
+		return INSTANCE;
+	}
 
-	public boolean loadPaks;
-	public String gameContentPath;
-	public String gameVersionOverride;
-	public String encryptionKeyOverride;
-	public boolean fatalObjectSerializationErrors;
+	public String token;
+	public String defaultPrefix = ",";
+	public long homeGuildId;
+	public String homeGuildInviteLink;
+	public long itemShopChannelId;
+	public long logsChannelId;
+	public List<Long> emojiGuildIds = Collections.emptyList();
+	public List<Long> adminUserIds = Collections.emptyList();
+
+	public DeviceAuthQuota deviceAuthQuota = new DeviceAuthQuota();
+	public boolean allowUsersToCreateDeviceAuth = true;
+
+	public String proxyHostsFile;
+	public String proxyUsername;
+	public String proxyPassword;
+	public String proxyDomainFormat;
+
+	public boolean loadGameFiles = true;
+	public String gamePath = "C:\\Program Files\\Epic Games\\Fortnite\\FortniteGame\\Content\\Paks";
+	public String game; // VersionContainer.game
+	public String gameVersion;
+	public String encryptionKey;
+	public boolean fatalObjectSerializationErrors = true;
+
+	/** We use System.getProperty() in the other module as the config for game files */
+	private void applyAssetReaderProperties() {
+		if (gamePath != null) System.setProperty("gamePath", gamePath);
+		if (game != null) System.setProperty("game", game);
+		if (gameVersion != null) System.setProperty("gameVersion", gameVersion);
+		if (encryptionKey != null) System.setProperty("encryptionKey", encryptionKey);
+		System.setProperty("fatalObjectSerializationErrors", fatalObjectSerializationErrors ? "true" : "false");
+	}
+
+	public static class DeviceAuthQuota {
+		public int maxForPrivileged = 20;
+		public int maxForPremium = 5;
+		public int maxForComplimentary = 90;
+		public int minAccountAgeInDaysForComplimentary = 90;
+		public List<Long> additionalPrivilegedUserIds = Collections.emptyList();
+	}
 }

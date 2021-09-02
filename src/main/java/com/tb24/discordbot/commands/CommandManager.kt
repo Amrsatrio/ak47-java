@@ -8,11 +8,11 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.mojang.brigadier.tree.LiteralCommandNode
+import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.util.CollectorEndReason
 import com.tb24.discordbot.util.CollectorException
-import com.tb24.discordbot.util.Utils
 import com.tb24.fn.network.AccountService.GrantType
 import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.EmbedBuilder
@@ -316,7 +316,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 	fun unhandledException(source: CommandSourceStack, e: Throwable, additional: String) {
 		source.complete(null, EmbedBuilder().setColor(BrigadierCommand.COLOR_ERROR)
 			.setTitle("💥 Uh oh! That was unexpected!")
-			.setDescription("An error has occurred and we're working to fix the problem!\nYou can [join our server](${Utils.HOMEBASE_GUILD_INVITE}) and report it there if we failed to fix it in time!")
+			.setDescription("An error has occurred and we're working to fix the problem!\nYou can [join our server](${BotConfig.get().homeGuildInviteLink}) and report it there if we failed to fix it in time!")
 			.addField("Error", "```$e```", false)
 			.build())
 		if (DiscordBot.ENV == "prod" || DiscordBot.ENV == "stage") {

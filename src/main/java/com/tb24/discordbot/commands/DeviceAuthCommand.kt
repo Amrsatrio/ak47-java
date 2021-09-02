@@ -8,6 +8,7 @@ import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.format
@@ -117,12 +118,16 @@ private fun create(c: CommandContext<CommandSourceStack>): Int {
 	val limit = source.getSavedAccountsLimit()
 	if (dbDevices.size >= limit) {
 		if (dbDevices.isEmpty() && limit == 0) {
-			throw SimpleCommandExceptionType(LiteralMessage("Your Discord account must be older than 90 days in order to have 3 complimentary saved logins.\nAlternatively, you can buy premium from us to get 4 saved logins regardless of account age.")).create()
-		} else {
-			throw SimpleCommandExceptionType(LiteralMessage("Maximum number of saved logins has been reached.")).create()
+			val quotaSettings = BotConfig.get().deviceAuthQuota
+			throw SimpleCommandExceptionType(LiteralMessage("Your Discord account must be older than %,d days in order to have %,d complimentary saved logins.\nAlternatively, you can buy premium from us to get %,d saved logins regardless of account age.".format(
+				quotaSettings.minAccountAgeInDaysForComplimentary,
+				quotaSettings.maxForComplimentary,
+				quotaSettings.maxForPremium
+			))).create()
 		}
+		throw SimpleCommandExceptionType(LiteralMessage("Maximum number of saved logins (%,d) has been reached.".format(limit))).create()
 	}
-	if (System.getProperty("disallowDeviceAuthCreation") == "true") {
+	if (!BotConfig.get().allowUsersToCreateDeviceAuth) {
 		throw SimpleCommandExceptionType(LiteralMessage("The current instance of the bot does not allow saving logins.")).create()
 	}
 	source.loading("Creating device auth")

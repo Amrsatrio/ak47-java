@@ -118,7 +118,7 @@ fun generateShopImage(catalogManager: CatalogManager, grid: Int = 0): BufferedIm
 	}
 	else catalogManager.athenaSections.values.filter { it.items.isNotEmpty() }.subList(0, 2)
 	val titleFont = ResourcesContext.burbankBigRegularBlack.deriveFont(Font.ITALIC, 160f)
-	val titleText = System.getProperty("java.version")//"ITEM SHOP"
+	val titleText = "ITEM SHOP"
 	val sectionContainers = mutableListOf<FShopSectionContainer>()
 
 	// region Measure & Layout

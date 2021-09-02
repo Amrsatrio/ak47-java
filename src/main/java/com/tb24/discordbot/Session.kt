@@ -35,12 +35,22 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		val LOGGER: Logger = LoggerFactory.getLogger("Session")
 	}
 
-	val api = EpicApi(client.okHttpClient)
+	val api: EpicApi
 	val otherClientApis = ConcurrentHashMap<EAuthClient, EpicApi>()
-	var channelsManager = ChannelsManager(api)
+	var channelsManager: ChannelsManager
 	val homebaseManagers = hashMapOf<String, HomebaseManager>()
 
 	init {
+		var client = client.okHttpClient
+		val proxyHost = pickProxyHost()
+		if (proxyHost != null) {
+			client = client.newBuilder()
+				.proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxyHost, 3128)))
+				.proxyAuthenticator(ProxyManager.PROXY_AUTHENTICATOR)
+				.build()
+		}
+		this.api = EpicApi(client)
+		this.channelsManager = ChannelsManager(api)
 		if (persistent) SessionPersister.get(id)?.apply {
 			api.setToken(token)
 			api.currentLoggedIn = accountData
@@ -135,7 +145,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 			}
 		}
 		val dbDevices = client.savedLoginsManager.getAll(id)
-		if (System.getProperty("disallowDeviceAuthCreation") != "true" && dbDevices.none { it.accountId == user.id } && dbDevices.size < source.getSavedAccountsLimit()) {
+		if (BotConfig.get().allowUsersToCreateDeviceAuth && dbDevices.none { it.accountId == user.id } && dbDevices.size < source.getSavedAccountsLimit()) {
 			embed.setFooter("Tip: do %ssavelogin to keep yourself logged in in the future".format(source.prefix))
 		}
 		source.complete(null, embed.build())
@@ -176,6 +186,13 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 			hb.updated(ProfileUpdatedEvent("campaign", campaign, null))
 		}
 		hb
+	}
+
+	private fun pickProxyHost(): String? {
+		val random = Random(id.toLongOrNull() ?: Long.MAX_VALUE)
+		val pickedHost = client.proxyManager.pickOne(random)
+		if (pickedHost != null) LOGGER.info("$id: Using proxy host $pickedHost")
+		return pickedHost
 	}
 
 	@Subscribe(threadMode = ThreadMode.ASYNC)

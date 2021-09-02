@@ -4,10 +4,7 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
-import com.tb24.discordbot.DiscordBot
-import com.tb24.discordbot.HttpException
-import com.tb24.discordbot.Rune
-import com.tb24.discordbot.Session
+import com.tb24.discordbot.*
 import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.exec
 import com.tb24.fn.model.account.GameProfile
@@ -103,13 +100,16 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 		return r.table("members").get(author.id).run(client.dbConn).first() != null
 	}
 
-	fun getSavedAccountsLimit() = when {
-		Rune.isBotDev(this) || author.idLong == 854421774028374026L || author.idLong == 529158207265046530L || author.idLong == 125616041417113600L -> 20
-		hasPremium() -> 5
-		else -> {
-			val timeCreated = author.timeCreated.toEpochSecond()
-			val accountAge = System.currentTimeMillis() / 1000 - timeCreated
-			if (accountAge < 90 * 24 * 60 * 60) 0 else 3
+	fun getSavedAccountsLimit(): Int {
+		val quotaSettings = BotConfig.get().deviceAuthQuota
+		return when {
+			Rune.isBotDev(this) || author.idLong in quotaSettings.additionalPrivilegedUserIds -> quotaSettings.maxForPrivileged
+			hasPremium() -> quotaSettings.maxForPremium
+			else -> {
+				val timeCreated = author.timeCreated.toEpochSecond()
+				val accountAge = System.currentTimeMillis() / 1000 - timeCreated
+				if (accountAge < quotaSettings.minAccountAgeInDaysForComplimentary * 24 * 60 * 60) 0 else 3
+			}
 		}
 	}
 }

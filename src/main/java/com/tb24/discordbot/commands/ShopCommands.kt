@@ -5,7 +5,7 @@ import com.google.gson.JsonParser
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.tb24.discordbot.DiscordBot
+import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.images.FMergedMaterialParams
 import com.tb24.discordbot.images.generateShopImage
@@ -100,7 +100,7 @@ fun executeShopImage(source: CommandSourceStack): Int {
 	val fileName = "shop-${SimpleDateFormat("dd-MM-yyyy").apply { timeZone = tz }.format(now)}.png"
 	val message = source.channel.sendMessage("**Battle Royale Item Shop (%s)**".format(DateFormat.getDateInstance().apply { timeZone = tz }.format(now))).addFile(image, fileName).complete()
 	source.loadingMsg!!.delete().queue()
-	if (source.channel.idLong == DiscordBot.ITEM_SHOP_CHANNEL_ID) {
+	if (source.channel.idLong == BotConfig.get().itemShopChannelId) {
 		message.crosspost().queue()
 	}
 	return Command.SINGLE_SUCCESS
@@ -123,7 +123,7 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 			profileManager.dispatchClientCommandRequest(QueryProfile(), "athena")
 		}
 	).await()
-	val showAccInfo = source.channel.idLong != DiscordBot.ITEM_SHOP_CHANNEL_ID && source.session.id != "__internal__"
+	val showAccInfo = source.channel.idLong != BotConfig.get().itemShopChannelId && source.session.id != "__internal__"
 	val sections = if (subGame == ESubGame.Campaign) catalogManager.campaignSections else catalogManager.athenaSections.values
 	val contents = arrayOfNulls<List<String>>(sections.size)
 	val prices = mutableMapOf<String, CatalogItemPrice>()

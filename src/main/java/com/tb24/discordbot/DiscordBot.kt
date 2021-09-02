@@ -25,6 +25,7 @@ import net.dv8tion.jda.api.requests.GatewayIntent
 import net.jodah.expiringmap.ExpirationPolicy
 import net.jodah.expiringmap.ExpiringMap
 import okhttp3.OkHttpClient
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.time.Duration
@@ -38,10 +39,8 @@ import kotlin.jvm.JvmField as F
 class DiscordBot(token: String) {
 	companion object {
 		const val VERSION = "6.4.6"
-		@F val LOGGER = LoggerFactory.getLogger("DiscordBot")
-		@F val LOAD_PAKS = System.getProperty("loadPaks", "false") == "true"
-		@F val ENV = System.getProperty("env", "dev")
-		const val ITEM_SHOP_CHANNEL_ID = 702307657989619744L
+		@F val LOGGER: Logger = LoggerFactory.getLogger("DiscordBot")
+		@F val ENV: String = System.getProperty("env", "dev")
 		lateinit var instance: DiscordBot
 
 		/** Provides safe access to [instance] in places where bot initialization is optional */
@@ -49,13 +48,13 @@ class DiscordBot(token: String) {
 
 		@JvmStatic
 		fun main(args: Array<String>) {
-			val token = args.getOrNull(0)
+			val token = BotConfig.get().token
 			if (token.isNullOrEmpty()) {
 				LOGGER.warn("No token provided")
 				exitProcess(1)
 			}
 			LOGGER.info("Starting Discord Bot...")
-			if (LOAD_PAKS) {
+			if (BotConfig.get().loadGameFiles) {
 				AssetManager.INSTANCE.loadPaks(true, 0)
 			}
 			try {
@@ -107,7 +106,7 @@ class DiscordBot(token: String) {
 		okHttpClient = OkHttpClient()
 		proxyManager = ProxyManager()
 		setupInternalSession()
-		if (LOAD_PAKS) {
+		if (BotConfig.get().loadGameFiles) {
 			// Load encrypted PAKs
 			keychainTask.run()
 		}
@@ -135,7 +134,7 @@ class DiscordBot(token: String) {
 		// Schedule tasks
 		if (ENV != "dev") {
 			scheduleUtcMidnightTask()
-			if (LOAD_PAKS) {
+			if (BotConfig.get().loadGameFiles) {
 				scheduleKeychainTask()
 			}
 		}
@@ -171,7 +170,7 @@ class DiscordBot(token: String) {
 	@Suppress("MemberVisibilityCanBePrivate")
 	fun postItemShop() {
 		setupInternalSession()
-		val itemShopChannel = discord.getTextChannelById(ITEM_SHOP_CHANNEL_ID)
+		val itemShopChannel = discord.getTextChannelById(BotConfig.get().itemShopChannelId)
 		if (itemShopChannel != null) {
 			executeShopText(OnlyChannelCommandSource(this, itemShopChannel), ESubGame.Athena)
 			executeShopImage(OnlyChannelCommandSource(this, itemShopChannel))
@@ -212,7 +211,7 @@ class DiscordBot(token: String) {
 	// region Prefix manager
 	fun getCommandPrefix(message: Message): String {
 		if (!message.isFromGuild /*|| ENV == "dev"*/) {
-			return defaultPrefix
+			return BotConfig.get().defaultPrefix
 		}
 		val guildId = message.guild.idLong
 		var dbEntry = prefixMap[guildId]
@@ -222,17 +221,11 @@ class DiscordBot(token: String) {
 			if (dbEntry == null) {
 				dbEntry = PrefixConfig()
 				dbEntry.server = guildIdString
-				dbEntry.prefix = defaultPrefix
+				dbEntry.prefix = BotConfig.get().defaultPrefix
 			}
 			prefixMap[guildId] = dbEntry
 		}
 		return dbEntry.prefix
-	}
-
-	val defaultPrefix get() = when (ENV) {
-		"prod" -> "."
-		"stage" -> "-"
-		else -> ","
 	}
 
 	class PrefixConfig {
@@ -242,7 +235,7 @@ class DiscordBot(token: String) {
 	// endregion
 
 	fun dlog(content: String?, embed: MessageEmbed?) {
-		val logsChannel = discord.getTextChannelById(708832031848661072L)
+		val logsChannel = discord.getTextChannelById(BotConfig.get().logsChannelId)
 		if (logsChannel != null) {
 			val builder = MessageBuilder(content)
 			if (embed != null) {

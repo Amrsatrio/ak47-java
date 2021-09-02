@@ -6,10 +6,10 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
+import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.Rune
 import com.tb24.discordbot.commands.arguments.MentionArgument.Companion.getMention
 import com.tb24.discordbot.commands.arguments.MentionArgument.Companion.mention
-import com.tb24.discordbot.util.Utils
 import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.ChannelType
@@ -44,7 +44,7 @@ class GrantRoledCommand : BrigadierCommand("grantroled", "Grants premium to ever
 		.requires(::prodAndBotDev)
 		.executes { c ->
 			val source = c.source
-			val guild = source.client.discord.getGuildById(Utils.HOMEBASE_GUILD_ID)
+			val guild = source.client.discord.getGuildById(BotConfig.get().homeGuildId)
 				?: throw SimpleCommandExceptionType(LiteralMessage("Home guild not found.")).create()
 			val membersWithRole = guild.loadMembers().get().filter { m -> m.roles.any { it.name.equals("premium", true) } }
 			val granted = r.table("members").run(source.client.dbConn).toList()
@@ -63,7 +63,7 @@ class SyncPremiumRoleCommand : BrigadierCommand("syncpremiumrole", "Internal com
 		.requires(::prodAndBotDev)
 		.executes { c ->
 			val source = c.source
-			val guild = source.client.discord.getGuildById(Utils.HOMEBASE_GUILD_ID)
+			val guild = source.client.discord.getGuildById(BotConfig.get().homeGuildId)
 				?: throw SimpleCommandExceptionType(LiteralMessage("Home guild not found.")).create()
 			val role = guild.getRolesByName("premium", true).firstOrNull()
 				?: throw SimpleCommandExceptionType(LiteralMessage("No role in ${guild.name} named Premium.")).create()
@@ -120,7 +120,7 @@ fun premium(source: CommandSourceStack, target: User, remove: Boolean/*, secret:
 		.setColor(if (remove) BrigadierCommand.COLOR_ERROR else BrigadierCommand.COLOR_SUCCESS)
 		.setTimestamp(Instant.now())
 		.build())
-	source.client.discord.getGuildById(Utils.HOMEBASE_GUILD_ID)?.let { homebaseGuild ->
+	source.client.discord.getGuildById(BotConfig.get().homeGuildId)?.let { homebaseGuild ->
 		val role = homebaseGuild.getRolesByName("premium", true).firstOrNull()
 		if (role != null) {
 			if (remove) {

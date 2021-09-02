@@ -2,7 +2,6 @@ package com.tb24.discordbot
 
 import com.rethinkdb.RethinkDB.r
 import com.tb24.discordbot.commands.BrigadierCommand
-import com.tb24.discordbot.util.Utils
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.events.guild.GuildJoinEvent
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent
@@ -16,7 +15,7 @@ class GuildListeners(private val client: DiscordBot) : ListenerAdapter() {
 		val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_SUCCESS)
 			.setTitle("👋 Hello %s, thanks for adding %s!".format(guild.name, client.discord.selfUser.name))
 			.setDescription("- Use `{Prefix}help` or `{Prefix}commands` to see all my commands.\n- Server admins can change my prefix from `{Prefix}` by using `{Prefix}prefix <new name>`.\n- If you need more help, want to subscribe to bot updates and daily item shop, or get more info about premium, you can [visit our support server]({Invite}).\n\nEnjoy!"
-				.replace("{Prefix}", client.defaultPrefix).replace("{Invite}", Utils.HOMEBASE_GUILD_INVITE))
+				.replace("{Prefix}", BotConfig.get().defaultPrefix).replace("{Invite}", BotConfig.get().homeGuildInviteLink))
 		generalChannel.sendMessageEmbeds(embed.build()).queue()
 	}
 
@@ -25,7 +24,7 @@ class GuildListeners(private val client: DiscordBot) : ListenerAdapter() {
 	}
 
 	override fun onGuildMemberJoin(event: GuildMemberJoinEvent) {
-		if (event.guild.idLong == Utils.HOMEBASE_GUILD_ID && client.isProd) {
+		if (event.guild.idLong == BotConfig.get().homeGuildId && client.isProd) {
 			grantRoleIfInTable(event, "members", "premium")
 			grantRoleIfInTable(event, "admins", "admin.js")
 		}

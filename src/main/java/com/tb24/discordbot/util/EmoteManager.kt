@@ -2,6 +2,7 @@ package com.tb24.discordbot.util
 
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.DiscordBot
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.util.getPreviewImagePath
@@ -18,15 +19,7 @@ import javax.imageio.ImageIO
 import kotlin.math.min
 
 val WHITELIST_ICON_EMOJI_ITEM_TYPES = arrayOf("AccountResource", "ConsumableAccountItem", "Currency", "Gadget", "Stat")
-val EMOJI_GUILDS = arrayOf(
-	845586443106517012L, // tee 1
-	845586502922010635L, // tee 2
-	805121146214940682L, // add ur emoji idc 2
-	677515124373979155L, // Epic Server Version Status
-	Utils.HOMEBASE_GUILD_ID, // AK Facility
-	612383214962606081L, // AS Development
-	784128953387974736L, // add ur emoji idc
-)
+val EMOJI_GUILDS by lazy { BotConfig.get().emojiGuildIds + BotConfig.get().homeGuildId }
 
 fun getItemIconEmoji(item: FortItemStack, bypassWhitelist: Boolean = false): Emote? {
 	val client = DiscordBot.instance.discord
