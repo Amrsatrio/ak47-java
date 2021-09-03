@@ -219,7 +219,7 @@ class DiscordBot(token: String) {
 
 	@Synchronized
 	fun ensureInternalSession() {
-		val response = internalSession.api.accountService.verify(null).exec()
+		val response = internalSession.api.accountService.verify(null).execute()
 		if (response.code() == 401) {
 			setupInternalSession()
 		} else if (response.code() != 200) {

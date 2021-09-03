@@ -36,6 +36,7 @@ import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.util.toPngArray
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
+import net.dv8tion.jda.api.entities.TextChannel
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.awt.image.BufferedImage
@@ -100,7 +101,7 @@ fun executeShopImage(source: CommandSourceStack): Int {
 	val fileName = "shop-${SimpleDateFormat("dd-MM-yyyy").apply { timeZone = tz }.format(now)}.png"
 	val message = source.channel.sendMessage("**Battle Royale Item Shop (%s)**".format(DateFormat.getDateInstance().apply { timeZone = tz }.format(now))).addFile(image, fileName).complete()
 	source.loadingMsg!!.delete().queue()
-	if (source.channel.idLong == BotConfig.get().itemShopChannelId) {
+	if (source.channel.idLong == BotConfig.get().itemShopChannelId && (source.channel as TextChannel).isNews) {
 		message.crosspost().queue()
 	}
 	return Command.SINGLE_SUCCESS
@@ -162,7 +163,7 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 		}
 	}
 	val message = source.complete(null, embed.build())
-	if (!showAccInfo) {
+	if (!showAccInfo && (source.channel as TextChannel).isNews) {
 		message.crosspost().queue()
 	}
 	return Command.SINGLE_SUCCESS
