@@ -128,6 +128,8 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 	val sections = if (subGame == ESubGame.Campaign) catalogManager.campaignSections.values else catalogManager.athenaSections.values
 	val contents = arrayOfNulls<List<String>>(sections.size)
 	val prices = mutableMapOf<String, CatalogItemPrice>()
+	var numOwned = 0
+	var numShownItems = 0
 	for ((i, section) in sections.withIndex()) {
 		val lines = mutableListOf<String>()
 		for (catalogEntry in section.items) {
@@ -136,8 +138,13 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 			}*/
 			if (catalogEntry.offerType == ECatalogOfferType.StaticPrice && (catalogEntry.prices.isEmpty() || catalogEntry.prices.first().currencyType == EStoreCurrencyType.RealMoney)) continue
 			val sd = catalogEntry.holder().apply { resolve(profileManager) }
-			lines.add("%,d. %s%s".format(catalogEntry.__ak47_index + 1, sd.friendlyName, if (showAccInfo && (sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit)) " ✅" else if (showAccInfo && !sd.eligible) " ❌" else ""))
+			val ownedOrSoldOut = showAccInfo && (sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit)
+			if (ownedOrSoldOut && subGame == ESubGame.Athena) {
+				numOwned++
+			}
+			lines.add("%,d. %s%s".format(catalogEntry.__ak47_index + 1, sd.friendlyName, if (ownedOrSoldOut) " ✅" else if (showAccInfo && !sd.eligible) " ❌" else ""))
 			catalogEntry.prices.forEach { prices.putIfAbsent(it.currencyType.name + ' ' + it.currencySubType, it) }
+			numShownItems++
 		}
 		contents[i] = lines
 	}
@@ -147,6 +154,9 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 	if (showAccInfo) {
 		embed.setDescription("Use `${source.prefix}buy` or `${source.prefix}gift` to perform operations with these items.\n✅ = Owned/sold out")
 			.addField(if (prices.size == 1) "Balance" else "Balances", prices.values.joinToString(" \u00b7 ") { it.getAccountBalanceText(profileManager) }, false)
+		if (numOwned > 0) {
+			embed.appendDescription("\nOwned: %,d/%,d%s".format(numOwned, numShownItems, if (numOwned >= numShownItems) " ✅" else ""))
+		}
 	}
 	for ((i, section) in sections.withIndex()) {
 		if (contents[i].isNullOrEmpty()) {

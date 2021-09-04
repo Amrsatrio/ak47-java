@@ -13,7 +13,6 @@ import com.tb24.discordbot.managers.CatalogManager
 import com.tb24.discordbot.managers.SavedLoginsManager
 import com.tb24.discordbot.tasks.AutoLoginRewardTask
 import com.tb24.discordbot.tasks.KeychainTask
-import com.tb24.discordbot.util.exec
 import com.tb24.fn.model.assetdata.ESubGame
 import com.tb24.uasset.AssetManager
 import net.dv8tion.jda.api.JDA
