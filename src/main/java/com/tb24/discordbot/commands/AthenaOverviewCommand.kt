@@ -58,7 +58,7 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 			val currentBattleStars = stats.battlestars ?: 0
 			val totalBattleStars = stats.battlestars_season_total ?: 0
 			val spentBattleStars = totalBattleStars - currentBattleStars
-			val currentStylePoints = stats.alien_style_points ?: 0
+			val currentStylePoints = stats.style_points ?: 0
 			val spentStylePoints = stats.purchasedBpOffers.values.sumOf { if (it.currencyType == "alien_style_points") it.totalCurrencyPaid else 0 }
 			val totalStylePoints = currentStylePoints + spentStylePoints
 			embed.addField("Season Resources", "%s %s **%,d** (%,d spent, %,d total)\n%s %s **%,d** (%,d spent, %,d total)\n%s %s **%,d**".format(

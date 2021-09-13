@@ -180,9 +180,9 @@ class DiscordBot(token: String) {
 		if (ENV == "dev") {
 			//return
 		}
-		ensureInternalSession()
 		val itemShopChannel = discord.getTextChannelById(BotConfig.get().itemShopChannelId)
 		if (itemShopChannel != null) {
+			ensureInternalSession()
 			executeShopText(OnlyChannelCommandSource(this, itemShopChannel), ESubGame.Athena)
 			executeShopImage(OnlyChannelCommandSource(this, itemShopChannel))
 		}
