@@ -15,6 +15,10 @@ import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import java.time.ZoneOffset
 
 class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your daily creative XP.", arrayOf("doihavecreativexp", "cxp")) {
+	companion object {
+		val resetHourUtc = 13 // Make sure to change this every season
+	}
+
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
 			val source = it.source
@@ -36,7 +40,7 @@ class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your 
 			val loginTime = (athena.stats as AthenaProfileStats).quest_manager?.dailyLoginInterval
 			if (loginTime != null) {
 				val now = lastCreativePlaytimeTracker.attributes.getDateISO("creation_time").toInstant().atOffset(ZoneOffset.UTC)
-				var next = now.withHour(14).withMinute(0).withSecond(0)
+				var next = now.withHour(resetHourUtc).withMinute(0).withSecond(0)
 				if (now > next) {
 					next = next.plusDays(1)
 				}

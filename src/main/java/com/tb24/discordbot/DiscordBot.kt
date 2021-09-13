@@ -39,7 +39,7 @@ import kotlin.jvm.JvmField as F
 
 class DiscordBot(token: String) {
 	companion object {
-		const val VERSION = "6.4.6"
+		const val VERSION = "6.4.7"
 		@F val LOGGER: Logger = LoggerFactory.getLogger("DiscordBot")
 		@F val ENV: String = System.getProperty("env", "dev")
 		lateinit var instance: DiscordBot
@@ -178,7 +178,7 @@ class DiscordBot(token: String) {
 	@Suppress("MemberVisibilityCanBePrivate")
 	fun postItemShop() {
 		if (ENV == "dev") {
-			return
+			//return
 		}
 		ensureInternalSession()
 		val itemShopChannel = discord.getTextChannelById(BotConfig.get().itemShopChannelId)

@@ -38,6 +38,8 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 			throw SimpleCommandExceptionType(LiteralMessage("Task is already running.")).create()
 		}
 		TASK_IS_RUNNING.set(true)
+		DiscordBot.LOGGER.info("Executing AutoLoginRewardTask")
+		client.ensureInternalSession()
 		val autoClaimEntries = r.table("auto_claim").run(client.dbConn, AutoClaimEntry::class.java).shuffled(random)
 		val users = client.internalSession.queryUsersMap(autoClaimEntries.map { it.id })
 		for (entry in autoClaimEntries) {

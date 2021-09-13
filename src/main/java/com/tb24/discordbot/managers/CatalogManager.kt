@@ -127,7 +127,7 @@ class CatalogManager {
 
 	private fun onCampaignCatalogUpdated() {
 		val freeLlamas = llamas.items.filter { it.devName == "RandomFree.FreePack.01" || it.title == "Upgrade Llama (Seasonal Sale Freebie!)" }
-		client?.discord?.getTextChannelById(BotConfig.get().itemShopChannelId)?.sendMessage("STW shop change detected, free llamas: " + freeLlamas.joinToString { "#%,d".format(it.__ak47_index + 1) }.ifEmpty { "none :(" })?.queue()
+		client?.discord?.getTextChannelById(BotConfig.get().itemShopChannelId)?.sendMessage("Free llamas: " + freeLlamas.joinToString { "#%,d".format(it.__ak47_index + 1) }.ifEmpty { "🚫 None" })?.queue()
 		// TODO auto claim free llamas
 	}
 
