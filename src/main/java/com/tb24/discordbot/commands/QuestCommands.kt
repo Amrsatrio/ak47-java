@@ -11,6 +11,7 @@ import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.Rune
 import com.tb24.discordbot.commands.arguments.ItemArgument.Companion.getItem
 import com.tb24.discordbot.commands.arguments.ItemArgument.Companion.item
 import com.tb24.discordbot.util.*
@@ -51,7 +52,7 @@ class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manage
 				.joinToString("\n")
 			if (description.isEmpty()) {
 				description = "You have no daily challenges"
-			} else if (numRerolls > 0) {
+			} else if (numRerolls > 0 && Rune.isBotDev(source)) {
 				description += "\n\n" + "You have %,d reroll(s) remaining today.\nUse `%s%s replace <%s>` to replace one."
 					.format(numRerolls, source.prefix, c.commandName, "daily challenge #")
 			}

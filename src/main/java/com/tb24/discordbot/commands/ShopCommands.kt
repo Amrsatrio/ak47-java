@@ -155,7 +155,7 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 		embed.setDescription("Use `${source.prefix}buy` or `${source.prefix}gift` to perform operations with these items.")
 			.addField(if (prices.size == 1) "Balance" else "Balances", prices.values.joinToString(" \u00b7 ") { it.getAccountBalanceText(profileManager) }, false)
 		if (numOwned > 0) {
-			embed.appendDescription("**Owned:** %,d/%,d%s".format(numOwned, numShownItems, if (numOwned >= numShownItems) " ✅" else ""))
+			embed.appendDescription("\n**Owned:** %,d/%,d%s".format(numOwned, numShownItems, if (numOwned >= numShownItems) " ✅" else ""))
 		}
 	}
 	for ((i, section) in sections.withIndex()) {
