@@ -56,14 +56,10 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 			}
 			embed.addField("Account Level", Formatters.num.format(stats.accountLevel), false)
 			val currentBattleStars = stats.battlestars ?: 0
-			val totalBattleStars = stats.battlestars_season_total ?: 0
-			val spentBattleStars = totalBattleStars - currentBattleStars
 			val currentStylePoints = stats.style_points ?: 0
-			val spentStylePoints = stats.purchasedBpOffers.values.sumOf { if (it.currencyType == "alien_style_points") it.totalCurrencyPaid else 0 }
-			val totalStylePoints = currentStylePoints + spentStylePoints
-			embed.addField("Season Resources", "%s %s **%,d** (%,d spent, %,d total)\n%s %s **%,d** (%,d spent, %,d total)\n%s %s **%,d**".format(
-				"Battle Stars", battleStarEmote?.asMention, currentBattleStars, spentBattleStars, totalBattleStars,
-				"Rainbow Ink", styleCurrencyEmote?.asMention, currentStylePoints, spentStylePoints, totalStylePoints,
+			embed.addField("Season Resources", "%s %s **%,d**\n%s %s **%,d**\n%s %s **%,d**".format(
+				"Battle Stars", battleStarEmote?.asMention, currentBattleStars,
+				"Rainbow Ink", styleCurrencyEmote?.asMention, currentStylePoints,
 				"Bars", barsEmote?.asMention, inventory.stash["globalcash"] ?: 0
 			), false)
 			stats.last_match_end_datetime?.apply {
@@ -86,8 +82,16 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 					df.format(athena.created),
 					df.format(athena.updated)
 				), true)
-				embed.addField("Wins", "**Season:** %,d\n**Lifetime:** %,d".format(stats.season?.numWins, stats.lifetime_wins), true)
+				embed.addField("Wins", "**Season:** %,d\n**Lifetime:** %,d".format(stats.season?.numWins ?: 0, stats.lifetime_wins), true)
 				embed.addField("2FA reward claimed", if (stats.mfa_reward_claimed) "✅" else "❌", true)
+				val currentBattleStars = stats.battlestars ?: 0
+				val totalBattleStars = stats.battlestars_season_total ?: 0
+				val spentBattleStars = totalBattleStars - currentBattleStars
+				val currentStylePoints = stats.style_points ?: 0
+				val spentStylePoints = stats.purchasedBpOffers.values.sumOf { if (it.currencyType == "style_points") it.totalCurrencyPaid else 0 }
+				val totalStylePoints = currentStylePoints + spentStylePoints
+				embed.addField("Battle Stars", "%,d spent, %,d total".format(spentBattleStars, totalBattleStars), true)
+				embed.addField("Style Points", "%,d spent, %,d total".format(spentStylePoints, totalStylePoints), true)
 				embed.addFieldSeparate("Past seasons", stats.past_seasons.toList(), 0) {
 					if (it.seasonNumber >= 11) {
 						"Season %,d: %s level %,d, %,d wins".format(it.seasonNumber, if (it.purchasedVIP) "Battle Pass" else "Free Pass", it.seasonLevel, it.numWins)
