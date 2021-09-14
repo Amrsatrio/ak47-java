@@ -6,6 +6,7 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.SEASON_NUM
 import com.tb24.discordbot.images.MapImageGenerator
 import com.tb24.discordbot.images.MapImageGenerator.MapMarker
 import com.tb24.discordbot.images.MapImageGenerator.MapPath
@@ -53,7 +54,6 @@ private val locationTagToDisplayName by lazy {
 	}
 	map
 }
-private val seasonNum = 17
 
 class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Shows your character collection.", arrayOf("characters", "npcs")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -73,7 +73,7 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 				collected.addAll(item.getAttributes(FortMcpCollectionBase::class.java).collected)
 			}
 		}
-		val seasonData = FortItemStack("AthenaSeason:athenaseason$seasonNum", 1).defData as? AthenaSeasonItemDefinition
+		val seasonData = FortItemStack("AthenaSeason:athenaseason$SEASON_NUM", 1).defData as? AthenaSeasonItemDefinition
 			?: throw SimpleCommandExceptionType(LiteralMessage("Season data not found.")).create()
 		val data = seasonData.CollectionsDataTable.load<FortCollectionsDataTable>()?.Collections
 			?.firstOrNull { it.CollectionType == "CollectableCharacter" }?.Collection?.load<FortCollectionDataCharacter>()?.Entries
@@ -248,7 +248,7 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 				collected.addAll(item.getAttributes(FortMcpCollectionBase::class.java).collected)
 			}
 		}
-		val seasonData = FortItemStack("AthenaSeason:athenaseason$seasonNum", 1).defData as? AthenaSeasonItemDefinition
+		val seasonData = FortItemStack("AthenaSeason:athenaseason$SEASON_NUM", 1).defData as? AthenaSeasonItemDefinition
 			?: throw SimpleCommandExceptionType(LiteralMessage("Season data not found.")).create()
 		val data = seasonData.CollectionsDataTable.load<FortCollectionsDataTable>()?.Collections
 			?.firstOrNull { it.CollectionType == "CollectableFish" }?.Collection?.load<FortCollectionDataFishing>()?.Entries
@@ -298,7 +298,7 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 			val split = def.EntryTag.toString().split('.')
 			// br_{type}         _{category}      _{variant}_{metric}_s{season}
 			// br_collection_fish_effectiveflopper_purple   _length  _s14
-			val statKey = "br_${"collection_fish"}_${split[1]}_${split[2]}_${"length"}_s$seasonNum".toLowerCase()
+			val statKey = "br_${"collection_fish"}_${split[1]}_${split[2]}_${"length"}_s$SEASON_NUM".toLowerCase()
 			stats.associateTo(scores) { it.accountId to (it.stats[statKey] ?: 0) / 1000f }
 			embed.addField("Scores", scores.entries
 				.filter { it.value > 0f }
@@ -326,7 +326,7 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 
 fun main() {
 	INSTANCE.loadPaks()
-	val tandems = loadObject<FortCollectionDataCharacter>("/BattlepassS$seasonNum/SeasonData/CollectionDataCharacter")!!.Entries.map { (it.value as FortCollectionDataEntryCharacter).CharacterData.load<FortTandemCharacterData>()!! }
+	val tandems = loadObject<FortCollectionDataCharacter>("/BattlepassS$SEASON_NUM/SeasonData/CollectionDataCharacter")!!.Entries.map { (it.value as FortCollectionDataEntryCharacter).CharacterData.load<FortTandemCharacterData>()!! }
 	val actors = arrayOf(
 		"/NPCLibrary/LevelOverlays/Apollo_Terrain_NPCLibrary_Overlay",
 		"/NPCLibrary/LevelOverlays/Apollo_Terrain_NPCLibraryBoss_Overlay",

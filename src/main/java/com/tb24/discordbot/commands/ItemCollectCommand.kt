@@ -39,9 +39,9 @@ class ItemCollectCommand : BrigadierCommand("collectibles", "Shows collectibles 
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it.source, true) }
-		.then(literal("nomap")
+		/*.then(literal("nomap")
 			.executes { execute(it.source, false) }
-		)
+		)*/
 		.then(literal("generate")
 			.requires(Rune::isBotDev)
 			.executes { generate(it.source) }
@@ -84,7 +84,6 @@ class ItemCollectCommand : BrigadierCommand("collectibles", "Shows collectibles 
 					} else {
 						continue
 					}
-					continue
 				}
 			}
 

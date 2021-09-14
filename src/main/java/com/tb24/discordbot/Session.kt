@@ -140,7 +140,8 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		user.externalAuths?.run {
 			values.forEach {
 				if (it.type == "psn" || it.type == "xbl" || it.type == "nintendo") {
-					embed.addField(L10N.format("account.ext.${it.type}.name"), it.externalDisplayName.orDash(), true)
+					val externalDisplayName = it.externalDisplayName
+					embed.addField(L10N.format("account.ext.${it.type}.name"), if (externalDisplayName.isNullOrEmpty()) "<linked>" else externalDisplayName, true)
 				}
 			}
 		}

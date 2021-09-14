@@ -5,6 +5,7 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.RESET_HOUR_UTC
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
@@ -15,10 +16,6 @@ import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import java.time.ZoneOffset
 
 class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your daily creative XP.", arrayOf("doihavecreativexp", "cxp")) {
-	companion object {
-		val resetHourUtc = 13 // Make sure to change this every season
-	}
-
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
 			val source = it.source
@@ -40,7 +37,7 @@ class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your 
 			val loginTime = (athena.stats as AthenaProfileStats).quest_manager?.dailyLoginInterval
 			if (loginTime != null) {
 				val now = lastCreativePlaytimeTracker.attributes.getDateISO("creation_time").toInstant().atOffset(ZoneOffset.UTC)
-				var next = now.withHour(resetHourUtc).withMinute(0).withSecond(0)
+				var next = now.withHour(RESET_HOUR_UTC).withMinute(0).withSecond(0)
 				if (now > next) {
 					next = next.plusDays(1)
 				}
