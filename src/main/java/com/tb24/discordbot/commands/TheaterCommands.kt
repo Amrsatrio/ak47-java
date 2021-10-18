@@ -4,6 +4,7 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
+import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.assetdata.FortActiveTheaterInfo
 import com.tb24.fn.model.assetdata.FortActiveTheaterInfo.FortAvailableMissionAlertData
@@ -98,7 +99,11 @@ fun executeMtxAlerts(source: CommandSourceStack, campaign: McpProfile? = null): 
 			embed.setTitle("%s %,d".format(Utils.MTX_EMOJI, totalMtx))
 		}
 	}
-	source.complete(null, embed.build())
+	val role = if (campaign == null) {
+		source.guild.getRoleById(BotConfig.get().mtxAlertsRoleId)
+			?: source.guild.getRolesByName("V-Bucks Alerts Ping", true).firstOrNull()
+	} else null
+	source.complete(if (role != null && embed.fields.isNotEmpty()) role.asMention else null, embed.build())
 	return Command.SINGLE_SUCCESS
 }
 
