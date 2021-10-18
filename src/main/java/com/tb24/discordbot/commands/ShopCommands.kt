@@ -124,7 +124,7 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 			profileManager.dispatchClientCommandRequest(QueryProfile(), "athena")
 		}
 	).await()
-	val showAccInfo = source.channel.idLong != BotConfig.get().itemShopChannelId && source.session.id != "__internal__"
+	val showAccInfo = source.channel.idLong != BotConfig.get().itemShopChannelId
 	val sections = if (subGame == ESubGame.Campaign) catalogManager.campaignSections.values else catalogManager.athenaSections.values
 	val contents = arrayOfNulls<List<String>>(sections.size)
 	val prices = mutableMapOf<String, CatalogItemPrice>()

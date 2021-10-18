@@ -5,10 +5,7 @@ import com.google.common.base.Throwables
 import com.rethinkdb.RethinkDB.r
 import com.rethinkdb.net.Connection
 import com.rethinkdb.utils.Internals
-import com.tb24.discordbot.commands.CommandManager
-import com.tb24.discordbot.commands.OnlyChannelCommandSource
-import com.tb24.discordbot.commands.executeShopImage
-import com.tb24.discordbot.commands.executeShopText
+import com.tb24.discordbot.commands.*
 import com.tb24.discordbot.managers.CatalogManager
 import com.tb24.discordbot.managers.SavedLoginsManager
 import com.tb24.discordbot.tasks.AutoLoginRewardTask
@@ -165,6 +162,12 @@ class DiscordBot(token: String) {
 				return@Runnable
 			}*/
 			try {
+				postMtxAlerts()
+			} catch (e: Throwable) {
+				dlog("__**Failed to auto post V-Bucks alerts**__\n```\n${Throwables.getStackTraceAsString(e)}```", null)
+				return@Runnable
+			}
+			try {
 				autoLoginRewardTask.run()
 			} catch (e: Throwable) {
 				dlog("__**AutoLoginRewardTask failure**__\n```\n${Throwables.getStackTraceAsString(e)}```", null)
@@ -177,14 +180,21 @@ class DiscordBot(token: String) {
 	/** Decoupled and public, so you can manually invoke this through eval */
 	@Suppress("MemberVisibilityCanBePrivate")
 	fun postItemShop() {
-		if (ENV == "dev") {
-			//return
-		}
 		val itemShopChannel = discord.getTextChannelById(BotConfig.get().itemShopChannelId)
 		if (itemShopChannel != null) {
 			ensureInternalSession()
-			executeShopText(OnlyChannelCommandSource(this, itemShopChannel), ESubGame.Athena)
-			executeShopImage(OnlyChannelCommandSource(this, itemShopChannel))
+			val source = OnlyChannelCommandSource(this, itemShopChannel)
+			executeShopText(source, ESubGame.Athena)
+			executeShopImage(source)
+		}
+	}
+
+	@Suppress("MemberVisibilityCanBePrivate")
+	fun postMtxAlerts() {
+		val mtxAlertsChannel = discord.getTextChannelById(BotConfig.get().mtxAlertsChannelId)
+		if (mtxAlertsChannel != null) {
+			val source = OnlyChannelCommandSource(this, mtxAlertsChannel)
+			executeMtxAlerts(source)
 		}
 	}
 

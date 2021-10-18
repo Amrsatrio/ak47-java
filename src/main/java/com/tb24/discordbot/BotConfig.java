@@ -28,6 +28,7 @@ public class BotConfig {
 	public long homeGuildId;
 	public String homeGuildInviteLink;
 	public long itemShopChannelId;
+	public long mtxAlertsChannelId;
 	public long logsChannelId;
 	public List<Long> emojiGuildIds = Collections.emptyList();
 	public List<Long> adminUserIds = Collections.emptyList();

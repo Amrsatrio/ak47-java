@@ -105,7 +105,7 @@ class ExportObjectCommand : BrigadierCommand("export", "Export an object from th
 }
 
 private val DUMP_CLASS_REQUIREMENT = Predicate<CommandSourceStack> {
-	it.author.idLong in arrayOf(624299014388711455L, 299693897859465228L, 129267551673909249L, 476930709227962389L)
+	it.author.idLong in arrayOf(624299014388711455L, 299693897859465228L, 129267551673909249L, 476930709227962389L, 373913699943186432L)
 }
 
 class DumpClassCommand : BrigadierCommand("dumpclass", "Class dump.") {
