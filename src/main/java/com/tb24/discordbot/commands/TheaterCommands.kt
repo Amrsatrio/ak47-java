@@ -2,10 +2,14 @@ package com.tb24.discordbot.commands
 
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.BotConfig
+import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.util.*
+import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.assetdata.FortActiveTheaterInfo
 import com.tb24.fn.model.assetdata.FortActiveTheaterInfo.FortAvailableMissionAlertData
 import com.tb24.fn.model.assetdata.FortActiveTheaterInfo.FortAvailableMissionData
@@ -13,6 +17,7 @@ import com.tb24.fn.model.assetdata.FortMissionGenerator
 import com.tb24.fn.model.assetdata.FortTheaterInfo.FortTheaterMapData
 import com.tb24.fn.model.assetdata.FortZoneTheme
 import com.tb24.fn.model.mcpprofile.McpProfile
+import com.tb24.fn.model.mcpprofile.commands.QueryPublicProfile
 import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
 import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats.FortMissionAlertClaimData
 import com.tb24.fn.util.format
@@ -22,6 +27,7 @@ import com.tb24.uasset.loadCDO
 import me.fungames.jfortniteparse.fort.objects.rows.GameDifficultyInfo
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
+import java.util.concurrent.CompletableFuture
 
 class MissionAlertsCommand : BrigadierCommand("alerts", "Shows today's mission alerts.", arrayOf("ma")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -72,6 +78,62 @@ class MissionAlertsCommand : BrigadierCommand("alerts", "Shows today's mission a
 class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks mission alerts.", arrayOf("va", "mtxalerts")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.withPublicProfile({ c, campaign -> executeMtxAlerts(c.source, campaign) }, "Getting mission alerts info")
+		.then(literal("bulk")
+			.executes { executeBulk(it.source) }
+			.then(argument("users", UserArgument.users(10))
+				.executes { executeBulk(it.source, lazy { UserArgument.getUsers(it, "users").values }) }
+			)
+		)
+
+	private fun executeBulk(source: CommandSourceStack, usersLazy: Lazy<Collection<GameProfile>>? = null): Int {
+		if (source.api.userToken == null) {
+			source.session = source.client.internalSession
+		}
+		source.loading("Getting mission alerts info")
+		val mtxAlerts = mutableMapOf<String, Int>()
+		var totalMtx = 0
+		queryTheaters(source).iterateMissions { _, mission, missionAlert ->
+			val mtxLoot = missionAlert?.MissionAlertRewards?.items?.firstOrNull { it.itemType == "AccountResource:currency_mtxswap" }
+				?: return@iterateMissions true
+			totalMtx += mtxLoot.quantity
+			mtxAlerts[missionAlert.MissionAlertGuid] = mission.MissionDifficultyInfo.getRowMapped<GameDifficultyInfo>()!!.RecommendedRating
+			true
+		}
+		if (mtxAlerts.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("There are no V-Bucks mission alerts today :(")).create()
+		}
+		val users = if (usersLazy == null) {
+			source.loading("Resolving users")
+			source.queryUsers(source.client.savedLoginsManager.getAll(source.author.id).map { it.accountId })
+		} else usersLazy.value
+		if (users.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("No users that we can display.")).create()
+		}
+		source.loading("Querying STW data for " + users.joinToString { it.displayName })
+		CompletableFuture.allOf(*users.map {
+			source.api.profileManager.dispatchPublicCommandRequest(it, QueryPublicProfile(), "campaign")
+		}.toTypedArray()).await()
+		val embed = EmbedBuilder().setColor(COLOR_INFO)
+			.setFooter("%,d V-Bucks today".format(totalMtx))
+		for (user in users) {
+			val campaign = source.api.profileManager.getProfileData(user.id, "campaign") ?: continue
+			val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:homebaseonboarding" }?.attributes?.get("completion_hbonboarding_completezone")?.asInt ?: 0) > 0
+			val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
+			if (!completedTutorial || !canReceiveMtxCurrency) {
+				continue
+			}
+			val attrs = campaign.stats as CampaignProfileStats
+			embed.addField(user.displayName, mtxAlerts.entries.joinToString(" ") { (alertGuid, rating) ->
+				val hasCompletedMissionAlert = attrs.mission_alert_redemption_record?.claimData?.any { it.missionAlertId == alertGuid } == true
+				"%,d: %s".format(rating, if (hasCompletedMissionAlert) "✅" else "❌")
+			}, false)
+		}
+		if (embed.fields.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("All users we're trying to display don't have STW founders.")).create()
+		}
+		source.complete(null, embed.build())
+		return Command.SINGLE_SUCCESS
+	}
 }
 
 fun executeMtxAlerts(source: CommandSourceStack, campaign: McpProfile? = null): Int {
