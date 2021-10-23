@@ -117,9 +117,9 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 			.setFooter("%,d V-Bucks today".format(totalMtx))
 		for (user in users) {
 			val campaign = source.api.profileManager.getProfileData(user.id, "campaign") ?: continue
-			val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:homebaseonboarding" }?.attributes?.get("completion_hbonboarding_completezone")?.asInt ?: 0) > 0
+			//val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:homebaseonboarding" }?.attributes?.get("completion_hbonboarding_completezone")?.asInt ?: 0) > 0
 			val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
-			if (!completedTutorial || !canReceiveMtxCurrency) {
+			if (/*!completedTutorial ||*/ !canReceiveMtxCurrency) {
 				continue
 			}
 			val attrs = campaign.stats as CampaignProfileStats
