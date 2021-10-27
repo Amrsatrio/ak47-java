@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.events.interaction.GenericInteractionCreateEvent
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.Button
+import net.dv8tion.jda.api.interactions.components.ButtonStyle
 import net.dv8tion.jda.api.interactions.components.ComponentInteraction
 import net.dv8tion.jda.api.interactions.components.selections.SelectionMenu
 import java.util.concurrent.CompletableFuture
@@ -116,10 +117,11 @@ fun Message.awaitMessageComponentInteractions(filter: CollectorFilter<ComponentI
 		override fun onEnd(collected: Map<Any, ComponentInteraction>, reason: CollectorEndReason) {
 			if (options.errors?.contains(reason) == true) future.completeExceptionally(CollectorException(collector, reason))
 			else future.complete(collected.values)
+			val selectedIds = collected.values.map { it.componentId }
 			editMessageComponents(actionRows.map { row ->
 				ActionRow.of(*row.components.map {
 					when (it) {
-						is Button -> it.asDisabled()
+						is Button -> (if (it.id in selectedIds) it.withStyle(ButtonStyle.SUCCESS) else it).asDisabled()
 						is SelectionMenu -> it.asDisabled()
 						else -> throw AssertionError()
 					}

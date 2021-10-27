@@ -35,6 +35,8 @@ import net.dv8tion.jda.api.entities.Emote
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.utils.MarkdownSanitizer
+import net.dv8tion.jda.api.utils.TimeFormat
 import okhttp3.HttpUrl
 import okhttp3.Request
 import retrofit2.Call
@@ -46,12 +48,10 @@ import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.IOException
-import java.text.DateFormat
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
-import kotlin.math.abs
 
 @Throws(HttpException::class, IOException::class)
 fun ProfileManager.dispatchClientCommandRequest(payload: Any, profileId: String = "common_core"): CompletableFuture<ProfileUpdate> =
@@ -91,10 +91,7 @@ inline fun <reified T> okhttp3.Response.to(): T = body()!!.charStream().use { Ep
 
 val CommandContext<*>.commandName: String get() = nodes.first().node.name
 
-@JvmField
-val DF = DateFormat.getDateTimeInstance()
-
-inline fun Date.format(): String = DF.format(this)
+inline fun Date.format(): String = TimeFormat.DATE_TIME_SHORT.atTimestamp(this.time).toString()
 
 fun FortItemStack.render(displayQty: Int = quantity): String {
 	var dn = displayName
@@ -242,7 +239,7 @@ fun <T> EmbedBuilder.addFieldSeparate(title: String, entries: Collection<T>?, bu
 	return this
 }
 
-fun String?.escapeMarkdown() = if (this == null) null else replace("\\", "\\\\").replace("*", "\\*").replace("_", "\\_").replace("~", "\\~")
+inline fun String?.escapeMarkdown() = if (this == null) null else MarkdownSanitizer.escape(this)
 
 fun Array<FriendV2>.sortedFriends() = sortedBy { (if (!it.alias.isNullOrEmpty()) it.alias else if (!it.displayName.isNullOrEmpty()) it.displayName else it.accountId).toLowerCase() }
 
@@ -254,15 +251,17 @@ inline fun Date.renderWithRelative() = "${format()} (${relativeFromNow()})"
 
 inline fun Date.relativeFromNow(withSeconds: Boolean = false) = time.relativeFromNow(withSeconds)
 
-fun Long.relativeFromNow(withSeconds: Boolean = false): String {
+/*fun Long.relativeFromNow(withSeconds: Boolean = false): String {
 	val delta = System.currentTimeMillis() - this
 	val elapsedStr = StringUtil.formatElapsedTime(abs(delta), withSeconds).toString()
 	return when {
 		delta < 0L -> "in $elapsedStr"
 		delta < 60L -> "just now"
-		else /*delta > 0L*/ -> "$elapsedStr ago"
+		else *//*delta > 0L*//* -> "$elapsedStr ago"
 	}
-}
+}*/
+
+inline fun Long.relativeFromNow(withSeconds: Boolean = false) = TimeFormat.RELATIVE.atTimestamp(this).toString()
 
 fun String.shortenUrl(source: CommandSourceStack): String {
 	val cuttlyApiKey = "2f305deea48f34be34018ab54b7b7dd2b72e4"

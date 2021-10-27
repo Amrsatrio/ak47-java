@@ -80,7 +80,7 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 		.withPublicProfile({ c, campaign -> executeMtxAlerts(c.source, campaign) }, "Getting mission alerts info")
 		.then(literal("bulk")
 			.executes { executeBulk(it.source) }
-			.then(argument("users", UserArgument.users(10))
+			.then(argument("users", UserArgument.users(25))
 				.executes { executeBulk(it.source, lazy { UserArgument.getUsers(it, "users").values }) }
 			)
 		)
@@ -109,12 +109,11 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 		if (users.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("No users that we can display.")).create()
 		}
-		source.loading("Querying STW data for " + users.joinToString { it.displayName })
+		source.loading("Querying STW data for %,d user(s)".format(users.size))
 		CompletableFuture.allOf(*users.map {
 			source.api.profileManager.dispatchPublicCommandRequest(it, QueryPublicProfile(), "campaign")
 		}.toTypedArray()).await()
-		val embed = EmbedBuilder().setColor(COLOR_INFO)
-			.setFooter("%,d V-Bucks today".format(totalMtx))
+		val entries = mutableListOf<Pair<String, String>>()
 		for (user in users) {
 			val campaign = source.api.profileManager.getProfileData(user.id, "campaign") ?: continue
 			//val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:homebaseonboarding" }?.attributes?.get("completion_hbonboarding_completezone")?.asInt ?: 0) > 0
@@ -123,14 +122,20 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 				continue
 			}
 			val attrs = campaign.stats as CampaignProfileStats
-			embed.addField(user.displayName, mtxAlerts.entries.joinToString(" ") { (alertGuid, rating) ->
+			entries.add(user.displayName to mtxAlerts.entries.joinToString(" ") { (alertGuid, rating) ->
 				val hasCompletedMissionAlert = attrs.mission_alert_redemption_record?.claimData?.any { it.missionAlertId == alertGuid } == true
 				"%,d: %s".format(rating, if (hasCompletedMissionAlert) "✅" else "❌")
-			}, false)
+			})
 		}
-		if (embed.fields.isEmpty()) {
+		if (entries.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("All users we're trying to display don't have STW founders.")).create()
 		}
+		val embed = EmbedBuilder().setColor(COLOR_INFO)
+			.setFooter("%,d V-Bucks today".format(totalMtx))
+		val inline = entries.size >= 6
+		for (entry in entries) {
+            embed.addField(entry.first, entry.second, inline)
+        }
 		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS
 	}

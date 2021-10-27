@@ -10,7 +10,7 @@ import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats.MtxPurchaseHistoryEntry
 import net.dv8tion.jda.api.MessageBuilder
-import java.text.DateFormat
+import net.dv8tion.jda.api.utils.TimeFormat
 import java.util.*
 
 class PurchasesCommand : BrigadierCommand("purchases", "Shows your purchase history of V-Bucks priced items.", arrayOf("purchasehistory")) {
@@ -24,7 +24,7 @@ class PurchasesCommand : BrigadierCommand("purchases", "Shows your purchase hist
 			val mtxPurchaseHistory = (commonCore.stats as CommonCoreProfileStats).mtx_purchase_history
 			val entries = mtxPurchaseHistory?.purchases
 			if (entries.isNullOrEmpty()) {
-				throw SimpleCommandExceptionType(LiteralMessage("You haven't made a V-Bucks transaction.")).create()
+				throw SimpleCommandExceptionType(LiteralMessage("You haven't made a V-Bucks transaction recently.")).create()
 			}
 			var totalSpent = 0
 			var oldest = Long.MAX_VALUE
@@ -45,8 +45,8 @@ class PurchasesCommand : BrigadierCommand("purchases", "Shows your purchase hist
 				val embed = source.createEmbed()
 					.setTitle("Purchases")
 					.setDescription("Showing %,d to %,d of %,d entries\n\n%s".format(entriesStart, entriesEnd - 1, entries.size, value))
-					.addField("Info", "Spent since %s: %s %,d\nRefund tickets: %,d / %,d\nItems refunded: %,d".format(DateFormat.getDateInstance().format(oldest), Utils.MTX_EMOJI, totalSpent, mtxPurchaseHistory.refundCredits, 3, mtxPurchaseHistory.refundsUsed), false)
-					.setFooter("Page %,d of %,d \u2022 Server time: %s".format(page + 1, pageCount, Date().format()))
+					.addField("Info", "Spent since %s: %s %,d\nRefund tickets: %,d / %,d\nItems refunded: %,d".format(TimeFormat.DATE_LONG.atTimestamp(oldest), Utils.MTX_EMOJI, totalSpent, mtxPurchaseHistory.refundCredits, 3, mtxPurchaseHistory.refundsUsed), false)
+					.setFooter("Page %,d of %,d".format(page + 1, pageCount))
 				MessageBuilder(embed).build()
 			}
 			Command.SINGLE_SUCCESS

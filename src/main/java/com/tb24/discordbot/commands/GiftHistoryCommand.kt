@@ -53,7 +53,6 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 					val catalogEntry = source.client.catalogManager.purchasableCatalogEntries.firstOrNull { it.offerId == e.offerId }
 					"${catalogEntry?.holder()?.friendlyName ?: "<Item outside of current shop>"} to ${localUserMap[e.toAccountId]?.displayName ?: e.toAccountId} on ${e.date.format()}"
 				}
-				.setFooter("Server time: ${Date().format()}")
 				.build())
 			Command.SINGLE_SUCCESS
 		}
