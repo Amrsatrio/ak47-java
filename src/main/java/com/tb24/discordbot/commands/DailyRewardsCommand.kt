@@ -5,12 +5,14 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.discordbot.util.renderWithIcon
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
+import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.campaign.ClaimLoginReward
 import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.model.mcpprofile.notifications.DailyRewardsNotification
@@ -31,10 +33,25 @@ class DailyRewardsCommand : BrigadierCommand("dailyrewards", "Claims the STW dai
 			source.ensureSession()
 			source.loading("Claiming daily rewards")
 			source.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "campaign").await()
-			val response = source.api.profileManager.dispatchClientCommandRequest(ClaimLoginReward(), "campaign").await()
-			val campaign = source.api.profileManager.getProfileData("campaign")
-			notifyDailyRewardsClaimed(source, campaign, response.notifications.filterIsInstance<DailyRewardsNotification>().firstOrNull())
-			Command.SINGLE_SUCCESS
+			try {
+				val response = source.api.profileManager.dispatchClientCommandRequest(ClaimLoginReward(), "campaign").await()
+				val campaign = source.api.profileManager.getProfileData("campaign")
+				notifyDailyRewardsClaimed(source, campaign, response.notifications.filterIsInstance<DailyRewardsNotification>().firstOrNull())
+				Command.SINGLE_SUCCESS
+			} catch (e: HttpException) {
+				if (e.epicError.errorCode == "errors.com.epicgames.fortnite.check_access_failed") {
+					source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "common_core").await()
+					val msg = if (source.api.profileManager.getProfileData("common_core").items.values.none { it.templateId == "Token:campaignaccess" }){
+						"You don't have access to Save the World."
+					} else {
+						"You have access to STW, but you can start receiving daily rewards after completing Stonewood Storm Shield Defense 3."
+					}
+					source.complete(null, source.createEmbed().setColor(COLOR_ERROR)
+						.setDescription("❌ $msg")
+						.build())
+					0
+				} else throw e
+			}
 		}
 }
 
