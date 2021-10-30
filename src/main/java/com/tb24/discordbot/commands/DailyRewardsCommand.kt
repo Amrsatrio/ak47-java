@@ -41,7 +41,7 @@ class DailyRewardsCommand : BrigadierCommand("dailyrewards", "Claims the STW dai
 			} catch (e: HttpException) {
 				if (e.epicError.errorCode == "errors.com.epicgames.fortnite.check_access_failed") {
 					source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "common_core").await()
-					val msg = if (source.api.profileManager.getProfileData("common_core").items.values.none { it.templateId == "Token:campaignaccess" }){
+					val msg = if (source.api.profileManager.getProfileData("common_core").items.values.none { it.templateId == "Token:campaignaccess" }) {
 						"You don't have access to Save the World."
 					} else {
 						"You have access to STW, but you can start receiving daily rewards after completing Stonewood Storm Shield Defense 3."

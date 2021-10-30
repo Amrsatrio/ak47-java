@@ -101,8 +101,12 @@ fun executeShopImage(source: CommandSourceStack): Int {
 	val fileName = "shop-${SimpleDateFormat("dd-MM-yyyy").apply { timeZone = tz }.format(now)}.png"
 	val message = source.channel.sendMessage("**Battle Royale Item Shop (%s)**".format(DateFormat.getDateInstance().apply { timeZone = tz }.format(now))).addFile(image, fileName).complete()
 	source.loadingMsg!!.delete().queue()
-	if (source.channel.idLong == BotConfig.get().itemShopChannelId && (source.channel as TextChannel).isNews) {
-		message.crosspost().queue()
+	if (source.channel.idLong == BotConfig.get().itemShopChannelId) {
+		message.addReaction("👍").queue()
+		message.addReaction("👎").queue()
+		if ((source.channel as TextChannel).isNews) {
+			message.crosspost().queue()
+		}
 	}
 	return Command.SINGLE_SUCCESS
 }
