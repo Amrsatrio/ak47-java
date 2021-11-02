@@ -323,7 +323,7 @@ fun BuildResponse.ManifestDownloadInfo.createRequest(): Request {
 	val url = StringBuilder(uri)
 	if (queryParams.isNotEmpty()) {
 		url.append("?")
-        url.append(queryParams.joinToString("&") { it.name + "=" + it.value })
+		url.append(queryParams.joinToString("&") { it.name + "=" + it.value })
 	}
 	val builder = Request.Builder().url(url.toString())
 	for (header in headers ?: emptyList()) {

@@ -130,12 +130,12 @@ class DiscordBot(token: String) {
 		if (loadGameFiles == BotConfig.EGameFileLoadOption.Streamed) {
 			val manifestsDir = File("manifests")
 			if (!manifestsDir.exists()) {
-                manifestsDir.mkdirs()
-            }
+				manifestsDir.mkdirs()
+			}
 			val chunkDownloadDir = File("chunkDownload")
 			if (!chunkDownloadDir.exists()) {
-                chunkDownloadDir.mkdirs()
-            }
+				chunkDownloadDir.mkdirs()
+			}
 			val downloadInfo = element.manifests.first()
 			val manifestFileName = downloadInfo.uri.substringAfterLast('/')
 			val manifestFile = File(manifestsDir, manifestFileName)
