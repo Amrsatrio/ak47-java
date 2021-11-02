@@ -7,6 +7,7 @@ import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.util.AwaitReactionsOptions
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.awaitReactions
+import com.tb24.fn.DefaultInterceptor
 import net.dv8tion.jda.api.EmbedBuilder
 
 class AboutCommand : BrigadierCommand("about", "Shows credits of this bot.") {
@@ -37,7 +38,7 @@ class AboutCommand : BrigadierCommand("about", "Shows credits of this bot.") {
 					max = 1
 					time = 10000L
 				}).await().isNotEmpty()) {
-				message.editMessage(embed.addField("User agent", it.source.client.internalSession.api.okHttpClientInterceptor.userAgent, false).build()).complete()
+				message.editMessage(embed.addField("User agent", DefaultInterceptor.userAgent, false).build()).complete()
 			}
 			Command.SINGLE_SUCCESS
 		}

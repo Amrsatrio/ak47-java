@@ -42,7 +42,7 @@ public class BotConfig {
 	public String proxyPassword;
 	public String proxyDomainFormat;
 
-	public boolean loadGameFiles = true;
+	public EGameFileLoadOption loadGameFiles = EGameFileLoadOption.Local;
 	public String gamePath = "C:\\Program Files\\Epic Games\\Fortnite\\FortniteGame\\Content\\Paks";
 	public String game; // VersionContainer.game
 	public String gameVersion;
@@ -64,5 +64,9 @@ public class BotConfig {
 		public int maxForComplimentary = 3;
 		public int minAccountAgeInDaysForComplimentary = 90;
 		public List<Long> additionalPrivilegedUserIds = Collections.emptyList();
+	}
+
+	public enum EGameFileLoadOption {
+		NoLoad, Local, Streamed
 	}
 }

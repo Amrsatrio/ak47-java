@@ -19,6 +19,7 @@ import com.tb24.fn.model.friends.FriendV2
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer.CatalogItemPrice
 import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
+import com.tb24.fn.model.launcher.BuildResponse
 import com.tb24.fn.model.mcpprofile.ProfileUpdate
 import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
 import com.tb24.fn.util.*
@@ -318,6 +319,19 @@ fun FortRarityData.forRarity(rarity: EFortRarity): FortColorPalette {
 	}
 }
 
+fun BuildResponse.ManifestDownloadInfo.createRequest(): Request {
+	val url = StringBuilder(uri)
+	if (queryParams.isNotEmpty()) {
+		url.append("?")
+        url.append(queryParams.joinToString("&") { it.name + "=" + it.value })
+	}
+	val builder = Request.Builder().url(url.toString())
+	for (header in headers ?: emptyList()) {
+		builder.addHeader(header.name, header.value)
+	}
+	return builder.build()
+}
+
 fun Number.awtColor(hasAlpha: Boolean = toInt() ushr 24 != 0) = Color(toInt(), hasAlpha)
 
 inline fun createAndDrawCanvas(w: Int, h: Int, draw: (ctx: Graphics2D) -> Unit): BufferedImage {
@@ -338,5 +352,5 @@ object ResourcesContext {
 	val burbankBigRegularBlack by lazy { fromPaks("FortniteGame/Content/UI/Foundation/Fonts/BurbankBigRegular-Black.ufont") }
 	val burbankBigCondensedBlack by lazy { fromPaks("FortniteGame/Content/UI/Foundation/Fonts/BurbankBigCondensed-Black.ufont") }
 
-	private fun fromPaks(path: String) = Font.createFont(Font.TRUETYPE_FONT, ByteArrayInputStream(AssetManager.INSTANCE.saveGameFile(path)))
+	private fun fromPaks(path: String) = Font.createFont(Font.TRUETYPE_FONT, ByteArrayInputStream(AssetManager.INSTANCE.provider.saveGameFile(path)))
 }

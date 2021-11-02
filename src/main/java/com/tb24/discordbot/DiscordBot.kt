@@ -10,7 +10,12 @@ import com.tb24.discordbot.managers.CatalogManager
 import com.tb24.discordbot.managers.SavedLoginsManager
 import com.tb24.discordbot.tasks.AutoLoginRewardTask
 import com.tb24.discordbot.tasks.KeychainTask
+import com.tb24.discordbot.util.createRequest
+import com.tb24.discordbot.util.exec
+import com.tb24.fn.DefaultInterceptor
 import com.tb24.fn.model.assetdata.ESubGame
+import com.tb24.fn.model.launcher.ClientDetails
+import com.tb24.fn.util.EAuthClient
 import com.tb24.uasset.AssetManager
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.JDABuilder
@@ -25,6 +30,7 @@ import okhttp3.OkHttpClient
 import org.quartz.impl.StdSchedulerFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.io.File
 import java.io.IOException
 import java.time.Duration
 import java.time.ZoneOffset
@@ -52,9 +58,6 @@ class DiscordBot(token: String) {
 				exitProcess(1)
 			}
 			LOGGER.info("Starting Discord Bot...")
-			if (BotConfig.get().loadGameFiles) {
-				AssetManager.INSTANCE.loadPaks(false, 0)
-			}
 			try {
 				instance = DiscordBot(token)
 			} catch (e: Throwable) {
@@ -111,9 +114,47 @@ class DiscordBot(token: String) {
 		okHttpClient = OkHttpClient()
 		proxyManager = ProxyManager()
 		setupInternalSession()
-		if (BotConfig.get().loadGameFiles) {
-			// Load encrypted PAKs
-			keychainTask.run()
+
+		// Check for latest build
+		LOGGER.info("Checking latest Fortnite build...")
+		val launcherAppApi = internalSession.getApiForOtherClient(EAuthClient.LAUNCHER_APP_CLIENT_2)
+		val assetResponse = launcherAppApi.launcherService.querySignedDownload("Windows", "4fe75bbc5a674f4f9b356b5c90567da5", "Fortnite", "Live", ClientDetails()).exec().body()!!
+		val element = assetResponse.elements.first()
+		val buildVersion = element.buildVersion
+		val version = buildVersion.substringBeforeLast('-')
+		DefaultInterceptor.userAgent = "Fortnite/%s Android/12".format(version);
+		LOGGER.info("Fortnite version: $version")
+		val loadGameFiles = BotConfig.get().loadGameFiles
+
+		// Prepare manifest
+		if (loadGameFiles == BotConfig.EGameFileLoadOption.Streamed) {
+			val manifestsDir = File("manifests")
+			if (!manifestsDir.exists()) {
+                manifestsDir.mkdirs()
+            }
+			val chunkDownloadDir = File("chunkDownload")
+			if (!chunkDownloadDir.exists()) {
+                chunkDownloadDir.mkdirs()
+            }
+			val downloadInfo = element.manifests.first()
+			val manifestFileName = downloadInfo.uri.substringAfterLast('/')
+			val manifestFile = File(manifestsDir, manifestFileName)
+			if (!manifestFile.exists()) {
+				val manifestRequest = downloadInfo.createRequest()
+				LOGGER.info("Downloading manifest: " + manifestRequest.url())
+				val manifestResponse = okHttpClient.newCall(manifestRequest).exec().body()!!
+				manifestFile.writeBytes(manifestResponse.bytes())
+			} else {
+				LOGGER.info("Using existing manifest")
+			}
+			System.setProperty("manifestFile", manifestFile.path)
+		} else if (loadGameFiles == BotConfig.EGameFileLoadOption.Local) {
+			LOGGER.info("Using local game installation")
+		}
+
+		if (loadGameFiles != BotConfig.EGameFileLoadOption.NoLoad) {
+			AssetManager.INSTANCE.loadPaks(false, 0)
+			keychainTask.run() // Load encrypted PAKs
 		}
 		catalogManager = CatalogManager()
 
@@ -138,7 +179,7 @@ class DiscordBot(token: String) {
 		// Schedule tasks
 		if (ENV != "dev") {
 			scheduleUtcMidnightTask()
-			if (BotConfig.get().loadGameFiles) {
+			if (loadGameFiles != BotConfig.EGameFileLoadOption.NoLoad) {
 				scheduleKeychainTask()
 			}
 		}

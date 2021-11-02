@@ -45,7 +45,7 @@ public class HttpException extends RuntimeException {
 			return EpicApi.GSON.fromJson(ex.responseStr, toErrorClass);
 		} catch (JsonSyntaxException e) {
 			EpicError epicError = new EpicError();
-			epicError.errorMessage = "An error occurred while communicating with the game servers:" + '\n' + String.format("HTTP %d response from %s", ex.code(), "<REDACTED>");//ex.response().raw().request().url());
+			epicError.errorMessage = "An error occurred while communicating with the game servers:" + '\n' + String.format("HTTP %d response from %s", ex.code(), DiscordBot.ENV.equals("prod") ? "<REDACTED>" : ex.response.request().url());
 			return epicError;
 		}
 	}

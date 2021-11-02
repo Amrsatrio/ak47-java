@@ -39,7 +39,7 @@ class DumpAssetCommand : BrigadierCommand("dump", "Shows the properties of an ob
 					toConvert = obj
 					fileName = obj.name
 				} else {
-					val pkg = runCatching { AssetManager.INSTANCE.loadGameFile(path) }
+					val pkg = runCatching { AssetManager.INSTANCE.provider.loadGameFile(path) }
 						.getOrElse { throw SimpleCommandExceptionType(LiteralMessage("Failed to load package.\n```$it```")).create() }
 						?: throw SimpleCommandExceptionType(LiteralMessage("The package to load does not exist on disk or in the loader.")).create()
 					toConvert = pkg.exports
