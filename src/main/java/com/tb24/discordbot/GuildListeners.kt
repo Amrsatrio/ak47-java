@@ -14,8 +14,8 @@ class GuildListeners(private val client: DiscordBot) : ListenerAdapter() {
 		val generalChannel = guild.textChannels.firstOrNull { it.name == "general" } ?: return
 		val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_SUCCESS)
 			.setTitle("👋 Hello %s, thanks for adding %s!".format(guild.name, client.discord.selfUser.name))
-			.setDescription("- Use `{Prefix}help` or `{Prefix}commands` to see all my commands.\n- Server admins can change my prefix from `{Prefix}` by using `{Prefix}prefix <new name>`.\n- If you need more help, want to subscribe to bot updates and daily item shop, or get more info about premium, you can [visit our support server]({Invite}).\n\nEnjoy!"
-				.replace("{Prefix}", BotConfig.get().defaultPrefix).replace("{Invite}", BotConfig.get().homeGuildInviteLink))
+			.setDescription("- Use `{Prefix}help` or `{Prefix}commands` to see all my commands.\n- Server admins can change my prefix from `{Prefix}` by using `{Prefix}prefix <new name>`."
+				.replace("{Prefix}", BotConfig.get().defaultPrefix))
 		BotConfig.get().homeGuildInviteLink?.let {
 			embed.appendDescription("\n- If you need more help, want to subscribe to bot updates and daily item shop, or get more info about premium, you can [visit our support server](%s).".format(it))
 		}
