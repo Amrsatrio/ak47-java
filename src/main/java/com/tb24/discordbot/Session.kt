@@ -137,6 +137,13 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 			.addField("Account ID", user.id, false)
 			//.setThumbnail("https://cdn2.unrealengine.com/Kairos/portraits/${avatarKeys[0]}.png?preview=1")
 			//.setColor(Color.decode(EpicApi.GSON.fromJson(avatarKeys[1], Array<String>::class.java)[1]))
+		val inviteLink = BotConfig.get().homeGuildInviteLink
+		if (inviteLink != null) {
+			val homeGuild = client.discord.getGuildById(BotConfig.get().homeGuildId)
+			if (homeGuild != null && runCatching { homeGuild.retrieveMemberById(source.author.idLong).complete() }.isFailure) {
+				embed.setDescription("Have questions, issues, or suggestions? Want to stay updated with the bot's development or vibe with us? [Join our support server!](%s)".format(inviteLink))
+			}
+		}
 		user.externalAuths?.run {
 			values.forEach {
 				if (it.type == "psn" || it.type == "xbl" || it.type == "nintendo") {
