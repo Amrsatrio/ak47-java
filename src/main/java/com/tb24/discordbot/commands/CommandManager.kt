@@ -168,7 +168,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		}
 	}
 
-	fun handleCommand(command: String, source: CommandSourceStack, prefix: String = "") {
+	fun handleCommand(command: String, source: CommandSourceStack, prefix: String = "", canRetry: Boolean = true) {
 		val reader = StringReader(command)
 		reader.cursor += prefix.length
 		while (reader.peek().isWhitespace()) {
@@ -240,8 +240,12 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				source.complete(null, embed.setDescription(lines.joinToString("\n")).build())
 			}
 		} catch (e: HttpException) {
-			if (httpError(source, e)) {
-				handleCommand(command, source, prefix)
+			if (httpError(source, e) && canRetry) {
+				handleCommand(command, source, prefix, false)
+			} else {
+				client.dlog("__**Attempted to repeat a command more than once**__\nUser: ${source.author.asMention}\n```\n${Throwables.getStackTraceAsString(e)}```", null)
+				DiscordBot.LOGGER.error("Attempted to repeat a command more than once", e)
+				throw e
 			}
 		} catch (e: Throwable) {
 			val additional = "\nCommand: ${reader.string}\nProxy: ${source.session.api.okHttpClient.proxy()}"

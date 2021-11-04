@@ -272,7 +272,7 @@ class DiscordBot(token: String) {
 		val response = internalSession.api.accountService.verify(null).execute()
 		if (response.code() == 401) {
 			setupInternalSession()
-		} else if (response.code() != 200) {
+		} else if (!response.isSuccessful) {
 			throw HttpException(response)
 		}
 	}

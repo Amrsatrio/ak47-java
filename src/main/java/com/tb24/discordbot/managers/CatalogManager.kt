@@ -140,6 +140,7 @@ class CatalogManager {
 	class UpdateCatalogJob : Job {
 		override fun execute(context: JobExecutionContext) {
 			val client = context.mergedJobDataMap["client"] as DiscordBot
+			client.ensureInternalSession()
 			client.catalogManager.ensureCatalogData(client.internalSession.api)
 			// Note: Don't reschedule the job using catalogData.expiration since it can prevent subsequent scheduled jobs
 			// from being executed whenever an exception occurs
