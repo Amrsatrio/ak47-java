@@ -246,7 +246,6 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				} else {
 					client.dlog("__**Attempted to repeat a command more than once**__\nUser: ${source.author.asMention}\n```\n${Throwables.getStackTraceAsString(e)}```", null)
 					DiscordBot.LOGGER.error("Attempted to repeat a command more than once", e)
-					throw e
 				}
 			}
 		} catch (e: Throwable) {
