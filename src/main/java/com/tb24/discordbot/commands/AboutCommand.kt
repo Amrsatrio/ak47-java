@@ -38,7 +38,7 @@ class AboutCommand : BrigadierCommand("about", "Shows credits of this bot.") {
 					max = 1
 					time = 10000L
 				}).await().isNotEmpty()) {
-				message.editMessage(embed.addField("User agent", DefaultInterceptor.userAgent, false).build()).complete()
+				message.editMessageEmbeds(embed.addField("User agent", DefaultInterceptor.userAgent, false).build()).complete()
 			}
 			Command.SINGLE_SUCCESS
 		}
