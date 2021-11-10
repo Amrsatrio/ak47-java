@@ -34,6 +34,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 
 	init {
 		register(AboutCommand())
+		register(AccoladesCommand())
 		register(AccountCommand())
 		register(AffiliateNameCommand())
 		register(AthenaDailyChallengesCommand())

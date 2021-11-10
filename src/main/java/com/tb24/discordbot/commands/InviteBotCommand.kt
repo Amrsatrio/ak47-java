@@ -17,7 +17,7 @@ class InviteBotCommand : BrigadierCommand("invite", "Sends a link to invite this
 			val components = mutableListOf<Component>()
 			components.add(Button.of(ButtonStyle.LINK, "https://discordapp.com/api/oauth2/authorize?client_id=${selfUser.id}&permissions=519232&scope=bot%20applications.commands", "Invite ${selfUser.name} to your server"))
 			BotConfig.get().homeGuildInviteLink?.let { inviteLink ->
-				components.add(Button.of(ButtonStyle.LINK, inviteLink, "Invite ${selfUser.name} to your server"))
+				components.add(Button.of(ButtonStyle.LINK, inviteLink, "Join our support server"))
 			}
 			source.complete("**Invite Links**", null, listOf(ActionRow.of(components)))
 			Command.SINGLE_SUCCESS

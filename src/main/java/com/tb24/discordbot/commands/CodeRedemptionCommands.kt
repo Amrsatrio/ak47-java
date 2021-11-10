@@ -60,6 +60,7 @@ class CheckCodeCommand : BrigadierCommand("checkcode", "Evaluates an Epic Games 
 			.addField("Code Creation", data.dateCreated.format(), false)
 			.addField("Period", "%s \u2013 %s".format(data.startDate.format(), data.endDate.format()), false)
 			.addField("Uses", "`%s`\n%,d / %,d".format(Utils.progress(data.useCount, data.maxNumberOfUses, 32), data.useCount, data.maxNumberOfUses), false)
+			.addField("Batch No", "%,d".format(data.batchNumber), false)
 			.setFooter(data.code)
 		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS
