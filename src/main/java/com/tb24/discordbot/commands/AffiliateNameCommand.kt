@@ -12,7 +12,7 @@ import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commoncore.SetAffiliateName
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 
-class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Support a Creator code. Use `clear` to unset the code.", arrayOf("code")) {
+class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Support a Creator code.", arrayOf("code")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it, null) }
 		.then(argument("new code", greedyString())
@@ -41,13 +41,12 @@ class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Su
 			}
 			source.complete(null, embed.build())
 		} else {
-			val isClear = newCode == "clear"
-			source.loading(if (isClear) "Clearing Support a Creator code" else "Applying Support a Creator code")
+			source.loading("Applying Support a Creator code")
 			source.api.profileManager.dispatchClientCommandRequest(SetAffiliateName().apply {
-				affiliateName = if (isClear) "" else newCode
+				affiliateName = newCode
 			}).await()
 			source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
-				.setDescription(if (isClear) "🗑 **Cleared** Support a Creator code." else "✅ Support a Creator code set to **$newCode**.")
+				.setDescription("✅ Support a Creator code set to **$newCode**.")
 				.build())
 		}
 		return Command.SINGLE_SUCCESS
