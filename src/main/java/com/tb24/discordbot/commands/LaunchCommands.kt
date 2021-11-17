@@ -24,7 +24,7 @@ class LaunchWindowsCommand : BrigadierCommand("launch", "Launches you into Fortn
 			if (!source.isFromType(ChannelType.PRIVATE)) {
 				throw SimpleCommandExceptionType(LiteralMessage("Please invoke the command again in DMs, as we have to send you info that carries over your current session.")).create()
 			}
-			val deviceData = source.client.savedLoginsManager.get(source.session.id, source.api.currentLoggedIn.id)
+			val deviceData = if (true) null else source.client.savedLoginsManager.get(source.session.id, source.api.currentLoggedIn.id)
 			val launcherPath = "C:\\Program Files\\Epic Games\\Fortnite\\FortniteGame\\Binaries\\Win64\\FortniteLauncher.exe"
 			val commandLine = "\"$launcherPath\" ${generateLaunchArgs(source, deviceData)}"
 			val validityMessage = if (deviceData != null) "Valid until you delete the saved login for that account.\n⚠ **Don't share the text below, anyone can login to your account easily with it!**" else "Valid for 5 minutes, until it's used, or until you log out."
@@ -39,6 +39,7 @@ class LaunchWindowsCommand : BrigadierCommand("launch", "Launches you into Fortn
 		)
 
 	private fun executeGenerateShortcuts(source: CommandSourceStack, gamePath: String = "C:\\Program Files\\Epic Games\\Fortnite"): Int {
+		throw SimpleCommandExceptionType(LiteralMessage("Shortcuts feature is disabled until further notice.")).create()
 		if (!source.isFromType(ChannelType.PRIVATE)) {
 			throw SimpleCommandExceptionType(LiteralMessage("Please invoke the command again in DMs, as we have to send you info that contains your saved logins.")).create()
 		}
@@ -94,7 +95,8 @@ class LaunchWindowsCommand : BrigadierCommand("launch", "Launches you into Fortn
 			password = source.api.accountService.getExchangeCode().exec().body()!!.code
 			type = "exchangecode"
 		}
-		return "-AUTH_LOGIN=$login -AUTH_PASSWORD=$password -AUTH_TYPE=$type$authClientArgs -epicapp=Fortnite -epicenv=Prod -epicportal"
+		val accountId = deviceData?.accountId ?: source.api.currentLoggedIn.id
+		return "-AUTH_LOGIN=$login -AUTH_PASSWORD=$password -AUTH_TYPE=$type$authClientArgs -epicapp=Fortnite -epicenv=Prod -EpicPortal -epicuserid=$accountId"
 	}
 }
 
