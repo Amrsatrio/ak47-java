@@ -18,7 +18,6 @@ import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.ChannelType
 import net.dv8tion.jda.api.entities.Message
-import net.dv8tion.jda.internal.entities.UserImpl
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import org.slf4j.Logger
@@ -275,8 +274,8 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 							.addField("Gift ID", item.itemId, false)
 							.setFooter("React this with anything to acknowledge")
 							.build()
-						val user = client.discord.getUserById(id) ?: client.discord.retrieveUserById(id).complete()
-						val channel = (user as UserImpl).privateChannel ?: user.openPrivateChannel().complete()
+						val user = client.discord.retrieveUserById(id).complete()
+						val channel = user.openPrivateChannel().complete()
 						channel.sendMessageEmbeds(embed).complete()
 					}
 				}

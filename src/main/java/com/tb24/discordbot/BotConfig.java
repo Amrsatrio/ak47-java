@@ -24,6 +24,7 @@ public class BotConfig {
 	}
 
 	public String token;
+	public String mongoUrl = "mongodb://localhost:27017";
 	public String defaultPrefix = ",";
 	public long homeGuildId;
 	public String homeGuildInviteLink;

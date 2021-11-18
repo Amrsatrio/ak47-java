@@ -29,7 +29,7 @@ class MentionArgument private constructor(private val mentionType: MentionType) 
 			val id = input.toLongOrNull()
 			if (id != null) {
 				return when (mentionType) {
-					MentionType.USER -> setOf(message.jda.getUserById(id) ?: message.jda.retrieveUserById(id).complete())
+					MentionType.USER -> setOf(message.jda.retrieveUserById(id).complete())
 					MentionType.ROLE -> (if (message.channelType.isGuild) message.guild.getRoleById(id) else message.jda.getRoleById(id))?.let(Collections::singleton)
 					MentionType.CHANNEL -> message.jda.getTextChannelById(id)?.let(Collections::singleton)
 					MentionType.EMOTE -> message.jda.getEmoteById(id)?.let(Collections::singleton)

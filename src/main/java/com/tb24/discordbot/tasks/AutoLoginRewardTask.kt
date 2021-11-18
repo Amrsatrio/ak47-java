@@ -18,7 +18,6 @@ import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.model.mcpprofile.notifications.DailyRewardsNotification
 import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
 import net.dv8tion.jda.api.exceptions.ErrorResponseException
-import net.dv8tion.jda.internal.entities.UserImpl
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.*
@@ -64,7 +63,7 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 			try {
 				displayName = users[epicId]?.displayName
 				val user = client.discord.getUserById(discordId) ?: client.discord.retrieveUserById(discordId).complete()
-				val channel = (user as UserImpl).privateChannel ?: user.openPrivateChannel().complete()
+				val channel = user.openPrivateChannel().complete()
 				source = OnlyChannelCommandSource(client, channel)
 				if (displayName == null) {
 					disableAutoClaim(epicId)

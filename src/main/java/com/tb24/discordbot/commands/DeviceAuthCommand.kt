@@ -15,7 +15,7 @@ import com.tb24.discordbot.util.format
 import com.tb24.fn.model.account.DeviceAuth
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.ChannelType
-import net.dv8tion.jda.internal.entities.UserImpl
+import net.dv8tion.jda.api.exceptions.ErrorResponseException
 
 class DeviceAuthCommand : BrigadierCommand("devices", "Device auth operation commands.", arrayOf("device")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -144,9 +144,14 @@ private fun create(c: CommandContext<CommandSourceStack>): Int {
 	if (inDMs) {
 		source.complete(null, embed.populateDeviceAuthDetails(response).build())
 	} else {
-		source.complete(null, embed.setDescription("Check your DMs for details.").build())
-		val channel = (source.author as UserImpl).privateChannel ?: runCatching { source.author.openPrivateChannel().complete() }.getOrNull()
-		channel?.sendMessageEmbeds(embed.setDescription(null).populateDeviceAuthDetails(response).build())?.complete()
+		try {
+			source.author.openPrivateChannel()
+				.flatMap { it.sendMessageEmbeds(EmbedBuilder(embed).populateDeviceAuthDetails(response).build()) }
+				.complete()
+			source.complete(null, embed.setDescription("Check your DMs for details.").build())
+		} catch (e: ErrorResponseException) {
+            source.complete(null, embed.setDescription("We couldn't DM you the details.").build())
+        }
 	}
 	return Command.SINGLE_SUCCESS
 }
