@@ -86,7 +86,7 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 	fun generateUrl(url: String): String {
 		if (!isFromType(ChannelType.PRIVATE) && !complete(null, createEmbed().setColor(BrigadierCommand.COLOR_WARNING)
 				.setTitle("✋ Hold up!")
-				.setDescription("We're about to send a link that carries your current session which will be valid for some time until you log out. Make sure you trust the people here, or you may do the command again [in DMs](${getPrivateChannelLink()}).\n\nContinue? (❌ in 45s)")
+				.setDescription("We're about to send a link that carries your current session which will be valid for some time or until you log out. Make sure you trust the people here, or you may do the command again [in DMs](${getPrivateChannelLink()}).\n\nContinue? (❌ in 45s)")
 				.build()).yesNoReactions(author).await()) {
 			throw SimpleCommandExceptionType(LiteralMessage("Alright.")).create()
 		}
