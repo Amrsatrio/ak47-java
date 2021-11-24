@@ -197,7 +197,7 @@ fun EmbedBuilder.renewAffiliateAndPopulateMtxFields(source: CommandSourceStack, 
 		val commonCore = source.api.profileManager.getProfileData("common_core")
 		val stats = commonCore.stats as CommonCoreProfileStats
 		var additional: String? = null
-		if (!stats.mtx_affiliate.isNullOrEmpty() && stats.mtx_affiliate_set_time != null && true/*System.currentTimeMillis() > stats.mtx_affiliate_set_time.time + 14L * 24L * 60L * 60L * 1000L*/) {
+		if (!stats.mtx_affiliate.isNullOrEmpty() && stats.mtx_affiliate_set_time != null && System.currentTimeMillis() > stats.mtx_affiliate_set_time.time + 14L * 24L * 60L * 60L * 1000L) {
 			try {
 				source.api.profileManager.dispatchClientCommandRequest(SetAffiliateName().apply { affiliateName = stats.mtx_affiliate }, "common_core").await()
 				additional = "ℹ " + "Renewed"
