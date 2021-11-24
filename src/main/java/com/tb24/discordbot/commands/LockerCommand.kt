@@ -5,24 +5,29 @@ import com.google.gson.internal.bind.util.ISO8601Utils
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
-import com.mojang.brigadier.arguments.StringArgumentType.getString
-import com.mojang.brigadier.arguments.StringArgumentType.word
+import com.mojang.brigadier.arguments.StringArgumentType.*
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.images.GridSlot
 import com.tb24.discordbot.images.createAttachmentOfIcons
 import com.tb24.discordbot.util.*
+import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
+import com.tb24.fn.model.McpVariantReader
+import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.subgame.SetItemFavoriteStatusBatch
-import com.tb24.fn.util.Formatters
-import com.tb24.fn.util.getBoolean
-import com.tb24.fn.util.getPreviewImagePath
+import com.tb24.fn.util.*
+import me.fungames.jfortniteparse.fort.exports.AthenaCosmeticItemDefinition
+import me.fungames.jfortniteparse.fort.exports.AthenaItemWrapDefinition
+import me.fungames.jfortniteparse.fort.exports.variants.*
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
 import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.util.scale
 import me.fungames.jfortniteparse.util.toPngArray
+import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.Message
 import okhttp3.Request
 import java.awt.Image
@@ -87,20 +92,7 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		.then(argument("type", word())
 			.executes { c ->
 				val source = c.source
-				val type = getString(c, "type")
-				val lowerType = type.toLowerCase(Locale.ROOT)
-				val filterType = when (if (lowerType.endsWith('s')) lowerType.substring(0, lowerType.length - 1) else lowerType) {
-					"character", "outfit", "skin" -> "AthenaCharacter"
-					"backpack", "backbling" -> "AthenaBackpack"
-					"pickaxe", "harvestingtool" -> "AthenaPickaxe"
-					"glider" -> "AthenaGlider"
-					"skydivecontrail", "contrail" -> "AthenaSkyDiveContrail"
-					"dance", "emote", "spray", "toy" -> "AthenaDance"
-					"itemwrap", "wrap" -> "AthenaItemWrap"
-					"musicpack", "music" -> "AthenaMusicPack"
-					"loadingscreen" -> "AthenaLoadingScreen"
-					else -> throw SimpleCommandExceptionType(LiteralMessage("Unknown cosmetic type $type. Valid values are: (case insensitive)```\nOutfit, BackBling, HarvestingTool, Glider, Contrail, Emote, Wrap, Music, LoadingScreen\n```")).create()
-				}
+				val filterType = parseType(getString(c, "type"))
 				source.ensureSession()
 				source.loading("Getting cosmetics")
 				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
@@ -156,6 +148,56 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 				Command.SINGLE_SUCCESS
 			}
 		)
+		.then(literal("text")
+			.executes { executeText(it.source) }
+			.then(argument("type", string())
+				.executes { executeText(it.source, parseType(getString(it, "type"))) }
+			)
+		)
+
+	private fun executeText(source: CommandSourceStack, filterType: String = "AthenaCharacter"): Int {
+		source.ensureSession()
+		source.loading("Getting cosmetics")
+		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+		val athena = source.api.profileManager.getProfileData("athena")
+		val queryAccountIds = mutableSetOf<String>()
+		val entries = athena.items.values
+			.filter { it.primaryAssetType == filterType }
+			.sortedWith(SimpleAthenaLockerItemComparator().apply { bPrioritizeFavorites = false })
+			.map { LockerEntry(it, queryAccountIds) }
+		if (entries.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("No")).create()
+		}
+		val users = source.queryUsers(queryAccountIds)
+		source.message.replyPaginated(entries, 12, source.loadingMsg) { content, page, pageCount ->
+			val entriesStart = page * 12 + 1
+			val entriesEnd = entriesStart + content.size
+			val embed = source.createEmbed()
+				.setTitle(names[filterType])
+				.setDescription("Showing %,d to %,d of %,d entries".format(entriesStart, entriesEnd - 1, entries.size))
+				.setFooter("Page %,d of %,d".format(page + 1, pageCount))
+			content.forEach { it.addTo(embed, users) }
+			MessageBuilder(embed).build()
+		}
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun parseType(type: String): String {
+		val lowerType = type.toLowerCase(Locale.ROOT)
+		val filterType = when (if (lowerType.endsWith('s')) lowerType.substring(0, lowerType.length - 1) else lowerType) {
+			"character", "outfit", "skin" -> "AthenaCharacter"
+			"backpack", "backbling" -> "AthenaBackpack"
+			"pickaxe", "harvestingtool" -> "AthenaPickaxe"
+			"glider" -> "AthenaGlider"
+			"skydivecontrail", "contrail" -> "AthenaSkyDiveContrail"
+			"dance", "emote", "spray", "toy" -> "AthenaDance"
+			"itemwrap", "wrap" -> "AthenaItemWrap"
+			"musicpack", "music" -> "AthenaMusicPack"
+			"loadingscreen" -> "AthenaLoadingScreen"
+			else -> throw SimpleCommandExceptionType(LiteralMessage("Unknown cosmetic type $type. Valid values are: (case insensitive)```\nOutfit, BackBling, HarvestingTool, Glider, Contrail, Emote, Wrap, Music, LoadingScreen\n```")).create()
+		}
+		return filterType
+	}
 }
 
 class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive cosmetics in an image.") {
@@ -313,7 +355,7 @@ private fun perform(source: CommandSourceStack, name: String?, ids: Collection<F
 		return@supplyAsync null
 	}
 	val slots = mutableListOf<GridSlot>()
-	for (item in ids.sortedWith(SimpleAthenaLockerItemComparator())) {
+	for (item in ids.sortedWith(SimpleAthenaLockerItemComparator().apply { bPrioritizeFavorites = false })) {
 		val itemData = item.defData ?: return@supplyAsync null
 		slots.add(GridSlot(
 			image = item.getPreviewImagePath()?.load<UTexture2D>()?.toBufferedImage(),
@@ -331,4 +373,48 @@ private fun perform(source: CommandSourceStack, name: String?, ids: Collection<F
 	}
 	source.channel.sendMessage("**$name** (${Formatters.num.format(ids.size)})")
 		.addFile(png, "$name-${source.api.currentLoggedIn.id}.png").complete()
+}
+
+class LockerEntry(val cosmetic: FortItemStack, queryAccountIds: MutableCollection<String>) {
+	private val defData = cosmetic.defData as? AthenaCosmeticItemDefinition
+	var displayName = defData?.DisplayName.format()
+	var description = defData?.Description.format()
+	var shortDescription = defData?.ShortDescription.format()
+	private val giftFromAccountId = cosmetic.attributes?.getString("giftFromAccountId")
+	private val backendVariants = EpicApi.GSON.fromJson(cosmetic.attributes.getAsJsonArray("variants"), Array<McpVariantReader>::class.java)
+
+	init {
+		giftFromAccountId?.let { queryAccountIds.add(it) }
+		if (shortDescription == null) {
+			if (defData is AthenaItemWrapDefinition) {
+				shortDescription = "Wrap"
+			}
+		}
+	}
+
+	fun addTo(embed: EmbedBuilder, users: List<GameProfile>) {
+		val title = "%s %s".format(getEmoteByName(cosmetic.rarity.name.toLowerCase() + '2')?.asMention, if (displayName.isNullOrEmpty()) cosmetic.primaryAssetName.toLowerCase() else displayName)
+		val descriptionParts = mutableListOf<String>()
+		val itemVariants = defData?.ItemVariants
+		if (itemVariants != null) {
+			for (lazyVariant in itemVariants) {
+				val cosmeticVariant = lazyVariant.value
+				val localBackendChannelName = cosmeticVariant.backendChannelName
+				val backendVariant = backendVariants.firstOrNull { it.channel == localBackendChannelName }
+				val activeVariantDisplayName = when (cosmeticVariant) {
+					is FortCosmeticVariantBackedByArray -> cosmeticVariant.getActive(backendVariant)?.VariantName?.format() ?: "**UNKNOWN SUBTYPE PLEASE REPORT**"
+					is FortCosmeticFloatSliderVariant -> "%d/%d".format(cosmeticVariant.getActive(backendVariant).toInt(), cosmeticVariant.MaxParamValue.toInt())
+					is FortCosmeticNumericalVariant -> Formatters.num.format(cosmeticVariant.getActive(backendVariant))
+					is FortCosmeticProfileBannerVariant -> continue // Always the currently equipped banner
+					is FortCosmeticRichColorVariant -> "#%08X".format(cosmeticVariant.getActive(backendVariant).toFColor(true).toPackedARGB())
+					else -> "**UNKNOWN TYPE PLEASE REPORT**"
+				}
+				descriptionParts.add("%s (%s)".format(cosmeticVariant.VariantChannelName.format(), activeVariantDisplayName))
+			}
+		}
+		if (giftFromAccountId != null) {
+			descriptionParts.add("🎁 ${users.firstOrNull { it.id == giftFromAccountId }?.displayName ?: "Unknown"}")
+		}
+		embed.addField(title, descriptionParts.joinToString("\n"), true)
+	}
 }

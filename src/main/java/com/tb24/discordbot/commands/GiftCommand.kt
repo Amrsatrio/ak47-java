@@ -15,12 +15,10 @@ import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
-import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commoncore.GiftCatalogEntry
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.util.format
-import com.tb24.fn.util.getAffiliateNameRespectingSetDate
 import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Role
@@ -83,10 +81,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts a friend an offer from the i
 			.addField(L10N.format("catalog.balance"), price.getAccountBalanceText(profileManager), true)
 			.setThumbnail(Utils.benBotExportAsset(displayData.imagePath))
 			.setColor(displayData.presentationParams?.vector?.get("Background_Color_B") ?: Role.DEFAULT_COLOR_RAW)
-		if (price.currencyType == EStoreCurrencyType.MtxCurrency) {
-			embed.addField(L10N.format("catalog.mtx_platform"), (commonCore.stats as CommonCoreProfileStats).current_mtx_platform.name, true)
-				.addField(L10N.format("sac.verb"), getAffiliateNameRespectingSetDate(commonCore) ?: "🚫 " + L10N.format("common.none"), false)
-		}
+			.renewAffiliateAndPopulateMtxFields(source, price)
 		if (!source.complete(null, embed.build()).yesNoReactions(source.author).await()) {
 			throw SimpleCommandExceptionType(LiteralMessage("Gift canceled.")).create()
 		}
@@ -125,5 +120,5 @@ class GiftCommand : BrigadierCommand("gift", "Gifts a friend an offer from the i
 	}
 
 	private inline fun CommandSourceStack.completeWarning(title: String?, body: String? = null, footer: String? = null) =
-		complete(null, EmbedBuilder().setColor(COLOR_WARNING).setTitle("⚠ $title").setDescription(body).setFooter(body).build())
+		complete(null, EmbedBuilder().setColor(COLOR_WARNING).setTitle("⚠ $title").setDescription(body).setFooter(footer).build())
 }

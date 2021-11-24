@@ -9,6 +9,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType.getInteger
 import com.mojang.brigadier.arguments.IntegerArgumentType.integer
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.catalogOffer
 import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.getCatalogEntry
@@ -20,6 +21,7 @@ import com.tb24.fn.model.gamesubcatalog.ECatalogOfferType
 import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commoncore.PurchaseCatalogEntry
+import com.tb24.fn.model.mcpprofile.commands.commoncore.SetAffiliateName
 import com.tb24.fn.model.mcpprofile.notifications.CatalogPurchaseNotification
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.model.priceengine.QueryOfferPricesPayload
@@ -150,10 +152,7 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 			.addField(L10N.format("catalog.balance"), price.getAccountBalanceText(profileManager), true)
 			.setThumbnail(Utils.benBotExportAsset(displayData.imagePath))
 			.setColor(displayData.presentationParams?.vector?.get("Background_Color_B") ?: Role.DEFAULT_COLOR_RAW)
-		if (price.currencyType == EStoreCurrencyType.MtxCurrency) {
-			embed.addField(L10N.format("catalog.mtx_platform"), (commonCore.stats as CommonCoreProfileStats).current_mtx_platform.name, true)
-				.addField(L10N.format("sac.verb"), getAffiliateNameRespectingSetDate(commonCore) ?: "🚫 " + L10N.format("common.none"), false)
-		}
+			.renewAffiliateAndPopulateMtxFields(source, price)
 		val warnings = mutableListOf<String>()
 		if (isUndoUnderCooldown(profileManager.getProfileData("common_core"), offer.offerId)) {
 			warnings.add(L10N.format("purchase.undo_cooldown_warning"))
@@ -190,4 +189,25 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 	} else {
 		throw SimpleCommandExceptionType(LiteralMessage("Purchase canceled.")).create()
 	}
+}
+
+fun EmbedBuilder.renewAffiliateAndPopulateMtxFields(source: CommandSourceStack, price: CatalogOffer.CatalogItemPrice): EmbedBuilder {
+	return if (price.currencyType == EStoreCurrencyType.MtxCurrency) {
+		// Renew SAC if it has expired
+		val commonCore = source.api.profileManager.getProfileData("common_core")
+		val stats = commonCore.stats as CommonCoreProfileStats
+		var additional: String? = null
+		if (!stats.mtx_affiliate.isNullOrEmpty() && stats.mtx_affiliate_set_time != null && true/*System.currentTimeMillis() > stats.mtx_affiliate_set_time.time + 14L * 24L * 60L * 60L * 1000L*/) {
+			try {
+				source.api.profileManager.dispatchClientCommandRequest(SetAffiliateName().apply { affiliateName = stats.mtx_affiliate }, "common_core").await()
+				additional = "ℹ " + "Renewed"
+			} catch (e: HttpException) {
+				if (e.epicError.errorCode == "errors.com.epicgames.fortnite.invalid_affiliate") {
+					additional = "⚠ " + "Affiliate is not active."
+				} else throw e
+			}
+		}
+		addField(L10N.format("catalog.mtx_platform"), stats.current_mtx_platform.name, true)
+		addField(L10N.format("sac.verb"), (getAffiliateNameRespectingSetDate(commonCore) ?: ("🚫 " + L10N.format("common.none"))) + if (additional != null) "\n$additional" else "", false)
+	} else this
 }

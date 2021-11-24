@@ -6,6 +6,7 @@ import com.tb24.discordbot.commands.CommandSourceStack
 import com.tb24.discordbot.managers.ChannelsManager
 import com.tb24.discordbot.managers.HomebaseManager
 import com.tb24.discordbot.util.*
+import com.tb24.discordbot.webcampaign.WebCampaign
 import com.tb24.fn.EpicApi
 import com.tb24.fn.event.ProfileUpdatedEvent
 import com.tb24.fn.model.account.AccountMutationResponse
@@ -38,6 +39,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 	val otherClientApis = ConcurrentHashMap<EAuthClient, EpicApi>()
 	var channelsManager: ChannelsManager
 	val homebaseManagers = hashMapOf<String, HomebaseManager>()
+	val webCampaignManagers = hashMapOf<String, WebCampaign>()
 
 	init {
 		var client = client.okHttpClient
@@ -193,6 +195,14 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 			hb.updated(ProfileUpdatedEvent("campaign", campaign, null))
 		}
 		hb
+	}
+
+	fun getWebCampaignManager(id: String): WebCampaign {
+		return webCampaignManagers.getOrPut(id) {
+			val newManager = WebCampaign(api.okHttpClient)
+			newManager.connect()
+			newManager
+		}
 	}
 
 	private fun pickProxyHost(): String? {
