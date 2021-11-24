@@ -6,7 +6,9 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
 import com.tb24.discordbot.*
 import com.tb24.discordbot.util.Utils
+import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.exec
+import com.tb24.discordbot.util.yesNoReactions
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.McpProfile
 import net.dv8tion.jda.api.EmbedBuilder
@@ -82,8 +84,11 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 
 	@Throws(HttpException::class)
 	fun generateUrl(url: String): String {
-		if (!isFromType(ChannelType.PRIVATE)) {
-			throw SimpleCommandExceptionType(LiteralMessage("Please invoke the command again in DMs, as we have to send you info that carries over your current session.")).create()
+		if (!isFromType(ChannelType.PRIVATE) && !complete(null, createEmbed().setColor(BrigadierCommand.COLOR_WARNING)
+				.setTitle("✋ Hold up!")
+				.setDescription("We're about to send a link that carries your current session which will be valid for some time until you log out. Make sure you trust the people here, or you may do the command again [in DMs](${getPrivateChannelLink()}).\n\nContinue? (❌ in 45s)")
+				.build()).yesNoReactions(author).await()) {
+			throw SimpleCommandExceptionType(LiteralMessage("Alright.")).create()
 		}
 		return "https://www.epicgames.com/id/exchange?exchangeCode=${api.accountService.exchangeCode.exec().body()!!.code}&redirectUrl=${URLEncoder.encode(url, "UTF-8")}"
 	}
@@ -112,6 +117,8 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 			}
 		}
 	}
+
+	fun getPrivateChannelLink() = author.openPrivateChannel().complete().let { "https://discord.com/channels/%s/%s".format("@me", it.id) }
 }
 
 class OnlyChannelCommandSource(client: DiscordBot, channel: MessageChannel) : CommandSourceStack(client, ReceivedMessage(

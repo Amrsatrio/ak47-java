@@ -104,9 +104,6 @@ private fun DeviceAuth.LocationIpDate.render() = "%s, %s (%s)".format(dateTime.f
 private fun create(c: CommandContext<CommandSourceStack>): Int {
 	val source = c.source
 	val inDMs = source.isFromType(ChannelType.PRIVATE)
-	/*if (!inDMs) {
-		throw SimpleCommandExceptionType(LiteralMessage("Please perform this command in DMs because a sensitive info could be posted.")).create()
-	}*/
 	source.ensureSession()
 	val sessionId = source.session.id
 	val user = source.api.currentLoggedIn
@@ -145,10 +142,10 @@ private fun create(c: CommandContext<CommandSourceStack>): Int {
 		source.complete(null, embed.populateDeviceAuthDetails(response).build())
 	} else {
 		try {
-			source.author.openPrivateChannel()
+			val detailsMessage = source.author.openPrivateChannel()
 				.flatMap { it.sendMessageEmbeds(EmbedBuilder(embed).populateDeviceAuthDetails(response).build()) }
 				.complete()
-			source.complete(null, embed.setDescription("Check your DMs for details.").build())
+			source.complete(null, embed.setDescription("[Check your DMs for details.](%s)".format(detailsMessage.jumpUrl)).build())
 		} catch (e: ErrorResponseException) {
             source.complete(null, embed.setDescription("We couldn't DM you the details.").build())
         }

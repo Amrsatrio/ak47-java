@@ -70,12 +70,12 @@ class DiscordBot(token: String) {
 	var dbConn: Connection
 	var savedLoginsManager: SavedLoginsManager
 
-	var okHttpClient: OkHttpClient
-	var proxyManager: ProxyManager
-	var catalogManager: CatalogManager
+	val okHttpClient: OkHttpClient
+	val proxyManager: ProxyManager
+	val catalogManager: CatalogManager
 
-	var discord: JDA
-	var commandManager: CommandManager
+	val discord: JDA
+	val commandManager: CommandManager
 
 	val sessions: MutableMap<String, Session> = ExpiringMap.builder()
 		.expiration(40, TimeUnit.MINUTES)
