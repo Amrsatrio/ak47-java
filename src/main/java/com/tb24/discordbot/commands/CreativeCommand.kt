@@ -19,20 +19,27 @@ import java.util.*
 import java.util.regex.Pattern
 
 class CreativeCommand : BrigadierCommand("creative", "Manages your creative islands and codes.") {
+	companion object {
+		private val MNEMONIC_PATTERN = Pattern.compile("(\\d{4}-\\d{4}-\\d{4})(\\?v=\\d+)?")
+	}
+
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.then(argument("island code", greedyString())
 			.executes { c ->
 				val source = c.source
-				val mnemonic = getString(c, "island code")
-				if (!Pattern.matches("\\d{4}-\\d{4}-\\d{4}", mnemonic)) {
+				val inMnemonic = getString(c, "island code")
+				val matcher = MNEMONIC_PATTERN.matcher(inMnemonic)
+				if (!matcher.matches()) {
 					throw SimpleCommandExceptionType(LiteralMessage("Invalid island code. Must be in this format: `0000-0000-0000`")).create()
 				}
+				val mnemonic = matcher.group(1)
+				val version = matcher.group(2)?.substringAfterLast('=')?.toInt()
 				if (source.api.userToken == null) {
 					source.session = source.client.internalSession
 				}
 				source.ensureSession()
 				source.loading("Searching island code")
-				val linkData = source.api.linksService.queryLinkByMnemonic("fn", mnemonic, null, null).exec().body()!!
+				val linkData = source.api.linksService.queryLinkByMnemonic("fn", mnemonic, null, version).exec().body()!!
 				val embed = EmbedBuilder().setColor(COLOR_INFO)
 					.setAuthor(linkData.creatorName + " presents")
 					.setTitle(linkData.metadata.title, "https://fortnite.com/creative/island-codes/$mnemonic")
