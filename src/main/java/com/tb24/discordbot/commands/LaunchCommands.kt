@@ -35,9 +35,9 @@ class LaunchWindowsCommand : BrigadierCommand("launch", "Launches you into Fortn
 				return@executes 0
 			}
 			val launcherPath = "C:\\Program Files\\Epic Games\\Fortnite\\FortniteGame\\Binaries\\Win64\\FortniteLauncher.exe"
-			val commandLine = "\"$launcherPath\" ${generateLaunchArgs(source, deviceData)}"
+			val commandLine = "start /d \"%s\" %s %s".format(launcherPath.substringBeforeLast('\\'), launcherPath.substringAfterLast('\\'), generateLaunchArgs(source, deviceData))
 			val validityMessage = if (deviceData != null) "Valid until you delete the saved login for that account.\n⚠ **Don't share the text below, anyone can login to your account easily with it!**" else "Valid for 5 minutes, until it's used, or until you log out."
-			source.complete("__**Log in to Fortnite Windows as ${source.api.currentLoggedIn.displayName}**__\nCopy and paste the text below into the Windows Search box (Win+S) and hit enter. $validityMessage\n```bat\n$commandLine\n```")
+			source.complete("__**Log in to Fortnite Windows as ${source.api.currentLoggedIn.displayName}**__\nCopy and paste the text below into a Command Prompt window (cmd.exe) and hit enter. $validityMessage\n```bat\n$commandLine\n```")
 			Command.SINGLE_SUCCESS
 		}
 		.then(literal("shortcuts")
