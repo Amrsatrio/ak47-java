@@ -11,7 +11,6 @@ import com.mojang.brigadier.arguments.StringArgumentType.*
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.L10N
-import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.discordbot.util.exec
@@ -22,7 +21,6 @@ import net.dv8tion.jda.api.entities.Message
 
 class ComposeMcpCommand : BrigadierCommand("composemcp", "Perform an arbitrary MCP profile operation. Usually used if such operation is not implemented yet.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires(Rune::hasPremium)
 		.then(argument("command", word())
 			.executes { exec(it.source, getString(it, "command")) }
 			.then(argument("profile ID", word())
@@ -34,6 +32,7 @@ class ComposeMcpCommand : BrigadierCommand("composemcp", "Perform an arbitrary M
 		)
 
 	fun exec(source: CommandSourceStack, command: String, profileId: String = "common_core", bodyRaw: String = "{}"): Int {
+		source.ensurePremium("Perform arbitrary MCP profile operations")
 		val parsedJson = try {
 			JsonParser.parseString(bodyRaw)
 		} catch (e: JsonSyntaxException) {

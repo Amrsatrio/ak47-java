@@ -13,6 +13,7 @@ import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.util.CollectorEndReason
 import com.tb24.discordbot.util.CollectorException
+import com.tb24.discordbot.util.EmbedMessage
 import com.tb24.fn.network.AccountService.GrantType
 import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.EmbedBuilder
@@ -198,7 +199,12 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				val lines = mutableListOf<String>()
 				// command error message and optionally context
 				if (e.type != unkCmd) {
-					lines.add("❌ " + e.rawMessage.string)
+					val rawMessage = e.rawMessage
+					if (rawMessage is EmbedMessage) {
+						source.complete(null, rawMessage.embed)
+						return
+					}
+					lines.add("❌ " + rawMessage.string)
 					// dupe of CommandSyntaxException.getContext() but with formatting
 					if (e.input != null && e.cursor >= 0) {
 						val builder = StringBuilder()

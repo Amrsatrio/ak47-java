@@ -8,7 +8,6 @@ import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.commandName
 import com.tb24.discordbot.util.dispatchClientCommandRequest
@@ -19,7 +18,6 @@ import java.text.SimpleDateFormat
 
 class HomebaseNameCommand : BrigadierCommand("homebasename", "Displays or changes the homebase name. (STW owning accounts only)") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires(Rune::hasPremium)
 		.executes { execute(it, null) }
 		.then(argument("new name", greedyString())
 			.executes { execute(it, getString(it, "new name")) }
@@ -27,6 +25,7 @@ class HomebaseNameCommand : BrigadierCommand("homebasename", "Displays or change
 
 	private fun execute(context: CommandContext<CommandSourceStack>, newHomebaseName: String?): Int {
 		val source = context.source
+		source.ensurePremium("Change homebase name")
 		source.ensureSession()
 		val isQuery = newHomebaseName == null
 		source.loading(if (isQuery) "Getting homebase name" else "Changing homebase name")

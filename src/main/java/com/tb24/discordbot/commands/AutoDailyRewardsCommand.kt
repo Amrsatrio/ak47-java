@@ -6,7 +6,6 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
-import com.tb24.discordbot.Rune
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
 import com.tb24.discordbot.tasks.AutoClaimEntry
@@ -18,7 +17,6 @@ import net.dv8tion.jda.api.EmbedBuilder
 
 class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll your saved accounts for automatic daily rewards claiming.", arrayOf("autostw", "auto")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires(Rune::hasPremium)
 		.executes {
 			val source = it.source
 			if (source.api.userToken == null) {
@@ -37,6 +35,7 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 		)
 
 	fun execute(source: CommandSourceStack, user: GameProfile?): Int {
+		source.ensurePremium("Automatically claim STW daily rewards every day")
 		var accountId = user?.id
 		var user = user
 		val discordId = source.author.id

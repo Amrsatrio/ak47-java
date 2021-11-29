@@ -6,5 +6,4 @@ import com.tb24.discordbot.commands.CommandSourceStack
 
 object Rune {
 	inline fun isBotDev(source: CommandSourceStack) = source.author.idLong in BotConfig.get().adminUserIds
-	inline fun hasPremium(source: CommandSourceStack) = source.hasPremium()
 }

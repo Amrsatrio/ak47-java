@@ -29,6 +29,7 @@ public class BotConfig {
 	public long homeGuildId;
 	public String homeGuildInviteLink;
 	public long itemShopChannelId;
+	public long premiumChannelId;
 	public long mtxAlertsChannelId;
 	public long mtxAlertsRoleId;
 	public long logsChannelId;

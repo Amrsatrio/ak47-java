@@ -5,10 +5,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
 import com.tb24.discordbot.*
-import com.tb24.discordbot.util.Utils
-import com.tb24.discordbot.util.await
-import com.tb24.discordbot.util.exec
-import com.tb24.discordbot.util.yesNoReactions
+import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.McpProfile
 import net.dv8tion.jda.api.EmbedBuilder
@@ -103,6 +100,22 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 
 	fun hasPremium(): Boolean {
 		return r.table("members").get(author.id).run(client.dbConn).first() != null
+	}
+
+	fun ensurePremium(description: String? = null) {
+		if (hasPremium()) return
+		val homeGuild = client.discord.getGuildById(BotConfig.get().homeGuildId)
+			?: throw SimpleCommandExceptionType(LiteralMessage("Premium required to use this feature.")).create()
+		val role = homeGuild.getRolesByName("premium", true).firstOrNull()
+			?: throw SimpleCommandExceptionType(LiteralMessage("No role in ${homeGuild.name} named Premium.")).create()
+		val embed = EmbedBuilder().setColor(role.color)
+			.setTitle("🌟 You've discovered a premium feature!")
+			.setDescription("${description?.let { "**$it with premium!**\n" } ?: ""}To get premium, you can ")
+		if (runCatching { homeGuild.retrieveMemberById(author.idLong).complete() }.isFailure) {
+			embed.appendDescription("[join our support server](${BotConfig.get().homeGuildInviteLink}) and ")
+		}
+		embed.appendDescription("visit <#${BotConfig.get().premiumChannelId}> to see the available options.")
+		throw SimpleCommandExceptionType(EmbedMessage(embed.build())).create()
 	}
 
 	fun getSavedAccountsLimit(): Int {

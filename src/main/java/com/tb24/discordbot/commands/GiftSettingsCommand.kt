@@ -11,7 +11,6 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
 import com.tb24.discordbot.L10N
-import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
@@ -22,7 +21,6 @@ import net.dv8tion.jda.api.EmbedBuilder
 
 class GiftSettingsCommand : BrigadierCommand("giftsettings", "Manage your gift settings such as gift acceptance, wrap, and message.", arrayOf("giftconfig", "gs")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires(Rune::hasPremium)
 		.executes {
 			val source = it.source
 			source.ensureSession()

@@ -7,7 +7,6 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.L10N
-import com.tb24.discordbot.Rune
 import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.catalogOffer
 import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.getCatalogEntry
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
@@ -25,7 +24,6 @@ import net.dv8tion.jda.api.entities.Role
 
 class GiftCommand : BrigadierCommand("gift", "Gifts a friend an offer from the item shop.", arrayOf("g")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires(Rune::hasPremium)
 		.then(argument("item number", catalogOffer())
 			.then(argument("recipients", users(1))
 				.executes { execute(it.source, getCatalogEntry(it, "item number"), getUsers(it, "recipients").values.first()) }
@@ -33,6 +31,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts a friend an offer from the i
 		)
 
 	private fun execute(source: CommandSourceStack, catalogOffer: CatalogOffer, recipient: GameProfile): Int {
+		source.ensurePremium("Gift an item")
 		val ce = catalogOffer.holder()
 		if (catalogOffer.giftInfo == null || !catalogOffer.giftInfo.bIsEnabled) {
 			throw SimpleCommandExceptionType(LiteralMessage("${ce.friendlyName} is not giftable.")).create()

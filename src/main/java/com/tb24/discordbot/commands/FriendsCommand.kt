@@ -9,7 +9,6 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.L10N
-import com.tb24.discordbot.Rune
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
 import com.tb24.discordbot.util.*
@@ -35,11 +34,11 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		.then(literal("incoming").executes { list(it.source, "incoming") }.then(literal("withid").executes { list(it.source, "incoming", true) }))
 		.then(literal("outgoing").executes { list(it.source, "outgoing") }.then(literal("withid").executes { list(it.source, "outgoing", true) }))
 		.then(literal("blocklist").executes { list(it.source, "blocklist") }.then(literal("withid").executes { list(it.source, "blocklist", true) }))
-		.then(literal("removeall").requires(Rune::hasPremium).executes { bulk(it.source, "remove", null, FriendsService::queryFriends, FriendsService::deleteFriendOrRejectInvite) })
-		.then(literal("acceptall").requires(Rune::hasPremium).executes { bulk(it.source, "accept", null, FriendsService::queryIncomingFriendRequests, FriendsService::sendInviteOrAcceptInvite) })
-		.then(literal("rejectall").requires(Rune::hasPremium).executes { bulk(it.source, "reject", null, FriendsService::queryIncomingFriendRequests, FriendsService::deleteFriendOrRejectInvite) })
-		.then(literal("cancelall").requires(Rune::hasPremium).executes { bulk(it.source, "cancel", null, FriendsService::queryOutgoingFriendRequests, FriendsService::deleteFriendOrRejectInvite) })
-		.then(literal("unblockall").requires(Rune::hasPremium).executes { bulk(it.source, "unblock", null, FriendsService::queryBlockedPlayers, FriendsService::sendUnblock) })
+		.then(literal("removeall").executes { bulk(it.source, "remove", null, FriendsService::queryFriends, FriendsService::deleteFriendOrRejectInvite) })
+		.then(literal("acceptall").executes { bulk(it.source, "accept", null, FriendsService::queryIncomingFriendRequests, FriendsService::sendInviteOrAcceptInvite) })
+		.then(literal("rejectall").executes { bulk(it.source, "reject", null, FriendsService::queryIncomingFriendRequests, FriendsService::deleteFriendOrRejectInvite) })
+		.then(literal("cancelall").executes { bulk(it.source, "cancel", null, FriendsService::queryOutgoingFriendRequests, FriendsService::deleteFriendOrRejectInvite) })
+		.then(literal("unblockall").executes { bulk(it.source, "unblock", null, FriendsService::queryBlockedPlayers, FriendsService::sendUnblock) })
 		/*.then(literal("avatarids").executes { c ->
 			val source = c.source
 			source.ensureSession()
@@ -327,6 +326,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 	}
 
 	private fun bulk(source: CommandSourceStack, type: String, suppliedQueue: List<GameProfile>?, query: ((FriendsService, String, Boolean?) -> Call<Array<FriendV2>>)?, op: FriendsService.(String, String) -> Call<Void>): Int {
+		source.ensurePremium("Do bulk friend operations")
 		source.ensureSession()
 		if (!source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
 				.setTitle("Confirmation")

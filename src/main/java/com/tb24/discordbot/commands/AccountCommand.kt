@@ -8,7 +8,6 @@ import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.AccountMutationPayload
 import com.tb24.fn.model.account.BackupCodesResponse
@@ -18,7 +17,6 @@ import net.dv8tion.jda.api.EmbedBuilder
 
 class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf("a")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires(Rune::hasPremium)
 		.executes(::displaySummary)
 		.then(literal("displayname")
 			.then(argument("new name", greedyString())
@@ -42,6 +40,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 
 	private inline fun displaySummary(c: CommandContext<CommandSourceStack>): Int {
 		val source = c.source
+		source.ensurePremium("View more account info")
 		source.ensureSession()
 		if (!source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
 				.setTitle("✋ Hold up!")
@@ -83,6 +82,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 	}
 
 	private fun setDisplayName(source: CommandSourceStack, newName: String): Int {
+		source.ensurePremium("Change account display name")
 		source.ensureSession()
 		if (newName.length < 3 || newName.length > 16) {
 			throw SimpleCommandExceptionType(LiteralMessage("Display name must be between 3 and 16 characters long.")).create()
@@ -122,6 +122,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 
 	private inline fun displayBackupCodes(c: CommandContext<CommandSourceStack>): Int {
 		val source = c.source
+		source.ensurePremium("View account's existing backup codes")
 		source.ensureSession()
 		source.loading("Getting backup codes")
 		val response = source.api.accountService.getBackupCodes(source.api.currentLoggedIn.id).exec().body()!!
@@ -139,6 +140,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 
 	private inline fun generateBackupCodes(c: CommandContext<CommandSourceStack>): Int {
 		val source = c.source
+		source.ensurePremium("Generate new backup codes")
 		source.ensureSession()
 		source.loading("Generating backup codes")
 		val response = source.api.accountService.generateBackupCodes(source.api.currentLoggedIn.id).exec().body()!!
@@ -163,6 +165,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 	}.toString()
 
 	private inline fun unlink(source: CommandSourceStack, externalAuthType: String): Int {
+		source.ensurePremium("Unlink a connected account")
 		source.ensureSession()
 		source.loading("Getting linked accounts")
 		val externalAuth = runCatching { source.api.accountService.getExternalAuth(source.api.currentLoggedIn.id, externalAuthType).exec() }.getOrNull()?.body()
