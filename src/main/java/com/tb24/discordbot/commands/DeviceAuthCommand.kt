@@ -116,11 +116,12 @@ private fun create(c: CommandContext<CommandSourceStack>): Int {
 	if (dbDevices.size >= limit) {
 		if (dbDevices.isEmpty() && limit == 0) {
 			val quotaSettings = BotConfig.get().deviceAuthQuota
-			throw SimpleCommandExceptionType(LiteralMessage("Your Discord account must be older than %,d days in order to have %,d complimentary saved logins.\nAlternatively, you can buy premium from us to get %,d saved logins regardless of account age.".format(
+			source.ensurePremium("Your Discord account must be older than %,d days in order to have %,d complimentary saved logins.\nGet %,d saved logins regardless of account age".format(
 				quotaSettings.minAccountAgeInDaysForComplimentary,
 				quotaSettings.maxForComplimentary,
 				quotaSettings.maxForPremium
-			))).create()
+			))
+			check(false) // We should never reach this point
 		}
 		throw SimpleCommandExceptionType(LiteralMessage("Maximum number of saved logins (%,d) has been reached.".format(limit))).create()
 	}

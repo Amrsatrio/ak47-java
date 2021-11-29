@@ -92,7 +92,7 @@ inline fun <reified T> okhttp3.Response.to(): T = body()!!.charStream().use { Ep
 
 val CommandContext<*>.commandName: String get() = nodes.first().node.name
 
-inline fun Date.format(): String = TimeFormat.DATE_TIME_SHORT.atTimestamp(this.time).toString()
+inline fun Date.format(): String = TimeFormat.DATE_TIME_SHORT.format(this.time)
 
 fun FortItemStack.render(displayQty: Int = quantity): String {
 	var dn = displayName
@@ -262,7 +262,7 @@ inline fun Date.relativeFromNow(withSeconds: Boolean = false) = time.relativeFro
 	}
 }*/
 
-inline fun Long.relativeFromNow(withSeconds: Boolean = false) = TimeFormat.RELATIVE.atTimestamp(this).toString()
+inline fun Long.relativeFromNow(withSeconds: Boolean = false) = TimeFormat.RELATIVE.format(this)
 
 fun String.shortenUrl(source: CommandSourceStack): String {
 	val cuttlyApiKey = "2f305deea48f34be34018ab54b7b7dd2b72e4"

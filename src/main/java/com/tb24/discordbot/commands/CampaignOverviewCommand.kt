@@ -14,7 +14,7 @@ import com.tb24.fn.model.mcpprofile.stats.CommonPublicProfileStats
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
 import me.fungames.jfortniteparse.fort.enums.EFortStatType.*
-import java.text.DateFormat
+import net.dv8tion.jda.api.utils.TimeFormat
 
 class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statistics of an account.", arrayOf("profile")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -79,10 +79,9 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 			Utils.MTX_EMOJI,
 			stats.unslot_mtx_spend
 		), true)
-		val df = DateFormat.getDateInstance()
 		embed.addField("Dates", "**Creation Date:** %s\n**Last Updated:** %s".format(
-			df.format(campaign.created),
-			df.format(campaign.updated)
+			TimeFormat.DATE_LONG.format(campaign.created.time),
+			TimeFormat.DATE_LONG.format(campaign.updated.time)
 		), true)
 		embed.addField("Miscellaneous", "**Mythic Schematics:** %,d\n**Revisions:** %,d\n**Zones Completed:** %,d".format(
 			mythicSchematics.size,

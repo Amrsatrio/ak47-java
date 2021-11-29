@@ -45,7 +45,7 @@ class PurchasesCommand : BrigadierCommand("purchases", "Shows your purchase hist
 				val embed = source.createEmbed()
 					.setTitle("Purchases")
 					.setDescription("Showing %,d to %,d of %,d entries\n\n%s".format(entriesStart, entriesEnd - 1, entries.size, value))
-					.addField("Info", "Spent since %s: %s %,d\nRefund tickets: %,d / %,d\nItems refunded: %,d".format(TimeFormat.DATE_LONG.atTimestamp(oldest), Utils.MTX_EMOJI, totalSpent, mtxPurchaseHistory.refundCredits, 3, mtxPurchaseHistory.refundsUsed), false)
+					.addField("Info", "Spent since %s: %s %,d\nRefund tickets: %,d / %,d\nItems refunded: %,d".format(TimeFormat.DATE_LONG.format(oldest), Utils.MTX_EMOJI, totalSpent, mtxPurchaseHistory.refundCredits, 3, mtxPurchaseHistory.refundsUsed), false)
 					.setFooter("Page %,d of %,d".format(page + 1, pageCount))
 				MessageBuilder(embed).build()
 			}

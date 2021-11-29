@@ -16,10 +16,12 @@ import me.fungames.jfortniteparse.fort.exports.FortItemDefinition
 import me.fungames.jfortniteparse.fort.objects.rows.AthenaExtendedXPCurveEntry
 import me.fungames.jfortniteparse.fort.objects.rows.AthenaSeasonalXPCurveEntry
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
-import java.text.DateFormat
+import net.dv8tion.jda.api.utils.TimeFormat
 
 val battleStarEmote = textureEmote("/Game/Athena/UI/Frontend/Art/T_UI_BP_BattleStar_L.T_UI_BP_BattleStar_L")
 val styleCurrencyEmote = textureEmote("/Game/Athena/UI/Frontend/Art/T_UI_BP_StyleCurrency_L.T_UI_BP_StyleCurrency_L")
+val battlePassEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass-L.T-FNBR-BattlePass-L")
+val freePassEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass-Default-L.T-FNBR-BattlePass-Default-L")
 
 class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of current season.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -35,7 +37,7 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 			val inventory = source.api.fortniteService.inventorySnapshot(source.api.currentLoggedIn.id).exec().body()!!
 			val embed = source.createEmbed()
 				.setTitle("Season " + stats.season_num)
-				.addField("%s Level %,d".format(if (stats.book_purchased) "Battle Pass" else "Free Pass", stats.level), "`%s`\n%,d / %,d".format(Utils.progress(stats.xp, xpToNextLevel, 32), stats.xp, xpToNextLevel), false)
+				.addField("%s Level %,d".format((if (stats.book_purchased) battlePassEmote else freePassEmote)?.asMention, stats.level), "`%s`\n%,d / %,d".format(Utils.progress(stats.xp, xpToNextLevel, 32), stats.xp, xpToNextLevel), false)
 			if (nextLevelReward != null) {
 				embed.addField("Rewards for level %,d".format(stats.level + 1), nextLevelReward.renderWithIcon(), false)
 				embed.setThumbnail(Utils.benBotExportAsset(nextLevelReward.getPreviewImagePath(true)?.toString()))
@@ -77,10 +79,9 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 				val athena = source.api.profileManager.getProfileData("athena")
 				val stats = athena.stats as AthenaProfileStats
 				val embed = source.createEmbed()
-				val df = DateFormat.getDateInstance()
 				embed.addField("Dates", "**Creation Date:** %s\n**Last Updated:** %s".format(
-					df.format(athena.created),
-					df.format(athena.updated)
+					TimeFormat.DATE_LONG.format(athena.created.time),
+					TimeFormat.DATE_LONG.format(athena.updated.time)
 				), true)
 				embed.addField("Wins", "**Season:** %,d\n**Lifetime:** %,d".format(stats.season?.numWins ?: 0, stats.lifetime_wins), true)
 				embed.addField("2FA reward claimed", if (stats.mfa_reward_claimed) "✅" else "❌", true)
@@ -90,13 +91,13 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 				val currentStylePoints = stats.style_points ?: 0
 				val spentStylePoints = stats.purchasedBpOffers.values.sumOf { if (it.currencyType == "style_points") it.totalCurrencyPaid else 0 }
 				val totalStylePoints = currentStylePoints + spentStylePoints
-				embed.addField("Battle Stars", "%,d spent, %,d total".format(spentBattleStars, totalBattleStars), true)
+				embed.addField("%s Battle Stars".format(battleStarEmote?.asMention), "%,d spent, %,d total".format(spentBattleStars, totalBattleStars), true)
 				embed.addField("Style Points", "%,d spent, %,d total".format(spentStylePoints, totalStylePoints), true)
 				embed.addFieldSeparate("Past seasons", stats.past_seasons.toList(), 0) {
 					if (it.seasonNumber >= 11) {
-						"Season %,d: %s level %,d, %,d wins".format(it.seasonNumber, if (it.purchasedVIP) "Battle Pass" else "Free Pass", it.seasonLevel, it.numWins)
+						"%s `%,2d` Level %,d, %,d wins".format((if (it.purchasedVIP) battlePassEmote else freePassEmote)?.asMention, it.seasonNumber, it.seasonLevel, it.numWins)
 					} else {
-						"Season %,d: Level %,d, %s tier %,d, %,d wins".format(it.seasonNumber, it.seasonLevel, if (it.purchasedVIP) "Battle Pass" else "Free Pass", it.bookLevel, it.numWins)
+						"%s `%,2d` Level %,d, Tier %,d, %,d wins".format((if (it.purchasedVIP) battlePassEmote else freePassEmote)?.asMention, it.seasonNumber, it.seasonLevel, it.bookLevel, it.numWins)
 					}
 				}
 				source.complete(null, embed.build())
