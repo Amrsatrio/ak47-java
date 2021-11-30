@@ -14,11 +14,14 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.Rune
 import com.tb24.discordbot.commands.arguments.ItemArgument.Companion.getItem
 import com.tb24.discordbot.commands.arguments.ItemArgument.Companion.item
+import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
+import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.assetdata.RewardCategoryTabData
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.commands.QueryPublicProfile
 import com.tb24.fn.model.mcpprofile.commands.subgame.FortRerollDailyQuest
 import com.tb24.fn.model.mcpprofile.stats.IQuestManager
 import com.tb24.fn.util.format
@@ -37,6 +40,7 @@ import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.Message
+import java.util.concurrent.CompletableFuture
 
 class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manages your active BR daily challenges.", arrayOf("dailychals", "brdailies", "bd")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -83,6 +87,12 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 				.executes { replaceQuest(it.source, "campaign", getInteger(it, "daily quest #"), ::getCampaignDailyQuests) }
 			)
 		)
+		.then(literal("bulk")
+			.executes { executeBulk(it.source) }
+			.then(argument("users", UserArgument.users(15))
+				.executes { executeBulk(it.source, lazy { UserArgument.getUsers(it, "users").values }) }
+			)
+		)
 
 	private fun displayDailyQuests(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
 		val source = c.source
@@ -109,6 +119,44 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 		campaign.items.values
 			.filter { it.primaryAssetType == "Quest" && it.attributes["quest_state"]?.asString == "Active" && (it.defData as? FortQuestItemDefinition)?.QuestType == EFortQuestType.DailyQuest }
 			.sortedBy { it.displayName }
+
+	private fun executeBulk(source: CommandSourceStack, usersLazy: Lazy<Collection<GameProfile>>? = null): Int {
+		if (source.api.userToken == null) {
+			source.session = source.client.internalSession
+		}
+		val users = if (usersLazy == null) {
+			source.loading("Resolving users")
+			source.queryUsers(source.client.savedLoginsManager.getAll(source.author.id).map { it.accountId })
+		} else usersLazy.value
+		if (users.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("No users that we can display.")).create()
+		}
+		source.loading("Querying STW data for %,d user(s)".format(users.size))
+		CompletableFuture.allOf(*users.map {
+			source.api.profileManager.dispatchPublicCommandRequest(it, QueryPublicProfile(), "campaign")
+		}.toTypedArray()).await()
+		val entries = mutableListOf<Pair<String, String>>()
+		for (user in users) {
+			val campaign = source.api.profileManager.getProfileData(user.id, "campaign") ?: continue
+			val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:homebaseonboarding" }?.attributes?.get("completion_hbonboarding_completezone")?.asInt ?: 0) > 0
+			if (!completedTutorial) continue
+
+			val quests = getCampaignDailyQuests(campaign)
+				.mapIndexed { i, it -> renderChallenge(it, "\u2800", null, allowBold = false) }
+				.joinToString("\n")
+
+			entries.add(Pair<String, String>(user.displayName, quests.ifEmpty { "\u2800✅ All dailies completed!" }))
+		}
+		if (entries.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("All users we're trying to display don't have STW founders.")).create()
+		}
+		val embed = EmbedBuilder().setColor(COLOR_INFO)
+		for (entry in entries) {
+			embed.addField(entry.first, entry.second, false)
+		}
+		source.complete(null, embed.build())
+		return Command.SINGLE_SUCCESS
+	}
 }
 
 class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR quests.", arrayOf("challenges", "chals")) {
@@ -321,7 +369,7 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 	return Command.SINGLE_SUCCESS
 }
 
-fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: String = "", isAthenaDaily: Boolean = false, showRarity: Boolean = isAthenaDaily, conditionalCondition: Boolean = false): String {
+fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: String? = "", isAthenaDaily: Boolean = false, showRarity: Boolean = isAthenaDaily, conditionalCondition: Boolean = false, allowBold: Boolean = true): String {
 	val (completion, max) = getQuestCompletion(item)
 	val xpRewardScalar = item.attributes["xp_reward_scalar"]?.asFloat ?: 1f
 	var dn = item.displayName
@@ -337,9 +385,15 @@ fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: Str
 		}
 		"[${rarity.rarityName.format()}] "
 	} else ""
-	val sb = StringBuilder("%s%s**%s** [%,d/%,d]".format(prefix, rarity, dn, completion, max))
+	val boldTitle = if (allowBold) "**" else ""
+	val sb = StringBuilder("%s%s%s%s%s ".format(prefix, rarity, boldTitle, dn, boldTitle))
+	if (rewardsPrefix != null) {
+		sb.append("[%,d/%,d]".format(completion, max))
+	} else {
+		sb.append("**[%,d/%,d]**".format(completion, max))
+	}
 	val quest = item.defData as FortQuestItemDefinition
-	val bold = isAthenaDaily && xpRewardScalar == 1f
+	val bold = allowBold && isAthenaDaily && xpRewardScalar == 1f
 	quest.Rewards?.forEach { reward ->
 		if (reward.ItemPrimaryAssetId.PrimaryAssetType.Name.text != "Quest") {
 			sb.append('\n')
@@ -348,11 +402,13 @@ fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: Str
 			if (bold) sb.append("**")
 		}
 	}
-	quest.RewardsTable?.value?.rows
-		?.mapValues { it.value.mapToClass(FortQuestRewardTableRow::class.java) }
-		?.filter { it.value.QuestTemplateId == "*" || it.value.QuestTemplateId == item.templateId && !it.value.Hidden }
-		?.render(rewardsPrefix, rewardsPrefix, xpRewardScalar, bold, conditionalCondition)
-		?.forEach { sb.append('\n').append(it) }
+	if (rewardsPrefix != null) {
+		quest.RewardsTable?.value?.rows
+			?.mapValues { it.value.mapToClass(FortQuestRewardTableRow::class.java) }
+			?.filter { it.value.QuestTemplateId == "*" || it.value.QuestTemplateId == item.templateId && !it.value.Hidden }
+			?.render(rewardsPrefix, rewardsPrefix, xpRewardScalar, bold, conditionalCondition)
+			?.forEach { sb.append('\n').append(it) }
+	}
 	return sb.toString()
 }
 
