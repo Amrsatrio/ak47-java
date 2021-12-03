@@ -20,6 +20,9 @@ import com.tb24.fn.model.catalog.StoreOffer
 import com.tb24.fn.model.coderedemption.EvaluateCodeResponse
 import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.EmbedBuilder
+import java.text.NumberFormat
+import java.util.*
+import kotlin.math.pow
 
 class CheckCodeCommand : BrigadierCommand("checkcode", "Evaluates an Epic Games code.", arrayOf("evaluatecode")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -90,17 +93,13 @@ class RedeemCodeCommand : BrigadierCommand("redeemcode", "Redeems an Epic Games 
 		)
 }
 
-fun EmbedBuilder.populateOffer(offer: StoreOffer?): EmbedBuilder {
+fun EmbedBuilder.populateOffer(offer: StoreOffer?, populatePrice: Boolean = true): EmbedBuilder {
 	if (offer == null) {
 		setDescription("Offer information unknown")
 		return this
 	}
 	val name = offer.title
 	val description = offer.description
-	val image = offer.keyImages?.getOrNull(0)?.url
-	val thumbnail = offer.keyImages?.getOrNull(2)?.url
-	val status = offer.status
-	val created = offer.creationDate.format()
 	val seller = offer.seller?.name ?: "Unknown"
 	val sb = StringBuilder()
 	sb.append("**$name**")
@@ -109,8 +108,22 @@ fun EmbedBuilder.populateOffer(offer: StoreOffer?): EmbedBuilder {
 	}
 	sb.append("\nby ").append(seller)
 	setDescription(sb.toString())
-	addField("Offer Creation", created, false)
-	setImage(image)
-	setThumbnail(thumbnail)
+	val dates = listOf(
+		"Creation" to offer.creationDate,
+		"Last Modified" to offer.lastModifiedDate,
+		"Viewable" to offer.viewableDate,
+		"Effective" to offer.effectiveDate,
+		"Expiry" to offer.expiryDate,
+		"PC Release" to offer.pcReleaseDate,
+	).filter { it.second != null }.groupBy { it.second }.entries.joinToString("\n") { it.value.joinToString() { it.first } + ": " + it.key.format() }
+	addField("Offer Dates", dates, false)
+	if (populatePrice && (offer.price ?: 0) != 0) {
+		val priceFormatter = NumberFormat.getCurrencyInstance()
+		priceFormatter.currency = Currency.getInstance(offer.currencyCode)
+		priceFormatter.minimumFractionDigits = offer.currencyDecimals
+		addField("Price", priceFormatter.format(offer.price / 10.0.pow(offer.currencyDecimals.toDouble())), false)
+	}
+	setImage(offer.keyImages?.getOrNull(0)?.url)
+	setThumbnail(offer.keyImages?.getOrNull(2)?.url)
 	return this
 }

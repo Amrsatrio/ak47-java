@@ -60,7 +60,6 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(CommandsCommand())
 		register(CompetitiveCommand())
 		register(ComposeMcpCommand())
-		register(CosmeticCommand())
 		register(CreativeCommand())
 		register(CreativeXpCommand())
 		register(DailyQuestsCommand())
@@ -97,6 +96,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(InfoCommand())
 		register(InviteBotCommand())
 		register(ItemCollectCommand())
+		register(ItemCommand())
 		register(LaunchAndroidCommand())
 		register(LaunchWindowsCommand())
 		register(LibraryCommand())
@@ -110,6 +110,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(MtxBalanceCommand())
 		register(MtxPlatformCommand())
 		register(NewsCommand())
+		register(OfferCommand())
 		register(PhoenixCommand())
 		register(PingCommand())
 		register(PrefixCommand())
@@ -327,11 +328,14 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 	}
 
 	fun unhandledException(source: CommandSourceStack, e: Throwable, additional: String) {
-		source.complete(null, EmbedBuilder().setColor(BrigadierCommand.COLOR_ERROR)
+		val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_ERROR)
 			.setTitle("💥 Uh oh! That was unexpected!")
-			.setDescription("An error has occurred and we're working to fix the problem!\nYou can [join our server](${BotConfig.get().homeGuildInviteLink}) and report it there if we failed to fix it in time!")
+			.setDescription("An error has occurred and we're working to fix the problem!")
 			.addField("Error", "```$e```", false)
-			.build())
+		BotConfig.get().homeGuildInviteLink?.let {
+			embed.appendDescription("\nYou can [join our server]($it) and report it there if we failed to fix it in time!")
+		}
+		source.complete(null, embed.build())
 		if (DiscordBot.ENV == "prod" || DiscordBot.ENV == "stage") {
 			client.dlog("""__**Error report**__
 User: ${source.author.asMention}$additional

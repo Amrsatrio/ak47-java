@@ -128,7 +128,7 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 			.build()).exec().to<JsonObject>().getString("purchaseToken")
 		val purchaseLink = "https://payment-website-pci.ol.epicgames.com/payment/v1/purchase?purchaseToken=$purchaseToken&uePlatform=FNGame"
 		source.complete("Visit this link to purchase the item shown below:\n${source.generateUrl(purchaseLink)}", EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
-			.populateOffer(storeOffer)
+			.populateOffer(storeOffer, false)
 			.addField("Price", priceFormatter.format(rmPrice.discountPrice / 100.0) + (if (rmPrice.originalPrice != rmPrice.discountPrice) " ~~" + priceFormatter.format(rmPrice.originalPrice / 100.0) + "~~" else "") + if (rmPrice.vatRate > 0.0) '\n' + "VAT included if applicable" else "", false)
 			.build())
 		return Command.SINGLE_SUCCESS

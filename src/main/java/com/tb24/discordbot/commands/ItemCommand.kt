@@ -14,7 +14,7 @@ import com.tb24.fn.util.getPreviewImagePath
 import me.fungames.jfortniteparse.fort.exports.FortMtxOfferData
 import net.dv8tion.jda.api.EmbedBuilder
 
-class CosmeticCommand : BrigadierCommand("cosmetic", "Shows info of a cosmetic by their ID.") {
+class ItemCommand : BrigadierCommand("item", "Shows info of a cosmetic by their ID.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.then(argument("id", greedyString())
 			.executes { c ->

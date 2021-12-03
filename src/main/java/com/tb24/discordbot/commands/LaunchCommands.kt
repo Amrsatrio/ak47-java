@@ -101,7 +101,7 @@ class LaunchWindowsCommand : BrigadierCommand("launch", "Launches you into Fortn
 		} else {
 			source.loading("Generating exchange code")
 			login = "unused"
-			password = source.api.accountService.getExchangeCode().exec().body()!!.code
+			password = source.session.getApiForOtherClient(EAuthClient.LAUNCHER_APP_CLIENT_2).accountService.getExchangeCode().exec().body()!!.code
 			type = "exchangecode"
 		}
 		val accountId = deviceData?.accountId ?: source.api.currentLoggedIn.id
