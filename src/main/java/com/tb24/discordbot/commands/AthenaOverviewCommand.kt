@@ -19,7 +19,7 @@ import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import net.dv8tion.jda.api.utils.TimeFormat
 
 val battleStarEmote = textureEmote("/Game/Athena/UI/Frontend/Art/T_UI_BP_BattleStar_L.T_UI_BP_BattleStar_L")
-val styleCurrencyEmote = textureEmote("/Game/Athena/UI/Frontend/Art/T_UI_BP_StyleCurrency_L.T_UI_BP_StyleCurrency_L")
+//val styleCurrencyEmote = textureEmote("/Game/Athena/UI/Frontend/Art/T_UI_BP_StyleCurrency_L.T_UI_BP_StyleCurrency_L")
 val battlePassEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass-L.T-FNBR-BattlePass-L")
 val freePassEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass-Default-L.T-FNBR-BattlePass-Default-L")
 
@@ -58,10 +58,9 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 			}
 			embed.addField("Account Level", Formatters.num.format(stats.accountLevel), false)
 			val currentBattleStars = stats.battlestars ?: 0
-			val currentStylePoints = stats.style_points ?: 0
-			embed.addField("Season Resources", "%s %s **%,d**\n%s %s **%,d**\n%s %s **%,d**".format(
+			//val currentStylePoints = stats.style_points ?: 0
+			embed.addField("Season Resources", "%s %s **%,d**\n%s %s **%,d**".format(
 				"Battle Stars", battleStarEmote?.asMention, currentBattleStars,
-				"Rainbow Ink", styleCurrencyEmote?.asMention, currentStylePoints,
 				"Bars", barsEmote?.asMention, inventory.stash["globalcash"] ?: 0
 			), false)
 			stats.last_match_end_datetime?.apply {

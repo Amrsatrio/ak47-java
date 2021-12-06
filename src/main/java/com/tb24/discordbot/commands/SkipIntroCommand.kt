@@ -13,7 +13,7 @@ class SkipIntroCommand : BrigadierCommand("skipintro", "Skips the forced Chapter
 			val source = it.source
 			source.ensureSession()
 			source.loading("Skipping intro")
-			val response = source.api.profileManager.dispatchClientCommandRequest(SetForcedIntroPlayed().apply { forcedIntroName = "yogurt" }).await()
+			val response = source.api.profileManager.dispatchClientCommandRequest(SetForcedIntroPlayed().apply { forcedIntroName = "Coconut" }).await()
 			if (response.profileRevision > response.profileChangesBaseRevision) {
 				source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
 					.setTitle("✅ Skipped intro")
