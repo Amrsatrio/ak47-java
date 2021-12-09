@@ -156,7 +156,7 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 		.setColor(0x0099FF)
 		.setTitle(if (subGame == ESubGame.Campaign) "⚡ " + "Save the World Item Shop" else "☂ " + "Battle Royale Item Shop")
 	if (showAccInfo) {
-		embed.setDescription("Use `${source.prefix}buy` or `${source.prefix}gift` to perform operations with these items.")
+		embed.setDescription("Use `${source.prefix}buy` to perform operations with these items.")
 			.addField(if (prices.size == 1) "Balance" else "Balances", prices.values.joinToString(" \u00b7 ") { it.getAccountBalanceText(profileManager) }, false)
 		if (numOwned > 0) {
 			embed.appendDescription("\n**Owned:** %,d/%,d%s".format(numOwned, numShownItems, if (numOwned >= numShownItems) " ✅" else ""))
