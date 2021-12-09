@@ -324,8 +324,8 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 		}
 		val embed = source.createEmbed().setColor(COLOR_WARNING)
 			.setDescription((if (favorite) "Favorite **%,d** of **%,d** exclusive items?" else "Unfavorite **%,d** of **%,d** exclusive items?").format(toFavorite.size, items.size))
-		val confirmationMsg = source.complete(null, embed.build())
-		if (!confirmationMsg.yesNoReactions(source.author).await()) {
+		val confirmationMsg = source.complete(null, embed.build(), confirmationButtons())
+		if (!confirmationMsg.awaitConfirmation(source.author).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS
 		}

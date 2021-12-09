@@ -50,7 +50,7 @@ class UndoCommand : BrigadierCommand("undo", "Cancel your last purchase.", array
 				.addField(L10N.format("catalog.items"), purchase.lootResult.run { if (isEmpty()) "No items" else joinToString("\n") { it.asItemStack().render() } }, false)
 				.addField(L10N.format("undo.confirmation.total_mtx_paid"), Utils.MTX_EMOJI + " " + Formatters.num.format(purchase.totalMtxPaid), false)
 				.addField(L10N.format("sac.verb"), purchase.metadata?.get("mtx_affiliate")?.asString ?: L10N.format("common.none"), false)
-			if (source.complete(null, embed.build()).yesNoReactions(source.author).await()) {
+			if (source.complete(null, embed.build(), confirmationButtons()).awaitConfirmation(source.author).await()) {
 				source.errorTitle = "Cancel Purchase Failed"
 				source.loading("Cancelling purchase of $catalogEntryName")
 				profileManager.dispatchClientCommandRequest(RefundMtxPurchase().apply {

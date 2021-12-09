@@ -161,7 +161,7 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 			warnings.add("This purchase is not eligible for refund.")
 		}
 		embed.setDescription(warnings.joinToString("\n") { "⚠ $it" })
-		confirmed = source.complete(null, embed.build()).yesNoReactions(source.author).await()
+		confirmed = source.complete(null, embed.build(), confirmationButtons()).awaitConfirmation(source.author).await()
 	}
 	if (confirmed) {
 		source.errorTitle = "Purchase Failed"

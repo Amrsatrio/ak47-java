@@ -22,13 +22,21 @@ import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.MetaStringMap
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
+import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.entities.MessageEmbed
+import net.dv8tion.jda.api.interactions.components.ActionRow
+import net.dv8tion.jda.api.interactions.components.Button
+import net.dv8tion.jda.api.interactions.components.ButtonStyle
 import okhttp3.MediaType
 import okhttp3.RequestBody
 import retrofit2.Call
 import java.net.HttpURLConnection
 
 class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", arrayOf("f")) {
+	companion object {
+		const val TOP_MUTUALS_COUNT = 15
+	}
+
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { list(it.source, "friends") }.then(literal("withid").executes { list(it.source, "friends", true) })
 		.then(literal("incoming").executes { list(it.source, "incoming") }.then(literal("withid").executes { list(it.source, "incoming", true) }))
@@ -39,21 +47,6 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		.then(literal("rejectall").executes { bulk(it.source, "reject", null, FriendsService::queryIncomingFriendRequests, FriendsService::deleteFriendOrRejectInvite) })
 		.then(literal("cancelall").executes { bulk(it.source, "cancel", null, FriendsService::queryOutgoingFriendRequests, FriendsService::deleteFriendOrRejectInvite) })
 		.then(literal("unblockall").executes { bulk(it.source, "unblock", null, FriendsService::queryBlockedPlayers, FriendsService::sendUnblock) })
-		/*.then(literal("avatarids").executes { c ->
-			val source = c.source
-			source.ensureSession()
-			val friends = source.api.friendsService.queryFriends(source.api.currentLoggedIn.id, null).exec().body()!!
-			val ids = friends.map { it.accountId }
-				.chunked(100)
-				.map { source.api.channelsService.queryMultiUserSingleSetting_field(it, "avatar").future() }
-				.apply { CompletableFuture.allOf(*toTypedArray()).await() }
-				.flatMap { it.get().body()!!.toList() }
-				.map { it.value }
-				.toSortedSet()
-				.joinToString("\n")
-			source.channel.sendFile(ids.toByteArray(), "avatar_ids_${source.api.currentLoggedIn.displayName}.txt").complete()
-			Command.SINGLE_SUCCESS
-		})*/
 		.then(literal("allowrequests")
 			.executes { updateAcceptInvites(it.source) }
 			.then(argument("can receive requests?", bool())
@@ -65,7 +58,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 				val source = c.source
 				source.ensureSession()
 				val summary = source.api.friendsService.queryFriendsSummary(source.api.currentLoggedIn.id, true).exec().body()!!
-				val friends = summary.friends.sortedFriends()
+				val friends = summary.friends.sortedFriends(source)
 				val users = getUsers(c, "user", friends)
 				if (users[source.api.currentLoggedIn.id] != null) {
 					throw SimpleCommandExceptionType(LiteralMessage("Users cannot be friends with themselves")).create()
@@ -89,7 +82,9 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			"blocklist" -> source.api.friendsService.queryBlockedPlayers(source.api.currentLoggedIn.id, true)
 			else -> throw AssertionError()
 		}
-		val entries = call.exec().body()!!.sortedFriends()
+		val unsortedEntries = call.exec().body()!!
+		source.queryUsers_map(unsortedEntries.map { it.accountId })
+		val entries = unsortedEntries.sortedFriends(source)
 		if (entries.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("$type is empty")).create()
 		}
@@ -99,9 +94,11 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			var chunkStart = entriesStart
 			val chunks = content.chunked(15) { chunk ->
 				MessageEmbed.Field("%,d - %,d".format(chunkStart, (chunkStart + chunk.size).also { chunkStart = it } - 1), chunk.joinToString("\n") {
+					val alias = it.alias
+					val displayName = it.getDisplayName(source)
 					"%,d. %s%s".format(entriesEnd++, when {
-						!it.alias.isNullOrEmpty() -> if (withId) "${it.alias.escapeMarkdown()} (${it.displayName.escapeMarkdown()}) `${it.accountId}`" else "${it.alias.escapeMarkdown()} (${it.displayName.escapeMarkdown()})"
-						!it.displayName.isNullOrEmpty() -> if (withId) "${it.displayName.escapeMarkdown()} `${it.accountId}`" else it.displayName.escapeMarkdown()
+						!alias.isNullOrEmpty() -> if (withId) "${alias.escapeMarkdown()} (${displayName.escapeMarkdown()}) `${it.accountId}`" else "${alias.escapeMarkdown()} (${displayName.escapeMarkdown()})"
+						!displayName.isNullOrEmpty() -> if (withId) "${displayName.escapeMarkdown()} `${it.accountId}`" else displayName.escapeMarkdown()
 						else -> "`${it.accountId}`"
 					}, if (type != "friends" || it.created == null || System.currentTimeMillis() >= it.created.time + 2L * 24L * 60L * 60L * 1000L) "" else "*")
 				}, true)
@@ -117,43 +114,56 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 	}
 
 	private fun entryDetails(source: CommandSourceStack, user: GameProfile, summary: FriendsSummary): Int {
-		summary.friends.firstOrNull { it.accountId == user.id }?.let {
-			return friends(source, it, user)
+		val friends = summary.friends.associateBy { it.accountId }
+		friends[user.id]?.let {
+			return friends(FriendContext(source, it, user, friends))
 		}
 		summary.incoming.firstOrNull { it.accountId == user.id }?.let {
-			return incoming(source, it, user)
+			return incoming(FriendContext(source, it, user, friends))
 		}
 		summary.outgoing.firstOrNull { it.accountId == user.id }?.let {
-			return outgoing(source, it, user)
+			return outgoing(FriendContext(source, it, user, friends))
 		}
 		// suggested here
 		summary.blocklist.firstOrNull { it.accountId == user.id }?.let {
-			return blocked(source, it, user)
+			return blocked(FriendContext(source, it, user, friends))
 		}
-		return promptToSendFriendRequest(source, user)
+		return promptToSendFriendRequest(FriendContext(source, null, user, friends))
 	}
 
-	private fun friends(source: CommandSourceStack, friend: FriendV2, user: GameProfile): Int {
-		val party = getCurrentParty(source)
-		val message = source.complete(null, source.createEmbed()
-			.setTitle("You're friends with ${friend.displayName?.escapeMarkdown() ?: friend.accountId}")
-			.setDescription((if (party != null) "📩 Invite to party\n" else "") + "📛 Change nickname\n🗑 Remove friend\n🚫 Block")
-			.populateFriendInfo(friend)
-			.build())
-		if (party != null) {
-			message.addReaction("📩").queue()
+	private fun friends(ctx: FriendContext, partyInviteSent: Boolean = false): Int {
+		val (source, friend, user) = ctx
+		check(friend != null)
+		var party: FPartyInfo? = null
+		val buttons = mutableListOf<Button>()
+		if (!partyInviteSent) {
+			party = getCurrentParty(source)
+			if (party != null) {
+				buttons.add(Button.of(ButtonStyle.SECONDARY, "invite", "Invite to party", Emoji.fromUnicode("📩")))
+			}
+		} else {
+			buttons.add(Button.of(ButtonStyle.SECONDARY, "invite", "Party invite sent", Emoji.fromUnicode("✅")).asDisabled())
 		}
-		message.addReaction("📛").queue()
-		//message.addReaction("📝").queue()
-		message.addReaction("🗑").queue()
-		message.addReaction("🚫").queue()
-		return when (message.awaitOneReaction(source)) {
-			"📩" -> inviteToParty(source, friend, party ?: throw SimpleCommandExceptionType(LiteralMessage("You are currently not in a party.")).create())
-			"📛" -> aliasOrNote(source, friend, false)
-			"📝" -> aliasOrNote(source, friend, true)
-			"🗑" -> remove(source, user)
-			"🚫" -> block(source, user)
-			else -> throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
+		buttons.add(Button.of(ButtonStyle.SECONDARY, "alias", "Change nickname", Emoji.fromUnicode("🏷️")))
+		//buttons.add(Button.of(ButtonStyle.SECONDARY, "note", "Change note", Emoji.fromUnicode("📝")))
+		if (friend.mutual > TOP_MUTUALS_COUNT) {
+			buttons.add(Button.of(ButtonStyle.SECONDARY, "mutuals", "Show mutual friends", Emoji.fromUnicode("🔗")))
+		}
+		buttons.add(Button.of(ButtonStyle.DANGER, "remove", "Remove friend", Emoji.fromUnicode("🗑")))
+		buttons.add(Button.of(ButtonStyle.DANGER, "block", "Block", Emoji.fromUnicode("⛔")))
+		val message = source.complete(null, source.createEmbed()
+			.setTitle(ctx.titleOverride ?: "You're friends with ${user.displayName?.escapeMarkdown() ?: user.id}")
+			.populateFriendInfo(ctx, true)
+			.build(), buttons.chunked(5, ActionRow::of))
+		source.loadingMsg = message
+		return when (message.awaitOneInteraction(source.author, false).componentId) {
+			"invite" -> inviteToParty(ctx, party!!)
+			"alias" -> aliasOrNote(ctx, friend.alias, false)
+			"note" -> aliasOrNote(ctx, friend.note, true)
+			"mutuals" -> mutuals(ctx, user.id)
+			"remove" -> remove(ctx)
+			"block" -> block(ctx)
+			else -> throw AssertionError()
 		}
 	}
 
@@ -176,24 +186,22 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			put("urn:epic:invite:platformdata", "")
 		}).exec().body()!!
 
-	private fun inviteToParty(source: CommandSourceStack, friend: FriendV2, party: FPartyInfo): Int {
-		val invite = party.invites.firstOrNull { it.sent_to == friend.accountId }
+	private fun inviteToParty(ctx: FriendContext, party: FPartyInfo): Int {
+		val (source, _, user) = ctx
+		val invite = party.invites.firstOrNull { it.sent_to == user.id }
 		if (invite != null) {
-			ping(source, friend.accountId)
+			ping(source, user.id)
 		} else {
-			party.invite(source, friend.accountId)
+			party.invite(source, user.id)
 		}
-		source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
-			.setTitle("✅ Party Invite Sent")
-			.setDescription("Party invite sent to " + friend.displayName)
-			.build())
-		return Command.SINGLE_SUCCESS
+		return friends(ctx, true)
 	}
 
-	private fun aliasOrNote(source: CommandSourceStack, friend: FriendV2, note: Boolean): Int {
+	private fun aliasOrNote(ctx: FriendContext, old: String?, note: Boolean): Int {
+		val (source, friend, user) = ctx
+		ctx.source.loadingMsg?.finalizeButtons(setOf("alias", "note"))
 		val propName = if (note) "note" else "nickname"
-		val old = friend.alias
-		source.complete("The current $propName is: `${old.orUnset()}`\nEnter the new $propName: (⏱ 45s)")
+		val promptMsg = source.channel.sendMessage("The current $propName is: `${old.orUnset()}`\nEnter the new $propName, or `clear` to unset: (⏱ 45s)").complete()
 		var new = source.channel.awaitMessages({ collected, _, _ -> collected.author == source.author }, AwaitMessagesOptions().apply {
 			max = 1
 			time = 45000L
@@ -201,128 +209,153 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		}).await().first().contentRaw
 		val friendsService = source.api.friendsService
 		val accountId = source.api.currentLoggedIn.id
-		val friendId = friend.accountId
+		val friendId = user.id
 		if (new == "clear") {
 			new = ""
-			(if (note) friendsService.deleteFriendNote(accountId, friendId) else friendsService.deleteFriendAlias(accountId, friendId)).exec()
+			if (note) {
+				friendsService.deleteFriendNote(accountId, friendId).exec()
+				friend!!.note = new
+			} else {
+				friendsService.deleteFriendAlias(accountId, friendId).exec()
+				friend!!.alias = new
+			}
 		} else {
 			val body = RequestBody.create(MediaType.get("text/plain"), new)
-			(if (note) friendsService.setFriendNote(accountId, friendId, body) else friendsService.setFriendAlias(accountId, friendId, body)).exec()
+			if (note) {
+				friendsService.setFriendNote(accountId, friendId, body).exec()
+				friend!!.note = new
+			} else {
+				friendsService.setFriendAlias(accountId, friendId, body).exec()
+				friend!!.alias = new
+			}
 		}
-		source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
-			.setTitle("✅ Updated $propName of ${friend.displayName}")
-			.setDescription("${old.orUnset()} \u2192 ${new.orUnset()}")
-			.build())
-		return Command.SINGLE_SUCCESS
+		promptMsg.delete().queue()
+		ctx.titleOverride = "✅ Updated $propName of ${user.displayName}"
+		//ctx.descriptionExtra = "`${old.orUnset()}` \u2192 `${new.orUnset()}`"
+		return friends(ctx)
 	}
 
-	private fun incoming(source: CommandSourceStack, friend: FriendV2, user: GameProfile): Int {
+	private fun incoming(ctx: FriendContext): Int {
+		val (source, _, user) = ctx
+		val buttons = mutableListOf<Button>()
+		buttons.add(Button.of(ButtonStyle.SUCCESS, "accept", "Accept"))
+		buttons.add(Button.of(ButtonStyle.SECONDARY, "reject", "Reject"))
+		buttons.add(Button.of(ButtonStyle.DANGER, "block", "Block", Emoji.fromUnicode("⛔")))
 		val message = source.complete(null, source.createEmbed()
-			.setTitle("Friend request from ${friend.displayName?.escapeMarkdown() ?: friend.accountId}")
-			.setDescription("✅ Accept\n❌ Reject\n🚫 Block")
-			.populateFriendInfo(friend)
-			.build())
-		message.addReaction("✅").queue()
-		message.addReaction("❌").queue()
-		message.addReaction("🚫").queue()
-		return when (message.awaitOneReaction(source)) {
-			"✅" -> accept(source, user)
-			"❌" -> reject(source, user)
-			"🚫" -> block(source, user)
-			else -> throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
+			.setTitle(ctx.titleOverride ?: "Friend request from ${user.displayName?.escapeMarkdown() ?: user.id}")
+			.populateFriendInfo(ctx)
+			.build(), listOf(ActionRow.of(buttons)))
+		source.loadingMsg = message
+		return when (message.awaitOneInteraction(source.author, false).componentId) {
+			"accept" -> accept(ctx)
+			"reject" -> reject(ctx)
+			"block" -> block(ctx)
+			else -> throw AssertionError()
 		}
 	}
 
-	private fun outgoing(source: CommandSourceStack, friend: FriendV2, user: GameProfile): Int {
+	private fun outgoing(ctx: FriendContext): Int {
+		val (source, _, user) = ctx
+		val buttons = mutableListOf<Button>()
+		buttons.add(Button.of(ButtonStyle.SECONDARY, "cancel", "Cancel friend request", Emoji.fromUnicode("❌")))
+		buttons.add(Button.of(ButtonStyle.DANGER, "block", "Block", Emoji.fromUnicode("⛔")))
 		val message = source.complete(null, source.createEmbed()
-			.setTitle("You have a pending friend request to ${friend.displayName?.escapeMarkdown() ?: friend.accountId}")
-			.setDescription("❌ Cancel\n🚫 Block")
-			.populateFriendInfo(friend)
-			.build())
-		message.addReaction("❌").queue()
-		message.addReaction("🚫").queue()
-		return when (message.awaitOneReaction(source)) {
-			"❌" -> cancel(source, user)
-			"🚫" -> block(source, user)
-			else -> throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
+			.setTitle(ctx.titleOverride ?: "You have a pending friend request to ${user.displayName?.escapeMarkdown() ?: user.id}")
+			.populateFriendInfo(ctx)
+			.build(), listOf(ActionRow.of(buttons)))
+		source.loadingMsg = message
+		return when (message.awaitOneInteraction(source.author, false).componentId) {
+			"cancel" -> cancel(ctx)
+			"block" -> block(ctx)
+			else -> throw AssertionError()
 		}
 	}
 
-	private fun blocked(source: CommandSourceStack, friend: FriendV2, user: GameProfile): Int {
+	private fun blocked(ctx: FriendContext): Int {
+		val (source, _, user) = ctx
+		val buttons = mutableListOf<Button>()
+		buttons.add(Button.of(ButtonStyle.SECONDARY, "unblock", "Unblock", Emoji.fromUnicode("🔓")))
 		val message = source.complete(null, source.createEmbed()
-			.setTitle("You have ${friend.displayName?.escapeMarkdown() ?: friend.accountId} blocked")
-			.setDescription("🔓 Unblock")
-			.populateFriendInfo(friend)
-			.build())
-		message.addReaction("🔓").queue()
-		return when (message.awaitOneReaction(source)) {
-			"🔓" -> unblock(source, user)
-			else -> throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
+			.setTitle(ctx.titleOverride ?: "You have ${user.displayName?.escapeMarkdown() ?: user.id} blocked")
+			.populateFriendInfo(ctx)
+			.build(), listOf(ActionRow.of(buttons)))
+		source.loadingMsg = message
+		return when (message.awaitOneInteraction(source.author, false).componentId) {
+			"unblock" -> unblock(ctx)
+			else -> throw AssertionError()
 		}
 	}
 
-	private fun promptToSendFriendRequest(source: CommandSourceStack, user: GameProfile): Int {
-		val embed = source.createEmbed()
-			.setTitle("You're not friends with ${user.displayName}")
-			.setDescription("📩 Send friend request\n🚫 Block")
+	private fun promptToSendFriendRequest(ctx: FriendContext): Int {
+		val (source, _, user) = ctx
+		val mutuals = ctx.getMutualsFor(user.id)
+		val buttons = mutableListOf<Button>()
+		buttons.add(Button.of(ButtonStyle.SUCCESS, "request", "Send friend request", Emoji.fromUnicode("📩")))
+		if (mutuals.size > TOP_MUTUALS_COUNT) {
+			buttons.add(Button.of(ButtonStyle.SECONDARY, "mutuals", "Show mutual friends", Emoji.fromUnicode("🔗")))
+		}
+		buttons.add(Button.of(ButtonStyle.DANGER, "block", "Block", Emoji.fromUnicode("⛔")))
+		val message = source.complete(null, source.createEmbed()
+			.setTitle(ctx.titleOverride ?: "You're not friends with ${user.displayName}")
 			.addField("Account ID", user.id, false)
-		val message = source.complete(null, embed.build())
-		message.addReaction("📩").queue()
-		message.addReaction("🚫").queue()
-		return when (message.awaitOneReaction(source)) {
-			"📩" -> add(source, user)
-			"🚫" -> block(source, user)
-			else -> throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
+			.populateTopMutuals(ctx, user.id)
+			.build(), listOf(ActionRow.of(buttons)))
+		source.loadingMsg = message
+		return when (message.awaitOneInteraction(source.author, false).componentId) {
+			"request" -> add(ctx)
+			"mutuals" -> mutuals(ctx, user.id)
+			"block" -> block(ctx)
+			else -> throw AssertionError()
 		}
 	}
 
-	private fun add(source: CommandSourceStack, user: GameProfile): Int {
-		source.loading("Sending friend request to ${user.displayName}")
+	private fun add(ctx: FriendContext): Int {
+		val (source, _, user) = ctx
 		source.api.friendsService.sendInviteOrAcceptInvite(source.api.currentLoggedIn.id, user.id).exec()
-		source.complete(null, source.createEmbed().setTitle("✅ Sent friend request to ${user.displayName}").setColor(COLOR_SUCCESS).build())
-		return Command.SINGLE_SUCCESS
+		ctx.titleOverride = "✅ Sent friend request to ${user.displayName}"
+		return outgoing(ctx)
 	}
 
-	private fun remove(source: CommandSourceStack, user: GameProfile): Int {
-		source.loading("Unfriending ${user.displayName}")
+	private fun remove(ctx: FriendContext): Int {
+		val (source, _, user) = ctx
 		source.api.friendsService.deleteFriendOrRejectInvite(source.api.currentLoggedIn.id, user.id).exec()
-		source.complete(null, source.createEmbed().setTitle("✅ You're no longer friends with ${user.displayName}").setColor(COLOR_SUCCESS).build())
-		return Command.SINGLE_SUCCESS
+		ctx.titleOverride = "✅ You're no longer friends with ${user.displayName}"
+		return promptToSendFriendRequest(ctx)
 	}
 
-	private fun accept(source: CommandSourceStack, user: GameProfile): Int {
-		source.loading("Accepting ${user.displayName}'s friend request")
+	private fun accept(ctx: FriendContext): Int {
+		val (source, _, user) = ctx
 		source.api.friendsService.sendInviteOrAcceptInvite(source.api.currentLoggedIn.id, user.id).exec()
-		source.complete(null, source.createEmbed().setTitle("✅ ${user.displayName} is now your friend").setColor(COLOR_SUCCESS).build())
-		return Command.SINGLE_SUCCESS
+		ctx.titleOverride = "✅ ${user.displayName} is now your friend"
+		return friends(ctx)
 	}
 
-	private fun reject(source: CommandSourceStack, user: GameProfile): Int {
-		source.loading("Rejecting ${user.displayName}'s friend request")
+	private fun reject(ctx: FriendContext): Int {
+		val (source, _, user) = ctx
 		source.api.friendsService.deleteFriendOrRejectInvite(source.api.currentLoggedIn.id, user.id).exec()
-		source.complete(null, source.createEmbed().setTitle("✅ Rejected friend request from ${user.displayName}").setColor(COLOR_SUCCESS).build())
-		return Command.SINGLE_SUCCESS
+		ctx.titleOverride = "✅ Rejected friend request from ${user.displayName}"
+		return promptToSendFriendRequest(ctx)
 	}
 
-	private fun cancel(source: CommandSourceStack, user: GameProfile): Int {
-		source.loading("Canceling friend request to ${user.displayName}")
+	private fun cancel(ctx: FriendContext): Int {
+		val (source, _, user) = ctx
 		source.api.friendsService.deleteFriendOrRejectInvite(source.api.currentLoggedIn.id, user.id).exec()
-		source.complete(null, source.createEmbed().setTitle("✅ Cancelled outgoing friend request to ${user.displayName}").setColor(COLOR_SUCCESS).build())
-		return Command.SINGLE_SUCCESS
+		ctx.titleOverride = "✅ Cancelled outgoing friend request to ${user.displayName}"
+		return promptToSendFriendRequest(ctx)
 	}
 
-	private fun block(source: CommandSourceStack, user: GameProfile): Int {
-		source.loading("Blocking ${user.displayName}")
+	private fun block(ctx: FriendContext): Int {
+		val (source, _, user) = ctx
 		source.api.friendsService.sendBlock(source.api.currentLoggedIn.id, user.id).exec()
-		source.complete(null, source.createEmbed().setTitle("✅ Blocked ${user.displayName}").setColor(COLOR_SUCCESS).build())
-		return Command.SINGLE_SUCCESS
+		ctx.titleOverride = "✅ Blocked ${user.displayName}"
+		return blocked(ctx)
 	}
 
-	private fun unblock(source: CommandSourceStack, user: GameProfile): Int {
-		source.loading("Unblocking ${user.displayName}")
+	private fun unblock(ctx: FriendContext): Int {
+		val (source, _, user) = ctx
 		source.api.friendsService.sendUnblock(source.api.currentLoggedIn.id, user.id).exec()
-		source.complete(null, source.createEmbed().setTitle("✅ Unblocked ${user.displayName}").setColor(COLOR_SUCCESS).build())
-		return Command.SINGLE_SUCCESS
+		ctx.titleOverride = "✅ Unblocked ${user.displayName}"
+		return promptToSendFriendRequest(ctx)
 	}
 
 	private fun bulk(source: CommandSourceStack, type: String, suppliedQueue: List<GameProfile>?, query: ((FriendsService, String, Boolean?) -> Call<Array<FriendV2>>)?, op: FriendsService.(String, String) -> Call<Void>): Int {
@@ -331,7 +364,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		if (!source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
 				.setTitle("Confirmation")
 				.setDescription(L10N.format("friends.$type.bulk.warning"))
-				.build()).yesNoReactions(source.author).await()) {
+				.build(), confirmationButtons()).awaitConfirmation(source.author).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS
 		}
@@ -342,7 +375,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			suppliedQueue!!.map { it.id }
 		} else {
 			sub = query!!(source.api.friendsService, accountId, null).exec().body()!!
-			sub.map { it.accountId }
+			sub.map { it.accountId }.also { source.queryUsers_map(it) }
 		}
 		var i = 0
 		var success = 0
@@ -360,7 +393,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 						val displayName = if (usingSuppliedQueue) {
 							suppliedQueue!![i].displayName
 						} else {
-							sub!![i].displayName
+							sub!![i].getDisplayName(source)
 						}
 						source.channel.sendMessage("%s failed: %s".format(displayName?.escapeMarkdown() ?: queue[i], e.epicError.displayText)).queue()
 						++i
@@ -400,27 +433,99 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		return Command.SINGLE_SUCCESS
 	}
 
-	private fun EmbedBuilder.populateFriendInfo(friend: FriendV2): EmbedBuilder {
+	private fun EmbedBuilder.populateFriendInfo(ctx: FriendContext, alreadyFriends: Boolean = false): EmbedBuilder {
+		val (_, friend, user) = ctx
 		//addField("Epic Display Name", friend.displayName, false)
-		addField("Account ID", friend.accountId, false)
-		if (friend.connections != null) {
-			for ((k, v) in friend.connections) {
-				addField(L10N.format("account.ext.$k.name"), v.name.orDash(), true)
+		addField("Account ID", user.id, false)
+		user.externalAuths?.run {
+			values.forEach {
+				if (it.type == "psn" || it.type == "xbl" || it.type == "nintendo") {
+					val externalDisplayName = it.externalDisplayName
+					addField(L10N.format("account.ext.${it.type}.name"), if (externalDisplayName.isNullOrEmpty()) "<linked>" else externalDisplayName, true)
+				}
 			}
 		}
-		if (!friend.alias.isNullOrEmpty()) {
-			addField("Nickname", friend.alias.escapeMarkdown(), false)
+		val alias = friend?.alias
+		if (!alias.isNullOrEmpty()) {
+			addField("Nickname", alias.escapeMarkdown(), false)
 		}
-		if (friend.created != null) {
-			val canBeGiftedStart = friend.created.time + 2L * 24L * 60L * 60L * 1000L
-			if (System.currentTimeMillis() < canBeGiftedStart) {
+		populateTopMutuals(ctx, user.id)
+		val created = friend?.created
+		if (created != null) {
+			addField(if (alreadyFriends) "Friends since" else "Request sent at", created.relativeFromNow(), false)
+			val canBeGiftedStart = created.time + 2L * 24L * 60L * 60L * 1000L
+			if (alreadyFriends && System.currentTimeMillis() < canBeGiftedStart) {
 				addField("Eligible for gifting", canBeGiftedStart.relativeFromNow(), false)
 			}
-			setFooter("Friends since")
-			setTimestamp(friend.created.toInstant())
 		}
 		return this
 	}
 
+	private fun EmbedBuilder.populateTopMutuals(ctx: FriendContext, accountId: String): EmbedBuilder {
+		val (source, _, _, friends) = ctx
+		val mutuals = ctx.getMutualsFor(accountId)
+		if (mutuals.isNotEmpty()) {
+			val topMutuals = mutuals.map { friends[it]!! }.sortedByDescending { it.mutual }.take(TOP_MUTUALS_COUNT)
+			val mutualsString = topMutuals.joinToString(", ") { "%s (%,d)".format(it.getDisplayName(source)?.escapeMarkdown() ?: "`${it.accountId}`", it.mutual) }
+			addField("%,d mutual friends".format(mutuals.size), mutualsString, false)
+		}
+		return this
+	}
+
+	private fun mutuals(ctx: FriendContext, accountId: String): Int {
+		val (source, _, _, friends) = ctx
+		//source.loadingMsg?.finalizeButtons(setOf("mutuals"))
+		val entries = ctx.getMutualsFor(accountId).sortedWith { a, b ->
+			val numMutualsCompare = friends[b]!!.mutual - friends[a]!!.mutual
+			if (numMutualsCompare != 0) {
+				numMutualsCompare
+			} else {
+				val dnA = source.userCache[a]?.displayName ?: a
+				val dnB = source.userCache[b]?.displayName ?: b
+				dnA.compareTo(dnB, true)
+			}
+		}
+		check(entries.isNotEmpty())
+		source.message.replyPaginated(entries, 30, source.loadingMsg) { content, page, pageCount ->
+			val entriesStart = page * 30 + 1
+			val entriesEnd = entriesStart + content.size
+			var chunkStart = entriesStart
+			val chunks = content.chunked(15) { chunk ->
+				MessageEmbed.Field("%,d - %,d".format(chunkStart, (chunkStart + chunk.size).also { chunkStart = it } - 1), chunk.joinToString("\n") {
+					"`%2d` %s".format(friends[it]!!.mutual, source.userCache[it]?.displayName?.escapeMarkdown() ?: "`$it`")
+				}, true)
+			}
+			val embed = source.createEmbed()
+				.setTitle("%s's mutual friends".format(source.userCache[accountId]?.displayName ?: "`$accountId`"))
+				.setDescription("Showing %,d to %,d of %,d entries".format(entriesStart, entriesEnd - 1, entries.size))
+				.setFooter("Page %,d of %,d".format(page + 1, pageCount))
+			chunks.forEach(embed::addField)
+			MessageBuilder(embed.build()).build()
+		}
+		return Command.SINGLE_SUCCESS
+	}
+
 	private inline fun String?.orUnset() = if (isNullOrEmpty()) "(unset)" else this
+
+	private class FriendContext(
+		@JvmField val source: CommandSourceStack,
+		@JvmField val friend: FriendV2?,
+		@JvmField val user: GameProfile,
+		@JvmField val friends: Map<String, FriendV2>
+	) {
+		@JvmField var titleOverride: String? = null
+		private val mutualsCache = hashMapOf<String, List<String>>()
+
+		fun getMutualsFor(accountId: String) = mutualsCache.getOrPut(accountId) {
+			val mutuals = source.api.friendsService.queryFriendMutuals(source.api.currentLoggedIn.id, accountId).exec().body()!!.toList()
+			source.queryUsers_map(mutuals)
+			mutuals
+		}
+
+		inline operator fun component1() = source
+		inline operator fun component2() = friend
+		inline operator fun component3() = user
+		inline operator fun component4() = friends
+		inline operator fun component5() = titleOverride
+	}
 }

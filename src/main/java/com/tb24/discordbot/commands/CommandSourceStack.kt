@@ -14,6 +14,7 @@ import net.dv8tion.jda.api.entities.*
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.internal.entities.ReceivedMessage
 import java.net.URLEncoder
+import java.util.concurrent.CompletableFuture
 
 open class CommandSourceStack(val client: DiscordBot, val message: Message, sessionId: String?) {
 	companion object {
@@ -76,15 +77,30 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 			//.setColor(Color.decode(EpicApi.GSON.fromJson(avatarBackground, Array<String>::class.java)[1]))
 	}
 
+	val userCache = hashMapOf<String, GameProfile>()
+
 	@Throws(HttpException::class)
 	fun queryUsers(ids: Iterable<String>) = session.queryUsers(ids)
+
+	@Throws(HttpException::class)
+	fun queryUsers_map(ids: Collection<String>) {
+		if (ids.isEmpty()) {
+			return
+		}
+		ids.filter { !userCache.containsKey(it) }
+			.chunked(100)
+			.map { session.api.accountService.findAccountsByIds(it).future() }
+			.apply { CompletableFuture.allOf(*toTypedArray()).await() }
+			.flatMap { it.get().body()!!.toList<GameProfile>() }
+			.associateByTo(userCache) { it.id }
+	}
 
 	@Throws(HttpException::class)
 	fun generateUrl(url: String): String {
 		if (!isFromType(ChannelType.PRIVATE) && !complete(null, createEmbed().setColor(BrigadierCommand.COLOR_WARNING)
 				.setTitle("✋ Hold up!")
 				.setDescription("We're about to send a link that carries your current session which will be valid for some time or until you log out. Make sure you trust the people here, or you may do the command again [in DMs](${getPrivateChannelLink()}).\n\nContinue? (❌ in 45s)")
-				.build()).yesNoReactions(author).await()) {
+				.build(), confirmationButtons()).awaitConfirmation(author).await()) {
 			throw SimpleCommandExceptionType(LiteralMessage("Alright.")).create()
 		}
 		return "https://www.epicgames.com/id/exchange?exchangeCode=${api.accountService.exchangeCode.exec().body()!!.code}&redirectUrl=${URLEncoder.encode(url, "UTF-8")}"

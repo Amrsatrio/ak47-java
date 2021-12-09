@@ -143,11 +143,13 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 		}
 		val self = source.api.currentLoggedIn
 		val friends = source.api.friendsService.queryFriends(self.id, true).exec().body()!!
-		val stats = friends.map { it.accountId }
+		val accountIds = friends.map { it.accountId }
+		val stats = accountIds
 			.chunked(50)
 			.map { source.api.statsproxyService.queryMultipleUserStats("collection_character", QueryMultipleUserStats().apply { owners = it.toTypedArray() }).future() }
 			.apply { CompletableFuture.allOf(*toTypedArray()).await() }
 			.flatMap { it.get().body()!!.toList() }
+		source.queryUsers_map(accountIds)
 		val embed = EmbedBuilder().setTitle("Characters / Friends leaderboard").setColor(COLOR_INFO)
 		val scores = mutableMapOf<String, Int>(self.id to selfScore) // account ID -> characters completed
 		stats.associateTo(scores) { it.accountId to (it.stats["br_collection_character_count_s15"] ?: 0) }
@@ -177,7 +179,7 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 				dn = self.displayName
 				bold = "**"
 			} else {
-				dn = friends.firstOrNull { it.accountId == e.key }?.displayName ?: e.key
+				dn = source.userCache[e.key]?.displayName ?: e.key
 				bold = ""
 			}
 			sb.append("%s#%,d %s \u2014 %,d%s".format(bold, placement, dn.escapeMarkdown(), e.value, bold))
@@ -310,7 +312,7 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 						dn = self.displayName
 						bold = "**"
 					} else {
-						dn = friends.firstOrNull { it.accountId == e.key }?.displayName ?: e.key
+						dn = source.userCache[e.key]?.displayName ?: e.key
 						bold = ""
 					}
 					"%s#%,d %s %.2f cm%s".format(bold, i + 1, dn.escapeMarkdown(), e.value, bold)

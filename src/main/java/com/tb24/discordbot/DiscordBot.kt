@@ -42,7 +42,7 @@ import kotlin.jvm.JvmField as F
 
 class DiscordBot(token: String) {
 	companion object {
-		const val VERSION = "6.5.3"
+		const val VERSION = "6.6.0"
 		@F val LOGGER: Logger = LoggerFactory.getLogger("DiscordBot")
 		@F val ENV: String = System.getProperty("env", "dev")
 		lateinit var instance: DiscordBot
@@ -153,7 +153,7 @@ class DiscordBot(token: String) {
 		}
 
 		if (loadGameFiles != BotConfig.EGameFileLoadOption.NoLoad) {
-			AssetManager.INSTANCE.loadPaks(false, 0)
+			AssetManager.INSTANCE.loadPaks(false, if (ENV == "prod") TOC_READ_OPTION_READ_DIRECTORY_INDEX else 0)
 			keychainTask.run() // Load encrypted PAKs
 		}
 		catalogManager = CatalogManager()

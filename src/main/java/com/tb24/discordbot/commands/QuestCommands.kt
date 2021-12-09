@@ -351,8 +351,8 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 		confirmationMessage = source.complete(null, embed.setColor(BrigadierCommand.COLOR_WARNING)
 			.setTitle("Replace?")
 			.setDescription(renderChallenge(questToReplace, conditionalCondition = canReceiveMtxCurrency))
-			.build())
-		if (!confirmationMessage.yesNoReactions(source.author).await()) {
+			.build(), confirmationButtons())
+		if (!confirmationMessage.awaitConfirmation(source.author).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS
 		}

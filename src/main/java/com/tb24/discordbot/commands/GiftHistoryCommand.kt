@@ -24,14 +24,11 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 			val sentTo = giftHistory?.sentTo ?: emptyMap()
 			val receivedFrom = giftHistory?.receivedFrom ?: emptyMap()
 			val gifts = giftHistory?.gifts ?: emptyArray()
-			val localUserMap = mutableMapOf<String, GameProfile>()
 			val idsToQuery = mutableSetOf<String>()
 			idsToQuery.addAll(sentTo.keys)
 			idsToQuery.addAll(receivedFrom.keys)
 			gifts.forEach { idsToQuery.add(it.toAccountId) }
-			if (idsToQuery.size > 0) {
-				source.queryUsers(idsToQuery).forEach { localUserMap[it.id] = it }
-			}
+			source.queryUsers_map(idsToQuery)
 			source.client.catalogManager.ensureCatalogData(source.client.internalSession.api)
 			val within24h = getSentGiftsWithin24H(giftHistory)
 			val sb = StringBuilder(if (within24h.size < 5) {
@@ -47,11 +44,11 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 			source.complete(null, source.createEmbed()
 				.setTitle("Gift History")
 				.setDescription(sb.toString())
-				.addField("Sent (${Formatters.num.format(sentTo.size)})", summary(sentTo, localUserMap, source.prefix + c.commandName + " sent"), false)
-				.addField("Received (${Formatters.num.format(receivedFrom.size)})", summary(receivedFrom, localUserMap, source.prefix + c.commandName + " received"), false)
+				.addField("Sent (${Formatters.num.format(sentTo.size)})", summary(sentTo, source.userCache, source.prefix + c.commandName + " sent"), false)
+				.addField("Received (${Formatters.num.format(receivedFrom.size)})", summary(receivedFrom, source.userCache, source.prefix + c.commandName + " received"), false)
 				.addFieldSeparate("Recent gifts (${Formatters.num.format(gifts.size)})", gifts.sortedByDescending { it.date }) { e ->
 					val catalogEntry = source.client.catalogManager.purchasableCatalogEntries.firstOrNull { it.offerId == e.offerId }
-					"${catalogEntry?.holder()?.friendlyName ?: "<Item outside of current shop>"} to ${localUserMap[e.toAccountId]?.displayName ?: e.toAccountId} on ${e.date.format()}"
+					"${catalogEntry?.holder()?.friendlyName ?: "<Item outside of current shop>"} to ${source.userCache[e.toAccountId]?.displayName ?: e.toAccountId} on ${e.date.format()}"
 				}
 				.build())
 			Command.SINGLE_SUCCESS

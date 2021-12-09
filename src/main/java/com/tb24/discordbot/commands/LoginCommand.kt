@@ -181,13 +181,7 @@ private inline fun accountPicker_buttons(source: CommandSourceStack): Int {
 	}
 	buttons.add(Button.secondary("new", "Login to another account").withEmoji(Emoji.fromUnicode("✨")))
 	val botMessage = source.complete("**Pick an account**", null, buttons.chunked(5, ActionRow::of))
-	val interaction = botMessage.awaitMessageComponentInteractions({ _, user, _ -> user == source.author }, AwaitMessageComponentInteractionsOptions().apply {
-		max = 1
-		time = 30000
-		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
-	}).await().first()
-	interaction.deferEdit().queue()
-	val choice = interaction.componentId
+	val choice = botMessage.awaitOneInteraction(source.author).componentId
 	source.session = source.initialSession
 	return if (choice == "new") {
 		startDefaultLoginFlow(source)

@@ -8,8 +8,9 @@ import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.util.await
+import com.tb24.discordbot.util.awaitConfirmation
+import com.tb24.discordbot.util.confirmationButtons
 import com.tb24.discordbot.util.exec
-import com.tb24.discordbot.util.yesNoReactions
 import com.tb24.fn.model.account.DeviceAuth
 import com.tb24.fn.util.EAuthClient
 import mslinks.ShellLink
@@ -30,7 +31,7 @@ class LaunchWindowsCommand : BrigadierCommand("launch", "Launches you into Fortn
 			if (!source.isFromType(ChannelType.PRIVATE) && !source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
 					.setTitle("✋ Hold up!")
 					.setDescription("We're about to send a code that carries your current session which will be valid for some time or until you log out. Make sure you trust the people here, or you may do the command again [in DMs](${source.getPrivateChannelLink()}).\n\nContinue? (❌ in 45s)")
-					.build()).yesNoReactions(source.author).await()) {
+					.build(), confirmationButtons()).awaitConfirmation(source.author).await()) {
 				source.complete("👌 Alright.")
 				return@executes 0
 			}

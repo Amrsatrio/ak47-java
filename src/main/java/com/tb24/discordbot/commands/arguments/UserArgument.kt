@@ -88,29 +88,36 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 	class FriendEntryQuery(val index: Int, val reader: StringReader, val start: Int = reader.cursor)
 
 	class UserResult(val ids: List<Any>) : Result {
+		@Suppress("UNCHECKED_CAST")
 		override fun getUsers(source: CommandSourceStack, loadingText: String, friends: List<FriendV2>?): Map<String, GameProfile> {
 			var friends = friends
 			source.ensureSession()
 			source.loading(loadingText)
-			val users = mutableMapOf<String, GameProfile>()
+			val users = Array<GameProfile?>(ids.size) { null } as Array<GameProfile>
 			val idsToQuery = mutableSetOf<String>()
+			val idIndices = mutableListOf<Int>()
 
 			// verify if recipients are account IDs and transforms non account IDs to account IDs using display name/email lookup
-			for (query in ids) {
+			for ((i, query) in ids.withIndex()) {
 				if (query is FriendEntryQuery) {
 					val recipientN = query.index
 					if (friends == null) {
-						friends = source.api.friendsService.queryFriends(source.api.currentLoggedIn.id, true).exec().body()!!.sortedFriends()
+						val unsortedFriends = source.api.friendsService.queryFriends(source.api.currentLoggedIn.id, true).exec().body()!!
+						source.queryUsers_map(unsortedFriends.map { it.accountId })
+						friends = unsortedFriends.sortedFriends(source)
 					}
 					if (friends.isEmpty()) {
 						throw SimpleCommandExceptionType(LiteralMessage("No friends to choose from.")).create()
 					}
 					val friend = friends.safeGetOneIndexed(recipientN, query.reader, query.start)
-					users[friend.accountId] = GameProfile(friend.accountId, friend.displayName)
+					users[i] = source.userCache[friend.accountId]!!
 				} else if (query is String) {
 					when {
 						query.isEmpty() -> throw SimpleCommandExceptionType(LiteralMessage("A user cannot be empty.")).create()
-						query.length == 32 -> idsToQuery.add(query)
+						query.length == 32 -> {
+							idsToQuery.add(query)
+							idIndices.add(i)
+						}
 						else -> {
 							val user = (if (Utils.EMAIL_ADDRESS.matcher(query).matches()) {
 								source.api.accountService.getByEmail(query).exec().body()!!
@@ -141,7 +148,9 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 										errorMessage = "We can't find an Epic account with ${L10N.format("account.ext.${externalAuthType.name}.name")} `$externalNameQuery`."
 									}
 								}
-								if (result == null) {
+								if (result != null) {
+									source.userCache[result.id] = result
+								} else {
 									val sb = StringBuilder(errorMessage)
 									val searchResults = source.api.userSearchService.queryUsers(source.api.currentLoggedIn.id, query, externalAuthType).exec().body()!!
 									if (searchResults.isNotEmpty()) {
@@ -168,24 +177,32 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 								}
 								result
 							})
-							users[user.id] = user
+							users[i] = user
 						}
 					}
 				}
 			}
 
 			if (idsToQuery.size > 0) {
-				source.queryUsers(idsToQuery).forEach { users[it.id] = it }
-				val notFound = idsToQuery.filter { !users.contains(it) }
+				source.queryUsers_map(idsToQuery)
+				val notFound = mutableListOf<String>()
+				for ((i, id) in idsToQuery.withIndex()) {
+					val user = source.userCache[id]
+					if (user != null) {
+						users[idIndices[i]] = user
+					} else {
+						notFound.add(id)
+					}
+				}
 				if (notFound.isNotEmpty()) {
 					throw SimpleCommandExceptionType(LiteralMessage("Invalid Account ID(s): " + notFound.joinToString())).create()
 				}
 			}
 			val dupes = ids.filterIndexed { index, item -> ids.indexOf(item) != index }
 			if (dupes.isNotEmpty()) {
-				throw SimpleCommandExceptionType(LiteralMessage(dupes.joinToString("\n", "Duplicate users:\n") { users[it]?.run { "$displayName - $it" } ?: it.toString() })).create()
+				throw SimpleCommandExceptionType(LiteralMessage(dupes.joinToString("\n", "Duplicate users:\n") { source.userCache[it]?.run { "$displayName - $it" } ?: it.toString() })).create()
 			}
-			return users
+			return users.associateBy { it.id }
 		}
 	}
 }

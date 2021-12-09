@@ -32,11 +32,12 @@ import me.fungames.jfortniteparse.fort.objects.FortItemQuantityPair
 import me.fungames.jfortniteparse.fort.objects.rows.FortQuestRewardTableRow
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import net.dv8tion.jda.api.EmbedBuilder
-import net.dv8tion.jda.api.entities.Emote
-import net.dv8tion.jda.api.entities.Message
-import net.dv8tion.jda.api.entities.MessageEmbed
-import net.dv8tion.jda.api.entities.User
-import net.dv8tion.jda.api.utils.MarkdownSanitizer
+import net.dv8tion.jda.api.entities.*
+import net.dv8tion.jda.api.interactions.components.ActionRow
+import net.dv8tion.jda.api.interactions.components.Button
+import net.dv8tion.jda.api.interactions.components.ButtonStyle
+import net.dv8tion.jda.api.interactions.components.ComponentInteraction
+import net.dv8tion.jda.api.interactions.components.selections.SelectionMenu
 import net.dv8tion.jda.api.utils.TimeFormat
 import okhttp3.HttpUrl
 import okhttp3.Request
@@ -187,22 +188,45 @@ fun <T> Array<T>.safeGetOneIndexed(index: Int, reader: StringReader? = null, sta
 	return get(index - 1)
 }
 
+fun confirmationButtons() = listOf(ActionRow.of(
+	Button.of(ButtonStyle.SUCCESS, "positive", "Confirm"),
+	Button.of(ButtonStyle.DANGER, "negative", "Decline")
+))
+
 @Throws(CommandSyntaxException::class)
-fun Message.yesNoReactions(author: User, inTime: Long = 45000L): CompletableFuture<Boolean> = CompletableFuture.supplyAsync {
-	val icons = arrayOf("✅", "❌").apply { forEach { addReaction(it).queue() } }
-	awaitReactions({ reaction, user, _ -> icons.contains(reaction.reactionEmote.name) && user?.idLong == author.idLong }, AwaitReactionsOptions().apply {
-		max = 1
-		time = inTime
-		errors = arrayOf(CollectorEndReason.TIME)
-	}).await().first().reactionEmote.name == "✅"
+fun Message.awaitConfirmation(author: User, inTime: Long = 45000L): CompletableFuture<Boolean> = CompletableFuture.supplyAsync {
+	awaitOneInteraction(author, inTime = inTime).componentId == "positive"
 }
 
-fun Message.awaitOneReaction(source: CommandSourceStack) =
+fun Message.awaitOneReaction(source: CommandSourceStack, inTime: Long = 45000L) =
 	awaitReactions({ _, user, _ -> user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
 		max = 1
-		time = 30000
+		time = inTime
 		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
 	}).await().first().reactionEmote.name
+
+fun Message.awaitOneInteraction(author: User, inFinalizeButtonsOnEnd: Boolean = true, inTime: Long = 45000L): ComponentInteraction {
+	val interaction = awaitMessageComponentInteractions({ _, user, _ -> user?.idLong == author.idLong }, AwaitMessageComponentInteractionsOptions().apply {
+		max = 1
+		time = inTime
+		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
+		finalizeButtonsOnEnd = inFinalizeButtonsOnEnd
+	}).await().first()
+	interaction.deferEdit().queue()
+	return interaction
+}
+
+fun Message.finalizeButtons(selectedIds: Collection<String>) {
+	editMessageComponents(actionRows.map { row ->
+		ActionRow.of(*row.components.map {
+			when (it) {
+				is Button -> it.withStyle(if (it.id in selectedIds) ButtonStyle.SUCCESS else ButtonStyle.SECONDARY).asDisabled()
+				is SelectionMenu -> it.asDisabled()
+				else -> throw AssertionError()
+			}
+		}.toTypedArray())
+	}).queue()
+}
 
 fun <T> Future<T>.await(): T {
 	try {
@@ -240,9 +264,17 @@ fun <T> EmbedBuilder.addFieldSeparate(title: String, entries: Collection<T>?, bu
 	return this
 }
 
-inline fun String?.escapeMarkdown() = if (this == null) null else MarkdownSanitizer.escape(this)
+//inline fun String?.escapeMarkdown() = if (this == null) null else MarkdownSanitizer.escape(this) // JDA's MarkdownSanitizer does not sanitize single underscores
+fun String?.escapeMarkdown() = if (this == null) null else replace("\\", "\\\\").replace("*", "\\*").replace("_", "\\_").replace("~", "\\~")
 
-fun Array<FriendV2>.sortedFriends() = sortedBy { (if (!it.alias.isNullOrEmpty()) it.alias else if (!it.displayName.isNullOrEmpty()) it.displayName else it.accountId).toLowerCase() }
+fun Array<FriendV2>.sortedFriends(source: CommandSourceStack) = sortedBy {
+	(if (!it.alias.isNullOrEmpty()) it.alias else {
+		val displayName = it.getDisplayName(source)
+		if (!displayName.isNullOrEmpty()) displayName else it.accountId
+	}).toLowerCase()
+}
+
+fun FriendV2.getDisplayName(source: CommandSourceStack) = source.userCache[accountId]?.displayName
 
 inline fun CatalogOffer.holder() = CatalogEntryHolder(this)
 
