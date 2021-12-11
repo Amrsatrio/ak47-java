@@ -17,6 +17,7 @@ import com.tb24.fn.model.assetdata.ESubGame
 import com.tb24.fn.model.launcher.ClientDetails
 import com.tb24.fn.util.EAuthClient
 import com.tb24.uasset.AssetManager
+import me.fungames.jfortniteparse.ue4.io.TOC_READ_OPTION_READ_DIRECTORY_INDEX
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.JDABuilder
 import net.dv8tion.jda.api.MessageBuilder
@@ -67,8 +68,10 @@ class DiscordBot(token: String) {
 		}
 	}
 
-	var dbConn: Connection
-	var savedLoginsManager: SavedLoginsManager
+	val dbConn: Connection
+	//val mongoClient: MongoClient
+	//val datastore: Datastore
+	val savedLoginsManager: SavedLoginsManager
 
 	val okHttpClient: OkHttpClient
 	val proxyManager: ProxyManager
@@ -103,6 +106,15 @@ class DiscordBot(token: String) {
 		Internals.getInternalMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL)
 		dbConn = r.connection(dbUrl).connect()
 
+		// Setup MongoDB
+		/*val mongoUrl = BotConfig.get().mongoUrl
+		LOGGER.info("Connecting to MongoDB database {}...", mongoUrl)
+		mongoClient = MongoClients.create(mongoUrl)
+
+		datastore = Morphia.createDatastore(mongoClient, "ak47")
+		datastore.mapper.mapPackage("com.tb24.discordbot.model")
+		datastore.ensureIndexes()*/
+
 		// DAOs
 		savedLoginsManager = SavedLoginsManager(dbConn)
 
@@ -122,7 +134,7 @@ class DiscordBot(token: String) {
 		val element = assetResponse.elements.first()
 		val buildVersion = element.buildVersion
 		val version = buildVersion.substringBeforeLast('-')
-		DefaultInterceptor.userAgent = "Fortnite/%s Android/12".format(version);
+		DefaultInterceptor.userAgent = "Fortnite/%s Android/12".format(version)
 		LOGGER.info("Fortnite version: $version")
 		val loadGameFiles = BotConfig.get().loadGameFiles
 

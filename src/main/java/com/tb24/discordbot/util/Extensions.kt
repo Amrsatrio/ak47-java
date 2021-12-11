@@ -276,6 +276,24 @@ fun Array<FriendV2>.sortedFriends(source: CommandSourceStack) = sortedBy {
 
 fun FriendV2.getDisplayName(source: CommandSourceStack) = source.userCache[accountId]?.displayName
 
+val CHAPTER_SEASON_STARTS = arrayOf(1, 11, 19)
+
+fun getChapterAndSeason(seasonNum: Int): Pair<String?, String> {
+	for (i in CHAPTER_SEASON_STARTS.size - 1 downTo 0) {
+		if (seasonNum >= CHAPTER_SEASON_STARTS[i]) {
+			val chapterNum = i + 1
+			val seasonNumInChapter = (seasonNum - CHAPTER_SEASON_STARTS[i]) + 1
+			return Pair(if (chapterNum > 1) Formatters.num.format(chapterNum) else null, if (seasonNumInChapter == 10) "X" else Formatters.num.format(seasonNumInChapter))
+		}
+	}
+	return Pair(null, Formatters.num.format(seasonNum))
+}
+
+fun getFriendlySeasonText(seasonNum: Int): String {
+	val (chapter, season) = getChapterAndSeason(seasonNum)
+	return if (chapter != null) "Chapter $chapter, Season $season" else "Season $season"
+}
+
 inline fun CatalogOffer.holder() = CatalogEntryHolder(this)
 
 inline fun String?.orDash() = if (isNullOrEmpty()) "\u2014" else this

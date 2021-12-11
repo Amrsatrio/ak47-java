@@ -38,7 +38,7 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Battle pass.", arrayOf
 		val context = BattlePassViewController(source.api.profileManager.getProfileData("athena"))
 		source.message.replyPaginated(context.rewards.pages, 1, source.loadingMsg) { (page), pageNum, pageCount ->
 			val embed = EmbedBuilder().setColor(if (context.stats.book_purchased) 0xE1784D else 0x55C5FF)
-				.setAuthor("Season 7 / Battle Pass", null, Utils.benBotExportAsset(if (context.stats.book_purchased) {
+				.setAuthor("%s / Battle Pass".format(getFriendlySeasonText(context.stats.season_num)), null, Utils.benBotExportAsset(if (context.stats.book_purchased) {
 					"/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass.T-FNBR-BattlePass"
 				} else {
 					"/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass-Default.T-FNBR-BattlePass-Default"

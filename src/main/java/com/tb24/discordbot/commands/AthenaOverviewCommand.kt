@@ -36,7 +36,7 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows your BR level of cur
 			val nextLevelReward = getNextLevelReward(seasonData, stats.level, stats.book_purchased)
 			val inventory = source.api.fortniteService.inventorySnapshot(source.api.currentLoggedIn.id).exec().body()!!
 			val embed = source.createEmbed()
-				.setTitle("Season " + stats.season_num)
+				.setTitle(getFriendlySeasonText(stats.season_num))
 				.addField("%s Level %,d".format((if (stats.book_purchased) battlePassEmote else freePassEmote)?.asMention, stats.level), "`%s`\n%,d / %,d".format(Utils.progress(stats.xp, xpToNextLevel, 32), stats.xp, xpToNextLevel), false)
 			if (nextLevelReward != null) {
 				embed.addField("Rewards for level %,d".format(stats.level + 1), nextLevelReward.renderWithIcon(), false)
