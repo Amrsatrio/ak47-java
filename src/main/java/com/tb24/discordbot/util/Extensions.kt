@@ -9,6 +9,7 @@ import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.commands.CommandSourceStack
+import com.tb24.discordbot.commands.rarityData
 import com.tb24.fn.EpicApi
 import com.tb24.fn.ProfileManager
 import com.tb24.fn.model.FortItemStack
@@ -94,6 +95,8 @@ inline fun <reified T> okhttp3.Response.to(): T = body()!!.charStream().use { Ep
 val CommandContext<*>.commandName: String get() = nodes.first().node.name
 
 inline fun Date.format(): String = TimeFormat.DATE_TIME_SHORT.format(this.time)
+
+val FortItemStack.palette get() = defData?.Series?.value?.Colors ?: rarityData.forRarity(rarity)
 
 fun FortItemStack.render(displayQty: Int = quantity): String {
 	var dn = displayName
