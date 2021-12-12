@@ -188,10 +188,10 @@ fun <T> Array<T>.safeGetOneIndexed(index: Int, reader: StringReader? = null, sta
 	return get(index - 1)
 }
 
-fun confirmationButtons() = listOf(ActionRow.of(
+fun confirmationButtons() = ActionRow.of(
 	Button.of(ButtonStyle.SUCCESS, "positive", "Confirm"),
 	Button.of(ButtonStyle.DANGER, "negative", "Decline")
-))
+)
 
 @Throws(CommandSyntaxException::class)
 fun Message.awaitConfirmation(author: User, inTime: Long = 45000L): CompletableFuture<Boolean> = CompletableFuture.supplyAsync {
@@ -205,18 +205,18 @@ fun Message.awaitOneReaction(source: CommandSourceStack, inTime: Long = 45000L) 
 		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
 	}).await().first().reactionEmote.name
 
-fun Message.awaitOneInteraction(author: User, inFinalizeButtonsOnEnd: Boolean = true, inTime: Long = 45000L): ComponentInteraction {
+fun Message.awaitOneInteraction(author: User, inFinalizeComponentsOnEnd: Boolean = true, inTime: Long = 45000L): ComponentInteraction {
 	val interaction = awaitMessageComponentInteractions({ _, user, _ -> user?.idLong == author.idLong }, AwaitMessageComponentInteractionsOptions().apply {
 		max = 1
 		time = inTime
 		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
-		finalizeButtonsOnEnd = inFinalizeButtonsOnEnd
+		finalizeComponentsOnEnd = inFinalizeComponentsOnEnd
 	}).await().first()
 	interaction.deferEdit().queue()
 	return interaction
 }
 
-fun Message.finalizeButtons(selectedIds: Collection<String>) {
+fun Message.finalizeComponents(selectedIds: Collection<String>) {
 	editMessageComponents(actionRows.map { row ->
 		ActionRow.of(*row.components.map {
 			when (it) {

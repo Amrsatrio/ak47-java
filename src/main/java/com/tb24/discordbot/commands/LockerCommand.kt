@@ -29,6 +29,9 @@ import me.fungames.jfortniteparse.util.toPngArray
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.interactions.components.ActionRow
+import net.dv8tion.jda.api.interactions.components.Button
+import net.dv8tion.jda.api.interactions.components.ButtonStyle
 import okhttp3.Request
 import java.awt.Image
 import java.io.ByteArrayOutputStream
@@ -38,13 +41,17 @@ import java.util.zip.Deflater
 import java.util.zip.DeflaterOutputStream
 
 class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form of an image.") {
-	val names = mutableMapOf(
+	// PrimaryAssetType[:ClassName]
+	val names = mapOf(
 		"AthenaCharacter" to "Outfits",
 		"AthenaBackpack" to "Back Blings",
 		"AthenaPickaxe" to "Harvesting Tools",
 		"AthenaGlider" to "Gliders",
 		"AthenaSkyDiveContrail" to "Contrails",
-		"AthenaDance" to "Emotes",
+		"AthenaDance:AthenaDanceItemDefinition" to "Emotes",
+		"AthenaDance:AthenaSprayItemDefinition" to "Sprays",
+		"AthenaDance:AthenaEmojiItemDefinition" to "Emoticons",
+		"AthenaDance:AthenaToyItemDefinition" to "Toys",
 		"AthenaItemWrap" to "Wraps",
 		"AthenaMusicPack" to "Musics",
 		"AthenaLoadingScreen" to "Loading Screens"
@@ -57,36 +64,31 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 			source.loading("Getting cosmetics")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 			val athena = source.api.profileManager.getProfileData("athena")
-			val ctgs: Map<String, MutableSet<FortItemStack>> = mapOf(
-				"AthenaCharacter" to mutableSetOf(),
-				"AthenaBackpack" to mutableSetOf(),
-				"AthenaPickaxe" to mutableSetOf(),
-				"AthenaGlider" to mutableSetOf(),
-				"AthenaSkyDiveContrail" to mutableSetOf(),
-				"AthenaDance" to mutableSetOf(),
-				"AthenaItemWrap" to mutableSetOf(),
-				"AthenaMusicPack" to mutableSetOf(),
-				//"AthenaLoadingScreen" to mutableSetOf()
-			)
+			val typesToQuery = names.keys.map { it.substringBefore(':') }.toSet()
+			val itemsByType = typesToQuery.associateWith { mutableListOf<FortItemStack>() }
 			for (item in athena.items.values) {
-				val ids = ctgs[item.primaryAssetType]
-				if (ids != null && (item.primaryAssetType != "AthenaDance" || item.primaryAssetName.startsWith("eid_"))) {
-					ids.add(item)
+				itemsByType[item.primaryAssetType]?.add(item)
+			}
+			val finalItems = mutableMapOf<String, List<FortItemStack>>()
+			for (categoryKey in names.keys) {
+				if (categoryKey.contains(':')) {
+					val primaryAssetType = categoryKey.substringBefore(':')
+					val className = categoryKey.substringAfter(':')
+					finalItems[categoryKey] = itemsByType[primaryAssetType]!!.filter { it.defData?.exportType == className }
+				} else {
+					finalItems[categoryKey] = itemsByType[categoryKey]!!
 				}
 			}
-			source.loading("Generating and uploading images")
-			CompletableFuture.allOf(
-				perform(source, names["AthenaCharacter"], ctgs["AthenaCharacter"]),
-				perform(source, names["AthenaBackpack"], ctgs["AthenaBackpack"]),
-				perform(source, names["AthenaPickaxe"], ctgs["AthenaPickaxe"]),
-				perform(source, names["AthenaGlider"], ctgs["AthenaGlider"]),
-				perform(source, names["AthenaSkyDiveContrail"], ctgs["AthenaSkyDiveContrail"]),
-				perform(source, names["AthenaDance"], ctgs["AthenaDance"]),
-				perform(source, names["AthenaItemWrap"], ctgs["AthenaItemWrap"]),
-				perform(source, names["AthenaMusicPack"], ctgs["AthenaMusicPack"]),
-				//perform(source, names["AthenaLoadingScreen"], ctgs["AthenaLoadingScreen"])
-			).await()
-			source.complete("✅ All images have been sent successfully.")
+			val buttons = mutableListOf<Button>()
+			for ((categoryKey, items) in finalItems) {
+				if (items.isEmpty()) continue
+				buttons.add(Button.of(ButtonStyle.SECONDARY, categoryKey, "%s (%,d)".format(names[categoryKey]!!, items.size)))
+			}
+			val message = source.complete("**Pick a category**", null, *buttons.chunked(5, ActionRow::of).toTypedArray())
+			val choice = message.awaitOneInteraction(source.author).componentId
+			source.loading("Generating and uploading image")
+			perform(source, names[choice], finalItems[choice]).await()
+			source.loadingMsg!!.delete().queue()
 			Command.SINGLE_SUCCESS
 		}
 		.then(argument("type", word())
@@ -190,11 +192,14 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 			"pickaxe", "harvestingtool" -> "AthenaPickaxe"
 			"glider" -> "AthenaGlider"
 			"skydivecontrail", "contrail" -> "AthenaSkyDiveContrail"
-			"dance", "emote", "spray", "toy" -> "AthenaDance"
+			"dance", "emote" -> "AthenaDance:AthenaDanceItemDefinition"
+			"spray" -> "AthenaDance:AthenaSprayItemDefinition"
+			"emoticon" -> "AthenaDance:AthenaEmojiItemDefinition"
+			"toy" -> "AthenaDance:AthenaToyItemDefinition"
 			"itemwrap", "wrap" -> "AthenaItemWrap"
 			"musicpack", "music" -> "AthenaMusicPack"
 			"loadingscreen" -> "AthenaLoadingScreen"
-			else -> throw SimpleCommandExceptionType(LiteralMessage("Unknown cosmetic type $type. Valid values are: (case insensitive)```\nOutfit, BackBling, HarvestingTool, Glider, Contrail, Emote, Wrap, Music, LoadingScreen\n```")).create()
+			else -> throw SimpleCommandExceptionType(LiteralMessage("Unknown cosmetic type $type. Valid values are: (case insensitive)```\nOutfit, BackBling, HarvestingTool, Glider, Contrail, Emote, Spray, Emoticon, Toy, Wrap, Music, LoadingScreen\n```")).create()
 		}
 		return filterType
 	}

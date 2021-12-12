@@ -99,7 +99,7 @@ inline fun MessageChannel.createMessageComponentInteractionCollector(noinline fi
 
 class AwaitMessageComponentInteractionsOptions : MessageComponentInteractionCollectorOptions() {
 	var errors: Array<CollectorEndReason>? = null
-	var finalizeButtonsOnEnd = true
+	var finalizeComponentsOnEnd = true
 }
 
 @Throws(CollectorException::class)
@@ -114,11 +114,11 @@ fun Message.awaitMessageComponentInteractions(filter: CollectorFilter<ComponentI
 		override fun onEnd(collected: Map<Any, ComponentInteraction>, reason: CollectorEndReason) {
 			if (options.errors?.contains(reason) == true) {
 				future.completeExceptionally(CollectorException(collector, reason))
-				finalizeButtons(collected.values.map { it.componentId })
+				finalizeComponents(collected.values.map { it.componentId })
 			} else {
 				future.complete(collected.values)
-				if (options.finalizeButtonsOnEnd) {
-					finalizeButtons(collected.values.map { it.componentId })
+				if (options.finalizeComponentsOnEnd) {
+					finalizeComponents(collected.values.map { it.componentId })
 				}
 			}
 		}
