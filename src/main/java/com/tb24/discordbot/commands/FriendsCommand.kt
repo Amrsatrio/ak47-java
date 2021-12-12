@@ -58,8 +58,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 				val source = c.source
 				source.ensureSession()
 				val summary = source.api.friendsService.queryFriendsSummary(source.api.currentLoggedIn.id, true).exec().body()!!
-				val friends = summary.friends.sortedFriends(source)
-				val users = getUsers(c, "user", friends)
+				val users = getUsers(c, "user", summary.friends)
 				if (users[source.api.currentLoggedIn.id] != null) {
 					throw SimpleCommandExceptionType(LiteralMessage("Users cannot be friends with themselves")).create()
 				}

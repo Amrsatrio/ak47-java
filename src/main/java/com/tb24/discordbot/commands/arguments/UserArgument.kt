@@ -28,7 +28,7 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 		fun users(max: Int = Integer.MAX_VALUE, greedy: Boolean = true) = UserArgument(max, greedy)
 
 		@JvmStatic
-		fun getUsers(context: CommandContext<CommandSourceStack>, name: String, friends: List<FriendV2>? = null, loadingText: String = "Resolving users") =
+		fun getUsers(context: CommandContext<CommandSourceStack>, name: String, friends: Array<FriendV2>? = null, loadingText: String = "Resolving users") =
 			context.getArgument(name, Result::class.java).getUsers(context.source, loadingText, friends)
 	}
 
@@ -82,15 +82,14 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 	override fun getExamples() = EXAMPLES
 
 	fun interface Result {
-		fun getUsers(source: CommandSourceStack, loadingText: String, friends: List<FriendV2>?): Map<String, GameProfile>
+		fun getUsers(source: CommandSourceStack, loadingText: String, friends: Array<FriendV2>?): Map<String, GameProfile>
 	}
 
 	class FriendEntryQuery(val index: Int, val reader: StringReader, val start: Int = reader.cursor)
 
 	class UserResult(val ids: List<Any>) : Result {
 		@Suppress("UNCHECKED_CAST")
-		override fun getUsers(source: CommandSourceStack, loadingText: String, friends: List<FriendV2>?): Map<String, GameProfile> {
-			var friends = friends
+		override fun getUsers(source: CommandSourceStack, loadingText: String, friends: Array<FriendV2>?): Map<String, GameProfile> {
 			source.ensureSession()
 			source.loading(loadingText)
 			val users = Array<GameProfile?>(ids.size) { null } as Array<GameProfile>
@@ -101,15 +100,13 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 			for ((i, query) in ids.withIndex()) {
 				if (query is FriendEntryQuery) {
 					val recipientN = query.index
-					if (friends == null) {
-						val unsortedFriends = source.api.friendsService.queryFriends(source.api.currentLoggedIn.id, true).exec().body()!!
-						source.queryUsers_map(unsortedFriends.map { it.accountId })
-						friends = unsortedFriends.sortedFriends(source)
-					}
-					if (friends.isEmpty()) {
+					val unsortedFriends = friends ?: source.api.friendsService.queryFriends(source.api.currentLoggedIn.id, true).exec().body()!!
+					source.queryUsers_map(unsortedFriends.map { it.accountId })
+					val sortedFriends = unsortedFriends.sortedFriends(source)
+					if (sortedFriends.isEmpty()) {
 						throw SimpleCommandExceptionType(LiteralMessage("No friends to choose from.")).create()
 					}
-					val friend = friends.safeGetOneIndexed(recipientN, query.reader, query.start)
+					val friend = sortedFriends.safeGetOneIndexed(recipientN, query.reader, query.start)
 					users[i] = source.userCache[friend.accountId]!!
 				} else if (query is String) {
 					when {
@@ -131,7 +128,7 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 										result = source.api.accountService.getByDisplayName(query).exec().body()!!
 									} catch (e: HttpException) {
 										if (e.epicError.errorCode == "errors.com.epicgames.account.account_not_found") {
-											errorMessage = "We can't find an Epic account with name `$query`."
+											errorMessage = "Couldn't find an Epic account with name `$query`."
 										} else {
 											throw e
 										}
@@ -145,7 +142,7 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 									val externalNameQuery = query.substring(colonIndex + 1)
 									result = source.api.accountService.getExternalIdMappingsByDisplayName(externalAuthType, externalNameQuery, true).exec().body()!!.firstOrNull()
 									if (result == null) {
-										errorMessage = "We can't find an Epic account with ${L10N.format("account.ext.${externalAuthType.name}.name")} `$externalNameQuery`."
+										errorMessage = "Couldn't find an Epic account with ${L10N.format("account.ext.${externalAuthType.name}.name")} `$externalNameQuery`."
 									}
 								}
 								if (result != null) {
@@ -154,7 +151,7 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 									val sb = StringBuilder(errorMessage)
 									val searchResults = source.api.userSearchService.queryUsers(source.api.currentLoggedIn.id, query, externalAuthType).exec().body()!!
 									if (searchResults.isNotEmpty()) {
-										sb.append("\nDo you mean:")
+										sb.append("\nDid you mean:")
 										for ((i, entry) in searchResults.withIndex()) {
 											sb.append("\n\u2022 ")
 											if (i >= 20) {
