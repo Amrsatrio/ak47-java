@@ -257,6 +257,7 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 		"AthenaDance:eid_hiphop01",
 		"AthenaDance:eid_kpopdance03",
 		"AthenaDance:eid_playereleven",
+		"AthenaDance:spid_065_discoballer",
 		"AthenaDance:spid_066_llamalaxy",
 		"AthenaGlider:founderglider",
 		"AthenaGlider:founderumbrella",
