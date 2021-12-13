@@ -123,7 +123,10 @@ fun EmbedBuilder.populateOffer(offer: StoreOffer?, populatePrice: Boolean = true
 		priceFormatter.minimumFractionDigits = offer.currencyDecimals
 		addField("Price", priceFormatter.format(offer.price / 10.0.pow(offer.currencyDecimals.toDouble())), false)
 	}
-	setImage(offer.keyImages?.getOrNull(0)?.url)
-	setThumbnail(offer.keyImages?.getOrNull(2)?.url)
+	if (!offer.keyImages.isNullOrEmpty()) {
+		setImage((offer.getImage("OfferImageWide") ?: offer.getImage("Thumbnail") ?: offer.keyImages.firstOrNull())?.url)
+	}
 	return this
 }
+
+fun StoreOffer.getImage(type: String) = keyImages?.filter { it.type == type }?.maxByOrNull { it.width * it.height }

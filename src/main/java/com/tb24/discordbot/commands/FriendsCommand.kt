@@ -58,8 +58,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 				val source = c.source
 				source.ensureSession()
 				val summary = source.api.friendsService.queryFriendsSummary(source.api.currentLoggedIn.id, true).exec().body()!!
-				val friends = summary.friends.sortedFriends(source)
-				val users = getUsers(c, "user", friends)
+				val users = getUsers(c, "user", summary.friends)
 				if (users[source.api.currentLoggedIn.id] != null) {
 					throw SimpleCommandExceptionType(LiteralMessage("Users cannot be friends with themselves")).create()
 				}
@@ -154,7 +153,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		val message = source.complete(null, source.createEmbed()
 			.setTitle(ctx.titleOverride ?: "You're friends with ${user.displayName?.escapeMarkdown() ?: user.id}")
 			.populateFriendInfo(ctx, true)
-			.build(), buttons.chunked(5, ActionRow::of))
+			.build(), *buttons.chunked(5, ActionRow::of).toTypedArray())
 		source.loadingMsg = message
 		return when (message.awaitOneInteraction(source.author, false).componentId) {
 			"invite" -> inviteToParty(ctx, party!!)
@@ -199,7 +198,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 
 	private fun aliasOrNote(ctx: FriendContext, old: String?, note: Boolean): Int {
 		val (source, friend, user) = ctx
-		ctx.source.loadingMsg?.finalizeButtons(setOf("alias", "note"))
+		ctx.source.loadingMsg?.finalizeComponents(setOf("alias", "note"))
 		val propName = if (note) "note" else "nickname"
 		val promptMsg = source.channel.sendMessage("The current $propName is: `${old.orUnset()}`\nEnter the new $propName, or `clear` to unset: (⏱ 45s)").complete()
 		var new = source.channel.awaitMessages({ collected, _, _ -> collected.author == source.author }, AwaitMessagesOptions().apply {
@@ -244,7 +243,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		val message = source.complete(null, source.createEmbed()
 			.setTitle(ctx.titleOverride ?: "Friend request from ${user.displayName?.escapeMarkdown() ?: user.id}")
 			.populateFriendInfo(ctx)
-			.build(), listOf(ActionRow.of(buttons)))
+			.build(), ActionRow.of(buttons))
 		source.loadingMsg = message
 		return when (message.awaitOneInteraction(source.author, false).componentId) {
 			"accept" -> accept(ctx)
@@ -262,7 +261,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		val message = source.complete(null, source.createEmbed()
 			.setTitle(ctx.titleOverride ?: "You have a pending friend request to ${user.displayName?.escapeMarkdown() ?: user.id}")
 			.populateFriendInfo(ctx)
-			.build(), listOf(ActionRow.of(buttons)))
+			.build(), ActionRow.of(buttons))
 		source.loadingMsg = message
 		return when (message.awaitOneInteraction(source.author, false).componentId) {
 			"cancel" -> cancel(ctx)
@@ -278,7 +277,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		val message = source.complete(null, source.createEmbed()
 			.setTitle(ctx.titleOverride ?: "You have ${user.displayName?.escapeMarkdown() ?: user.id} blocked")
 			.populateFriendInfo(ctx)
-			.build(), listOf(ActionRow.of(buttons)))
+			.build(), ActionRow.of(buttons))
 		source.loadingMsg = message
 		return when (message.awaitOneInteraction(source.author, false).componentId) {
 			"unblock" -> unblock(ctx)
@@ -299,7 +298,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			.setTitle(ctx.titleOverride ?: "You're not friends with ${user.displayName}")
 			.addField("Account ID", user.id, false)
 			.populateTopMutuals(ctx, user.id)
-			.build(), listOf(ActionRow.of(buttons)))
+			.build(), ActionRow.of(buttons))
 		source.loadingMsg = message
 		return when (message.awaitOneInteraction(source.author, false).componentId) {
 			"request" -> add(ctx)
@@ -474,7 +473,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 
 	private fun mutuals(ctx: FriendContext, accountId: String): Int {
 		val (source, _, _, friends) = ctx
-		//source.loadingMsg?.finalizeButtons(setOf("mutuals"))
+		//source.loadingMsg?.finalizeComponents(setOf("mutuals"))
 		val entries = ctx.getMutualsFor(accountId).sortedWith { a, b ->
 			val numMutualsCompare = friends[b]!!.mutual - friends[a]!!.mutual
 			if (numMutualsCompare != 0) {

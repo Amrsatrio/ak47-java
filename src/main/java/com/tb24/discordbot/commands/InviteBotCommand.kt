@@ -19,7 +19,7 @@ class InviteBotCommand : BrigadierCommand("invite", "Sends a link to invite this
 			BotConfig.get().homeGuildInviteLink?.let { inviteLink ->
 				components.add(Button.of(ButtonStyle.LINK, inviteLink, "Join our support server"))
 			}
-			source.complete("**Invite Links**", null, listOf(ActionRow.of(components)))
+			source.complete("**Invite Links**", null, ActionRow.of(components))
 			Command.SINGLE_SUCCESS
 		}
 }

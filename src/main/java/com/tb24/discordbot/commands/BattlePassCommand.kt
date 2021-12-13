@@ -105,7 +105,7 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Battle pass.", arrayOf
 		if (buttons.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("No Battle Pass offers available.")).create()
 		}
-		val botMessage = source.complete("**Which Battle Pass offer would you like to purchase?**\nYour level: %s Level %,d\nBalance: %s %,d\n".format(if (stats.book_purchased) "Battle Pass" else "Free Pass", stats.level, Utils.MTX_EMOJI, balance), null, buttons.chunked(5, ActionRow::of))
+		val botMessage = source.complete("**Which Battle Pass offer would you like to purchase?**\nYour level: %s Level %,d\nBalance: %s %,d\n".format(if (stats.book_purchased) "Battle Pass" else "Free Pass", stats.level, Utils.MTX_EMOJI, balance), null, *buttons.chunked(5, ActionRow::of).toTypedArray())
 		source.loadingMsg = botMessage
 		val interaction = botMessage.awaitMessageComponentInteractions({ _, user, _ -> user == source.author }, AwaitMessageComponentInteractionsOptions().apply {
 			max = 1

@@ -48,12 +48,15 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 		return (loadingMsg?.editMessage(loadingText) ?: channel.sendMessage(loadingText)).override(true).complete().also { loadingMsg = it }
 	}
 
-	fun complete(text: String?, embed: MessageEmbed? = null, actionRows: Collection<ActionRow>? = null): Message {
+	fun complete(text: String?, embed: MessageEmbed? = null, vararg actionRows: ActionRow): Message {
 		val builder = MessageBuilder().setContent(text)
 		if (embed != null) {
 			builder.setEmbeds(embed)
 		}
-		val message = builder.setActionRows(actionRows).build()
+		if (actionRows.isNotEmpty()) {
+			builder.setActionRows(*actionRows)
+		}
+		val message = builder.build()
 		val complete = (loadingMsg?.editMessage(message) ?: channel.sendMessage(message)).override(true).complete()
 		loadingMsg = null
 		return complete

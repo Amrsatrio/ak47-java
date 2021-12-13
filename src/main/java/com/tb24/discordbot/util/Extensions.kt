@@ -9,6 +9,7 @@ import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.commands.CommandSourceStack
+import com.tb24.discordbot.commands.rarityData
 import com.tb24.fn.EpicApi
 import com.tb24.fn.ProfileManager
 import com.tb24.fn.model.FortItemStack
@@ -94,6 +95,8 @@ inline fun <reified T> okhttp3.Response.to(): T = body()!!.charStream().use { Ep
 val CommandContext<*>.commandName: String get() = nodes.first().node.name
 
 inline fun Date.format(): String = TimeFormat.DATE_TIME_SHORT.format(this.time)
+
+val FortItemStack.palette get() = defData?.Series?.value?.Colors ?: rarityData.forRarity(rarity)
 
 fun FortItemStack.render(displayQty: Int = quantity): String {
 	var dn = displayName
@@ -188,10 +191,10 @@ fun <T> Array<T>.safeGetOneIndexed(index: Int, reader: StringReader? = null, sta
 	return get(index - 1)
 }
 
-fun confirmationButtons() = listOf(ActionRow.of(
+fun confirmationButtons() = ActionRow.of(
 	Button.of(ButtonStyle.SUCCESS, "positive", "Confirm"),
 	Button.of(ButtonStyle.DANGER, "negative", "Decline")
-))
+)
 
 @Throws(CommandSyntaxException::class)
 fun Message.awaitConfirmation(author: User, inTime: Long = 45000L): CompletableFuture<Boolean> = CompletableFuture.supplyAsync {
@@ -205,18 +208,18 @@ fun Message.awaitOneReaction(source: CommandSourceStack, inTime: Long = 45000L) 
 		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
 	}).await().first().reactionEmote.name
 
-fun Message.awaitOneInteraction(author: User, inFinalizeButtonsOnEnd: Boolean = true, inTime: Long = 45000L): ComponentInteraction {
+fun Message.awaitOneInteraction(author: User, inFinalizeComponentsOnEnd: Boolean = true, inTime: Long = 45000L): ComponentInteraction {
 	val interaction = awaitMessageComponentInteractions({ _, user, _ -> user?.idLong == author.idLong }, AwaitMessageComponentInteractionsOptions().apply {
 		max = 1
 		time = inTime
 		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
-		finalizeButtonsOnEnd = inFinalizeButtonsOnEnd
+		finalizeComponentsOnEnd = inFinalizeComponentsOnEnd
 	}).await().first()
 	interaction.deferEdit().queue()
 	return interaction
 }
 
-fun Message.finalizeButtons(selectedIds: Collection<String>) {
+fun Message.finalizeComponents(selectedIds: Collection<String>) {
 	editMessageComponents(actionRows.map { row ->
 		ActionRow.of(*row.components.map {
 			when (it) {

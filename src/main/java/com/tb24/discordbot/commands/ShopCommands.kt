@@ -102,8 +102,8 @@ fun executeShopImage(source: CommandSourceStack): Int {
 	val message = source.channel.sendMessage("**Battle Royale Item Shop (%s)**".format(DateFormat.getDateInstance().apply { timeZone = tz }.format(now))).addFile(image, fileName).complete()
 	source.loadingMsg!!.delete().queue()
 	if (source.channel.idLong == BotConfig.get().itemShopChannelId) {
-		message.addReaction("👍").queue()
-		message.addReaction("👎").queue()
+		/*message.addReaction("👍").queue()
+		message.addReaction("👎").queue()*/
 		if ((source.channel as TextChannel).isNews) {
 			message.crosspost().queue()
 		}
@@ -120,16 +120,17 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 	val catalogManager = source.client.catalogManager
 	val profileManager = source.api.profileManager
 	catalogManager.ensureCatalogData(source.client.internalSession.api)
+	val isCampaign = subGame == ESubGame.Campaign
 	CompletableFuture.allOf(
 		profileManager.dispatchClientCommandRequest(QueryProfile()),
-		if (subGame == ESubGame.Campaign) {
+		if (isCampaign) {
 			profileManager.dispatchClientCommandRequest(PopulatePrerolledOffers(), "campaign")
 		} else {
 			profileManager.dispatchClientCommandRequest(QueryProfile(), "athena")
 		}
 	).await()
 	val showAccInfo = source.channel.idLong != BotConfig.get().itemShopChannelId
-	val sections = if (subGame == ESubGame.Campaign) catalogManager.campaignSections.values else catalogManager.athenaSections.values
+	val sections = if (isCampaign) catalogManager.campaignSections.values else catalogManager.athenaSections.values
 	val contents = arrayOfNulls<List<String>>(sections.size)
 	val prices = mutableMapOf<String, CatalogItemPrice>()
 	var numOwned = 0
@@ -154,9 +155,9 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 	}
 	val embed = EmbedBuilder()
 		.setColor(0x0099FF)
-		.setTitle(if (subGame == ESubGame.Campaign) "⚡ " + "Save the World Item Shop" else "☂ " + "Battle Royale Item Shop")
+		.setTitle(if (isCampaign) "⚡ " + "Save the World Item Shop" else "☂ " + "Battle Royale Item Shop")
 	if (showAccInfo) {
-		embed.setDescription("Use `${source.prefix}buy` or `${source.prefix}gift` to perform operations with these items.")
+		embed.setDescription(if (isCampaign) "Use `${source.prefix}buy` to buy an item listed below." else "Use `${source.prefix}buy` or `${source.prefix}gift` to perform operations with these items.")
 			.addField(if (prices.size == 1) "Balance" else "Balances", prices.values.joinToString(" \u00b7 ") { it.getAccountBalanceText(profileManager) }, false)
 		if (numOwned > 0) {
 			embed.appendDescription("\n**Owned:** %,d/%,d%s".format(numOwned, numShownItems, if (numOwned >= numShownItems) " ✅" else ""))

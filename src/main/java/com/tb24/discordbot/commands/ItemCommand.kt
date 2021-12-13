@@ -11,7 +11,7 @@ import com.tb24.discordbot.commands.arguments.ItemArgument
 import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
-import com.tb24.discordbot.util.forRarity
+import com.tb24.discordbot.util.palette
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.util.format
@@ -59,22 +59,19 @@ class CosmeticCommand : BrigadierCommand("cosmetic", "Shows info and options abo
 			"AthenaItemWrap",
 			"AthenaMusicPack",
 			"AthenaLoadingScreen",
-		)))
-		.executes {
-			val source = it.source
-			source.ensureSession()
-			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
-			val athena = source.api.profileManager.getProfileData("athena")
-			execute(it.source, ItemArgument.getItem(it, "item", athena))
-		}
+		))
+			.executes {
+				val source = it.source
+				source.ensureSession()
+				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+				val athena = source.api.profileManager.getProfileData("athena")
+				execute(it.source, ItemArgument.getItem(it, "item", athena))
+			}
+		)
 
 	private fun execute(source: CommandSourceStack, item: FortItemStack): Int {
 		val defData = item.defData// ?: throw SimpleCommandExceptionType(LiteralMessage("Not found")).create()
-		var palette = rarityData.forRarity(item.rarity)
-		defData?.Series?.value?.also {
-			palette = it.Colors
-		}
-		val embed = EmbedBuilder().setColor(palette.Color1.toColor())
+		val embed = EmbedBuilder().setColor(item.palette.Color1.toColor())
 			.setTitle(item.displayName)
 			.setDescription(defData.Description.format())
 			.setThumbnail(Utils.benBotExportAsset(item.getPreviewImagePath(true)?.toString()))

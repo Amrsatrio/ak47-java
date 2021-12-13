@@ -23,6 +23,7 @@ class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your 
 			source.loading("Getting BR data")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 			val athena = source.api.profileManager.getProfileData("athena")
+			val stats = athena.stats as AthenaProfileStats
 			val lastCreativePlaytimeTracker = athena.items.values.firstOrNull { it.templateId == "Quest:quest_br_creative_playtimetracker_4" }
 				?: throw SimpleCommandExceptionType(LiteralMessage("No playtime tracker")).create()
 			val (current, max) = getQuestCompletion(lastCreativePlaytimeTracker, false)
@@ -30,11 +31,15 @@ class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your 
 			val xpCount = loadObject<UCurveTable>("/Game/Athena/Balance/DataTables/AthenaAccoladeXP.AthenaAccoladeXP")!!.findCurve(FName("CreativeMode_15mMedal"))!!.eval(1f).toInt()
 			val embed = source.createEmbed()
 				.setTitle("Creative XP")
-				.setDescription("`%s`\n%,d / %,d minutes played\n%,d / %,d %s".format(
+				.addField("Playtime", "`%s`\n%,d / %,d minutes played\n%,d / %,d %s".format(
 					Utils.progress(current, max, 32),
 					current, max,
-					current / delta * xpCount, max / delta * xpCount, textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-XPSmall-L.T-FNBR-XPSmall-L")?.asMention))
-			val loginTime = (athena.stats as AthenaProfileStats).quest_manager?.dailyLoginInterval
+					current / delta * xpCount, max / delta * xpCount, textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-XPSmall-L.T-FNBR-XPSmall-L")?.asMention), true)
+			val dynamicXp = stats.creative_dynamic_xp
+			if (dynamicXp.timespan != 0.0f) {
+				embed.addField("Gameplay", "Bank XP: %,d\nBucket XP: %,d\nBank XP multiplier: \u00d7%f\nEarned today: %,d\nDaily excess multiplier: \u00d7%f".format(dynamicXp.bankXp, dynamicXp.bucketXp, dynamicXp.bankXpMult, dynamicXp.currentDayXp, dynamicXp.dailyExcessXpMult), true)
+			}
+			val loginTime = stats.quest_manager?.dailyLoginInterval
 			if (loginTime != null) {
 				val now = lastCreativePlaytimeTracker.attributes.getDateISO("creation_time").toInstant().atOffset(ZoneOffset.UTC)
 				var next = now.withHour(RESET_HOUR_UTC).withMinute(0).withSecond(0)

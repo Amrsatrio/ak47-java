@@ -60,6 +60,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(CommandsCommand())
 		register(CompetitiveCommand())
 		register(ComposeMcpCommand())
+		register(CosmeticCommand())
 		register(CreativeCommand())
 		register(CreativeXpCommand())
 		register(DailyQuestsCommand())
