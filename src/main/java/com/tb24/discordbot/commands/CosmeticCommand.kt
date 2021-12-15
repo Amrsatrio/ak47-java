@@ -59,7 +59,7 @@ class CosmeticCommand : BrigadierCommand("cosmetic", "Shows info and options abo
 
 	private fun execute(source: CommandSourceStack, item: FortItemStack, profile: McpProfile): Int {
 		val defData = item.defData as? AthenaCosmeticItemDefinition ?: throw SimpleCommandExceptionType(LiteralMessage("Not found")).create()
-		val embed = EmbedBuilder().setColor(item.palette.Color1.toColor())
+		val embed = EmbedBuilder().setColor(item.palette.Color2.toColor())
 			.setAuthor(item.shortDescription.format())
 			.setTitle((if (item.isItemSeen) "" else bangEmote?.asMention + ' ') + item.displayName.ifEmpty { defData.name })
 			.setDescription(item.description)
@@ -231,6 +231,7 @@ class CosmeticCommand : BrigadierCommand("cosmetic", "Shows info and options abo
 			variantUpdates = inVariantUpdates
 			optLockerUseCountOverride = -1
 		}, "athena").await()
+		source.session.avatarCache.remove(source.api.currentLoggedIn.id)
 		return execute(source, item, source.api.profileManager.getProfileData("athena"))
 	}
 

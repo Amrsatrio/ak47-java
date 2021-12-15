@@ -9,12 +9,14 @@ import com.tb24.discordbot.util.*
 import com.tb24.discordbot.webcampaign.WebCampaign
 import com.tb24.fn.EpicApi
 import com.tb24.fn.event.ProfileUpdatedEvent
+import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.account.AccountMutationResponse
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.McpLootEntry
 import com.tb24.fn.model.mcpprofile.item.FortGiftBoxItem
 import com.tb24.fn.network.AccountService.GrantType.exchangeCode
 import com.tb24.fn.util.EAuthClient
+import com.tb24.fn.util.getPreviewImagePath
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.ChannelType
@@ -34,12 +36,12 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 	companion object {
 		val LOGGER: Logger = LoggerFactory.getLogger("Session")
 	}
-
 	val api: EpicApi
 	val otherClientApis = ConcurrentHashMap<EAuthClient, EpicApi>()
 	var channelsManager: ChannelsManager
 	val homebaseManagers = hashMapOf<String, HomebaseManager>()
 	val webCampaignManagers = hashMapOf<String, WebCampaign>()
+	val avatarCache = hashMapOf<String /*accountId*/, Pair<String /*icon*/, Int /*background*/>>()
 
 	init {
 		var client = client.okHttpClient
@@ -155,7 +157,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		}
 		val dbDevices = client.savedLoginsManager.getAll(id)
 		if (BotConfig.get().allowUsersToCreateDeviceAuth && dbDevices.none { it.accountId == user.id } && dbDevices.size < source.getSavedAccountsLimit()) {
-			embed.setFooter("Tip: do %ssavelogin to keep yourself logged in in the future".format(source.prefix))
+			embed.setFooter("Tip: do %ssavelogin to stay logged in".format(source.prefix))
 		}
 		source.complete(null, embed.build())
 	}
@@ -203,6 +205,21 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 			newManager.connect()
 			newManager
 		}
+	}
+
+	fun getAvatar(accountId: String) = avatarCache.getOrPut(accountId) {
+		val response = api.avatarService.queryAvatars("fortnite", accountId).execute()
+		if (!response.isSuccessful) {
+			return@getOrPut "" to -1
+		}
+		val avatarId = response.body()!!.first().avatarId
+		if (avatarId.isEmpty()) {
+			return@getOrPut "" to -1
+		}
+		val item = FortItemStack(avatarId, 1)
+		val icon = item.getPreviewImagePath()?.toString()?.let { Utils.benBotExportAsset(it) } ?: ""
+		val background = item.palette.Color2.toFColor(true).toPackedARGB() and 0xFFFFFF
+		icon to background
 	}
 
 	private fun pickProxyHost(): String? {

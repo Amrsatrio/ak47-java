@@ -294,11 +294,18 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			buttons.add(Button.of(ButtonStyle.SECONDARY, "mutuals", "Show mutual friends", Emoji.fromUnicode("🔗")))
 		}
 		buttons.add(Button.of(ButtonStyle.DANGER, "block", "Block", Emoji.fromUnicode("⛔")))
-		val message = source.complete(null, source.createEmbed()
+		val embed = source.createEmbed()
 			.setTitle(ctx.titleOverride ?: "You're not friends with ${user.displayName}")
 			.addField("Account ID", user.id, false)
 			.populateTopMutuals(ctx, user.id)
-			.build(), ActionRow.of(buttons))
+		val (avatar, avatarBackground) = source.session.getAvatar(user.id)
+		if (avatar.isNotEmpty()) {
+			embed.setThumbnail(avatar)
+		}
+		if (avatarBackground != -1) {
+			embed.setColor(avatarBackground)
+		}
+		val message = source.complete(null, embed.build(), ActionRow.of(buttons))
 		source.loadingMsg = message
 		return when (message.awaitOneInteraction(source.author, false).componentId) {
 			"request" -> add(ctx)
@@ -433,7 +440,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 	}
 
 	private fun EmbedBuilder.populateFriendInfo(ctx: FriendContext, alreadyFriends: Boolean = false): EmbedBuilder {
-		val (_, friend, user) = ctx
+		val (source, friend, user) = ctx
 		//addField("Epic Display Name", friend.displayName, false)
 		addField("Account ID", user.id, false)
 		user.externalAuths?.run {
@@ -456,6 +463,13 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			if (alreadyFriends && System.currentTimeMillis() < canBeGiftedStart) {
 				addField("Eligible for gifting", canBeGiftedStart.relativeFromNow(), false)
 			}
+		}
+		val (avatar, avatarBackground) = source.session.getAvatar(user.id)
+		if (avatar.isNotEmpty()) {
+			setThumbnail(avatar)
+		}
+		if (avatarBackground != -1) {
+			setColor(avatarBackground)
 		}
 		return this
 	}

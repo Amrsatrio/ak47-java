@@ -8,6 +8,7 @@ import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.util.Utils
+import com.tb24.discordbot.util.palette
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.util.format
 import com.tb24.fn.util.getPreviewImagePath
@@ -25,7 +26,7 @@ class ItemCommand : BrigadierCommand("item", "Shows info of a cosmetic by their 
 				}
 				val item = FortItemStack(id, 1)
 				val defData = item.defData ?: throw SimpleCommandExceptionType(LiteralMessage("Not found")).create()
-				val embed = EmbedBuilder()
+				val embed = EmbedBuilder().setColor(item.palette.Color2.toColor())
 					.setTitle(item.displayName.ifEmpty { defData.name })
 					.setDescription(defData.Description.format())
 					.addField("Rarity", defData.Rarity.name.format(), false)

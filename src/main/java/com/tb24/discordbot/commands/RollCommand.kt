@@ -152,7 +152,7 @@ class RollCommand : BrigadierCommand("roll", "Simulate a given loot pool.", arra
 			val embed = EmbedBuilder()
 				.setAuthor(tier.TierGroup.text)
 				.setTitle("%s %s".format(Formatters.percent.format(tier.Weight / totalTierGroupWeight), tier.LootPackage.text))
-				.setColor(rarityData.forRarity(EFortRarity.values()[tier.LootTier]).Color1.toFColor(true).toPackedARGB())
+				.setColor(rarityData.forRarity(EFortRarity.values()[tier.LootTier]).Color2.toFColor(true).toPackedARGB())
 			for (lootPackage in lootPackages) {
 				val possibilities = mutableMapOf<String, Float>()
 				lootPackage.populatePossibilities(possibilities, 1f, showDisabled)

@@ -73,11 +73,9 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 	@Throws(HttpException::class)
 	fun createEmbed(user: GameProfile = api.currentLoggedIn, phoenixRating: Boolean = false): EmbedBuilder {
 		val hasCampaign = session.api.profileManager.hasProfileData(user.id, "campaign")
-		val authorName = if (hasCampaign) "[%,d] %s".format(session.getHomebase(user.id).calcEnergyByFORT(phoenixRating).toInt(), user.displayName) else user.displayName
-		//val (avatar, avatarBackground) = session.channelsManager.getUserSettings(user.id, "avatar", "avatarBackground")
-		return EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
-			.setAuthor(authorName/*, null, avatar?.let { "https://cdn2.unrealengine.com/Kairos/portraits/$it.png?preview=1" }*/)
-			//.setColor(Color.decode(EpicApi.GSON.fromJson(avatarBackground, Array<String>::class.java)[1]))
+		val authorName = if (hasCampaign) "[%,.1f] %s".format(session.getHomebase(user.id).calcEnergyByFORT(phoenixRating), user.displayName) else user.displayName
+		val (avatar, avatarBackground) = session.getAvatar(user.id)
+		return EmbedBuilder().setColor(if (avatarBackground != -1) avatarBackground else BrigadierCommand.COLOR_INFO).setAuthor(authorName, null, avatar.ifEmpty { null })
 	}
 
 	val userCache = hashMapOf<String, GameProfile>()
