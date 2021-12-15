@@ -81,8 +81,7 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 		// Prompt to open a present
 		var select: SelectionMenu.Builder? = null
 		if (unusedKeys > 0) {
-			embed.setFooter("Open a present:")
-			select = SelectionMenu.create("rewardNodeId")
+			select = SelectionMenu.create("rewardNodeId").setPlaceholder("Open a present...")
 			for (reward in rewards) {
 				if (reward.isClaimable) {
 					select.addOption(reward.longDisplayName, reward.rewardNode.NodeTag.toString())
@@ -101,12 +100,15 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 		// Open present selection
 		val message = source.complete(null, embed.build(), ActionRow.of(select.build()))
 		source.loadingMsg = message
-		val rewardNodeTagToOpen = (message.awaitOneInteraction(source.author, false) as SelectionMenuInteraction).values.first()
-		source.api.profileManager.dispatchClientCommandRequest(UnlockRewardNode().apply {
+		val rewardNodeTagToOpen = (message.awaitOneInteraction(source.author, false, 120000L) as SelectionMenuInteraction).values.first() // 2 minutes is enough for people to glance at
+		val response = source.api.profileManager.dispatchClientCommandRequest(UnlockRewardNode().apply {
 			nodeId = rewardNodeTagToOpen
 			rewardGraphId = state.rewardGraphItem.itemId
 			rewardCfg = ""
 		}, "athena").await()
+		if (response.profileRevision == response.profileChangesBaseRevision) {
+			throw SimpleCommandExceptionType(LiteralMessage("Something went wrong when opening a present.")).create()
+		}
 		athena = source.api.profileManager.getProfileData("athena")
 
 		// Grab the received items from the newly granted gift box
@@ -129,12 +131,14 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 		val dayNumber = 1 + (System.currentTimeMillis() - graphAttrs.unlock_epoch.time) / (24 * 60 * 60 * 1000)
 		val keyItem = profile.items.values.firstOrNull { it.templateId == winterfestData.WinterfestKeyTemplateId } ?: FortItemStack(winterfestData.WinterfestKeyTemplateId, 1)
 		val unusedKeys = keyItem.quantity - (graphAttrs.reward_keys?.getOrNull(0)?.unlock_keys_used ?: 0)
-		val nextKeyAt = if (keyItem.quantity < rewardGraphDef.RewardKey.first().RewardKeyMaxCount) graphAttrs.unlock_epoch.time + 24 * 60 * 60 * 1000 else -1
+		val nextKeyAt = if (keyItem.quantity < rewardGraphDef.RewardKey.first().RewardKeyMaxCount) graphAttrs.unlock_epoch.time + (24 * 60 * 60 * 1000) * dayNumber else -1
 		val rewards = hashMapOf<String, WinterfestReward>()
 		val sortedRewards get() = rewards.values.sorted()
 
 		init {
 			rewardGraphDef.Rewards.forEach {
+				// Skip A1 because I don't know what that does
+				if (it.NodeTag.toString() == "ERG.Node.A.1") return@forEach
 				rewards[it.NodeTag.toString()] = WinterfestReward(it, this)
 			}
 		}
