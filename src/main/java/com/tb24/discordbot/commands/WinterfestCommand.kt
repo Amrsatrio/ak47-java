@@ -125,7 +125,8 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 	}
 
 	class WinterfestState(val winterfestData: FortWinterfestData, val profile: McpProfile) {
-		val rewardGraphItem = profile.items.values.first { it.templateId == winterfestData.WinterfestItemTemplateId }
+		val rewardGraphItem = profile.items.values.firstOrNull { it.templateId == winterfestData.WinterfestItemTemplateId }
+			?: throw SimpleCommandExceptionType(LiteralMessage("No Winterfest right now.")).create()
 		val rewardGraphDef = rewardGraphItem.defData as AthenaRewardEventGraph
 		val graphAttrs = rewardGraphItem.getAttributes(AthenaRewardEventGraphItem::class.java)
 		val dayNumber = 1 + (System.currentTimeMillis() - graphAttrs.unlock_epoch.time) / (24 * 60 * 60 * 1000)
