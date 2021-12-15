@@ -30,7 +30,7 @@ class LaunchWindowsCommand : BrigadierCommand("launch", "Launches you into Fortn
 			}
 			if (!source.isFromType(ChannelType.PRIVATE) && !source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
 					.setTitle("✋ Hold up!")
-					.setDescription("We're about to send a code that carries your current session which will be valid for some time or until you log out. Make sure you trust the people here, or you may do the command again [in DMs](${source.getPrivateChannelLink()}).\n\nContinue? (❌ in 45s)")
+					.setDescription("We're about to send a code that carries your current session which will be valid for some time or until you log out. Make sure you trust the people here, or you may do the command again [in DMs](${source.getPrivateChannelLink()}).\n\nContinue?")
 					.build(), confirmationButtons()).awaitConfirmation(source.author).await()) {
 				source.complete("👌 Alright.")
 				return@executes 0

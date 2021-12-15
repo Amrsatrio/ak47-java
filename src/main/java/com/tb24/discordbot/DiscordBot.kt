@@ -101,7 +101,7 @@ class DiscordBot(token: String) {
 		})
 
 		// Setup database
-		val dbUrl = "rethinkdb://localhost:28015/ak47"
+		val dbUrl = BotConfig.get().rethinkUrl
 		LOGGER.info("Connecting to database {}...", dbUrl)
 		Internals.getInternalMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL)
 		dbConn = r.connection(dbUrl).connect()

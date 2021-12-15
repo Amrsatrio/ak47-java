@@ -119,11 +119,11 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Battle pass.", arrayOf
 		if (choice == SingleTier) {
 			val limit = min(balance / offer.price.basePrice, 100 - stats.book_level)
 			if (limit > 1) {
-				source.complete("Enter the number of tiers you want to buy (1 - %,d, ⏱ 45s)".format(limit))
+				source.complete("Enter the number of tiers you want to buy (1 - %,d, ⏱ 60s)".format(limit))
 				source.loadingMsg = botMessage
 				quantity = source.channel.awaitMessages({ _, user, _ -> user == source.author }, AwaitMessagesOptions().apply {
 					max = 1
-					time = 30000
+					time = 60000
 					errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
 				}).await().first().contentRaw.toIntOrNull()
 					?: throw SimpleCommandExceptionType(LiteralMessage("The provided input is not a number.")).create()

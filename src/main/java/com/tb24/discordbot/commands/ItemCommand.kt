@@ -7,13 +7,8 @@ import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.commands.arguments.ItemArgument
 import com.tb24.discordbot.util.Utils
-import com.tb24.discordbot.util.await
-import com.tb24.discordbot.util.dispatchClientCommandRequest
-import com.tb24.discordbot.util.palette
 import com.tb24.fn.model.FortItemStack
-import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.util.format
 import com.tb24.fn.util.getPreviewImagePath
 import me.fungames.jfortniteparse.fort.exports.FortMtxOfferData
@@ -31,7 +26,7 @@ class ItemCommand : BrigadierCommand("item", "Shows info of a cosmetic by their 
 				val item = FortItemStack(id, 1)
 				val defData = item.defData ?: throw SimpleCommandExceptionType(LiteralMessage("Not found")).create()
 				val embed = EmbedBuilder()
-					.setTitle(item.displayName)
+					.setTitle(item.displayName.ifEmpty { defData.name })
 					.setDescription(defData.Description.format())
 					.addField("Rarity", defData.Rarity.name.format(), false)
 					.setThumbnail(Utils.benBotExportAsset(item.getPreviewImagePath(true)?.toString()))
@@ -44,38 +39,4 @@ class ItemCommand : BrigadierCommand("item", "Shows info of a cosmetic by their 
 				Command.SINGLE_SUCCESS
 			}
 		)
-}
-
-class CosmeticCommand : BrigadierCommand("cosmetic", "Shows info and options about a BR cosmetic you own.", arrayOf("c")) {
-	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.then(argument("item", ItemArgument.item(
-			true,
-			"AthenaCharacter",
-			"AthenaBackpack",
-			"AthenaPickaxe",
-			"AthenaGlider",
-			"AthenaSkyDiveContrail",
-			"AthenaDance",
-			"AthenaItemWrap",
-			"AthenaMusicPack",
-			"AthenaLoadingScreen",
-		))
-			.executes {
-				val source = it.source
-				source.ensureSession()
-				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
-				val athena = source.api.profileManager.getProfileData("athena")
-				execute(it.source, ItemArgument.getItem(it, "item", athena))
-			}
-		)
-
-	private fun execute(source: CommandSourceStack, item: FortItemStack): Int {
-		val defData = item.defData// ?: throw SimpleCommandExceptionType(LiteralMessage("Not found")).create()
-		val embed = EmbedBuilder().setColor(item.palette.Color1.toColor())
-			.setTitle(item.displayName)
-			.setDescription(defData.Description.format())
-			.setThumbnail(Utils.benBotExportAsset(item.getPreviewImagePath(true)?.toString()))
-		source.complete(null, embed.build())
-		return Command.SINGLE_SUCCESS
-	}
 }

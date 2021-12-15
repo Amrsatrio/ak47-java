@@ -8,8 +8,10 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
+import com.tb24.discordbot.L10N
 import com.tb24.discordbot.commands.CommandSourceStack
 import com.tb24.discordbot.commands.rarityData
+import com.tb24.discordbot.managers.managerData
 import com.tb24.fn.EpicApi
 import com.tb24.fn.ProfileManager
 import com.tb24.fn.model.FortItemStack
@@ -25,12 +27,16 @@ import com.tb24.fn.model.mcpprofile.ProfileUpdate
 import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
 import com.tb24.fn.util.*
 import com.tb24.uasset.AssetManager
+import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.enums.EFortRarity
-import me.fungames.jfortniteparse.fort.exports.FortRarityData
-import me.fungames.jfortniteparse.fort.exports.FortWorkerType
+import me.fungames.jfortniteparse.fort.exports.*
 import me.fungames.jfortniteparse.fort.objects.FortColorPalette
 import me.fungames.jfortniteparse.fort.objects.FortItemQuantityPair
+import me.fungames.jfortniteparse.fort.objects.rows.CosmeticMarkupTagDataRow
+import me.fungames.jfortniteparse.fort.objects.rows.CosmeticSetDataRow
 import me.fungames.jfortniteparse.fort.objects.rows.FortQuestRewardTableRow
+import me.fungames.jfortniteparse.ue4.assets.exports.UDataTable
+import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.*
@@ -98,6 +104,86 @@ inline fun Date.format(): String = TimeFormat.DATE_TIME_SHORT.format(this.time)
 
 val FortItemStack.palette get() = defData?.Series?.value?.Colors ?: rarityData.forRarity(rarity)
 
+val FortItemStack.description: String get() {
+	var description = transformedDefData?.Description.format() ?: ""
+	if (defData is FortWorkerType) {
+		description = TextFormatter.format(description, mapOf("Gender" to attributes.getString("gender", "1").toInt()))
+		val personality = getSurvivorPersonalityText(attributes.getString("personality", ""))
+		description = description.replace("[Worker.Personality]", (personality ?: L10N.InvalidPersonality).format()!!)
+		description = description.replace("[Worker.SetBonus.Buff]", L10N.SetBonusBuff_Default.format()!!)
+	}
+	val defData = transformedDefData
+	if (defData !is AthenaCosmeticItemDefinition) {
+		return description
+	}
+	val sb = StringBuilder(description)
+	if (defData.GameplayTags != null) {
+		val cosmeticSets = loadObject<UDataTable>("/Game/Athena/Items/Cosmetics/Metadata/CosmeticSets")!!
+		val cosmeticUserFacingTags = loadObject<UDataTable>("/Game/Athena/Items/Cosmetics/Metadata/CosmeticUserFacingTags")!!
+		var seasonIntroduced = -1
+		val flags = mutableListOf<CosmeticMarkupTagDataRow>()
+		for (tag in defData.GameplayTags) {
+			val s = tag.toString()
+			if (s.startsWith("Cosmetics.Set.")) {
+				val cosmeticSet = cosmeticSets.findRowMapped<CosmeticSetDataRow>(FName(s))
+				sb.append(L10N.CosmeticItemDescription_SetMembership.format()!!.replace("<SetName>", "**").replace("</>", "**").replace("{0}", if (cosmeticSet != null) cosmeticSet.DisplayName.format()!! else s.substring("Cosmetics.Set.".length)))
+			} else if (s.startsWith("Cosmetics.Filter.Season.")) {
+				seasonIntroduced = s.substring("Cosmetics.Filter.Season.".length).toInt()
+			} else if (s.startsWith("Cosmetics.UserFacingFlags.")) {
+				val cosmeticSet = cosmeticUserFacingTags.findRowMapped<CosmeticMarkupTagDataRow>(FName(s))
+				if (cosmeticSet != null) {
+					flags.add(cosmeticSet)
+				}
+			}
+		}
+		if (seasonIntroduced != -1) {
+			sb.append(L10N.CosmeticItemDescription_Season.format()!!.replace("<SeasonText>", "**").replace("</>", "**").replace("{0}", getFriendlySeasonText(seasonIntroduced)))
+		}
+		if (flags.isNotEmpty()) {
+			sb.append("\n")
+			var b = false
+			for (flag in flags) {
+				if (b) {
+					sb.append(", ")
+				}
+				sb.append('[').append('_' + flag.DisplayName.format()!! + '_').append(']')
+				b = true
+			}
+		}
+	}
+	return sb.toString()
+}
+
+val FortItemStack.shortDescription get() = getShortDescription(true)
+
+fun FortItemStack.getShortDescription(bPickFromDefData: Boolean = true): FText {
+	val defData = if (primaryAssetName.isEmpty()) null else defData
+	if (bPickFromDefData && defData != null && defData.ShortDescription != null) {
+		return defData.ShortDescription
+	}
+	return when (primaryAssetType) {
+		"Ammo" -> L10N.Ammo
+		"AthenaBackpack" -> FText("", "0042E3154A36FA07C60F3AB87A77B8E1", "Back Bling")
+		"AthenaCharacter" -> FText("", "03828EAA442292F10A3EAB87F54DEC87", "Outfit")
+		"AthenaDance" -> L10N.Emote
+		"AthenaGlider" -> FText("", "1057574E47BE3E485D8D24967230D4D0", "Glider")
+		"AthenaItemWrap" -> FText("Fort.Cosmetics", "ItemWrapShortDescription", "Wrap")
+		"AthenaLoadingScreen" -> L10N.LoadingScreen
+		"AthenaMusicPack" -> FText("", "073E6AAC4A91D413AAB793A6DD82FA06", "Music")
+		"AthenaPickaxe" -> L10N.WeaponHarvest
+		"AccountResource" -> L10N.AccountResource
+		"CardPack" -> L10N.CardPack
+		"Defender" -> L10N.Defender
+		"Hero" -> L10N.Hero
+		"Ingredient" -> L10N.Ingredient
+		"Schematic" -> L10N.Schematic
+		"Token" -> L10N.Token
+		"Weapon" -> if (defData is FortWeaponRangedItemDefinition) L10N.WeaponRanged else if (defData is FortWeaponMeleeItemDefinition) L10N.WeaponMelee else L10N.Weapon
+		"Worker" -> L10N.Worker
+		else -> FText(primaryAssetType)
+	}
+}
+
 fun FortItemStack.render(displayQty: Int = quantity): String {
 	var dn = displayName
 	if (dn.isEmpty() && defData is FortWorkerType) {
@@ -113,6 +199,30 @@ fun FortItemStack.render(displayQty: Int = quantity): String {
 fun FortItemStack.renderWithIcon(displayQty: Int = quantity, bypassWhitelist: Boolean = false): String {
 	transformedDefData // resolves this item if it is FortConditionalResourceItemDefinition
 	return (getItemIconEmoji(this, bypassWhitelist)?.run { "$asMention " } ?: "") + render(displayQty)
+}
+
+fun getSurvivorPersonalityText(personalityTag: String): FText? {
+	val homebaseData = managerData
+	if (homebaseData != null) {
+		for (personality in homebaseData.WorkerPersonalities) {
+			if (personality.PersonalityTypeTag.toString() == personalityTag) {
+				return personality.PersonalityName
+			}
+		}
+	}
+	return null
+}
+
+fun getSurvivorSetBonusText(setBonusTag: String): FText? {
+	val homebaseData = managerData
+	if (homebaseData != null) {
+		for (setBonus in homebaseData.WorkerSetBonuses) {
+			if (setBonus.SetBonusTypeTag.toString() == setBonusTag) {
+				return setBonus.DisplayName
+			}
+		}
+	}
+	return null
 }
 
 fun CatalogItemPrice.icon(): String = when (currencyType) {
@@ -197,18 +307,18 @@ fun confirmationButtons() = ActionRow.of(
 )
 
 @Throws(CommandSyntaxException::class)
-fun Message.awaitConfirmation(author: User, inTime: Long = 45000L): CompletableFuture<Boolean> = CompletableFuture.supplyAsync {
+fun Message.awaitConfirmation(author: User, inTime: Long = 60000L): CompletableFuture<Boolean> = CompletableFuture.supplyAsync {
 	awaitOneInteraction(author, inTime = inTime).componentId == "positive"
 }
 
-fun Message.awaitOneReaction(source: CommandSourceStack, inTime: Long = 45000L) =
+fun Message.awaitOneReaction(source: CommandSourceStack, inTime: Long = 60000L) =
 	awaitReactions({ _, user, _ -> user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
 		max = 1
 		time = inTime
 		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
 	}).await().first().reactionEmote.name
 
-fun Message.awaitOneInteraction(author: User, inFinalizeComponentsOnEnd: Boolean = true, inTime: Long = 45000L): ComponentInteraction {
+fun Message.awaitOneInteraction(author: User, inFinalizeComponentsOnEnd: Boolean = true, inTime: Long = 60000L): ComponentInteraction {
 	val interaction = awaitMessageComponentInteractions({ _, user, _ -> user?.idLong == author.idLong }, AwaitMessageComponentInteractionsOptions().apply {
 		max = 1
 		time = inTime

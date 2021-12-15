@@ -42,11 +42,11 @@ private fun summary(source: CommandSourceStack, profileId: String): Int {
 	source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), profileId).await()
 	val profile = source.api.profileManager.getProfileData(profileId)
 	val stats = profile.stats as ILoadoutData
-	val mainLoadoutItem = stats.loadouts.getOrNull(stats.activeLoadoutIndex)?.let { profile.items[it] }
+	val mainLoadoutItem = FortCosmeticLockerItem.getFromProfile(profile, null)
 		?: throw SimpleCommandExceptionType(LiteralMessage("Main preset not found. Must be a bug.")).create()
 	val embed = source.createEmbed()
 		.setTitle(if (profileId == "athena") "Current BR locker" else "Current STW locker")
-		.populateLoadoutContents(mainLoadoutItem.getAttributes(FortCosmeticLockerItem::class.java), profile)
+		.populateLoadoutContents(mainLoadoutItem, profile)
 	val loadouts = sortedMapOf<Int, String>()
 	for (i in 1 until stats.loadouts.size) {
 		val loadoutId = stats.loadouts[i] ?: continue

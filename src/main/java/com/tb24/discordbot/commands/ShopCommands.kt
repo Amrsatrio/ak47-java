@@ -221,7 +221,7 @@ class OfferDisplayData {
 			if (loadImage) image = softPath?.load<UTexture2D>()?.toBufferedImage()
 			imagePath = softPath.toString()
 			if (title == null) title = item.displayName
-			if (subtitle == null) subtitle = defData?.ShortDescription?.format()
+			if (subtitle == null) subtitle = item.shortDescription.format()
 			palette = rarityData.forRarity(item.rarity)
 			defData?.Series?.value?.also {
 				palette = it.Colors

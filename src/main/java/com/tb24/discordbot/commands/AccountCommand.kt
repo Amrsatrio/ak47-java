@@ -44,7 +44,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		source.ensureSession()
 		if (!source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
 				.setTitle("✋ Hold up!")
-				.setDescription("You're about to view the account details of ${source.api.currentLoggedIn.displayName}. Some of the data that we will send here might be sensitive, such as real name or Facebook name. We don't recommend to proceed if this account isn't yours.\n\nContinue? (❌ in 45s)")
+				.setDescription("You're about to view the account details of ${source.api.currentLoggedIn.displayName}. Some of the data that we will send here might be sensitive, such as real name or Facebook name. We don't recommend to proceed if this account isn't yours.\n\nContinue?")
 				.build(), confirmationButtons()).awaitConfirmation(source.author).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS
@@ -94,7 +94,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		val oldName = source.api.currentLoggedIn.epicDisplayName.orDash()
 		if (!source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
 				.setTitle("Change display name?")
-				.setDescription("You're about to change the display name of account `${source.api.currentLoggedIn.id}`:\n\n`${oldName.orDash()}` \u2192 `$newName`\n\nThis action will be recorded in the Account History as `HISTORY_ACCOUNT_UPDATE`. You will not be able to change the display name again for the next 14 days if you proceed. Continue? (❌ in 45s)")
+				.setDescription("You're about to change the display name of account `${source.api.currentLoggedIn.id}`:\n\n`${oldName.orDash()}` \u2192 `$newName`\n\nThis action will be recorded in the Account History as `HISTORY_ACCOUNT_UPDATE`. You will not be able to change the display name again for the next 14 days if you proceed. Continue?")
 				.build(), confirmationButtons()).awaitConfirmation(source.author).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS
@@ -176,7 +176,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		}
 		if (!source.complete(null, source.createEmbed()
 				.setTitle("Unlink $externalAuthType?")
-				.setDescription("You're about to unlink a linked account with the following details:\n\n**Name**: ${externalAuth.externalDisplayName.orDash()}\n**ID(s)**:\n${externalAuth.authIds.joinToString("\n") { "\u2022 ${it.type}: ${it.id}" }}\n**Added**: ${externalAuth.dateAdded.renderWithRelative()}\n\nThis action will be recorded in the Account History as `HISTORY_ACCOUNT_EXTERNAL_AUTH_REMOVE`.\n\n${consoleWarning}Continue? (❌ in 45s)")
+				.setDescription("You're about to unlink a linked account with the following details:\n\n**Name**: ${externalAuth.externalDisplayName.orDash()}\n**ID(s)**:\n${externalAuth.authIds.joinToString("\n") { "\u2022 ${it.type}: ${it.id}" }}\n**Added**: ${externalAuth.dateAdded.renderWithRelative()}\n\nThis action will be recorded in the Account History as `HISTORY_ACCOUNT_EXTERNAL_AUTH_REMOVE`.\n\n${consoleWarning}Continue?")
 				.build(), confirmationButtons()).awaitConfirmation(source.author).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS

@@ -170,7 +170,7 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		if (entries.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("No")).create()
 		}
-		val users = source.queryUsers(queryAccountIds)
+		source.queryUsers_map(queryAccountIds)
 		source.message.replyPaginated(entries, 12, source.loadingMsg) { content, page, pageCount ->
 			val entriesStart = page * 12 + 1
 			val entriesEnd = entriesStart + content.size
@@ -178,7 +178,7 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 				.setTitle(names[filterType])
 				.setDescription("Showing %,d to %,d of %,d entries".format(entriesStart, entriesEnd - 1, entries.size))
 				.setFooter("Page %,d of %,d".format(page + 1, pageCount))
-			content.forEach { it.addTo(embed, users) }
+			content.forEach { it.addTo(embed, source) }
 			MessageBuilder(embed).build()
 		}
 		return Command.SINGLE_SUCCESS
@@ -234,7 +234,7 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 		"AthenaCharacter:cid_138_athena_commando_m_psburnout",
 		"AthenaCharacter:cid_174_athena_commando_f_carbidewhite",
 		"AthenaCharacter:cid_175_athena_commando_m_celestial",
-		"AthenaCharacter:cid_183_athena_commando_m_modernmilitaryred",,
+		"AthenaCharacter:cid_183_athena_commando_m_modernmilitaryred",
 		"AthenaCharacter:cid_296_athena_commando_m_math",
 		"AthenaCharacter:cid_313_athena_commando_m_kpopfashion",
 		"AthenaCharacter:cid_342_athena_commando_m_streetracermetallic",
@@ -284,7 +284,6 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 		"AthenaPickaxe:pickaxe_id_237_warpaint",
 		"AthenaPickaxe:pickaxe_id_256_techopsblue",
 		"AthenaPickaxe:pickaxe_id_294_candycane",
-		"AthenaPickaxe:cid_850_athena_commando_f_skullbritecube",
 		"AthenaPickaxe:pickaxe_id_464_longshortsmale",
 		"AthenaPickaxe:pickaxe_id_stw001_tier_1",
 		"AthenaPickaxe:pickaxe_id_stw006_tier_7",
@@ -398,29 +397,40 @@ class LockerEntry(val cosmetic: FortItemStack, queryAccountIds: MutableCollectio
 		}
 	}
 
-	fun addTo(embed: EmbedBuilder, users: List<GameProfile>) {
+	fun addTo(embed: EmbedBuilder, source: CommandSourceStack) {
 		val title = "%s %s".format(getEmoteByName(cosmetic.rarity.name.toLowerCase() + '2')?.asMention, if (displayName.isNullOrEmpty()) cosmetic.primaryAssetName.toLowerCase() else displayName)
 		val descriptionParts = mutableListOf<String>()
-		val itemVariants = defData?.ItemVariants
-		if (itemVariants != null) {
-			for (lazyVariant in itemVariants) {
-				val cosmeticVariant = lazyVariant.value
-				val localBackendChannelName = cosmeticVariant.backendChannelName
-				val backendVariant = backendVariants.firstOrNull { it.channel == localBackendChannelName }
-				val activeVariantDisplayName = when (cosmeticVariant) {
-					is FortCosmeticVariantBackedByArray -> cosmeticVariant.getActive(backendVariant)?.VariantName?.format() ?: "**UNKNOWN SUBTYPE PLEASE REPORT**"
-					is FortCosmeticFloatSliderVariant -> "%d/%d".format(cosmeticVariant.getActive(backendVariant).toInt(), cosmeticVariant.MaxParamValue.toInt())
-					is FortCosmeticNumericalVariant -> Formatters.num.format(cosmeticVariant.getActive(backendVariant))
-					is FortCosmeticProfileBannerVariant -> continue // Always the currently equipped banner
-					is FortCosmeticRichColorVariant -> "#%08X".format(cosmeticVariant.getActive(backendVariant).toFColor(true).toPackedARGB())
-					else -> "**UNKNOWN TYPE PLEASE REPORT**"
-				}
-				descriptionParts.add("%s (%s)".format(cosmeticVariant.VariantChannelName.format(), activeVariantDisplayName))
-			}
+		defData?.ItemVariants?.forEach { lazyVariant ->
+			val variantContainer = VariantContainer(lazyVariant.value, backendVariants)
+			val activeVariantDisplayName = variantContainer.activeVariantDisplayName ?: return@forEach
+			descriptionParts.add("%s (%s)".format(variantContainer.channelName, activeVariantDisplayName))
 		}
-		if (giftFromAccountId != null) {
-			descriptionParts.add("🎁 ${users.firstOrNull { it.id == giftFromAccountId }?.displayName ?: "Unknown"}")
+		giftFromAccountId?.let {
+			descriptionParts.add("🎁 ${source.userCache[it]?.displayName ?: "Unknown"}")
 		}
 		embed.addField(title, descriptionParts.joinToString("\n"), true)
 	}
+}
+
+class VariantContainer(val cosmeticVariant: FortCosmeticVariant, backendVariants: Array<McpVariantReader> = emptyArray()) {
+	val backendVariant: McpVariantReader?
+
+	init {
+		val localBackendChannelName = cosmeticVariant.backendChannelName
+		backendVariant = backendVariants.firstOrNull { it.channel == localBackendChannelName }
+	}
+
+	val channelName get() = cosmeticVariant.VariantChannelName.format()
+
+	val activeVariantDisplayName get() = when (cosmeticVariant) {
+		is FortCosmeticVariantBackedByArray -> cosmeticVariant.getActive(backendVariant)?.VariantName?.format() ?: "**UNKNOWN SUBTYPE PLEASE REPORT**"
+		is FortCosmeticFloatSliderVariant -> "%d/%d".format(cosmeticVariant.getActive(backendVariant).toInt(), cosmeticVariant.MaxParamValue.toInt())
+		is FortCosmeticNumericalVariant -> Formatters.num.format(cosmeticVariant.getActive(backendVariant))
+		is FortCosmeticProfileBannerVariant -> null // Always the currently equipped banner, cannot be displayed
+		is FortCosmeticRichColorVariant -> "#%08X".format(cosmeticVariant.getActive(backendVariant).toFColor(true).toPackedARGB())
+		else -> "**UNKNOWN TYPE PLEASE REPORT**"
+	}
+
+	operator fun component1() = cosmeticVariant
+	operator fun component2() = backendVariant
 }
