@@ -135,11 +135,13 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 			return
 		}
 		//val avatarKeys = channelsManager.getUserSettings(user.id, ChannelsManager.KEY_AVATAR, ChannelsManager.KEY_AVATAR_BACKGROUND)
-		val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
+		val (avatar, avatarBackground) = getAvatar(user.id)
+		val embed = EmbedBuilder().setColor(if (avatarBackground != -1) avatarBackground else BrigadierCommand.COLOR_INFO)
 			.setTitle("👋 Welcome, %s".format(user.displayName ?: "Unknown"))
 			.addField("Account ID", user.id, false)
-			//.setThumbnail("https://cdn2.unrealengine.com/Kairos/portraits/${avatarKeys[0]}.png?preview=1")
-			//.setColor(Color.decode(EpicApi.GSON.fromJson(avatarKeys[1], Array<String>::class.java)[1]))
+		if (avatar.isNotEmpty()) {
+			embed.setThumbnail(avatar)
+		}
 		val inviteLink = BotConfig.get().homeGuildInviteLink
 		if (inviteLink != null) {
 			val homeGuild = client.discord.getGuildById(BotConfig.get().homeGuildId)
