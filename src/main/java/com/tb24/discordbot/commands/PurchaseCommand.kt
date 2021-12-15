@@ -202,9 +202,7 @@ fun EmbedBuilder.renewAffiliateAndPopulateMtxFields(source: CommandSourceStack, 
 				source.api.profileManager.dispatchClientCommandRequest(SetAffiliateName().apply { affiliateName = stats.mtx_affiliate }, "common_core").await()
 				additional = "ℹ " + "Renewed"
 			} catch (e: HttpException) {
-				if (e.epicError.errorCode == "errors.com.epicgames.fortnite.invalid_affiliate") {
-					additional = "⚠ " + "Affiliate is not active."
-				} else throw e
+				additional = "⚠ " + "Renew failed: " + e.epicError.displayText
 			}
 		}
 		addField(L10N.format("catalog.mtx_platform"), stats.current_mtx_platform.name, true)
