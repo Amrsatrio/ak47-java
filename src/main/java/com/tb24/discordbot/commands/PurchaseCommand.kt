@@ -178,7 +178,7 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 		commonCore = profileManager.getProfileData("common_core")
 		val successEmbed = source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS)
 			.setTitle("✅ " + L10N.format("purchase.success.title"))
-			.addFieldSeparate(L10N.format("purchase.success.received"), results.toList(), 0) { it.asItemStack().render() }
+			.addFieldSeparate(L10N.format("purchase.success.received"), results.toList(), 0) { it.asItemStack().render(showType = true) }
 			.addField(L10N.format("purchase.success.final_balance"), price.getAccountBalanceText(profileManager), false)
 			.setTimestamp(Instant.now())
 		if (offer.refundable && !isUndoUnderCooldown(commonCore, offer.offerId)) {

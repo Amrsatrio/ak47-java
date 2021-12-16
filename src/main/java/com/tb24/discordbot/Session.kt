@@ -134,7 +134,6 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		if (user == null) {
 			return
 		}
-		//val avatarKeys = channelsManager.getUserSettings(user.id, ChannelsManager.KEY_AVATAR, ChannelsManager.KEY_AVATAR_BACKGROUND)
 		val (avatar, avatarBackground) = getAvatar(user.id)
 		val embed = EmbedBuilder().setColor(if (avatarBackground != -1) avatarBackground else BrigadierCommand.COLOR_INFO)
 			.setTitle("👋 Welcome, %s".format(user.displayName ?: "Unknown"))

@@ -17,12 +17,11 @@ import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.athena.UnlockRewardNode
 import com.tb24.fn.model.mcpprofile.item.AthenaRewardEventGraphItem
-import com.tb24.fn.util.asItemStack
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.exports.AthenaRewardEventGraph
-import me.fungames.jfortniteparse.fort.exports.FortItemDefinition
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.interactions.components.ActionRow
+import net.dv8tion.jda.api.interactions.components.selections.SelectOption
 import net.dv8tion.jda.api.interactions.components.selections.SelectionMenu
 import net.dv8tion.jda.api.interactions.components.selections.SelectionMenuInteraction
 
@@ -62,12 +61,14 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 
 		// Key count
 		val unusedKeys = state.unusedKeys
-		descriptionParts.add("**Presents to open:** %,d".format(unusedKeys))
+		if (unusedKeys > 0) {
+			descriptionParts.add("Open **%,d presents!**".format(unusedKeys))
+		}
 
 		// Next key
 		val nextKeyAt = state.nextKeyAt
 		if (nextKeyAt != -1L) {
-			descriptionParts.add("**Next present:** %s".format(nextKeyAt.relativeFromNow()))
+			descriptionParts.add("Next present %s".format(nextKeyAt.relativeFromNow()))
 		}
 
 		val embed = source.createEmbed()
@@ -76,7 +77,7 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 
 		// Presents
 		val rewards = state.sortedRewards
-		rewards.forEach { it.addTo(embed, source.guild.idLong != 612383214962606081L) }
+		rewards.forEach { it.addTo(embed) }
 
 		// Prompt to open a present
 		var select: SelectionMenu.Builder? = null
@@ -84,7 +85,7 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 			select = SelectionMenu.create("rewardNodeId").setPlaceholder("Open a present...")
 			for (reward in rewards) {
 				if (reward.isClaimable) {
-					select.addOption(reward.longDisplayName, reward.rewardNode.NodeTag.toString())
+					select.addOption(reward.rewardNode.Rewards.joinToString { it.safeRender() }.take(SelectOption.LABEL_MAX_LENGTH).ifEmpty { reward.longDisplayName }, reward.rewardNode.NodeTag.toString())
 				}
 			}
 			if (select.options.isEmpty()) {
@@ -107,6 +108,8 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 			rewardCfg = ""
 		}, "athena").await()
 		if (response.profileRevision == response.profileChangesBaseRevision) {
+			source.loadingMsg = null
+			message.finalizeComponents(emptySet())
 			throw SimpleCommandExceptionType(LiteralMessage("Something went wrong when opening a present.")).create()
 		}
 		athena = source.api.profileManager.getProfileData("athena")
@@ -118,7 +121,7 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 		val claimedEmbed = source.createEmbed().setColor(COLOR_SUCCESS)
 			.setTitle("✅ Claimed %s".format(state.rewards[rewardNodeTagToOpen]?.longDisplayName ?: rewardNodeTagToOpen))
 		if (lootList != null) {
-			claimedEmbed.addFieldSeparate("You received", lootList.toList(), 0) { it.asItemStack().render() }
+			claimedEmbed.addFieldSeparate("You received", lootList.toList(), 0) { it.asItemStack().render(showType = true) }
 		}
 		source.channel.sendMessageEmbeds(claimedEmbed.build()).queue()
 		return execute(source, winterfestData)
@@ -130,7 +133,7 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 		val rewardGraphDef = rewardGraphItem.defData as AthenaRewardEventGraph
 		val graphAttrs = rewardGraphItem.getAttributes(AthenaRewardEventGraphItem::class.java)
 		val dayNumber = 1 + (System.currentTimeMillis() - graphAttrs.unlock_epoch.time) / (24 * 60 * 60 * 1000)
-		val keyItem = profile.items.values.firstOrNull { it.templateId == winterfestData.WinterfestKeyTemplateId } ?: FortItemStack(winterfestData.WinterfestKeyTemplateId, 1)
+		val keyItem = profile.items.values.firstOrNull { it.templateId == winterfestData.WinterfestKeyTemplateId } ?: FortItemStack(winterfestData.WinterfestKeyTemplateId, 0)
 		val unusedKeys = keyItem.quantity - (graphAttrs.reward_keys?.getOrNull(0)?.unlock_keys_used ?: 0)
 		val nextKeyAt = if (keyItem.quantity < rewardGraphDef.RewardKey.first().RewardKeyMaxCount) graphAttrs.unlock_epoch.time + (24 * 60 * 60 * 1000) * dayNumber else -1
 		val rewards = hashMapOf<String, WinterfestReward>()
@@ -189,19 +192,42 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 
 		val displayName get() = "Present $column$row"
 
-		val longDisplayName get() = displayName // TODO @MattTheo please finish your variant tag to display name mappings
-
-		fun addTo(embed: EmbedBuilder, redactRewards: Boolean) {
-			val rewardItem = rewardNode.Rewards.joinToString("\n") {
-				val itemDef = it.ItemDefinition?.load<FortItemDefinition>()
-				if (itemDef == null) {
-					if (redactRewards) "???" else "||%s||".format(it.ItemDefinition.toString().substringAfterLast('.'))
-				} else {
-					val item = it.asItemStack()
-					item.displayName.ifEmpty { item.primaryAssetName }
-				}
+		val description: String get() {
+			val ribbonColor = when (rewardNode.getVariant("Cosmetics.Variant.Channel.Winterfest.RibbonColor", "Mat1")) {
+				"Mat1" -> "Red"
+				"Mat2" -> "Blue"
+				"Mat3" -> "Green"
+				"Mat5" -> "White"
+				"Mat6" -> "Yellow"
+				"Mat7" -> "Dark Blue"
+				else -> "???"
 			}
-			val sb = StringBuilder(rewardItem)
+			val wrappingColor = when (rewardNode.getVariant("Cosmetics.Variant.Channel.Winterfest.WrappingColor", "Mat1")) {
+				"Mat1" -> "Red"
+				"Mat2" -> "Green"
+				"Mat3" -> "Blue"
+				"Mat4" -> "Yellow"
+				"Mat5" -> "Purple"
+				"Mat6" -> "Light Blue"
+				else -> "???"
+			}
+			val wrappingStyle = when (rewardNode.getVariant("Cosmetics.Variant.Channel.Winterfest.WrappingStyle", "Mat1")) {
+				"Mat1" -> "Trees"
+				"Mat2" -> "Snowflakes"
+				"Mat3" -> "Candy"
+				else -> "???"
+			}
+			return "$ribbonColor ribbon, $wrappingColor $wrappingStyle wrap"
+		}
+
+		private fun AthenaRewardEventGraph.RewardNode.getVariant(variantChannelTag: String, default: String) =
+			HardDefinedVisuals.firstOrNull { it.VariantChannelTag.toString() == variantChannelTag }?.ActiveVariantTag?.toString()?.substringAfterLast('.') ?: default
+
+		val longDisplayName get() = "%s (%s)".format(displayName, description)
+
+		fun addTo(embed: EmbedBuilder) {
+			val sb = StringBuilder('_' + description + '_')
+			rewardNode.Rewards.joinTo(sb, "\n", "\n") { it.safeRender() }
 			val unclaimedPrerequisites = mutableListOf<WinterfestReward>()
 			getUnclaimedPrerequisites(unclaimedPrerequisites)
 			if (unclaimedPrerequisites.isNotEmpty()) {

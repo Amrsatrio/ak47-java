@@ -29,15 +29,20 @@ class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your 
 			val (current, max) = getQuestCompletion(lastCreativePlaytimeTracker, false)
 			val delta = 15
 			val xpCount = loadObject<UCurveTable>("/Game/Athena/Balance/DataTables/AthenaAccoladeXP.AthenaAccoladeXP")!!.findCurve(FName("CreativeMode_15mMedal"))!!.eval(1f).toInt()
+			var playtimeXp = "`%s`\n%,d / %,d minutes played\n%,d / %,d %s".format(
+				Utils.progress(current, max, 32),
+				current, max,
+				current / delta * xpCount, max / delta * xpCount, textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-XPSmall-L.T-FNBR-XPSmall-L")?.asMention)
+			val hasMoreXp = current < max
+			if (hasMoreXp) {
+				playtimeXp += "\nLast XP grant at 🕒 " + formatDurationSeconds((235L - (max - current)) * 60L)
+			}
 			val embed = source.createEmbed()
 				.setTitle("Creative XP")
-				.addField("Playtime", "`%s`\n%,d / %,d minutes played\n%,d / %,d %s".format(
-					Utils.progress(current, max, 32),
-					current, max,
-					current / delta * xpCount, max / delta * xpCount, textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-XPSmall-L.T-FNBR-XPSmall-L")?.asMention), true)
+				.addField("Playtime", playtimeXp, true)
 			val dynamicXp = stats.creative_dynamic_xp
 			if (dynamicXp.timespan != 0.0f) {
-				embed.addField("Gameplay", "Bank XP: %,d\nBucket XP: %,d\nBank XP multiplier: \u00d7%f\nEarned today: %,d\nDaily excess multiplier: \u00d7%f".format(dynamicXp.bankXp, dynamicXp.bucketXp, dynamicXp.bankXpMult, dynamicXp.currentDayXp, dynamicXp.dailyExcessXpMult), true)
+				embed.addField("Gameplay (raw data)", "Bank XP: %,d\nBucket XP: %,d\nBank XP multiplier: \u00d7%f\nEarned today: %,d\nDaily excess multiplier: \u00d7%f".format(dynamicXp.bankXp, dynamicXp.bucketXp, dynamicXp.bankXpMult, dynamicXp.currentDayXp, dynamicXp.dailyExcessXpMult), true)
 			}
 			val loginTime = stats.quest_manager?.dailyLoginInterval
 			if (loginTime != null) {
@@ -47,10 +52,6 @@ class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your 
 					next = next.plusDays(1)
 				}
 				embed.setFooter("Resets").setTimestamp(next)
-			}
-			val hasMoreXp = current < max
-			if (hasMoreXp) {
-				embed.appendDescription("\nLast XP grant at 🕒 " + formatDurationSeconds((235L - (max - current)) * 60L))
 			}
 			source.complete(if (it.commandName == "doihavecreativexp") getEmoteByName(if (hasMoreXp) "yus" else "nu")?.asMention else null, embed.build())
 			Command.SINGLE_SUCCESS

@@ -30,6 +30,7 @@ import com.tb24.uasset.AssetManager
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.enums.EFortRarity
 import me.fungames.jfortniteparse.fort.exports.*
+import me.fungames.jfortniteparse.fort.objects.AthenaRewardItemReference
 import me.fungames.jfortniteparse.fort.objects.FortColorPalette
 import me.fungames.jfortniteparse.fort.objects.FortItemQuantityPair
 import me.fungames.jfortniteparse.fort.objects.rows.CosmeticMarkupTagDataRow
@@ -158,47 +159,61 @@ val FortItemStack.shortDescription get() = getShortDescription(true)
 
 fun FortItemStack.getShortDescription(bPickFromDefData: Boolean = true): FText {
 	val defData = if (primaryAssetName.isEmpty()) null else defData
-	if (bPickFromDefData && defData != null && defData.ShortDescription != null) {
-		return defData.ShortDescription
+	if (bPickFromDefData) {
+		defData?.ShortDescription?.let { return it }
 	}
-	return when (primaryAssetType) {
-		"Ammo" -> L10N.Ammo
-		"AthenaBackpack" -> FText("", "0042E3154A36FA07C60F3AB87A77B8E1", "Back Bling")
-		"AthenaCharacter" -> FText("", "03828EAA442292F10A3EAB87F54DEC87", "Outfit")
-		"AthenaDance" -> L10N.Emote
-		"AthenaGlider" -> FText("", "1057574E47BE3E485D8D24967230D4D0", "Glider")
-		"AthenaItemWrap" -> FText("Fort.Cosmetics", "ItemWrapShortDescription", "Wrap")
-		"AthenaLoadingScreen" -> L10N.LoadingScreen
-		"AthenaMusicPack" -> FText("", "073E6AAC4A91D413AAB793A6DD82FA06", "Music")
-		"AthenaPickaxe" -> L10N.WeaponHarvest
-		"AccountResource" -> L10N.AccountResource
-		"CardPack" -> L10N.CardPack
-		"Defender" -> L10N.Defender
-		"Hero" -> L10N.Hero
-		"Ingredient" -> L10N.Ingredient
-		"Schematic" -> L10N.Schematic
-		"Token" -> L10N.Token
-		"Weapon" -> if (defData is FortWeaponRangedItemDefinition) L10N.WeaponRanged else if (defData is FortWeaponMeleeItemDefinition) L10N.WeaponMelee else L10N.Weapon
-		"Worker" -> L10N.Worker
+	return when (defData) {
+		null -> FText(primaryAssetType)
+
+		// AthenaCosmeticItemDefinition
+		is AthenaBackpackItemDefinition -> FText("", "0042E3154A36FA07C60F3AB87A77B8E1", "Back Bling")
+		is AthenaCharacterItemDefinition -> FText("", "03828EAA442292F10A3EAB87F54DEC87", "Outfit")
+		is AthenaDanceItemDefinition -> L10N.Emote
+		is AthenaGliderItemDefinition -> FText("", "1057574E47BE3E485D8D24967230D4D0", "Glider")
+		is AthenaItemWrapDefinition -> FText("Fort.Cosmetics", "ItemWrapShortDescription", "Wrap")
+		is AthenaLoadingScreenItemDefinition -> L10N.LoadingScreen
+		is AthenaMusicPackItemDefinition -> FText("", "073E6AAC4A91D413AAB793A6DD82FA06", "Music")
+		is AthenaPickaxeItemDefinition -> L10N.WeaponHarvest
+
+		// FortWorldItemDefinition
+		is FortAmmoItemDefinition -> L10N.Ammo
+		is FortIngredientItemDefinition -> L10N.Ingredient
+
+			// FortWeaponItemDefinition
+			is FortWeaponRangedItemDefinition -> L10N.WeaponRanged
+			is FortWeaponMeleeItemDefinition -> L10N.WeaponMelee
+			is FortWeaponItemDefinition -> L10N.Weapon
+
+		// FortAccountItemDefinition
+		is FortCardPackItemDefinition -> L10N.CardPack
+		is FortPersistentResourceItemDefinition -> L10N.AccountResource
+		is FortSchematicItemDefinition -> L10N.Schematic
+		is FortTokenType -> L10N.Token
+
+			// FortCharacterType
+			is FortDefenderItemDefinition -> L10N.Defender
+			is FortHeroType -> L10N.Hero
+			is FortWorkerType -> L10N.Worker
+
 		else -> FText(primaryAssetType)
 	}
 }
 
-fun FortItemStack.render(displayQty: Int = quantity): String {
+fun FortItemStack.render(displayQty: Int = quantity, showType: Boolean = false): String {
 	var dn = displayName
 	if (dn.isEmpty() && defData is FortWorkerType) {
 		val asWorker = defData as FortWorkerType
 		dn = defData.Rarity.rarityName.format() + ' ' + if (asWorker.bIsManager) "Lead Survivor" else "Survivor"
 	}
 	if (dn.isEmpty()) {
-		dn = templateId
+		dn = primaryAssetName
 	}
-	return (if (displayQty > 1) Formatters.num.format(displayQty) + " \u00d7 " else "") + dn
+	return (if (displayQty > 1) Formatters.num.format(displayQty) + " \u00d7 " else "") + dn + (if (showType) " ($shortDescription)" else "")
 }
 
-fun FortItemStack.renderWithIcon(displayQty: Int = quantity, bypassWhitelist: Boolean = false): String {
+fun FortItemStack.renderWithIcon(displayQty: Int = quantity, bypassWhitelist: Boolean = false, showType: Boolean = false): String {
 	transformedDefData // resolves this item if it is FortConditionalResourceItemDefinition
-	return (getItemIconEmoji(this, bypassWhitelist)?.run { "$asMention " } ?: "") + render(displayQty)
+	return (getItemIconEmoji(this, bypassWhitelist)?.run { "$asMention " } ?: "") + render(displayQty, showType)
 }
 
 fun getSurvivorPersonalityText(personalityTag: String): FText? {
@@ -275,6 +290,15 @@ fun Map<FName, FortQuestRewardTableRow>.render(prefix: String, orPrefix: String,
 		lastIsSelectable = it.value.Selectable
 	}
 	return lines
+}
+
+fun AthenaRewardItemReference.safeRender(): String {
+	val itemDef = ItemDefinition?.load<FortItemDefinition>()
+	return if (itemDef == null) {
+		"%s".format(ItemDefinition.toString().substringAfterLast('.'))
+	} else {
+		asItemStack().render(showType = true)
+	}
 }
 
 @Throws(CommandSyntaxException::class)
