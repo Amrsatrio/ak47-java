@@ -116,7 +116,7 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 
 		// Grab the received items from the newly granted gift box
 		val giftBoxTemplateId = "GiftBox:gb_winterfestreward" // Let's hardcode the gift box template ID for now, grabbing from the data is pain
-		val lootListJson = athena.items.values.firstOrNull { it.templateId == giftBoxTemplateId }?.attributes?.getAsJsonObject("lootList")
+		val lootListJson = athena.items.values.firstOrNull { it.templateId == giftBoxTemplateId }?.attributes?.getAsJsonArray("lootList")
 		val lootList = lootListJson?.let { EpicApi.GSON.fromJson(it, Array<McpLootEntry>::class.java) }
 		val claimedEmbed = source.createEmbed().setColor(COLOR_SUCCESS)
 			.setTitle("✅ Claimed %s".format(state.rewards[rewardNodeTagToOpen]?.longDisplayName ?: rewardNodeTagToOpen))
