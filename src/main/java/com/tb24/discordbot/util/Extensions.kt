@@ -58,10 +58,13 @@ import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.IOException
+import java.io.PrintWriter
+import java.io.StringWriter
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
+import kotlin.math.min
 
 @Throws(HttpException::class, IOException::class)
 fun ProfileManager.dispatchClientCommandRequest(payload: Any, profileId: String = "common_core"): CompletableFuture<ProfileUpdate> =
@@ -430,6 +433,68 @@ fun getFriendlySeasonText(seasonNum: Int): String {
 	val (chapter, season) = getChapterAndSeason(seasonNum)
 	return if (chapter != null) "Chapter $chapter, Season $season" else "Season $season"
 }
+
+// region Copy of Throwable.printStackTrace but with frame limit
+fun Throwable.getStackTraceAsString(limit: Int = 4): String {
+	val s = PrintWriter(StringWriter())
+
+	// Guard against malicious overrides of Throwable.equals by
+	// using a Set with identity equality semantics.
+	val dejaVu = Collections.newSetFromMap(IdentityHashMap<Throwable, Boolean>())
+	dejaVu.add(this)
+
+	// Print our stack trace
+	s.println(this)
+	val trace = stackTrace
+	for (i in 0 until min(limit, trace.size))
+		s.println("\tat " + trace[i])
+
+	// Print suppressed exceptions, if any
+	for (se in suppressed)
+		se.printEnclosedStackTrace(s, trace, "Suppressed: ", "\t", dejaVu, limit)
+
+	// Print cause, if any
+	cause?.printEnclosedStackTrace(s, trace, "Caused by: ", "", dejaVu, limit)
+
+	return s.toString()
+}
+
+private fun Throwable.printEnclosedStackTrace(s: PrintWriter,
+											  enclosingTrace: Array<StackTraceElement>,
+											  caption: String,
+											  prefix: String,
+											  dejaVu: MutableSet<Throwable>,
+											  limit: Int) {
+	if (dejaVu.contains(this)) {
+		s.println("$prefix$caption[CIRCULAR REFERENCE: $this]")
+	} else {
+		dejaVu.add(this)
+		// Compute number of frames in common between this and enclosing trace
+		val trace = stackTrace
+		var m = trace.size - 1
+		var n = enclosingTrace.size - 1
+		while (m >= 0 && n >= 0 && trace[m] == enclosingTrace[n]) {
+			m--; n--
+		}
+		m = min(limit - 1, m)
+		val framesInCommon = trace.size - 1 - m
+
+		// Print our stack trace
+		s.println(prefix + caption + this)
+		for (i in 0..m)
+			s.println(prefix + "\tat " + trace[i])
+		if (framesInCommon != 0)
+			s.println("$prefix\t... $framesInCommon more")
+
+		// Print suppressed exceptions, if any
+		for (se in suppressed)
+			se.printEnclosedStackTrace(s, trace, "Suppressed: ", prefix + "\t", dejaVu, limit)
+
+		// Print cause, if any
+		cause?.printEnclosedStackTrace(s, trace, "Caused by: ", prefix, dejaVu, limit)
+	}
+}
+// endregion
 
 inline fun CatalogOffer.holder() = CatalogEntryHolder(this)
 

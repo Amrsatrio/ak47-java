@@ -1,6 +1,5 @@
 package com.tb24.discordbot.commands
 
-import com.google.common.base.Throwables
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.StringReader
@@ -14,6 +13,7 @@ import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.util.CollectorEndReason
 import com.tb24.discordbot.util.CollectorException
 import com.tb24.discordbot.util.EmbedMessage
+import com.tb24.discordbot.util.getStackTraceAsString
 import com.tb24.fn.network.AccountService.GrantType
 import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.EmbedBuilder
@@ -256,14 +256,17 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				if (canRetry) {
 					handleCommand(command, source, prefix, false)
 				} else {
-					client.dlog("__**Attempted to repeat a command more than once**__\nUser: ${source.author.asMention}\n```\n${Throwables.getStackTraceAsString(e)}```", null)
+					client.dlog("__**Attempted to repeat a command more than once**__\nUser: ${source.author.asMention}\n```\n${e.getStackTraceAsString()}```", null)
 					DiscordBot.LOGGER.error("Attempted to repeat a command more than once", e)
 				}
 			}
 		} catch (e: PermissionException) {
 			source.complete(null, EmbedBuilder().setColor(0xF04947).setDescription("❌ Cannot perform action due to a lack of Permission. Missing permission: " + e.permission.getName()).build())
 		} catch (e: Throwable) {
-			val additional = "\nCommand: ${reader.string}\nProxy: ${source.session.api.okHttpClient.proxy()}"
+			var additional = "\nCommand: ${reader.string}"
+			source.session.api.okHttpClient.proxy()?.let {
+				additional += "\nProxy: $it"
+			}
 			System.err.println("Unhandled exception while executing command$additional")
 			e.printStackTrace()
 			unhandledException(source, e, additional)
@@ -345,7 +348,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 			client.dlog("""__**Error report**__
 User: ${source.author.asMention}$additional
 ```
-${Throwables.getStackTraceAsString(e)}```""", null)
+${e.getStackTraceAsString()}```""", null)
 		}
 	}
 }

@@ -10,14 +10,14 @@ import com.tb24.discordbot.util.search
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
 
-class ItemArgument(private val greedy: Boolean, private vararg val itemTypes: String) : ArgumentType<ItemArgument.Result> {
+class ItemArgument(private val greedy: Boolean) : ArgumentType<ItemArgument.Result> {
 	companion object {
 		@JvmStatic
-		inline fun item(greedy: Boolean, vararg itemTypes: String) = ItemArgument(greedy, *itemTypes)
+		inline fun item(greedy: Boolean) = ItemArgument(greedy)
 
 		@JvmStatic
-		fun getItem(context: CommandContext<CommandSourceStack>, name: String, profile: McpProfile) =
-			context.getArgument(name, Result::class.java).resolve(profile)
+		fun getItem(context: CommandContext<CommandSourceStack>, name: String, profile: McpProfile, vararg itemTypes: String) =
+			context.getArgument(name, Result::class.java).resolve(profile, *itemTypes)
 	}
 
 	override fun parse(reader: StringReader): Result {
@@ -30,19 +30,15 @@ class ItemArgument(private val greedy: Boolean, private vararg val itemTypes: St
 			}
 			reader.string.substring(start, reader.cursor)
 		}
-		return Result(query, *itemTypes)
+		return Result(query)
 	}
 
-	class Result(val search: String, vararg val itemTypes: String) {
-		fun resolve(profile: McpProfile): FortItemStack {
-			var item = profile.items[search]
-			if (item == null) {
-				item = profile.items.values.search(search) { it.displayName.trim() }
-			}
-			if (item == null || item.primaryAssetType !in itemTypes) {
-				throw SimpleCommandExceptionType(LiteralMessage("Item not found.")).create()
-			}
-			return item
+	class Result(val search: String) {
+		fun resolve(profile: McpProfile, vararg itemTypes: String): FortItemStack {
+			val items = if (itemTypes.isNotEmpty()) profile.items.filter { it.value.primaryAssetType in itemTypes } else profile.items
+			return items[search]
+				?: items.values.search(search) { it.displayName.trim() }
+				?: throw SimpleCommandExceptionType(LiteralMessage("Item not found.")).create()
 		}
 	}
 }

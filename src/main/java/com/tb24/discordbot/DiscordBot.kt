@@ -1,7 +1,6 @@
 package com.tb24.discordbot
 
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.google.common.base.Throwables
 import com.rethinkdb.RethinkDB.r
 import com.rethinkdb.net.Connection
 import com.rethinkdb.utils.Internals
@@ -12,6 +11,7 @@ import com.tb24.discordbot.tasks.AutoLoginRewardTask
 import com.tb24.discordbot.tasks.KeychainTask
 import com.tb24.discordbot.util.createRequest
 import com.tb24.discordbot.util.exec
+import com.tb24.discordbot.util.getStackTraceAsString
 import com.tb24.fn.DefaultInterceptor
 import com.tb24.fn.model.assetdata.ESubGame
 import com.tb24.fn.model.launcher.ClientDetails
@@ -211,19 +211,19 @@ class DiscordBot(token: String) {
 			/*try {
 				postItemShop()
 			} catch (e: Throwable) {
-				dlog("__**Failed to auto post item shop**__\n```\n${Throwables.getStackTraceAsString(e)}```", null)
+				dlog("__**Failed to auto post item shop**__\n```\n${e.getStackTraceAsString()}```", null)
 				return@Runnable
 			}*/
 			try {
 				postMtxAlerts()
 			} catch (e: Throwable) {
-				dlog("__**Failed to auto post V-Bucks alerts**__\n```\n${Throwables.getStackTraceAsString(e)}```", null)
+				dlog("__**Failed to auto post V-Bucks alerts**__\n```\n${e.getStackTraceAsString()}```", null)
 				return@Runnable
 			}
 			try {
 				autoLoginRewardTask.run()
 			} catch (e: Throwable) {
-				dlog("__**AutoLoginRewardTask failure**__\n```\n${Throwables.getStackTraceAsString(e)}```", null)
+				dlog("__**AutoLoginRewardTask failure**__\n```\n${e.getStackTraceAsString()}```", null)
 				AutoLoginRewardTask.TASK_IS_RUNNING.set(false)
 			}
 		}
@@ -258,7 +258,7 @@ class DiscordBot(token: String) {
 			try {
 				keychainTask.run()
 			} catch (e: Throwable) {
-				dlog("__**Keychain task failure**__\n```\n${Throwables.getStackTraceAsString(e)}```", null)
+				dlog("__**Keychain task failure**__\n```\n${e.getStackTraceAsString()}```", null)
 				AutoLoginRewardTask.TASK_IS_RUNNING.set(false)
 			}
 		}, timeUntilNext, interval, TimeUnit.MILLISECONDS)

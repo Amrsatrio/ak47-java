@@ -3,6 +3,7 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
+import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.commands.arguments.ItemArgument
@@ -35,32 +36,24 @@ val bangEmote = getEmoteByName("akl_new")
 
 class CosmeticCommand : BrigadierCommand("cosmetic", "Shows info and options about a BR cosmetic you own.", arrayOf("c")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.then(argument("item", ItemArgument.item(
-			true,
-			"AthenaCharacter",
-			"AthenaBackpack",
-			"AthenaPickaxe",
-			"AthenaGlider",
-			"AthenaSkyDiveContrail",
-			"AthenaDance",
-			"AthenaItemWrap",
-			"AthenaMusicPack",
-			"AthenaLoadingScreen",
-		))
-			.executes {
-				val source = it.source
-				source.ensureSession()
-				source.loading("Getting cosmetics")
-				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await() // TODO what about STW profile?
-				val athena = source.api.profileManager.getProfileData("athena")
-				execute(it.source, ItemArgument.getItem(it, "item", athena), athena)
-			}
+		.then(argument("type", StringArgumentType.string())
+			.then(argument("item", ItemArgument.item(true))
+				.executes {
+					val itemType = parseCosmeticType(StringArgumentType.getString(it, "type"))
+					val source = it.source
+					source.ensureSession()
+					source.loading("Getting cosmetics")
+					source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+					val athena = source.api.profileManager.getProfileData("athena")
+					execute(it.source, ItemArgument.getItem(it, "item", athena, itemType), athena)
+				}
+			)
 		)
 
 	private fun execute(source: CommandSourceStack, item: FortItemStack, profile: McpProfile): Int {
 		val defData = item.defData as? AthenaCosmeticItemDefinition ?: throw SimpleCommandExceptionType(LiteralMessage("Not found")).create()
 		val embed = EmbedBuilder().setColor(item.palette.Color2.toColor())
-			.setAuthor(item.shortDescription.format())
+			.setAuthor((item.defData?.Series?.value?.DisplayName ?: item.rarity.rarityName).format() + " \u00b7 " + item.shortDescription.format())
 			.setTitle((if (item.isItemSeen) "" else bangEmote?.asMention + ' ') + item.displayName.ifEmpty { defData.name })
 			.setDescription(item.description)
 			.setThumbnail(Utils.benBotExportAsset(item.getPreviewImagePath(true)?.toString()))

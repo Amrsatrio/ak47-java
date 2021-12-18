@@ -42,13 +42,13 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 				val expedition = source.api.profileManager.getProfileData("campaign").items.values.first { it.primaryAssetType == "Expedition" }
 				prepare(source, expedition)
 			}
-			.then(argument("expedition", item(true, "Expedition"))
+			.then(argument("expedition", item(true))
 				.executes {
 					val source = it.source
 					source.ensureSession()
 					source.loading("Finding available expeditions")
 					source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
-					prepare(source, getItem(it, "expedition", source.api.profileManager.getProfileData("campaign")))
+					prepare(source, getItem(it, "expedition", source.api.profileManager.getProfileData("campaign"), "Expedition"))
 				}
 			)
 		)

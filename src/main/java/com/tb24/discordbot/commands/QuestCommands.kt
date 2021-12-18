@@ -248,13 +248,13 @@ class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR q
 
 class QuestCommand : BrigadierCommand("quest", "Shows the details of a quest by description.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.then(argument("item", item(true, "Quest"))
+		.then(argument("item", item(true))
 			.executes {
 				val source = it.source
 				source.ensureSession()
 				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
 				val campaign = source.api.profileManager.getProfileData("campaign")
-				questDetails(source, getItem(it, "item", campaign))
+				questDetails(source, getItem(it, "item", campaign, "Quest"))
 			}
 		)
 

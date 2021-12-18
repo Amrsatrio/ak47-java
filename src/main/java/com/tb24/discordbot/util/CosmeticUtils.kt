@@ -1,5 +1,7 @@
 package com.tb24.discordbot.util
 
+import com.mojang.brigadier.LiteralMessage
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.DiscordBot
 import com.tb24.fn.model.McpVariantReader
 import me.fungames.jfortniteparse.fort.exports.variants.*
@@ -7,6 +9,27 @@ import me.fungames.jfortniteparse.fort.objects.variants.BaseVariantDef
 import me.fungames.jfortniteparse.ue4.objects.core.math.FLinearColor
 import me.fungames.jfortniteparse.ue4.reader.FByteArchive
 import me.fungames.jfortniteparse.util.parseHexBinary
+import java.util.*
+
+fun parseCosmeticType(type: String): String {
+	val lowerType = type.toLowerCase(Locale.ROOT)
+	val filterType = when (if (lowerType.endsWith('s')) lowerType.substring(0, lowerType.length - 1) else lowerType) {
+		"character", "outfit", "skin" -> "AthenaCharacter"
+		"backpack", "backbling" -> "AthenaBackpack"
+		"pickaxe", "harvestingtool" -> "AthenaPickaxe"
+		"glider" -> "AthenaGlider"
+		"skydivecontrail", "contrail" -> "AthenaSkyDiveContrail"
+		"dance", "emote" -> "AthenaDance:AthenaDanceItemDefinition"
+		"spray" -> "AthenaDance:AthenaSprayItemDefinition"
+		"emoticon" -> "AthenaDance:AthenaEmojiItemDefinition"
+		"toy" -> "AthenaDance:AthenaToyItemDefinition"
+		"itemwrap", "wrap" -> "AthenaItemWrap"
+		"musicpack", "music" -> "AthenaMusicPack"
+		"loadingscreen" -> "AthenaLoadingScreen"
+		else -> throw SimpleCommandExceptionType(LiteralMessage("Unknown cosmetic type $type. Valid values are: (case insensitive)```\nOutfit, BackBling, HarvestingTool, Glider, Contrail, Emote, Spray, Emoticon, Toy, Wrap, Music, LoadingScreen\n```")).create()
+	}
+	return filterType
+}
 
 val FortCosmeticVariant.backendChannelName get() = VariantChannelTag.toString().substringAfter("Cosmetics.Variant.Channel.")
 

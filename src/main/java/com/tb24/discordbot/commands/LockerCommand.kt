@@ -14,7 +14,6 @@ import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.McpVariantReader
-import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.subgame.SetItemFavoriteStatusBatch
@@ -94,7 +93,7 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		.then(argument("type", word())
 			.executes { c ->
 				val source = c.source
-				val filterType = parseType(getString(c, "type"))
+				val filterType = parseCosmeticType(getString(c, "type"))
 				source.ensureSession()
 				source.loading("Getting cosmetics")
 				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
@@ -153,7 +152,7 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		.then(literal("text")
 			.executes { executeText(it.source) }
 			.then(argument("type", string())
-				.executes { executeText(it.source, parseType(getString(it, "type"))) }
+				.executes { executeText(it.source, parseCosmeticType(getString(it, "type"))) }
 			)
 		)
 
@@ -182,26 +181,6 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 			MessageBuilder(embed).build()
 		}
 		return Command.SINGLE_SUCCESS
-	}
-
-	private fun parseType(type: String): String {
-		val lowerType = type.toLowerCase(Locale.ROOT)
-		val filterType = when (if (lowerType.endsWith('s')) lowerType.substring(0, lowerType.length - 1) else lowerType) {
-			"character", "outfit", "skin" -> "AthenaCharacter"
-			"backpack", "backbling" -> "AthenaBackpack"
-			"pickaxe", "harvestingtool" -> "AthenaPickaxe"
-			"glider" -> "AthenaGlider"
-			"skydivecontrail", "contrail" -> "AthenaSkyDiveContrail"
-			"dance", "emote" -> "AthenaDance:AthenaDanceItemDefinition"
-			"spray" -> "AthenaDance:AthenaSprayItemDefinition"
-			"emoticon" -> "AthenaDance:AthenaEmojiItemDefinition"
-			"toy" -> "AthenaDance:AthenaToyItemDefinition"
-			"itemwrap", "wrap" -> "AthenaItemWrap"
-			"musicpack", "music" -> "AthenaMusicPack"
-			"loadingscreen" -> "AthenaLoadingScreen"
-			else -> throw SimpleCommandExceptionType(LiteralMessage("Unknown cosmetic type $type. Valid values are: (case insensitive)```\nOutfit, BackBling, HarvestingTool, Glider, Contrail, Emote, Spray, Emoticon, Toy, Wrap, Music, LoadingScreen\n```")).create()
-		}
-		return filterType
 	}
 }
 
