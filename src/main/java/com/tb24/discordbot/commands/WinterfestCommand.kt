@@ -63,6 +63,8 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 		val unusedKeys = state.unusedKeys
 		if (unusedKeys > 0) {
 			descriptionParts.add("Open **%,d presents!**".format(unusedKeys))
+		} else {
+			descriptionParts.add("Come back every day to open a new present!")
 		}
 
 		// Next key
@@ -102,11 +104,6 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 		val message = source.complete(null, embed.build(), ActionRow.of(select.build()))
 		source.loadingMsg = message
 		val rewardNodeTagToOpen = (message.awaitOneInteraction(source.author, false, 120000L) as SelectionMenuInteraction).values.first() // 2 minutes is enough for people to glance at
-		if (rewardNodeTagToOpen == "ERG.Node.D.1") {
-			source.loadingMsg = null
-			message.finalizeComponents(emptySet())
-			throw SimpleCommandExceptionType(LiteralMessage("Something went wrong when opening a present.")).create()
-		}
 		val response = source.api.profileManager.dispatchClientCommandRequest(UnlockRewardNode().apply {
 			nodeId = rewardNodeTagToOpen
 			rewardGraphId = state.rewardGraphItem.itemId

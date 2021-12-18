@@ -32,6 +32,7 @@ import net.dv8tion.jda.api.interactions.components.selections.SelectionMenu
 import net.dv8tion.jda.api.interactions.components.selections.SelectionMenuInteraction
 import kotlin.jvm.internal.Ref
 
+val equipEmote = getEmoteByName("akl_equip")
 val editStylesEmote = getEmoteByName("akl_editStyles")
 val favoritedEmote = getEmoteByName("akl_favorited")
 val favoriteEmote = getEmoteByName("akl_favorite")
@@ -86,14 +87,14 @@ class CosmeticCommand : BrigadierCommand("cosmetic", "Shows info and options abo
 			if (isEquipped) {
 				buttons.add(Button.of(ButtonStyle.SECONDARY, "equip", "Equipped", Emoji.fromUnicode("✅")).asDisabled())
 			} else {
-				buttons.add(Button.of(ButtonStyle.SECONDARY, "equip", "Equip", Emoji.fromUnicode("👕")))
+				buttons.add(Button.of(ButtonStyle.SECONDARY, "equip", "Equip", Emoji.fromEmote(equipEmote!!)))
 			}
 		} else {
 			val equippedIndices = currentLoadout.locker_slots_data.getSlotItems(category).withIndex().filter { it.value == item.templateId }.map { it.index + 1 }
 			if (equippedIndices.isNotEmpty()) {
 				embed.setFooter("Equipped at slot(s) " + equippedIndices.joinToString(", "))
 			}
-			buttons.add(Button.of(ButtonStyle.SECONDARY, "equipTo", "Equip to...", Emoji.fromUnicode("👕")))
+			buttons.add(Button.of(ButtonStyle.SECONDARY, "equipTo", "Equip to...", Emoji.fromEmote(equipEmote!!)))
 		}
 
 		// Prepare variants
