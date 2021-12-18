@@ -32,6 +32,9 @@ import net.dv8tion.jda.api.interactions.components.selections.SelectionMenu
 import net.dv8tion.jda.api.interactions.components.selections.SelectionMenuInteraction
 import kotlin.jvm.internal.Ref
 
+val editStylesEmote = getEmoteByName("akl_editStyles")
+val favoritedEmote = getEmoteByName("akl_favorited")
+val favoriteEmote = getEmoteByName("akl_favorite")
 val bangEmote = getEmoteByName("akl_new")
 
 class CosmeticCommand : BrigadierCommand("cosmetic", "Shows info and options about a BR cosmetic you own.", arrayOf("c")) {
@@ -107,15 +110,15 @@ class CosmeticCommand : BrigadierCommand("cosmetic", "Shows info and options abo
 				"%s (%s)".format(it.channelName, it.activeVariantDisplayName)
 			}, false)
 			if (numItems == 1) { // TODO support editing variants for multiple slot items
-				buttons.add(Button.of(ButtonStyle.SECONDARY, "editVariants", "Edit styles", Emoji.fromUnicode("🖊")))
+				buttons.add(Button.of(ButtonStyle.SECONDARY, "editVariants", "Edit styles", Emoji.fromEmote(editStylesEmote!!)))
 			}
 		}
 
 		// Favorite button
 		if (item.isFavorite) {
-			buttons.add(Button.of(ButtonStyle.SUCCESS, "favorite",  "Favorited", Emoji.fromUnicode("❤")))
+			buttons.add(Button.of(ButtonStyle.SUCCESS, "favorite",  "Favorited", Emoji.fromEmote(favoritedEmote!!)))
 		} else {
-			buttons.add(Button.of(ButtonStyle.SECONDARY, "favorite",  "Favorite", Emoji.fromUnicode("❤")))
+			buttons.add(Button.of(ButtonStyle.SECONDARY, "favorite",  "Favorite", Emoji.fromEmote(favoriteEmote!!)))
 		}
 
 		// Mark seen button
@@ -193,9 +196,8 @@ class CosmeticCommand : BrigadierCommand("cosmetic", "Shows info and options abo
 				if (!owned) {
 					if (variantDef.bHideIfNotOwned) {
 						continue
-					} else {
-						lockReason = variantDef.UnlockRequirements.format() ?: "Unknown"
 					}
+					lockReason = variantDef.UnlockRequirements.format() ?: "Unknown"
 				}
 			}
 			if (lockReason == null) {
@@ -210,7 +212,11 @@ class CosmeticCommand : BrigadierCommand("cosmetic", "Shows info and options abo
 		if (interaction.componentId == "cancel") {
 			return execute(source, item, source.api.profileManager.getProfileData("athena"))
 		}
-		val selectedVariantName = (interaction as SelectionMenuInteraction).values.first()
+		val selectedVariant = (interaction as SelectionMenuInteraction).selectedOptions!!.first()
+		if (selectedVariant.emoji != null) {
+			throw SimpleCommandExceptionType(LiteralMessage("That style is locked.")).create()
+		}
+		val selectedVariantName = selectedVariant.value
 		val selectedVariantDef = variantDefs.firstOrNull { it.backendVariantName == selectedVariantName } ?: return Command.SINGLE_SUCCESS
 		return equip(source, lockerItem, category, item, 0, arrayOf(McpVariantReader(cosmeticVariant.backendChannelName, selectedVariantDef.backendVariantName, emptyArray())))
 	}
