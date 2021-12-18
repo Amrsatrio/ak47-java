@@ -20,6 +20,7 @@ import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.ChannelType
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
+import net.dv8tion.jda.api.exceptions.PermissionException
 import net.dv8tion.jda.api.hooks.ListenerAdapter
 import net.dv8tion.jda.internal.utils.Helpers
 import java.net.HttpURLConnection
@@ -259,6 +260,8 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 					DiscordBot.LOGGER.error("Attempted to repeat a command more than once", e)
 				}
 			}
+		} catch (e: PermissionException) {
+			source.complete(null, EmbedBuilder().setColor(0xF04947).setDescription("❌ Cannot perform action due to a lack of Permission. Missing permission: " + e.permission.getName()).build())
 		} catch (e: Throwable) {
 			val additional = "\nCommand: ${reader.string}\nProxy: ${source.session.api.okHttpClient.proxy()}"
 			System.err.println("Unhandled exception while executing command$additional")

@@ -14,8 +14,8 @@ import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.assetdata.FortWinterfestData
 import com.tb24.fn.model.mcpprofile.McpLootEntry
 import com.tb24.fn.model.mcpprofile.McpProfile
-import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.athena.UnlockRewardNode
+import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.model.mcpprofile.item.AthenaRewardEventGraphItem
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.exports.AthenaRewardEventGraph
@@ -33,7 +33,7 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 			val winterfestData = loadObject<FortWinterfestData>("/WinterfestFrontend/UI/Data/WinterfestScreenData.WinterfestScreenData")
 				?: throw SimpleCommandExceptionType(LiteralMessage("No Winterfest right now.")).create()
 			source.loading("Getting Winterfest data")
-			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+			source.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "athena").await()
 			execute(source, winterfestData)
 		}
 
@@ -102,6 +102,11 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 		val message = source.complete(null, embed.build(), ActionRow.of(select.build()))
 		source.loadingMsg = message
 		val rewardNodeTagToOpen = (message.awaitOneInteraction(source.author, false, 120000L) as SelectionMenuInteraction).values.first() // 2 minutes is enough for people to glance at
+		if (rewardNodeTagToOpen == "ERG.Node.D.1") {
+			source.loadingMsg = null
+			message.finalizeComponents(emptySet())
+			throw SimpleCommandExceptionType(LiteralMessage("Something went wrong when opening a present.")).create()
+		}
 		val response = source.api.profileManager.dispatchClientCommandRequest(UnlockRewardNode().apply {
 			nodeId = rewardNodeTagToOpen
 			rewardGraphId = state.rewardGraphItem.itemId

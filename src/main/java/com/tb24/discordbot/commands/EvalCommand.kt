@@ -1,6 +1,5 @@
 package com.tb24.discordbot.commands
 
-import com.google.gson.internal.reflect.ReflectionAccessor
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
@@ -11,14 +10,18 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.Rune
 import com.tb24.uasset.AssetManager
-import javax.script.ScriptEngineManager
-import javax.script.ScriptException
+import org.graalvm.polyglot.Context
 
 class EvalCommand : BrigadierCommand("eval", "Evaluate an expression for debugging purposes.") {
-	private val engine = ScriptEngineManager().getEngineByName("js").apply {
-		put("provider", AssetManager.INSTANCE)
+	init {
+		System.setProperty("polyglot.engine.WarnInterpreterOnly", "false")
 	}
-	private val detailMessageField = Throwable::class.java.getDeclaredField("detailMessage").apply { ReflectionAccessor.getInstance().makeAccessible(this) }
+
+	private val engine = Context.create().apply {
+		getBindings("js").apply {
+			putMember("provider", AssetManager.INSTANCE)
+		}
+	}
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires(Rune::isBotDev)
@@ -27,15 +30,20 @@ class EvalCommand : BrigadierCommand("eval", "Evaluate an expression for debuggi
 		)
 
 	private fun handle(source: CommandSourceStack, code: String): Int {
+		if (engine == null) {
+			throw SimpleCommandExceptionType(LiteralMessage("JavaScript engine is not available.")).create()
+		}
 		try {
 			synchronized(engine) {
-				engine.put("client", source.client)
-				engine.put("source", source)
-				engine.put("config", BotConfig.get())
-				source.complete("```\n${engine.eval(code)}```", null)
+				engine.getBindings("js").apply {
+					putMember("client", source.client)
+					putMember("source", source)
+					putMember("config", BotConfig.get())
+				}
+				source.complete("```\n${engine.eval("js", code)}```", null)
 			}
 		} catch (e: Throwable) {
-			throw SimpleCommandExceptionType(LiteralMessage("Execution failed```\n${if (e is ScriptException) detailMessageField.get(e) as String else e.toString()}```")).create()
+			throw SimpleCommandExceptionType(LiteralMessage("Execution failed```\n${e.message}```")).create()
 		}
 		return Command.SINGLE_SUCCESS
 	}
