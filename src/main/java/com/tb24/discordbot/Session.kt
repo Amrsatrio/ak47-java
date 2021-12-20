@@ -62,6 +62,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		LOGGER.info("$id: Created")
 	}
 
+	@Synchronized
 	@Throws(HttpException::class, IOException::class)
 	fun login(source: CommandSourceStack?, fields: Map<String, String>, auth: EAuthClient = EAuthClient.FORTNITE_ANDROID_GAME_CLIENT, sendMessages: Boolean = true): Int {
 		if (source != null) {
@@ -91,6 +92,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		return Command.SINGLE_SUCCESS
 	}
 
+	@Synchronized
 	fun logout(message: Message? = null): Boolean {
 		val logoutMsg = message?.run {
 			if (author.idLong == client.discord.selfUser.idLong) {

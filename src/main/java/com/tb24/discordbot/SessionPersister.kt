@@ -1,49 +1,35 @@
 package com.tb24.discordbot
 
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
-import com.google.gson.JsonSyntaxException
-import com.tb24.fn.EpicApi
+import com.rethinkdb.RethinkDB.r
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.account.Token
-import java.io.*
-import java.nio.charset.StandardCharsets
 
 object SessionPersister {
-	private val file = File("config/sessions2.json")
-	private val sessions: JsonObject = try {
-		FileReader(file).use(JsonParser::parseReader).asJsonObject
-	} catch (e: FileNotFoundException) {
-		JsonObject()
-	} catch (e: JsonSyntaxException) {
-		JsonObject()
-	}
+	@JvmStatic
+	lateinit var client: DiscordBot
 
 	@Synchronized
-	fun get(sessionId: String): PersistedSession? =
-		EpicApi.GSON.fromJson(sessions[sessionId], PersistedSession::class.java)
+	fun get(sessionId: String) = r.table("sessions").get(sessionId).run(client.dbConn, PersistedSession::class.java).first()
 
 	@Synchronized
 	fun set(session: Session) {
-		sessions.add(session.id, EpicApi.GSON.toJsonTree(PersistedSession(session.api.userToken, session.api.currentLoggedIn.run { GameProfile(id, epicDisplayName) })))
-		save()
-	}
-
-	@Synchronized
-	fun remove(sessionId: String) = sessions.remove(sessionId).also { save() }
-
-	private fun save() {
-		file.parentFile.mkdirs()
-		try {
-			OutputStreamWriter(FileOutputStream(file), StandardCharsets.UTF_8)
-				.use { EpicApi.GSON.toJson(sessions, it) }
-		} catch (e: IOException) {
-			e.printStackTrace()
+		val persistedSession = PersistedSession(session.id, session.api.userToken, session.api.currentLoggedIn.run { GameProfile(id, epicDisplayName) })
+		val existing = get(session.id)
+		if (existing != null) {
+			r.table("sessions").update(persistedSession).run(client.dbConn)
+		} else {
+			r.table("sessions").insert(persistedSession).run(client.dbConn)
 		}
 	}
 
+	@Synchronized
+	fun remove(sessionId: String) = r.table("sessions").get(sessionId).delete().run(client.dbConn)
+
 	class PersistedSession(
+		@JvmField var id: String,
 		@JvmField var token: Token?,
 		@JvmField var accountData: GameProfile?
-	)
+	) {
+		constructor() : this("", null, null)
+	}
 }

@@ -133,6 +133,7 @@ class DiscordBot(token: String) {
 		}*/
 		okHttpClient = OkHttpClient()
 		proxyManager = ProxyManager()
+		SessionPersister.client = this
 		setupInternalSession()
 
 		// Check for latest build
