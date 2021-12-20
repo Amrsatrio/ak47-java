@@ -104,7 +104,9 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 		}
 		val users = if (usersLazy == null) {
 			source.loading("Resolving users")
-			source.queryUsers(source.client.savedLoginsManager.getAll(source.author.id).map { it.accountId })
+			val devices = source.client.savedLoginsManager.getAll(source.author.id)
+			source.queryUsers_map(devices.map { it.accountId })
+			devices.mapNotNull { source.userCache[it.accountId] }
 		} else usersLazy.value
 		if (users.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("No users that we can display.")).create()

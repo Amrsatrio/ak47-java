@@ -9,6 +9,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType.getInteger
 import com.mojang.brigadier.arguments.IntegerArgumentType.integer
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.catalogOffer
@@ -94,44 +95,7 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 		throw SimpleCommandExceptionType(LiteralMessage(L10N.format("purchase.failed.ineligible", sd.friendlyName))).create()
 	}
 	if (price.currencyType == EStoreCurrencyType.RealMoney) {
-		if (sd.getMeta("IsSubscription").equals("true", true)) {
-			//throw SimpleCommandExceptionType(LiteralMessage("${sd.friendlyName} is a subscription offer. Support for subscription offers will be added in a future update.")).create()
-		}
-		val epicAppStoreId = offer.appStoreId?.getOrNull(EAppStore.EpicPurchasingService.ordinal)
-			?: throw SimpleCommandExceptionType(LiteralMessage("${sd.friendlyName} can't be purchased using Epic Direct Payment, which is the only payment method supported by ${source.client.discord.selfUser.name}.")).create()
-		val completeAccountData = source.api.accountService.getById(source.api.currentLoggedIn.id).exec().body()!!
-		val storeOffer = source.api.catalogService.queryOffersBulk(listOf(epicAppStoreId), false, completeAccountData.country, "en").exec().body()!!.values.firstOrNull()
-		val rmPrice = source.api.priceEngineService.queryOfferPrices(QueryOfferPricesPayload().apply {
-			accountId = source.api.currentLoggedIn.id
-			calculateTax = false
-			lineOffers = arrayOf(
-				LineOfferReq().also {
-					it.offerId = epicAppStoreId
-					it.quantity = 1
-				}
-			)
-			country = completeAccountData.country
-		}).exec().body()!!.lineOffers.first().price
-		val priceFormatter = NumberFormat.getCurrencyInstance()
-		priceFormatter.currency = Currency.getInstance(rmPrice.currencyCode)
-		val purchaseTokenPayload = JsonObject().apply {
-			addProperty("locale", "")
-			add("offers", JsonArray().apply {
-				add(epicAppStoreId)
-			})
-			addProperty("subscriptionSlug", "")
-			addProperty("namespace", "fn")
-		}
-		val purchaseToken = source.api.okHttpClient.newCall(Request.Builder()
-			.url("https://payment-website-pci.ol.epicgames.com/payment/v1/purchaseToken")
-			.post(RequestBody.create(MediaType.get("application/json"), purchaseTokenPayload.toString()))
-			.build()).exec().to<JsonObject>().getString("purchaseToken")
-		val purchaseLink = "https://payment-website-pci.ol.epicgames.com/payment/v1/purchase?purchaseToken=$purchaseToken&uePlatform=FNGame"
-		source.complete("Visit this link to purchase the item shown below:\n${source.generateUrl(purchaseLink)}", EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
-			.populateOffer(storeOffer, false)
-			.addField("Price", priceFormatter.format(rmPrice.discountPrice / 100.0) + (if (rmPrice.originalPrice != rmPrice.discountPrice) " ~~" + priceFormatter.format(rmPrice.originalPrice / 100.0) + "~~" else "") + if (rmPrice.vatRate > 0.0) '\n' + "VAT included if applicable" else "", false)
-			.build())
-		return Command.SINGLE_SUCCESS
+		return realMoneyPurchase(source, offer, sd)
 	}
 	val accountBalance = price.getAccountBalance(profileManager)
 	if (accountBalance < price.basePrice) {
@@ -189,6 +153,47 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 	} else {
 		throw SimpleCommandExceptionType(LiteralMessage("Purchase canceled.")).create()
 	}
+}
+
+private fun realMoneyPurchase(source: CommandSourceStack, offer: CatalogOffer, sd: CatalogEntryHolder): Int {
+	if (sd.getMeta("IsSubscription").equals("true", true)) {
+		//throw SimpleCommandExceptionType(LiteralMessage("${sd.friendlyName} is a subscription offer. Support for subscription offers will be added in a future update.")).create()
+	}
+	val epicAppStoreId = offer.appStoreId?.getOrNull(EAppStore.EpicPurchasingService.ordinal)
+		?: throw SimpleCommandExceptionType(LiteralMessage("${sd.friendlyName} can't be purchased using Epic Direct Payment, which is the only payment method supported by ${source.client.discord.selfUser.name}.")).create()
+	val completeAccountData = source.api.accountService.getById(source.api.currentLoggedIn.id).exec().body()!!
+	val storeOffer = source.api.catalogService.queryOffersBulk(listOf(epicAppStoreId), false, completeAccountData.country, "en").exec().body()!!.values.firstOrNull()
+	val rmPrice = source.api.priceEngineService.queryOfferPrices(QueryOfferPricesPayload().apply {
+		accountId = source.api.currentLoggedIn.id
+		calculateTax = false
+		lineOffers = arrayOf(
+			LineOfferReq().also {
+				it.offerId = epicAppStoreId
+				it.quantity = 1
+			}
+		)
+		country = completeAccountData.country
+	}).exec().body()!!.lineOffers.first().price
+	val priceFormatter = NumberFormat.getCurrencyInstance()
+	priceFormatter.currency = Currency.getInstance(rmPrice.currencyCode)
+	val purchaseTokenPayload = JsonObject().apply {
+		addProperty("locale", "")
+		add("offers", JsonArray().apply {
+			add(epicAppStoreId)
+		})
+		addProperty("subscriptionSlug", "")
+		addProperty("namespace", "fn")
+	}
+	val purchaseToken = source.api.okHttpClient.newCall(Request.Builder()
+		.url("https://payment-website-pci.ol.epicgames.com/payment/v1/purchaseToken")
+		.post(RequestBody.create(MediaType.get("application/json"), purchaseTokenPayload.toString()))
+		.build()).exec().to<JsonObject>().getString("purchaseToken")
+	val purchaseLink = "https://payment-website-pci.ol.epicgames.com/payment/v1/purchase?purchaseToken=$purchaseToken&uePlatform=FNGame"
+	source.complete("Visit this link to purchase the item shown below:\n${source.generateUrl(purchaseLink)}", EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
+		.populateOffer(storeOffer, false)
+		.addField("Price", priceFormatter.format(rmPrice.discountPrice / 100.0) + (if (rmPrice.originalPrice != rmPrice.discountPrice) " ~~" + priceFormatter.format(rmPrice.originalPrice / 100.0) + "~~" else "") + if (rmPrice.vatRate > 0.0) '\n' + "VAT included if applicable" else "", false)
+		.build())
+	return Command.SINGLE_SUCCESS
 }
 
 fun EmbedBuilder.renewAffiliateAndPopulateMtxFields(source: CommandSourceStack, price: CatalogOffer.CatalogItemPrice): EmbedBuilder {

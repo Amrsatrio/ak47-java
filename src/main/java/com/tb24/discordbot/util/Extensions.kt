@@ -436,7 +436,8 @@ fun getFriendlySeasonText(seasonNum: Int): String {
 
 // region Copy of Throwable.printStackTrace but with frame limit
 fun Throwable.getStackTraceAsString(limit: Int = 4): String {
-	val s = PrintWriter(StringWriter())
+	val writer = StringWriter()
+	val s = PrintWriter(writer)
 
 	// Guard against malicious overrides of Throwable.equals by
 	// using a Set with identity equality semantics.
@@ -448,6 +449,8 @@ fun Throwable.getStackTraceAsString(limit: Int = 4): String {
 	val trace = stackTrace
 	for (i in 0 until min(limit, trace.size))
 		s.println("\tat " + trace[i])
+	if (trace.size > limit)
+		s.println("\t... " + (trace.size - limit) + " more")
 
 	// Print suppressed exceptions, if any
 	for (se in suppressed)
@@ -456,7 +459,7 @@ fun Throwable.getStackTraceAsString(limit: Int = 4): String {
 	// Print cause, if any
 	cause?.printEnclosedStackTrace(s, trace, "Caused by: ", "", dejaVu, limit)
 
-	return s.toString()
+	return writer.toString()
 }
 
 private fun Throwable.printEnclosedStackTrace(s: PrintWriter,

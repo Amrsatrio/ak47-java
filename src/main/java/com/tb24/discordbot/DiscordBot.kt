@@ -1,5 +1,6 @@
 package com.tb24.discordbot
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.rethinkdb.RethinkDB.r
 import com.rethinkdb.net.Connection
@@ -103,7 +104,14 @@ class DiscordBot(token: String) {
 		// Setup database
 		val dbUrl = BotConfig.get().rethinkUrl
 		LOGGER.info("Connecting to database {}...", dbUrl)
-		Internals.getInternalMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL)
+		val mapper = Internals.getInternalMapper()
+		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL)
+		mapper.setVisibility(mapper.serializationConfig.defaultVisibilityChecker
+			.withFieldVisibility(JsonAutoDetect.Visibility.ANY)
+			.withGetterVisibility(JsonAutoDetect.Visibility.NONE)
+			.withIsGetterVisibility(JsonAutoDetect.Visibility.NONE)
+			.withSetterVisibility(JsonAutoDetect.Visibility.NONE)
+			.withCreatorVisibility(JsonAutoDetect.Visibility.NONE))
 		dbConn = r.connection(dbUrl).connect()
 
 		// Setup MongoDB

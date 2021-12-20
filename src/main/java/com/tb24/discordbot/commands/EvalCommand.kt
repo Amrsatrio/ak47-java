@@ -17,7 +17,7 @@ class EvalCommand : BrigadierCommand("eval", "Evaluate an expression for debuggi
 		System.setProperty("polyglot.engine.WarnInterpreterOnly", "false")
 	}
 
-	private val engine = Context.create().apply {
+	private val engine = Context.newBuilder("js").allowAllAccess(true).build().apply {
 		getBindings("js").apply {
 			putMember("provider", AssetManager.INSTANCE)
 		}
