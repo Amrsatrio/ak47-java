@@ -13,7 +13,7 @@ class GuildListeners(private val client: DiscordBot) : ListenerAdapter() {
 		val guild = event.guild
 		val generalChannel = guild.textChannels.firstOrNull { it.name == "general" } ?: return
 		val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_SUCCESS)
-			.setTitle("👋 Hello %s, thanks for adding %s!".format(guild.name, client.discord.selfUser.name))
+			.setTitle("👋 Hello %s, thanks for adding %s!".format(guild.name, event.jda.selfUser.name))
 			.setDescription("- Use `{Prefix}help` or `{Prefix}commands` to see all my commands.\n- Server admins can change my prefix from `{Prefix}` by using `{Prefix}prefix <new name>`."
 				.replace("{Prefix}", BotConfig.get().defaultPrefix))
 		BotConfig.get().homeGuildInviteLink?.let {

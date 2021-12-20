@@ -2,26 +2,24 @@ package com.tb24.discordbot.images
 
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.util.createAndDrawCanvas
-import com.tb24.discordbot.util.exec
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
 import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.ue4.objects.core.math.FVector2D
-import okhttp3.Request
 import java.awt.AlphaComposite
 import java.awt.Graphics2D
 import java.awt.Shape
 import java.awt.geom.GeneralPath
 import java.awt.image.BufferedImage
-import javax.imageio.ImageIO
 
 class MapImageGenerator(var background: BufferedImage?, var backgroundMask: BufferedImage?) {
 	companion object {
 		val watermark by lazy {
 			val client = DiscordBot.instance
-			val avatarUrl = client.discord.selfUser.avatarUrl
+			/*val avatarUrl = client.discord.selfUser.avatarUrl
 				?: return@lazy null
-			client.okHttpClient.newCall(Request.Builder().url(avatarUrl).build()).exec().body()!!.byteStream().use(ImageIO::read)
+			client.okHttpClient.newCall(Request.Builder().url(avatarUrl).build()).exec().body()!!.byteStream().use(ImageIO::read)*/
+			null
 		}
 	}
 
@@ -63,14 +61,14 @@ class MapImageGenerator(var background: BufferedImage?, var backgroundMask: Buff
 			val (mx, my) = mapToImagePos(vec)
 			it.draw(ctx, mx.toInt(), my.toInt())
 		}
-		DiscordBot.getInstanceOrNull()?.discord?.selfUser?.avatarUrl?.let {
+		/*DiscordBot.getInstanceOrNull()?.discord?.selfUser?.avatarUrl?.let {
 			val pad = 32
 			val sz = 384
 			val originalComposite = ctx.composite
 			ctx.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, .5f)
 			ctx.drawImage(watermark, pad, h - pad - sz, sz, sz, null)
 			ctx.composite = originalComposite
-		}
+		}*/
 	}
 
 	fun mapToImagePos(vec: FVector2D): FVector2D {

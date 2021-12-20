@@ -1,6 +1,5 @@
 package com.tb24.discordbot.images
 
-import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.commands.iterateMissions
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
@@ -100,7 +99,7 @@ private fun generateMissionAlertsImage(resp: FortActiveTheaterInfo): BufferedIma
 		ctx.font = Font("Segoe UI", Font.BOLD or Font.ITALIC, 35)
 
 		// Watermarks Text
-		ctx.drawString(DiscordBot.getInstanceOrNull()?.discord?.selfUser?.name ?: "Development", 100, imageH - 55) // API
+		//ctx.drawString(DiscordBot.getInstanceOrNull()?.discord?.selfUser?.name ?: "Development", 100, imageH - 55) // API
 
 		// Watermarks Images
 		val oldComposite = ctx.composite

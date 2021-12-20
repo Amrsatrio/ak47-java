@@ -19,13 +19,13 @@ import com.tb24.fn.model.launcher.ClientDetails
 import com.tb24.fn.util.EAuthClient
 import com.tb24.uasset.AssetManager
 import me.fungames.jfortniteparse.ue4.io.TOC_READ_OPTION_READ_DIRECTORY_INDEX
-import net.dv8tion.jda.api.JDA
-import net.dv8tion.jda.api.JDABuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.Activity
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.requests.GatewayIntent
+import net.dv8tion.jda.api.sharding.DefaultShardManagerBuilder
+import net.dv8tion.jda.api.sharding.ShardManager
 import net.jodah.expiringmap.ExpirationPolicy
 import net.jodah.expiringmap.ExpiringMap
 import okhttp3.OkHttpClient
@@ -78,7 +78,7 @@ class DiscordBot(token: String) {
 	val proxyManager: ProxyManager
 	val catalogManager: CatalogManager
 
-	val discord: JDA
+	val discord: ShardManager
 	val commandManager: CommandManager
 
 	val sessions: MutableMap<String, Session> = ExpiringMap.builder()
@@ -181,7 +181,8 @@ class DiscordBot(token: String) {
 
 		// Setup JDA
 		LOGGER.info("Connecting to Discord...")
-		val builder = JDABuilder.createDefault(token).setHttpClient(okHttpClient)
+		// with sharding
+		val builder = DefaultShardManagerBuilder.createDefault(token).setHttpClient(okHttpClient)
 		if (ENV == "prod" || ENV == "stage") {
 			builder.enableIntents(GatewayIntent.GUILD_MEMBERS)
 		}
@@ -190,12 +191,11 @@ class DiscordBot(token: String) {
 		discord.addEventListener(commandManager)
 		//discord.addEventListener(new ReactionHandler(this)); // TODO doesn't respond if the channel hasn't been interacted with
 		discord.addEventListener(GuildListeners(this))
-		discord.awaitReady()
-		LOGGER.info("Logged in as {}! v{}", discord.selfUser.asTag, VERSION)
+		//LOGGER.info("Logged in as {}! v{}", discord.selfUser.asTag, VERSION)
 		Runtime.getRuntime().addShutdownHook(Thread {
 			internalSession.logout()
 		})
-		discord.presence.activity = Activity.playing(".help \u00b7 v$VERSION")
+		discord.setActivityProvider { Activity.playing(".help \u00b7 $it \u00b7 v$VERSION") }
 
 		// Schedule tasks
 		if (ENV != "dev") {
@@ -338,5 +338,5 @@ class DiscordBot(token: String) {
 		}
 	}
 
-	val isProd get() = ENV != "dev" && discord.selfUser.idLong == 563753712376479754L
+	val isProd get() = ENV != "dev"// && discord.selfUser.idLong == 563753712376479754L
 }

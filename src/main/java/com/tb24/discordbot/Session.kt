@@ -95,7 +95,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 	@Synchronized
 	fun logout(message: Message? = null): Boolean {
 		val logoutMsg = message?.run {
-			if (author.idLong == client.discord.selfUser.idLong) {
+			if (author.idLong == author.jda.selfUser.idLong) {
 				editMessage(Utils.loadingText("Logging out")).complete()
 			} else {
 				channel.sendMessage(Utils.loadingText("Logging out")).complete()

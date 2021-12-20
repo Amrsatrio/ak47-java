@@ -160,7 +160,7 @@ private fun realMoneyPurchase(source: CommandSourceStack, offer: CatalogOffer, s
 		//throw SimpleCommandExceptionType(LiteralMessage("${sd.friendlyName} is a subscription offer. Support for subscription offers will be added in a future update.")).create()
 	}
 	val epicAppStoreId = offer.appStoreId?.getOrNull(EAppStore.EpicPurchasingService.ordinal)
-		?: throw SimpleCommandExceptionType(LiteralMessage("${sd.friendlyName} can't be purchased using Epic Direct Payment, which is the only payment method supported by ${source.client.discord.selfUser.name}.")).create()
+		?: throw SimpleCommandExceptionType(LiteralMessage("${sd.friendlyName} can't be purchased using Epic Direct Payment, which is the only payment method supported by ${source.message.jda.selfUser.name}.")).create()
 	val completeAccountData = source.api.accountService.getById(source.api.currentLoggedIn.id).exec().body()!!
 	val storeOffer = source.api.catalogService.queryOffersBulk(listOf(epicAppStoreId), false, completeAccountData.country, "en").exec().body()!!.values.firstOrNull()
 	val rmPrice = source.api.priceEngineService.queryOfferPrices(QueryOfferPricesPayload().apply {

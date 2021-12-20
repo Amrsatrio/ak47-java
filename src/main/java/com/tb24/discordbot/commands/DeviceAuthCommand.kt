@@ -137,7 +137,7 @@ private fun create(c: CommandContext<CommandSourceStack>): Int {
 		clientId = source.api.userToken.client_id
 	})
 	val embed = source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS)
-		.setTitle("✅ Device auth created and registered to ${source.client.discord.selfUser.name}")
+		.setTitle("✅ Device auth created and registered to ${source.message.jda.selfUser.name}")
 		.setFooter("Use ${source.prefix}deletesavedlogin to reverse the process")
 	if (inDMs) {
 		source.complete(null, embed.populateDeviceAuthDetails(response).build())
