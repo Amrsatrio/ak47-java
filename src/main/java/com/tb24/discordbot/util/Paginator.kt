@@ -65,7 +65,7 @@ fun <T> Message.replyPaginated(all: List<T>,
 		override fun onEnd(collected: Map<Any, ComponentInteraction>, reason: CollectorEndReason) {
 			customReactions?.onEnd(collected, reason)
 			if (reason == CollectorEndReason.IDLE) {
-				finalizeComponents(emptySet())
+				collector.message?.finalizeComponents(emptySet())
 			}
 		}
 	}
