@@ -10,7 +10,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 fun <T> Message.replyPaginated(all: List<T>,
-							   pageSize: Int = 9,
+							   pageSize: Int,
 							   messageToEdit: Message? = null,
 							   initialPage: Int = 0,
 							   customReactions: PaginatorCustomComponents<T>? = null,

@@ -91,7 +91,7 @@ fun notifyDailyRewardsClaimed(source: CommandSourceStack, campaign: McpProfile, 
 
 private fun FortLoginReward.render(currentIndex: Int, claimedIndex: Int, canReceiveMtxCurrency: Boolean): String {
 	val renderedItem = asItemStack().apply { setConditionForConditionalItem(canReceiveMtxCurrency) }.renderWithIcon(bypassWhitelist = true)
-	val s = "`%,d` %s".format(currentIndex + 1, if (bIsMajorReward) "**$renderedItem**" else renderedItem)
+	val s = "`%d` %s".format(currentIndex + 1, if (bIsMajorReward) "**$renderedItem**" else renderedItem)
 	return if (currentIndex <= claimedIndex) "~~$s~~" else s
 }
 
