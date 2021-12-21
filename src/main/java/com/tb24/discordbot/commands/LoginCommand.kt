@@ -7,13 +7,13 @@ import com.mojang.brigadier.arguments.StringArgumentType.*
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.HttpException
+import com.tb24.discordbot.commands.arguments.StringArgument2.Companion.string2
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.DeviceAuth
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.account.PinGrantInfo
 import com.tb24.fn.network.AccountService.GrantType.*
 import com.tb24.fn.util.EAuthClient
-import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Emoji
@@ -24,7 +24,6 @@ import net.dv8tion.jda.api.interactions.components.Button
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.regex.Pattern
 import kotlin.concurrent.schedule
 import kotlin.math.min
@@ -54,7 +53,7 @@ class ExtendedLoginCommand : BrigadierCommand("loginx", "Login with arbitrary pa
 		.executes { extendedLogin(it.source) }
 		.then(argument("method", word())
 			.executes { extendedLogin(it.source, getString(it, "method")) }
-			.then(argument("params", string())
+			.then(argument("params", string2())
 				.executes { extendedLogin(it.source, getString(it, "method"), getString(it, "params")) }
 				.then(argument("auth client", word())
 					.executes { extendedLogin(it.source, getString(it, "method"), getString(it, "params"), getString(it, "auth client")) }
@@ -115,55 +114,6 @@ val EPIC_HEX_PATTERN = Pattern.compile(".*([0-9a-f]{32}).*")
 private fun extractCode(s: String): String {
 	val matcher = EPIC_HEX_PATTERN.matcher(s)
 	return if (matcher.matches()) matcher.group(1) else ""
-}
-
-private inline fun accountPicker(source: CommandSourceStack): Int {
-	val devices = source.client.savedLoginsManager.getAll(source.author.id)
-	if (devices.isEmpty()) {
-		return startDefaultLoginFlow(source)
-	}
-	val numberEmojis = arrayOf("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟")
-	source.loading("Preparing your login")
-	source.session = source.client.internalSession
-	val users = source.queryUsers(devices.map { it.accountId })
-	val description = mutableListOf<String>().apply {
-		for (i in devices.indices) {
-			val accountId = devices[i].accountId
-			add("${numberEmojis.getOrNull(i) ?: Formatters.num.format(i + 1)} ${users.firstOrNull { it.id == accountId }?.displayName ?: accountId}")
-		}
-		add("✨ Login to another account")
-	}
-	val botMessage = source.complete(null, EmbedBuilder().setColor(0x8AB4F8)
-		.setTitle("Pick an account")
-		.setDescription(description.joinToString("\n"))
-		.build())
-	val shouldStop = AtomicBoolean()
-	CompletableFuture.supplyAsync {
-		for (i in devices.indices) {
-			if (shouldStop.get()) {
-				return@supplyAsync
-			}
-			if (i >= numberEmojis.size) {
-				break
-			}
-			botMessage.addReaction(numberEmojis[i]).complete()
-		}
-		if (!shouldStop.get()) {
-			botMessage.addReaction("✨").complete()
-		}
-	}
-	val choice = botMessage.awaitOneReaction(source)
-	shouldStop.set(true)
-	source.session = source.initialSession
-	return if (choice == "✨") {
-		startDefaultLoginFlow(source)
-	} else {
-		val choiceIndex = numberEmojis.indexOf(choice)
-		if (!numberEmojis.indices.contains(choiceIndex)) {
-			throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
-		}
-		doDeviceAuthLogin(source, devices[choiceIndex], lazy { users })
-	}
 }
 
 private inline fun accountPicker_buttons(source: CommandSourceStack): Int {

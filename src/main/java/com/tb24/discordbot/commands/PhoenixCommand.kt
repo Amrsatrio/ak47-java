@@ -19,8 +19,6 @@ import me.fungames.jfortniteparse.ue4.assets.exports.UDataTable
 import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
-import net.dv8tion.jda.api.entities.ChannelType
-import net.dv8tion.jda.api.entities.Message
 import kotlin.jvm.internal.Ref.ObjectRef
 
 class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's venture level, xp, and how much is needed to level up.", arrayOf("vt")) {
@@ -95,18 +93,6 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 			embed.addField("Rewards for level ${Formatters.num.format(nextMajorIdx + /*index offset*/1)}", nextMajorData.VisibleReward.joinToString("\n") { FortItemStack(it.TemplateId, it.Quantity).renderWithIcon() }, true)
 		}
 		val seasonEndsText = "%s season ends %s".format(currentEvent.element.eventType.substringAfterLast('.'), currentEvent.element.activeUntil.relativeFromNow())
-		val gateQuests = !source.isFromType(ChannelType.TEXT) || source.guild.idLong != 784128953387974736L // auei
-		var message: Message? = null
-		if (gateQuests) {
-			embed.setFooter("$seasonEndsText \u00b7 React with anything within 30s to show quests")
-			message = source.complete(null, embed.build())
-			if (message.awaitReactions({ _, _, _ -> true }, AwaitReactionsOptions().apply {
-					max = 1
-					time = 30000L
-				}).await().isEmpty()) {
-				return Command.SINGLE_SUCCESS
-			}
-		}
 		val venturesQuests = campaign.items.values.filter { it.primaryAssetType == "Quest" && it.attributes["quest_state"]?.asString == "Active" && (it.defData as? FortQuestItemDefinition)?.Category?.rowName?.text?.startsWith("Phoenix_") == true }
 			.sortedByDescending { (it.defData as FortQuestItemDefinition).SortPriority ?: 0 }
 		for (item in venturesQuests) {
@@ -120,11 +106,7 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 			embed.addField(title, objectives + '\n' + rewards, false)
 		}
 		embed.setFooter(seasonEndsText)
-		if (gateQuests) {
-			message!!.editMessage(embed.build()).complete()
-		} else {
-			source.complete(null, embed.build())
-		}
+		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS
 	}
 

@@ -46,7 +46,6 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(AthenaQuestsCommand())
 		register(AuthCodeCommand())
 		register(AutoDailyRewardsCommand())
-		//register(AvatarCommand())
 		register(BattlePassCommand())
 		register(BlurlCommand())
 		register(CampaignLoadoutsCommand())

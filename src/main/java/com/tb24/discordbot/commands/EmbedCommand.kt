@@ -9,12 +9,18 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.commands.arguments.MentionArgument.Companion.getMention
 import com.tb24.discordbot.commands.arguments.MentionArgument.Companion.mention
-import com.tb24.discordbot.util.*
+import com.tb24.discordbot.util.AwaitMessagesOptions
+import com.tb24.discordbot.util.await
+import com.tb24.discordbot.util.awaitMessages
+import com.tb24.discordbot.util.awaitOneInteraction
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.Permission
+import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.TextChannel
+import net.dv8tion.jda.api.interactions.components.Button
+import net.dv8tion.jda.api.interactions.components.ButtonStyle
 
 class EmbedCommand : BrigadierCommand("embed", "Shiver me embeds!") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -42,20 +48,18 @@ class EmbedCommand : BrigadierCommand("embed", "Shiver me embeds!") {
 		}
 		val embed = EmbedBuilder().setTitle(title).setDescription(description).setColor(15767080)
 		var content = ""
-		val bMsg = source.channel.sendMessage("React with ➕ to add fields, 🗨 to add a message, or 📩 to send. *Preview:*\n$content").embed(embed.build()).allowedMentions(setOf()).complete()
+		val buttons = mutableListOf<Button>()
+		buttons.add(Button.of(ButtonStyle.SECONDARY, "addField", "Add field", Emoji.fromUnicode("➕")))
+		buttons.add(Button.of(ButtonStyle.SECONDARY, "addMessage", "Add message", Emoji.fromUnicode("🗨")))
+		buttons.add(Button.of(ButtonStyle.PRIMARY, "send", "Send", Emoji.fromUnicode("📩")))
+		val bMsg = source.channel.sendMessage("*Preview:*\n$content").setEmbeds(embed.build()).setActionRow(*buttons.toTypedArray()).allowedMentions(setOf()).complete()
 		val botHasMessageManage = bMsg.member!!.hasPermission(Permission.MESSAGE_MANAGE)
-		bMsg.addReaction("➕").queue()
-		bMsg.addReaction("🗨").queue()
-		bMsg.addReaction("📩").queue()
 		fun updateMessage() {
-			bMsg.editMessage("React with ➕ to add fields, 🗨 to add a message, or 📩 to send. *Preview:*\n$content").embed(embed.build()).allowedMentions(setOf()).queue()
+			bMsg.editMessage("*Preview:*\n$content").setEmbeds(embed.build()).setActionRow(*buttons.toTypedArray()).allowedMentions(setOf()).queue()
 		}
 		while (true) {
-			val choice = bMsg.awaitReactions({ _, user, _ -> user == source.author }, AwaitReactionsOptions().apply { time = 600000L; max = 1 }).await().firstOrNull()
-				?: break
-			if (botHasMessageManage) choice.removeReaction().queue()
-			when (choice.reactionEmote.emoji) {
-				"➕" -> {
+			when (bMsg.awaitOneInteraction(source.author, false, 600000L).componentId) {
+				"addField" -> {
 					if (embed.fields.size == 25) {
 						source.complete("❌ Embeds can only have 25 fields.")
 						continue
@@ -74,7 +78,7 @@ class EmbedCommand : BrigadierCommand("embed", "Shiver me embeds!") {
 					embed.addField(fieldTitle, fieldValue, fieldValue.length <= 100)
 					updateMessage()
 				}
-				"🗨" -> {
+				"addMessage" -> {
 					val messagePrompt = source.complete("Send the content for the message.")
 					val messageResponse = messagePrompt.channel.awaitMessages({ _, user, _ -> user == source.author }, AwaitMessagesOptions().apply { time = 600000L; max = 1 }).await().firstOrNull()
 						?: break
@@ -82,7 +86,7 @@ class EmbedCommand : BrigadierCommand("embed", "Shiver me embeds!") {
 					content = messageResponse.contentRaw
 					updateMessage()
 				}
-				"📩" -> {
+				"send" -> {
 					channel.sendMessage(MessageBuilder().setContent(content).setEmbeds(embed.build()).setAllowedMentions(setOf()).build()).complete()
 					source.complete("✅ ${source.author.asMention}, successfully sent embed! Interaction design by a.bakedpotato.")
 					break

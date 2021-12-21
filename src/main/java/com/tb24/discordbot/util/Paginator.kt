@@ -1,9 +1,10 @@
 package com.tb24.discordbot.util
 
-import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Message
-import net.dv8tion.jda.api.entities.MessageReaction
 import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.interactions.components.ActionRow
+import net.dv8tion.jda.api.interactions.components.Button
+import net.dv8tion.jda.api.interactions.components.ComponentInteraction
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
@@ -12,62 +13,66 @@ fun <T> Message.replyPaginated(all: List<T>,
 							   pageSize: Int = 9,
 							   messageToEdit: Message? = null,
 							   initialPage: Int = 0,
-							   customReactions: PaginatorCustomReactions<T>? = null,
+							   customReactions: PaginatorCustomComponents<T>? = null,
 							   render: (content: List<T>, page: Int, pageCount: Int) -> Message) {
 	val pageCount = ceil(all.size / pageSize.toFloat()).toInt()
 	var page = initialPage
 	val rendered = render(all.subList(page * pageSize, min(all.size, (page * pageSize) + pageSize)), page, pageCount)
-	val msg = (messageToEdit?.editMessage(rendered)?.override(true) ?: channel.sendMessage(rendered)).complete()
 	if (pageCount <= 1) {
+		(messageToEdit?.editMessage(rendered)?.override(true) ?: channel.sendMessage(rendered)).complete()
 		return
 	}
-	val reactions = mutableListOf("⏮", "◀", "▶", "⏭")
-	customReactions?.addReactions(reactions)
-	reactions.forEach { msg.addReaction(it).queue() }
-	val collector = msg.createReactionCollector({ reaction, user, _ -> reactions.contains(reaction.reactionEmote.name) && user?.idLong == author.idLong }, ReactionCollectorOptions().apply {
+	val rows = mutableListOf<ActionRow>()
+	val pageControlButtons = ActionRow.of(
+		Button.secondary("first", "⏮"),
+		Button.secondary("prev", "◀"),
+		Button.secondary("next", "▶"),
+		Button.secondary("last", "⏭")
+	)
+	rows.add(pageControlButtons)
+	customReactions?.modifyComponents(rows)
+	val msg = (messageToEdit?.editMessage(rendered)?.override(true) ?: channel.sendMessage(rendered)).setActionRows(rows).complete()
+	val collector = msg.createMessageComponentInteractionCollector({ _, user, _ -> user?.idLong == author.idLong }, MessageComponentInteractionCollectorOptions().apply {
 		idle = 90000L
 		//dispose = true
 	})
-	collector.callback = object : CollectorListener<MessageReaction> {
-		override fun onCollect(item: MessageReaction, user: User?) {
+	collector.callback = object : CollectorListener<ComponentInteraction> {
+		override fun onCollect(item: ComponentInteraction, user: User?) {
 			val oldPage = page
-			page = when (reactions.indexOf(item.reactionEmote.name)) {
-				0 -> 0
-				1 -> max(page - 1, 0)
-				2 -> min(page + 1, pageCount - 1)
-				3 -> pageCount - 1
+			page = when (item.componentId) {
+				"first" -> 0
+				"prev" -> max(page - 1, 0)
+				"next" -> min(page + 1, pageCount - 1)
+				"last" -> pageCount - 1
 				else -> {
-					customReactions?.handleReaction(collector, item, user, page, pageCount)
+					item.deferEdit().queue()
+					customReactions?.handleComponent(collector, item, user, page, pageCount)
 					return
 				}
 			}
 
-			if (msg.member?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
-				item.removeReaction(user!!).queue()
-			}
-
 			if (page != oldPage) {
-				msg.editMessage(render(all.subList(page * pageSize, min(all.size, (page * pageSize) + pageSize)), page, pageCount)).queue()
+				item.editMessage(render(all.subList(page * pageSize, min(all.size, (page * pageSize) + pageSize)), page, pageCount)).setActionRows(rows).queue()
+			} else {
+				item.deferEdit().queue() // TODO disable the buttons when they actually don't do anything
 			}
 		}
 
-		override fun onRemove(item: MessageReaction, user: User?) {
-			//onCollect(item, user) TODO invoke action on reaction remove needs more testing
-		}
+		override fun onRemove(item: ComponentInteraction, user: User?) {}
 
-		override fun onDispose(item: MessageReaction, user: User?) {}
+		override fun onDispose(item: ComponentInteraction, user: User?) {}
 
-		override fun onEnd(collected: Map<Any, MessageReaction>, reason: CollectorEndReason) {
+		override fun onEnd(collected: Map<Any, ComponentInteraction>, reason: CollectorEndReason) {
 			customReactions?.onEnd(collected, reason)
-			if (reason == CollectorEndReason.IDLE && msg.member?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
-				msg.clearReactions().queue()
+			if (reason == CollectorEndReason.IDLE) {
+				finalizeComponents(emptySet())
 			}
 		}
 	}
 }
 
-interface PaginatorCustomReactions<T> {
-	fun addReactions(reactions: MutableCollection<String>)
-	fun handleReaction(collector: ReactionCollector, item: MessageReaction, user: User?, page: Int, pageCount: Int)
-	fun onEnd(collected: Map<Any, MessageReaction>, reason: CollectorEndReason)
+interface PaginatorCustomComponents<T> {
+	fun modifyComponents(rows: MutableList<ActionRow>)
+	fun handleComponent(collector: MessageComponentInteractionCollector, item: ComponentInteraction, user: User?, page: Int, pageCount: Int)
+	fun onEnd(collected: Map<Any, ComponentInteraction>, reason: CollectorEndReason)
 }

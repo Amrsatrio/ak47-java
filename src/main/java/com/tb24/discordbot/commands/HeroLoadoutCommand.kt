@@ -16,8 +16,12 @@ import me.fungames.jfortniteparse.fort.exports.FortAbilityKit
 import me.fungames.jfortniteparse.fort.exports.FortHeroGameplayDefinition
 import me.fungames.jfortniteparse.fort.exports.FortHeroType
 import net.dv8tion.jda.api.MessageBuilder
-import net.dv8tion.jda.api.entities.MessageReaction
+import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.interactions.components.ActionRow
+import net.dv8tion.jda.api.interactions.components.Button
+import net.dv8tion.jda.api.interactions.components.ButtonStyle
+import net.dv8tion.jda.api.interactions.components.ComponentInteraction
 import java.util.concurrent.CompletableFuture
 import kotlin.math.max
 
@@ -84,22 +88,23 @@ class HeroLoadoutCommand : BrigadierCommand("heroloadout", "Manages your STW her
 		return Command.SINGLE_SUCCESS
 	}
 
-	private class HeroLoadoutReactions(val list: List<FortItemStack>, val event: CompletableFuture<FortItemStack?>) : PaginatorCustomReactions<FortItemStack> {
+	private class HeroLoadoutReactions(val list: List<FortItemStack>, val event: CompletableFuture<FortItemStack?>) : PaginatorCustomComponents<FortItemStack> {
 		var confirmed = false
 
-		override fun addReactions(reactions: MutableCollection<String>) {
-			reactions.add("✅")
+		override fun modifyComponents(rows: MutableList<ActionRow>) {
+			rows.add(ActionRow.of(Button.of(ButtonStyle.PRIMARY, "setActive", "Set active", Emoji.fromUnicode("✅"))))
 		}
 
-		override fun handleReaction(collector: ReactionCollector, item: MessageReaction, user: User?, page: Int, pageCount: Int) {
-			if (!confirmed && item.reactionEmote.name == "✅") {
+		override fun handleComponent(collector: MessageComponentInteractionCollector, item: ComponentInteraction, user: User?, page: Int, pageCount: Int) {
+			if (!confirmed && item.componentId == "setActive") {
 				confirmed = true
 				event.complete(list[page])
 				collector.stop()
+				collector.message?.finalizeComponents(emptySet())
 			}
 		}
 
-		override fun onEnd(collected: Map<Any, MessageReaction>, reason: CollectorEndReason) {
+		override fun onEnd(collected: Map<Any, ComponentInteraction>, reason: CollectorEndReason) {
 			event.complete(null)
 		}
 	}

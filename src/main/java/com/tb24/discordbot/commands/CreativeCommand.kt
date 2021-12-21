@@ -8,13 +8,14 @@ import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.util.AwaitReactionsOptions
-import com.tb24.discordbot.util.await
-import com.tb24.discordbot.util.awaitReactions
+import com.tb24.discordbot.util.awaitOneInteraction
 import com.tb24.discordbot.util.exec
 import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
-import net.dv8tion.jda.api.Permission
+import net.dv8tion.jda.api.entities.Emoji
+import net.dv8tion.jda.api.interactions.components.ActionRow
+import net.dv8tion.jda.api.interactions.components.Button
+import net.dv8tion.jda.api.interactions.components.ButtonStyle
 import java.util.*
 import java.util.regex.Pattern
 
@@ -56,8 +57,8 @@ class CreativeCommand : BrigadierCommand("creative", "Manages your creative isla
 					embed.addField("Tags", descriptionTags.joinToString(), false)
 				}
 				embed.addField("Version", Formatters.num.format(linkData.version), false)
-				val message = source.complete(null, embed.build())
 				if (source.session == source.client.internalSession) {
+					source.complete(null, embed.build())
 					return@executes Command.SINGLE_SUCCESS
 				}
 				var isFavorite = false
@@ -77,20 +78,25 @@ class CreativeCommand : BrigadierCommand("creative", "Manages your creative isla
 						break
 					}
 				}
-				val trigger = if (isFavorite) "💔" else "❤"
-				message.addReaction(trigger).queue()
-				val choice = message.awaitReactions({ reaction, user, _ -> user == source.author && reaction.reactionEmote.emoji == trigger }, AwaitReactionsOptions().apply { time = 60000L; max = 1 }).await().firstOrNull()
-				if (choice != null) {
-					val successMessage = if (isFavorite) {
-						source.api.fortniteService.removeCodeFromCreativeFavorites(source.api.currentLoggedIn.id, mnemonic).exec()
-						"Removed from favorites"
+				while (true) {
+					val message = source.complete(null, embed.build(), ActionRow.of(if (isFavorite) {
+						Button.of(ButtonStyle.SUCCESS, "favorite", "Favorited", Emoji.fromEmote(favoritedEmote!!))
 					} else {
-						source.api.fortniteService.addCodeToCreativeFavorites(source.api.currentLoggedIn.id, mnemonic).exec()
-						"Added to favorites"
+						Button.of(ButtonStyle.SECONDARY, "favorite",  "Favorite", Emoji.fromEmote(favoriteEmote!!))
+					}))
+					source.loadingMsg = message
+					val choice = message.awaitOneInteraction(source.author, false).componentId
+					if (choice == "favorite") {
+						isFavorite = if (isFavorite) {
+							source.api.fortniteService.removeCodeFromCreativeFavorites(source.api.currentLoggedIn.id, mnemonic).exec()
+							false
+						} else {
+							source.api.fortniteService.addCodeToCreativeFavorites(source.api.currentLoggedIn.id, mnemonic).exec()
+							true
+						}
+					} else {
+						break
 					}
-					message.editMessage(embed.setFooter("✅ $successMessage \u2022 $mnemonic").build()).complete()
-				} else if (message.member?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
-					message.clearReactions().queue()
 				}
 				Command.SINGLE_SUCCESS
 			}

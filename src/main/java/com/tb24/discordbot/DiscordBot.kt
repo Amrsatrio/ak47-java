@@ -181,7 +181,6 @@ class DiscordBot(token: String) {
 
 		// Setup JDA
 		LOGGER.info("Connecting to Discord...")
-		// with sharding
 		val builder = DefaultShardManagerBuilder.createDefault(token).setHttpClient(okHttpClient)
 		if (ENV == "prod" || ENV == "stage") {
 			builder.enableIntents(GatewayIntent.GUILD_MEMBERS)
@@ -189,7 +188,6 @@ class DiscordBot(token: String) {
 		discord = builder.build()
 		commandManager = CommandManager(this)
 		discord.addEventListener(commandManager)
-		//discord.addEventListener(new ReactionHandler(this)); // TODO doesn't respond if the channel hasn't been interacted with
 		discord.addEventListener(GuildListeners(this))
 		//LOGGER.info("Logged in as {}! v{}", discord.selfUser.asTag, VERSION)
 		Runtime.getRuntime().addShutdownHook(Thread {

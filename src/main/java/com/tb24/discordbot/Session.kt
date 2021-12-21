@@ -93,7 +93,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 	}
 
 	@Synchronized
-	fun logout(message: Message? = null): Boolean {
+	fun logout(message: Message? = null) {
 		val logoutMsg = message?.run {
 			if (author.idLong == author.jda.selfUser.idLong) {
 				editMessage(Utils.loadingText("Logging out")).complete()
@@ -101,16 +101,20 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 				channel.sendMessage(Utils.loadingText("Logging out")).complete()
 			}
 		}
-		var bError = false
+		var logoutSuccess = false
 		try {
-			api.accountService.killSession(api.userToken.access_token).exec()
-			logoutMsg?.editMessage("✅ Logged out successfully.")?.queue()
+			api.userToken?.let {
+				api.accountService.killSession(it.access_token).exec()
+				logoutSuccess = true
+			}
 		} catch (e: HttpException) {
+		}
+		if (logoutSuccess) {
+			logoutMsg?.editMessage("✅ Logged out successfully.")?.queue()
+		} else {
 			logoutMsg?.editMessage("✅ Already logged out.")?.queue()
-			bError = true
 		}
 		clear()
-		return bError
 	}
 
 	fun save() {

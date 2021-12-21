@@ -29,7 +29,11 @@ import com.tb24.fn.model.priceengine.QueryOfferPricesPayload
 import com.tb24.fn.model.priceengine.QueryOfferPricesPayload.LineOfferReq
 import com.tb24.fn.util.*
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.entities.Role
+import net.dv8tion.jda.api.interactions.components.ActionRow
+import net.dv8tion.jda.api.interactions.components.Button
+import net.dv8tion.jda.api.interactions.components.ButtonStyle
 import okhttp3.MediaType
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -68,18 +72,12 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 			.setTitle("How do you want to pay?")
 			.addField("Prices", offer.prices.joinToString("\n") { it.render(quantity) }, true)
 			.addField("Balances", offer.prices.joinToString("\n") { it.getAccountBalanceText(profileManager) }, true)
-		val priceSelectionMsg = source.complete(null, priceSelectionEbd.build())
-		val icons = offer.prices.map { it.emote() ?: throw SimpleCommandExceptionType(LiteralMessage(it.render(quantity) + " is missing an emote. Please report this problem to the devs.")).create() }
-		icons.forEach { priceSelectionMsg.addReaction(it).queue() }
-		val choice = priceSelectionMsg.awaitReactions({ reaction, user, _ -> icons.firstOrNull { it.idLong == reaction.reactionEmote.idLong } != null && user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
-			max = 1
-			time = 30000L
-			errors = arrayOf(CollectorEndReason.TIME)
-		}).await().first().reactionEmote.idLong
-		priceIndex = icons.indexOfFirst { it.idLong == choice }
-		if (priceIndex == -1) {
-			throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
+		val buttons = offer.prices.mapIndexed { i, price ->
+			val emote = price.emote() ?: throw SimpleCommandExceptionType(LiteralMessage(price.render(quantity) + " is missing an emote. Please report this problem to the devs.")).create()
+			Button.of(ButtonStyle.SECONDARY, i.toString(), Emoji.fromEmote(emote))
 		}
+		val priceSelectionMsg = source.complete(null, priceSelectionEbd.build(), ActionRow.of(buttons))
+		priceIndex = priceSelectionMsg.awaitOneInteraction(source.author).componentId.toInt()
 	} else if (priceIndex < 0) { // only one price, just use it
 		priceIndex = 0
 	}

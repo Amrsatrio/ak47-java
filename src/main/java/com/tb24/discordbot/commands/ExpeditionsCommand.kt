@@ -22,9 +22,10 @@ import me.fungames.jfortniteparse.fort.exports.FortExpeditionItemDefinition
 import me.fungames.jfortniteparse.fort.objects.rows.Recipe
 import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText
 import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
-import net.dv8tion.jda.api.Permission
-import net.dv8tion.jda.api.entities.MessageReaction
-import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.entities.Emoji
+import net.dv8tion.jda.api.interactions.components.ActionRow
+import net.dv8tion.jda.api.interactions.components.Button
+import net.dv8tion.jda.api.interactions.components.ButtonStyle
 import kotlin.math.max
 import kotlin.math.min
 
@@ -40,7 +41,8 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
 				// TODO interactive expedition picker
 				val expedition = source.api.profileManager.getProfileData("campaign").items.values.first { it.primaryAssetType == "Expedition" }
-				prepare(source, expedition)
+				val ctx = ExpeditionBuildSquadViewController(expedition, source.session.getHomebase(source.api.currentLoggedIn.id))
+				prepare(source, ctx)
 			}
 			.then(argument("expedition", item(true))
 				.executes {
@@ -48,15 +50,20 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 					source.ensureSession()
 					source.loading("Finding available expeditions")
 					source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
-					prepare(source, getItem(it, "expedition", source.api.profileManager.getProfileData("campaign"), "Expedition"))
+					val expedition = getItem(it, "expedition", source.api.profileManager.getProfileData("campaign"), "Expedition")
+					val ctx = ExpeditionBuildSquadViewController(expedition, source.session.getHomebase(source.api.currentLoggedIn.id))
+					prepare(source, ctx)
 				}
 			)
 		)
-		.then(literal("claim").executes {
-			it.source.ensureSession()
-			it.source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
-			claim(it.source, it.source.api.profileManager.getProfileData("campaign").items.values.first { it.primaryAssetType == "Expedition" })
-		})
+		.then(literal("claim")
+			.executes { c ->
+				val source = c.source
+				source.ensureSession()
+				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
+				claim(source, source.api.profileManager.getProfileData("campaign").items.values.first { it.primaryAssetType == "Expedition" })
+			}
+		)
 
 	private inline fun overview(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
 		val source = c.source
@@ -85,8 +92,7 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 		return Command.SINGLE_SUCCESS
 	}
 
-	private fun prepare(source: CommandSourceStack, expedition: FortItemStack): Int {
-		val ctx = ExpeditionBuildSquadViewController(expedition, source.session.getHomebase(source.api.currentLoggedIn.id))
+	private fun prepare(source: CommandSourceStack, ctx: ExpeditionBuildSquadViewController): Int {
 		val survivorEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/ItemTypes/T-Icon-Survivor-128.T-Icon-Survivor-128")!!
 		val typeIconPath = expeditionTypeIcon(ctx.type)
 		val typeEmote = textureEmote(typeIconPath)!!
@@ -94,7 +100,7 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 		requirements.add(typeEmote.asMention + ' ' + expeditionTypeTitle(ctx.type).format())
 		ctx.recipe.RecipeCosts.mapTo(requirements) { it.asItemStack().renderWithIcon() }
 		val embed = source.createEmbed()
-			.setTitle(expedition.displayName)
+			.setTitle(ctx.expedition.displayName)
 			.setThumbnail(Utils.benBotExportAsset(typeIconPath))
 			.setDescription("**Target Squad Power: %,d**\nDuration: %s\n%s\n\n✅ Start Expedition\n%s Change Slot\n%s Change Vehicle".format(
 				ctx.attrs.expedition_max_target_power,
@@ -109,50 +115,29 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 				textureEmote(heroTypeIcon(criteriaRequirement.RequiredTag.toString()))?.asMention + ' ' + (if (criteriaRequirement.bRequireRarity) criteriaRequirement.RequiredRarity.rarityName.format() + ' ' else "") + heroTypeTitle(criteriaRequirement.RequiredTag.toString()).format()
 			} else "None", true)
 			.addField("Rewards", ctx.recipe.RecipeResults.joinToString("\n") { it.asItemStack().renderWithIcon() }, true)
-		val message = source.complete(null, embed.build())
-		message.addReaction("✅").queue()
-		message.addReaction(survivorEmote).queue()
-		message.addReaction(typeEmote).queue()
-		val collector = message.createReactionCollector({ _, user, _ -> user == source.author }, ReactionCollectorOptions().apply {
-			idle = 120000L
-		})
-		collector.callback = object : CollectorListener<MessageReaction> {
-			override fun onCollect(item: MessageReaction, user: User?) {
-				try {
-					if (message.member?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
-						item.removeReaction(source.author).queue()
-					}
-					/*val emote = item.
-					if (emote.isEmoji) return
-					if (item.reactionEmote.idLong == researchPointIcon!!.idLong) {
-						val response = source.api.profileManager.dispatchClientCommandRequest(ClaimCollectedResources().apply { collectorsToClaim = arrayOf(ctx.resourceCollectorItem!!.itemId) }, "campaign").await()
-						ctx.collected = response.notifications?.filterIsInstance<CollectedResourceResultNotification>()?.firstOrNull()?.loot?.items?.firstOrNull()?.quantity ?: 0
-					} else {
-						val statType = ctx.icons.entries.firstOrNull { it.value.idLong == emote.idLong }?.key ?: return
-						val researchLevel = (campaign.stats as CampaignProfileStats).research_levels[statType]
-						if (researchLevel >= 120 || ctx.points < (ctx.costs[statType] ?: Integer.MAX_VALUE)) return
-						source.api.profileManager.dispatchClientCommandRequest(PurchaseResearchStatUpgrade().apply { statId = statType.name }, "campaign").await()
-					}
-					val campaignModified = source.api.profileManager.getProfileData(campaign.owner.id, "campaign")
-					ctx.populateItems(campaignModified)
-					message.editMessage(renderEmbed(source, campaignModified, ctx)).queue()*/
-				} catch (e: Throwable) {
-					e.printStackTrace()
-					// TODO handle async errors
-				}
-			}
-
-			override fun onRemove(item: MessageReaction, user: User?) {}
-
-			override fun onDispose(item: MessageReaction, user: User?) {}
-
-			override fun onEnd(collected: Map<Any, MessageReaction>, reason: CollectorEndReason) {
-				if (reason == CollectorEndReason.IDLE && message.member?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
-					message.clearReactions().queue()
-				}
-			}
+		val buttons = mutableListOf<Button>()
+		buttons.add(Button.of(ButtonStyle.PRIMARY, "start", "Start Expedition", Emoji.fromUnicode("✅")))
+		buttons.add(Button.of(ButtonStyle.PRIMARY, "changeSlot", "Change Slot", Emoji.fromEmote(survivorEmote)))
+		buttons.add(Button.of(ButtonStyle.PRIMARY, "changeVehicle", "Change Vehicle", Emoji.fromEmote(typeEmote)))
+		val message = source.complete(null, embed.build(), ActionRow.of(buttons))
+		return when (message.awaitOneInteraction(source.author, false, 120000L).componentId) {
+			"start" -> start(source, ctx)
+			"changeSlot" -> changeSlot(source, ctx)
+			"changeVehicle" -> changeVehicle(source, ctx)
+			else -> Command.SINGLE_SUCCESS
 		}
-		return Command.SINGLE_SUCCESS
+	}
+
+	private fun start(source: CommandSourceStack, ctx: ExpeditionBuildSquadViewController): Int {
+		TODO()
+	}
+
+	private fun changeSlot(source: CommandSourceStack, ctx: ExpeditionBuildSquadViewController): Int {
+		TODO()
+	}
+
+	private fun changeVehicle(source: CommandSourceStack, ctx: ExpeditionBuildSquadViewController): Int {
+		TODO()
 	}
 
 	private fun claim(source: CommandSourceStack, expedition: FortItemStack): Int {
@@ -166,12 +151,9 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 				Formatters.percentZeroFraction.format(attrs.expedition_success_chance)
 			))
 			.setThumbnail(Utils.benBotExportAsset(expeditionTypeIcon(recipe.RequiredCatalysts.first().toString())))
-		val message = source.complete(null, embed.build())
-		message.addReaction("✅").queue()
-		if (message.awaitReactions({ _, user, _ -> user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
-				max = 1
-				time = 30000L
-			}).await().isEmpty()) {
+		val message = source.complete(null, embed.build(), ActionRow.of(Button.primary("continue", "Continue")))
+		val choice = message.awaitOneInteraction(source.author, false).componentId
+		if (choice != "continue") {
 			return Command.SINGLE_SUCCESS
 		}
 		// TODO send claim request here
