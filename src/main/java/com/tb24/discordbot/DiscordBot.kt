@@ -82,7 +82,7 @@ class DiscordBot(token: String) {
 	val commandManager: CommandManager
 
 	val sessions: MutableMap<String, Session> = ExpiringMap.builder()
-		.expiration(40, TimeUnit.MINUTES)
+		.expiration(BotConfig.get().sessionLifetimeMinutes, TimeUnit.MINUTES)
 		.expirationPolicy(ExpirationPolicy.ACCESSED)
 		.build()
 	lateinit var internalSession: Session
@@ -275,7 +275,7 @@ class DiscordBot(token: String) {
 	// region Session manager
 	fun setupInternalSession() {
 		if (!::internalSession.isInitialized) {
-			internalSession = getSession("__internal__")
+			internalSession = getSession("__internal__", true)
 		}
 		val internalDeviceData = savedLoginsManager.getAll("__internal__")[0]
 		try {
@@ -296,7 +296,12 @@ class DiscordBot(token: String) {
 		}
 	}
 
-	fun getSession(id: String) = sessions.getOrPut(id) { Session(this, id) }
+	fun getSession(id: String, ignoreLimit: Boolean = false) = sessions.getOrPut(id) {
+		if (!ignoreLimit && sessions.size >= BotConfig.get().maxSessions) {
+			throw IllegalStateException("Too many people are using the bot right now. Please try again later.")
+		}
+		Session(this, id)
+	}
 	// endregion
 
 	// region Prefix manager

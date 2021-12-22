@@ -27,6 +27,8 @@ public class BotConfig {
 	public String rethinkUrl = "rethinkdb://localhost:28015/ak47";
 	public String mongoUrl = "mongodb://localhost:27017";
 	public String defaultPrefix = ",";
+	public long sessionLifetimeMinutes = 40;
+	public int maxSessions = 3000;
 	public long homeGuildId;
 	public String homeGuildInviteLink;
 	public long itemShopChannelId;

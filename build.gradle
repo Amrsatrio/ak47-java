@@ -47,7 +47,7 @@ repositories {
 dependencies {
 	implementation fileTree(dir: 'libs', include: ['*.jar'])
 	implementation 'com.github.FabianFG:JFortniteParse:master-SNAPSHOT'
-	implementation 'com.mojang:brigadier:1.0.17'
+	implementation 'com.mojang:brigadier:1.0.18'
 	implementation 'com.rethinkdb:rethinkdb-driver:2.4.4'
 	implementation 'com.tb24:epic-api:+'
 	//implementation 'dev.morphia.morphia:morphia-kotlin:2.2.3'

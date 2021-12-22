@@ -4,7 +4,10 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
-import com.tb24.discordbot.*
+import com.tb24.discordbot.BotConfig
+import com.tb24.discordbot.DiscordBot
+import com.tb24.discordbot.HttpException
+import com.tb24.discordbot.Rune
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.McpProfile
@@ -16,7 +19,7 @@ import net.dv8tion.jda.internal.entities.ReceivedMessage
 import java.net.URLEncoder
 import java.util.concurrent.CompletableFuture
 
-open class CommandSourceStack(val client: DiscordBot, val message: Message, sessionId: String?) {
+open class CommandSourceStack(val client: DiscordBot, val message: Message, sessionId: String?, ignoreSessionLimit: Boolean = false) {
 	companion object {
 		val IS_DEBUG = System.getProperty("intellij.debug.agent") == "true"
 	}
@@ -28,7 +31,7 @@ open class CommandSourceStack(val client: DiscordBot, val message: Message, sess
 	inline val member get() = message.member
 	inline fun isFromType(type: ChannelType) = message.isFromType(type)
 
-	val initialSession: Session = sessionId?.let { client.getSession(sessionId) } ?: client.internalSession
+	val initialSession = sessionId?.let { client.getSession(sessionId, ignoreSessionLimit || hasPremium()) } ?: client.internalSession
 	var session = initialSession
 	inline val api get() = session.api
 
@@ -175,4 +178,4 @@ class OnlyChannelCommandSource(client: DiscordBot, channel: MessageChannel) : Co
 	emptyList(),
 	0,
 	null,
-), null)
+), null, true)

@@ -170,7 +170,13 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 			if (event.author === event.jda.selfUser || event.author.isBot || !event.message.contentRaw.startsWith(prefix))
 				return@submit
 
-			handleCommand(event.message.contentRaw, CommandSourceStack(client, event.message, event.author.id), prefix)
+			val source = try {
+				CommandSourceStack(client, event.message, event.author.id)
+			} catch (e: IllegalStateException) {
+				event.channel.sendMessage("❌ " + e.message).queue()
+				return@submit
+			}
+			handleCommand(event.message.contentRaw, source, prefix)
 		}
 	}
 
