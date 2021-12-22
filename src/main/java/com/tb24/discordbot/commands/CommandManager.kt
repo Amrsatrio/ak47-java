@@ -24,6 +24,7 @@ import net.dv8tion.jda.api.exceptions.PermissionException
 import net.dv8tion.jda.api.hooks.ListenerAdapter
 import net.dv8tion.jda.internal.utils.Helpers
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.util.concurrent.Executors
 import kotlin.math.max
 import kotlin.math.min
@@ -265,6 +266,8 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 					DiscordBot.LOGGER.error("Attempted to repeat a command more than once", e)
 				}
 			}
+		} catch (e: SocketTimeoutException) {
+			source.complete("❌ Connection timed out. Please try again later.")
 		} catch (e: PermissionException) {
 			source.complete(null, EmbedBuilder().setColor(0xF04947).setDescription("❌ Cannot perform action due to a lack of Permission. Missing permission: " + e.permission.getName()).build())
 		} catch (e: Throwable) {
