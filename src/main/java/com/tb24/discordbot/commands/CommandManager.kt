@@ -19,9 +19,12 @@ import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.ChannelType
 import net.dv8tion.jda.api.entities.MessageEmbed
+import net.dv8tion.jda.api.events.ReadyEvent
+import net.dv8tion.jda.api.events.interaction.SlashCommandEvent
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.exceptions.PermissionException
 import net.dv8tion.jda.api.hooks.ListenerAdapter
+import net.dv8tion.jda.api.interactions.commands.CommandInteraction
 import net.dv8tion.jda.internal.utils.Helpers
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
@@ -33,6 +36,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 	@JvmField var dispatcher = CommandDispatcher<CommandSourceStack>()
 	val commandMap = hashMapOf<String, BrigadierCommand>()
 	val redirects = hashMapOf<String, BrigadierCommand>()
+	val slashCommands = hashMapOf<String, BaseCommandBuilder<CommandSourceStack>>()
 	private val threadPool = Executors.newCachedThreadPool()
 
 	init {
@@ -146,7 +150,12 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(FortniteAndroidApkCommand())
 	}
 
+	override fun onReady(event: ReadyEvent) {
+		client.discord.getGuildById(BotConfig.get().homeGuildId)!!.updateCommands().addCommands(slashCommands.values.map { it.build() }).complete()
+	}
+
 	private fun register(command: BrigadierCommand): LiteralCommandNode<CommandSourceStack> {
+		// Register classic text command
 		commandMap[command.name] = command
 //		val node = command.getNode(dispatcher)
 		val registered = command.register(dispatcher)
@@ -155,6 +164,12 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 			dispatcher.register(buildRedirect(alias, registered))
 		}
 		command.registeredNode = registered
+
+		// Register slash command
+		command.getSlashCommand()?.let {
+			slashCommands[it.name] = it
+		}
+
 		return registered
 	}
 
@@ -180,6 +195,26 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				return@submit
 			}
 			handleCommand(event.message.contentRaw, source, prefix)
+		}
+	}
+
+	override fun onSlashCommand(event: SlashCommandEvent) {
+		threadPool.submit {
+			val source = try {
+				CommandSourceStack(client, event.interaction, event.user.id)
+			} catch (e: IllegalStateException) {
+				event.channel.sendMessage("❌ " + e.message).queue()
+				return@submit
+			}
+			val interaction = event.interaction as CommandInteraction
+			val baseCommand = slashCommands[interaction.name]!!
+			val command = when {
+				interaction.subcommandGroup != null -> baseCommand.subcommandGroups[interaction.subcommandGroup]!!.subcommands[interaction.subcommandName]!!
+				interaction.subcommandName != null -> baseCommand.subcommands[interaction.subcommandName]!!
+				else -> baseCommand
+			}
+			command.command?.invoke(source)
+				?: DiscordBot.LOGGER.warn("Command ${event.commandPath} has no implementation")
 		}
 	}
 

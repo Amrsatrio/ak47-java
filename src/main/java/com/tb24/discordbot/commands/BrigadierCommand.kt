@@ -20,17 +20,23 @@ abstract class BrigadierCommand @JvmOverloads constructor(val name: String, val 
 	lateinit var registeredNode: CommandNode<CommandSourceStack>
 
 	abstract fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack>
+	open fun getSlashCommand(): BaseCommandBuilder<CommandSourceStack>? = null
 
 	open fun register(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralCommandNode<CommandSourceStack> =
 		dispatcher.register(getNode(dispatcher))
 
 	protected inline fun newRootNode() = literal(name)
+	protected inline fun newCommandBuilder() = command(name, description)
 
 	protected inline fun literal(name: String): LiteralArgumentBuilder<CommandSourceStack> =
 		LiteralArgumentBuilder.literal(name)
 
 	protected inline fun <T> argument(name: String, type: ArgumentType<T>): RequiredArgumentBuilder<CommandSourceStack, T> =
 		RequiredArgumentBuilder.argument(name, type)
+
+	protected inline fun command(name: String, description: String) = BaseCommandBuilder<CommandSourceStack>(name, description)
+	protected inline fun subcommand(name: String, description: String) = SubcommandBuilder<CommandSourceStack>(name, description)
+	protected inline fun group(name: String, description: String) = SubcommandGroupBuilder<CommandSourceStack>(name, description)
 
 	protected fun <T : ArgumentBuilder<CommandSourceStack, T>> ArgumentBuilder<CommandSourceStack, T>.withPublicProfile(func: (CommandContext<CommandSourceStack>, McpProfile) -> Int, loadingMsg: String, profileId: String = "campaign"): T = this
 		.executes {

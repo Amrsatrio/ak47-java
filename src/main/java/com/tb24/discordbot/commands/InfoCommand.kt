@@ -12,20 +12,23 @@ import java.lang.management.ManagementFactory
 
 class InfoCommand : BrigadierCommand("info", "Shows general info about the bot.", arrayOf("memory", "mem")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { c ->
-			val source = c.source
-			val embed = EmbedBuilder().setColor(COLOR_INFO)
-				.addField("Sessions (incl. you)", Formatters.num.format(source.client.sessions.size), true)
-				.addField("Premium users", Formatters.num.format(RethinkDB.r.table("members").run(source.client.dbConn).count()), true)
-				.addField("Granters", Formatters.num.format(RethinkDB.r.table("admins").run(source.client.dbConn).count()), true)
-				.addField("Servers", Formatters.num.format(source.client.discord.guilds.size), true)
-				.addField("Cached users", Formatters.num.format(source.client.discord.users.size), true)
-				.addField("Uptime", StringUtil.formatElapsedTime(ManagementFactory.getRuntimeMXBean().uptime, true).toString(), true)
-				.addField("Memory", getMemoryInfo(), true)
-				.addField("Versions", "Java: `%s`\nJDA: `%s`".format(System.getProperty("java.version"), JDAInfo.VERSION), true)
-			source.complete(null, embed.build())
-			Command.SINGLE_SUCCESS
-		}
+		.executes { execute(it.source) }
+
+	//override fun getSlashCommand() = newCommandBuilder().executes(::execute)
+
+	private fun execute(source: CommandSourceStack): Int {
+		val embed = EmbedBuilder().setColor(COLOR_INFO)
+			.addField("Sessions (incl. you)", Formatters.num.format(source.client.sessions.size), true)
+			.addField("Premium users", Formatters.num.format(RethinkDB.r.table("members").run(source.client.dbConn).count()), true)
+			.addField("Granters", Formatters.num.format(RethinkDB.r.table("admins").run(source.client.dbConn).count()), true)
+			.addField("Servers", Formatters.num.format(source.client.discord.guilds.size), true)
+			.addField("Cached users", Formatters.num.format(source.client.discord.users.size), true)
+			.addField("Uptime", StringUtil.formatElapsedTime(ManagementFactory.getRuntimeMXBean().uptime, true).toString(), true)
+			.addField("Memory", getMemoryInfo(), true)
+			.addField("Versions", "Java: `%s`\nJDA: `%s`".format(System.getProperty("java.version"), JDAInfo.VERSION), true)
+		source.complete(null, embed.build())
+		return Command.SINGLE_SUCCESS
+	}
 }
 
 class MemoryCommand : BrigadierCommand("memory", "Displays the JVM's current memory usage.", arrayOf("mem")) {
@@ -34,6 +37,11 @@ class MemoryCommand : BrigadierCommand("memory", "Displays the JVM's current mem
 			it.source.complete(getMemoryInfo())
 			Command.SINGLE_SUCCESS
 		}
+
+	override fun getSlashCommand() = newCommandBuilder().executes {
+		it.interaction.reply(getMemoryInfo()).complete()
+		Command.SINGLE_SUCCESS
+	}
 }
 
 private fun getMemoryInfo(): String {

@@ -4,38 +4,68 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
-import com.tb24.discordbot.BotConfig
-import com.tb24.discordbot.DiscordBot
-import com.tb24.discordbot.HttpException
-import com.tb24.discordbot.Rune
+import com.tb24.discordbot.*
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.McpProfile
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.*
+import net.dv8tion.jda.api.interactions.Interaction
+import net.dv8tion.jda.api.interactions.commands.CommandInteraction
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.internal.entities.ReceivedMessage
 import java.net.URLEncoder
 import java.util.concurrent.CompletableFuture
 
-open class CommandSourceStack(val client: DiscordBot, val message: Message, sessionId: String?, ignoreSessionLimit: Boolean = false) {
+open class CommandSourceStack {
 	companion object {
 		val IS_DEBUG = System.getProperty("intellij.debug.agent") == "true"
 	}
 
-	// Message delegates
-	inline val author get() = message.author
-	inline val channel get() = message.channel
-	inline val guild get() = message.guild
-	inline val member get() = message.member
-	inline fun isFromType(type: ChannelType) = message.isFromType(type)
+	val client: DiscordBot
+	lateinit var message: Message
+	private var _interaction: Interaction? = null
+	val interaction get() = _interaction!!
+	val commandInteraction get() = _interaction as CommandInteraction
 
-	val initialSession = sessionId?.let { client.getSession(sessionId, ignoreSessionLimit || hasPremium()) } ?: client.internalSession
-	var session = initialSession
+	val guild: Guild?
+	val member: Member?
+	val author: User // name should be user but whatever
+	val channel: MessageChannel
+
+	val initialSession: Session
+	var session: Session
 	inline val api get() = session.api
 
-	val prefix: String by lazy { client.getCommandPrefix(message) }
+	constructor(client: DiscordBot, message: Message, sessionId: String?, ignoreSessionLimit: Boolean = false) {
+		this.client = client
+		this.message = message
+		guild = message.guild
+		member = message.member
+		author = message.author
+		channel = message.channel
+		initialSession = getInitialSession(sessionId, ignoreSessionLimit)
+		session = initialSession
+	}
+
+	constructor(client: DiscordBot, interaction: Interaction, sessionId: String?, ignoreSessionLimit: Boolean = false) {
+		this.client = client
+		this._interaction = interaction
+		guild = interaction.guild
+		member = interaction.member
+		author = interaction.user
+		channel = interaction.channel as MessageChannel // TODO IMPORTANT
+		initialSession = getInitialSession(sessionId, ignoreSessionLimit)
+		session = initialSession
+	}
+
+	private fun getInitialSession(sessionId: String?, ignoreSessionLimit: Boolean) =
+		sessionId?.let { client.getSession(sessionId, ignoreSessionLimit || hasPremium()) } ?: client.internalSession
+
+	inline fun isFromType(type: ChannelType) = message.isFromType(type)
+
+	val prefix: String by lazy { DiscordBot.instance.getCommandPrefix(message) }
 
 	// region Flow control
 	var errorTitle: String? = null

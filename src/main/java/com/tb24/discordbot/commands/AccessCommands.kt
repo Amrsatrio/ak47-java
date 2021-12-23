@@ -116,7 +116,7 @@ fun premium(source: CommandSourceStack, target: User, remove: Boolean/*, secret:
 		.setThumbnail(target.avatarUrl)
 		.addField("Target User", "%s (tag: %s)".format(target.asMention, target.asTag), false)
 		.addField("Requested By", "%s (tag: %s)".format(source.author.asMention, source.author.asTag), false)
-		.addField("Requested At", if (source.isFromType(ChannelType.PRIVATE)) "Direct Message" else if (source.isFromType(ChannelType.TEXT)) "Guild: %s".format(source.guild.name) else "Unknown", false)
+		.addField("Requested At", if (source.isFromType(ChannelType.PRIVATE)) "Direct Message" else if (source.isFromType(ChannelType.TEXT)) "Guild: %s".format(source.guild!!.name) else "Unknown", false)
 		.setColor(if (remove) BrigadierCommand.COLOR_ERROR else BrigadierCommand.COLOR_SUCCESS)
 		.setTimestamp(Instant.now())
 		.build())

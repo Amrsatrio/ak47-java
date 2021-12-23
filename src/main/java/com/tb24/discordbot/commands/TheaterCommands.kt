@@ -169,7 +169,7 @@ fun executeMtxAlerts(source: CommandSourceStack, campaign: McpProfile? = null): 
 		}
 	}
 	val role = if (campaign == null) {
-		source.guild.getRoleById(BotConfig.get().mtxAlertsRoleId)
+		source.guild!!.getRoleById(BotConfig.get().mtxAlertsRoleId)
 			?: source.guild.getRolesByName("V-Bucks Alerts Ping", true).firstOrNull()
 	} else null
 	source.complete(if (role != null && embed.fields.isNotEmpty()) role.asMention else null, embed.build())
