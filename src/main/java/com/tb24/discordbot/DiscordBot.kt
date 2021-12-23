@@ -298,7 +298,7 @@ class DiscordBot(token: String) {
 
 	fun getSession(id: String, ignoreLimit: Boolean = false) = sessions.getOrPut(id) {
 		if (!ignoreLimit && sessions.size >= BotConfig.get().maxSessions) {
-			throw IllegalStateException("Too many people are using the bot right now. Please try again later.")
+			throw IllegalStateException(L10N.format("error.session.limit"))
 		}
 		Session(this, id)
 	}

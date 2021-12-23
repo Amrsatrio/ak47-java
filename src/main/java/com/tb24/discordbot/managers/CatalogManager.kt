@@ -104,16 +104,14 @@ class CatalogManager {
 		// Check for changes and invoke the callbacks when necessary
 		val currentAthenaHash = hashSections(athenaSections.filter { it.value.items.isNotEmpty() })
 		val currentCampaignHash = hashSections(campaignSections)
-		if (!firstLoad) {
-			if (athenaHash != currentAthenaHash) {
-				onAthenaCatalogUpdated()
-			}
-			if (campaignHash != currentCampaignHash) {
-				onCampaignCatalogUpdated()
-			}
+		if (athenaHash != currentAthenaHash) {
+			athenaHash = currentAthenaHash
+			if (!firstLoad) onAthenaCatalogUpdated()
 		}
-		athenaHash = currentAthenaHash
-		campaignHash = currentCampaignHash
+		if (campaignHash != currentCampaignHash) {
+			campaignHash = currentCampaignHash
+			if (!firstLoad) onCampaignCatalogUpdated()
+		}
 	}
 
 	private fun hashSections(map: Map<String, ShopSection>) = map.entries.joinToString(",") { (sectionId, section) ->
