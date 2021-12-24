@@ -73,7 +73,7 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 		if (!autoClaimEntries.any { it.id == accountId && it.registrantId == discordId }) {
 			source.loading("Checking STW ownership and enrolling")
 			if (autoClaimEntries.any { it.id == accountId }) {
-				throw SimpleCommandExceptionType(LiteralMessage("Another user of ${source.message.jda.selfUser.name} already have that account enrolled for auto claiming. An Epic account can only be enrolled once throughout the whole bot.")).create()
+				throw SimpleCommandExceptionType(LiteralMessage("Another user of ${source.jda.selfUser.name} already have that account enrolled for auto claiming. An Epic account can only be enrolled once throughout the whole bot.")).create()
 			}
 			source.api.profileManager.dispatchPublicCommandRequest(user, QueryPublicProfile(), "campaign").await()
 			val campaign = source.api.profileManager.getProfileData(user.id, "campaign")
@@ -83,7 +83,7 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 			val nextUtcMidnight = (System.currentTimeMillis() / millisInDay + 1) * millisInDay
 			source.complete(null, EmbedBuilder().setColor(COLOR_SUCCESS)
 				.setTitle("✅ Enrolled auto daily rewards claiming for account `${user.displayName ?: accountId}`")
-				.setDescription("${source.message.jda.selfUser.name} will automatically claim it after UTC midnight.")
+				.setDescription("${source.jda.selfUser.name} will automatically claim it after UTC midnight.")
 				.addField("Next claim", nextUtcMidnight.relativeFromNow(), false)
 				.build())
 		} else {
@@ -93,7 +93,7 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 			r.table("auto_claim").get(accountId).delete().run(source.client.dbConn)
 			source.complete(null, EmbedBuilder().setColor(COLOR_SUCCESS)
 				.setTitle("✅ Unenrolled auto daily rewards claiming for account `${user.displayName ?: accountId}`.")
-				.setDescription("${source.message.jda.selfUser.name} will no longer automatically claim the daily rewards of that account.")
+				.setDescription("${source.jda.selfUser.name} will no longer automatically claim the daily rewards of that account.")
 				.build())
 		}
 		return Command.SINGLE_SUCCESS

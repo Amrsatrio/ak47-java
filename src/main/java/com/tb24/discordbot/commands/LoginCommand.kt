@@ -209,7 +209,7 @@ fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 			cancel()
 		}
 	}
-	val waitingMsg = source.loading("Waiting for your action...\n⏱ ${StringUtil.formatElapsedTime(deviceCodeResponse.expiration - System.currentTimeMillis(), true)}")
+	val waitingMsg = source.loading("Waiting for your action...\n⏱ ${StringUtil.formatElapsedTime(deviceCodeResponse.expiration - System.currentTimeMillis(), true)}")!!
 	waitingMsg.addReaction("❌").queue()
 	val collector = waitingMsg.createReactionCollector({ reaction, user, _ -> reaction.reactionEmote.name == "❌" && user?.idLong == source.author.idLong }, ReactionCollectorOptions().apply { max = 1 })
 	collector.callback = object : CollectorListener<MessageReaction> {

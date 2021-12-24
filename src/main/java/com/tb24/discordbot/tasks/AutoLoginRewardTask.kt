@@ -7,7 +7,6 @@ import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.Session
 import com.tb24.discordbot.commands.CommandSourceStack
-import com.tb24.discordbot.commands.OnlyChannelCommandSource
 import com.tb24.discordbot.commands.notifyDailyRewardsClaimed
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
@@ -64,7 +63,7 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 				displayName = users[epicId]?.displayName
 				val user = client.discord.getUserById(discordId) ?: client.discord.retrieveUserById(discordId).complete()
 				val channel = user.openPrivateChannel().complete()
-				source = OnlyChannelCommandSource(client, channel)
+				source = CommandSourceStack(client, channel)
 				if (displayName == null) {
 					disableAutoClaim(epicId)
 					source.complete("Disabled automatic daily rewards claiming of `$epicId` because that account has been deleted or deactivated.")

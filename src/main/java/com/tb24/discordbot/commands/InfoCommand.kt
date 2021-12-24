@@ -14,7 +14,7 @@ class InfoCommand : BrigadierCommand("info", "Shows general info about the bot."
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it.source) }
 
-	//override fun getSlashCommand() = newCommandBuilder().executes(::execute)
+	override fun getSlashCommand() = newCommandBuilder().executes(::execute)
 
 	private fun execute(source: CommandSourceStack): Int {
 		val embed = EmbedBuilder().setColor(COLOR_INFO)

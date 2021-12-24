@@ -13,7 +13,7 @@ import net.dv8tion.jda.api.EmbedBuilder
 class AboutCommand : BrigadierCommand("about", "Shows credits of this bot.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
-			val selfUser = it.source.message.jda.selfUser
+			val selfUser = it.source.jda.selfUser
 			val embed = EmbedBuilder()
 				.setTitle("${selfUser.name} Kotlin/JVM Rewrite v${DiscordBot.VERSION}")
 				.addField("Developers", "kemo, amrsatrio", false)

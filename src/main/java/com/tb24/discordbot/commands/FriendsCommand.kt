@@ -11,15 +11,16 @@ import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
+import com.tb24.discordbot.managers.PartyManager
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.friends.FriendV2
 import com.tb24.fn.model.friends.FriendsSettings
 import com.tb24.fn.model.friends.FriendsSummary
+import com.tb24.fn.model.party.FMemberInfo
 import com.tb24.fn.model.party.FPartyInfo
 import com.tb24.fn.network.FriendsService
 import com.tb24.fn.util.Formatters
-import com.tb24.fn.util.MetaStringMap
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.Emoji
@@ -133,11 +134,11 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 	private fun friends(ctx: FriendContext, partyInviteSent: Boolean = false): Int {
 		val (source, friend, user) = ctx
 		check(friend != null)
-		var party: FPartyInfo? = null
+		val partyManager = source.session.getPartyManager(source.api.currentLoggedIn.id)
 		val buttons = mutableListOf<Button>()
 		if (!partyInviteSent) {
-			party = getCurrentParty(source)
-			if (party != null) {
+			partyManager.fetchParty()
+			if (partyManager.partyInfo != null) {
 				buttons.add(Button.of(ButtonStyle.SECONDARY, "invite", "Invite to party", Emoji.fromUnicode("📩")))
 			}
 		} else {
@@ -156,7 +157,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			.build(), *buttons.chunked(5, ActionRow::of).toTypedArray())
 		source.loadingMsg = message
 		return when (message.awaitOneInteraction(source.author, false).componentId) {
-			"invite" -> inviteToParty(ctx, party!!)
+			"invite" -> inviteToParty(ctx, partyManager)
 			"alias" -> aliasOrNote(ctx, friend.alias, false)
 			"note" -> aliasOrNote(ctx, friend.note, true)
 			"mutuals" -> mutuals(ctx, user.id)
@@ -166,32 +167,13 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		}
 	}
 
-	private fun getCurrentParty(source: CommandSourceStack): FPartyInfo? {
-		val summary = source.api.partyService.getUserSummary("Fortnite", source.api.currentLoggedIn.id).exec().body()!!
-		return summary.current.firstOrNull()
-	}
-
-	private fun FPartyInfo.invite(source: CommandSourceStack, accountId: String) =
-		source.api.partyService.sendInvite("Fortnite", id, accountId, true, MetaStringMap().apply {
-			put("urn:epic:conn:type", "game")
-			put("urn:epic:conn:platform", "WIN")
-			put("urn:epic:member:dn", source.api.currentLoggedIn.epicDisplayName)
-			put("urn:epic:cfg:build-id", meta.getString("urn:epic:cfg:build-id", "1:3:"))
-			put("urn:epic:invite:platformdata", "")
-		}).exec()
-
-	private fun ping(source: CommandSourceStack, accountId: String) =
-		source.api.partyService.createPing("Fortnite", accountId, source.api.currentLoggedIn.id, MetaStringMap().apply {
-			put("urn:epic:invite:platformdata", "")
-		}).exec().body()!!
-
-	private fun inviteToParty(ctx: FriendContext, party: FPartyInfo): Int {
-		val (source, _, user) = ctx
-		val invite = party.invites.firstOrNull { it.sent_to == user.id }
+	private fun inviteToParty(ctx: FriendContext, party: PartyManager): Int {
+		val (_, _, user) = ctx
+		val invite = party.partyInfo!!.invites.firstOrNull { it.sent_to == user.id }
 		if (invite != null) {
-			ping(source, user.id)
+			party.ping(user.id)
 		} else {
-			party.invite(source, user.id)
+			party.invite(user.id)
 		}
 		return friends(ctx, true)
 	}
@@ -540,5 +522,99 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		inline operator fun component3() = user
 		inline operator fun component4() = friends
 		inline operator fun component5() = titleOverride
+	}
+}
+
+class PartyCommand : BrigadierCommand("party", "Manages your party.", arrayOf("p")) {
+	// party: shows active party
+	// party invite <user>: invites user to party
+	// party kick <user>: kicks user from party
+	// party promote <user>: promotes user to party leader
+	// party leave: leaves party
+	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.executes { party(it.source) }
+
+	private fun party(source: CommandSourceStack): Int {
+		source.ensureSession()
+		val partyManager = source.session.getPartyManager(source.api.currentLoggedIn.id)
+		partyManager.fetchParty()
+		val party = partyManager.partyInfo ?: throw SimpleCommandExceptionType(LiteralMessage("You are not in a party.")).create()
+		// **Party**
+		// Members
+		// - a
+		// - [Leader] b
+		// - ...
+		// [Manage member] [Leave]
+
+		// **Manage <member>**
+		// [Promote] [Kick]
+
+		val embed = source.createEmbed()
+		val members = party.members.map {
+			val isLeader = it.role == FMemberInfo.EPartyMemberRole.CAPTAIN
+			val displayName = it.meta.getString("urn:epic:member:dn", source.userCache[it.account_id]?.displayName ?: "`${it.account_id}`")
+			if (isLeader) "[Leader] $displayName" else displayName
+		}
+		val selfIsLeader = party.members.firstOrNull { it.account_id == source.api.currentLoggedIn.id }?.role == FMemberInfo.EPartyMemberRole.CAPTAIN
+		embed.addField("Members", members.joinToString("\n"), false)
+		val buttons = mutableListOf<Button>()
+		buttons.add(Button.of(ButtonStyle.SECONDARY, "manageMembers", "Manage members"))
+		if (buttons.isEmpty()) {
+			source.complete(null, embed.build())
+			return Command.SINGLE_SUCCESS
+		}
+		while (true) {
+			val message = source.complete(null, embed.build(), ActionRow.of(buttons))
+			source.loadingMsg = message
+			when (message.awaitOneInteraction(source.author, false).componentId) {
+				"manageMembers" -> {
+					// Choose member to manage
+					val memberPickerButtons = mutableListOf<Button>()
+					party.members.forEach {
+						val displayName = source.userCache[it.account_id]?.displayName ?: "`${it.account_id}`"
+						memberPickerButtons.add(Button.of(ButtonStyle.SECONDARY, it.account_id, displayName))
+					}
+					val memberPickerMessage = source.complete("**Choose member**", null, ActionRow.of(memberPickerButtons))
+					source.loadingMsg = memberPickerMessage
+					val memberId = memberPickerMessage.awaitOneInteraction(source.author, false).componentId
+					if (manageMember(party, memberId, source, selfIsLeader, partyManager) == 0) {
+						break
+					}
+				}
+				else -> break
+			}
+		}
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun manageMember(party: FPartyInfo, memberId: String, source: CommandSourceStack, selfIsLeader: Boolean, partyManager: PartyManager): Int {
+		val member = party.members.firstOrNull { it.account_id == memberId } ?: throw SimpleCommandExceptionType(LiteralMessage("Member not found.")).create()
+		val memberDisplayName = source.userCache[member.account_id]?.displayName ?: "`${member.account_id}`"
+		// Manage member
+		// Leader is internally called captain
+		val memberButtons = mutableListOf<Button>()
+		val memberIsSelf = member.account_id == source.api.currentLoggedIn.id
+		if (selfIsLeader && !memberIsSelf) {
+			memberButtons.add(Button.of(ButtonStyle.SECONDARY, "promote", "Promote to leader"))
+			memberButtons.add(Button.of(ButtonStyle.DANGER, "kick", "Kick from party"))
+		}
+		// cancel
+		memberButtons.add(Button.of(ButtonStyle.SECONDARY, "cancel", "Cancel"))
+		val memberMessage = source.complete("**Manage $memberDisplayName**", null, ActionRow.of(memberButtons))
+		source.loadingMsg = memberMessage
+		return when (memberMessage.awaitOneInteraction(source.author, false).componentId) {
+			"promote" -> {
+				partyManager.promote(member.account_id)
+				source.channel.sendMessage("**$memberDisplayName** is now leader.").queue()
+				Command.SINGLE_SUCCESS
+			}
+			"kick" -> {
+				partyManager.kick(member.account_id)
+				source.channel.sendMessage("**$memberDisplayName** has been kicked from the party.").queue()
+				Command.SINGLE_SUCCESS
+			}
+			"cancel" -> Command.SINGLE_SUCCESS
+			else -> 0
+		}
 	}
 }

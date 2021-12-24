@@ -9,12 +9,13 @@ import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.McpProfile
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.*
 import net.dv8tion.jda.api.interactions.Interaction
+import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.commands.CommandInteraction
 import net.dv8tion.jda.api.interactions.components.ActionRow
-import net.dv8tion.jda.internal.entities.ReceivedMessage
 import java.net.URLEncoder
 import java.util.concurrent.CompletableFuture
 
@@ -28,44 +29,61 @@ open class CommandSourceStack {
 	private var _interaction: Interaction? = null
 	val interaction get() = _interaction!!
 	val commandInteraction get() = _interaction as CommandInteraction
+	var hook: InteractionHook? = null
 
+	val jda: JDA
 	val guild: Guild?
 	val member: Member?
-	val author: User // name should be user but whatever
+	val _user: User?
+	inline val author get() = _user!! // name should be user but whatever
 	val channel: MessageChannel
 
 	val initialSession: Session
 	var session: Session
 	inline val api get() = session.api
 
+	val prefix: String
+
 	constructor(client: DiscordBot, message: Message, sessionId: String?, ignoreSessionLimit: Boolean = false) {
 		this.client = client
 		this.message = message
+		jda = message.jda
 		guild = message.guild
 		member = message.member
-		author = message.author
+		_user = message.author
 		channel = message.channel
 		initialSession = getInitialSession(sessionId, ignoreSessionLimit)
 		session = initialSession
+		prefix = client.getCommandPrefix(guild)
 	}
 
 	constructor(client: DiscordBot, interaction: Interaction, sessionId: String?, ignoreSessionLimit: Boolean = false) {
 		this.client = client
 		this._interaction = interaction
+		jda = interaction.jda
 		guild = interaction.guild
 		member = interaction.member
-		author = interaction.user
+		_user = interaction.user
 		channel = interaction.channel as MessageChannel // TODO IMPORTANT
 		initialSession = getInitialSession(sessionId, ignoreSessionLimit)
 		session = initialSession
+		prefix = client.getCommandPrefix(guild)
+	}
+
+	constructor(client: DiscordBot, channel: MessageChannel) {
+		this.client = client
+		jda = channel.jda
+		guild = (channel as? TextChannel)?.guild
+		member = null
+		_user = (channel as? PrivateChannel)?.user
+		this.channel = channel
+		initialSession = client.internalSession
+		session = initialSession
+		prefix = client.getCommandPrefix(guild)
 	}
 
 	private fun getInitialSession(sessionId: String?, ignoreSessionLimit: Boolean) =
 		sessionId?.let { client.getSession(sessionId, ignoreSessionLimit || hasPremium()) } ?: client.internalSession
-
-	inline fun isFromType(type: ChannelType) = message.isFromType(type)
-
-	val prefix: String by lazy { DiscordBot.instance.getCommandPrefix(message) }
 
 	// region Flow control
 	var errorTitle: String? = null
@@ -73,7 +91,13 @@ open class CommandSourceStack {
 
 	var loadingMsg: Message? = null
 
-	fun loading(text: String?): Message {
+	fun loading(text: String?): Message? {
+		_interaction?.let {
+			if (hook == null) {
+				hook = it.deferReply().complete()
+			}
+			return null // FYI we cannot show the custom loading message, it's always "<Name> is thinking..."
+		}
 		var loadingText = Utils.loadingText(text ?: "Loading")
 		if (IS_DEBUG) {
 			loadingText = "[DEBUGGER ATTACHED] $loadingText"
@@ -90,11 +114,23 @@ open class CommandSourceStack {
 			builder.setActionRows(*actionRows)
 		}
 		val message = builder.build()
-		val complete = (loadingMsg?.editMessage(message) ?: channel.sendMessage(message)).override(true).complete()
+		_interaction?.let {
+			_interaction = null
+			val localHook = hook
+			return if (localHook != null) {
+				hook = null
+				localHook.editOriginal(message).complete()
+			} else {
+				it.reply(message).complete().retrieveOriginal().complete()
+			}
+		}
+		val sentMessage = (loadingMsg?.editMessage(message) ?: channel.sendMessage(message)).override(true).complete()
 		loadingMsg = null
-		return complete
+		return sentMessage
 	}
 	// endregion
+
+	inline fun getOption(name: String) = commandInteraction.getOption(name)
 
 	@Throws(CommandSyntaxException::class)
 	fun ensureSession() {
@@ -131,7 +167,7 @@ open class CommandSourceStack {
 
 	@Throws(HttpException::class)
 	fun generateUrl(url: String): String {
-		if (!isFromType(ChannelType.PRIVATE) && !complete(null, createEmbed().setColor(BrigadierCommand.COLOR_WARNING)
+		if (guild != null && !complete(null, createEmbed().setColor(BrigadierCommand.COLOR_WARNING)
 				.setTitle("✋ Hold up!")
 				.setDescription("We're about to send a link that carries your current session which will be valid for some time or until you log out. Make sure you trust the people here, or you may do the command again [in DMs](${getPrivateChannelLink()}).\n\nContinue?")
 				.build(), confirmationButtons()).awaitConfirmation(author).await()) {
@@ -183,29 +219,3 @@ open class CommandSourceStack {
 
 	fun getPrivateChannelLink() = author.openPrivateChannel().complete().let { "https://discord.com/channels/%s/%s".format("@me", it.id) }
 }
-
-class OnlyChannelCommandSource(client: DiscordBot, channel: MessageChannel) : CommandSourceStack(client, ReceivedMessage(
-	-1L,
-	channel,
-	MessageType.DEFAULT,
-	null,
-	false,
-	false,
-	null,
-	null,
-	false,
-	false,
-	null,
-	null,
-	(channel as? PrivateChannel)?.user,
-	null,
-	null,
-	null,
-	emptyList(),
-	emptyList(),
-	emptyList(),
-	emptyList(),
-	emptyList(),
-	0,
-	null,
-), null, true)

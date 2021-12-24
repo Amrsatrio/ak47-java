@@ -12,7 +12,6 @@ import com.tb24.discordbot.commands.arguments.MentionArgument.Companion.getMenti
 import com.tb24.discordbot.commands.arguments.MentionArgument.Companion.mention
 import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
-import net.dv8tion.jda.api.entities.ChannelType
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.User
 import java.time.Instant
@@ -116,7 +115,7 @@ fun premium(source: CommandSourceStack, target: User, remove: Boolean/*, secret:
 		.setThumbnail(target.avatarUrl)
 		.addField("Target User", "%s (tag: %s)".format(target.asMention, target.asTag), false)
 		.addField("Requested By", "%s (tag: %s)".format(source.author.asMention, source.author.asTag), false)
-		.addField("Requested At", if (source.isFromType(ChannelType.PRIVATE)) "Direct Message" else if (source.isFromType(ChannelType.TEXT)) "Guild: %s".format(source.guild!!.name) else "Unknown", false)
+		.addField("Requested At", source.guild?.let { "Guild: ${it.name}" } ?: "Direct Message", false)
 		.setColor(if (remove) BrigadierCommand.COLOR_ERROR else BrigadierCommand.COLOR_SUCCESS)
 		.setTimestamp(Instant.now())
 		.build())

@@ -17,7 +17,6 @@ import com.tb24.discordbot.util.getStackTraceAsString
 import com.tb24.fn.network.AccountService.GrantType
 import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.EmbedBuilder
-import net.dv8tion.jda.api.entities.ChannelType
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.ReadyEvent
 import net.dv8tion.jda.api.events.interaction.SlashCommandEvent
@@ -121,6 +120,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(MtxPlatformCommand())
 		register(NewsCommand())
 		register(OfferCommand())
+		//register(PartyCommand())
 		register(PhoenixCommand())
 		register(PurchaseCommand())
 		register(PurchasesCommand())
@@ -148,16 +148,18 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(WorkersCommand())
 		register(WorthCommand())
 		register(FortniteAndroidApkCommand())
+		register(TrollCommand())
 	}
 
 	override fun onReady(event: ReadyEvent) {
+		if (!client.isProd) return
 		client.discord.getGuildById(BotConfig.get().homeGuildId)!!.updateCommands().addCommands(slashCommands.values.map { it.build() }).complete()
+		DiscordBot.LOGGER.info("Updated home guild commands")
 	}
 
 	private fun register(command: BrigadierCommand): LiteralCommandNode<CommandSourceStack> {
 		// Register classic text command
 		commandMap[command.name] = command
-//		val node = command.getNode(dispatcher)
 		val registered = command.register(dispatcher)
 		for (alias in command.aliases) {
 			redirects[alias] = command
@@ -184,7 +186,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 
 	override fun onMessageReceived(event: MessageReceivedEvent) {
 		threadPool.submit {
-			val prefix = client.getCommandPrefix(event.message)
+			val prefix = client.getCommandPrefix(event.guild)
 			if (event.author === event.jda.selfUser || event.author.isBot || !event.message.contentRaw.startsWith(prefix))
 				return@submit
 
@@ -203,22 +205,14 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 			val source = try {
 				CommandSourceStack(client, event.interaction, event.user.id)
 			} catch (e: IllegalStateException) {
-				event.channel.sendMessage("❌ " + e.message).queue()
+				event.reply("❌ " + e.message).queue()
 				return@submit
 			}
-			val interaction = event.interaction as CommandInteraction
-			val baseCommand = slashCommands[interaction.name]!!
-			val command = when {
-				interaction.subcommandGroup != null -> baseCommand.subcommandGroups[interaction.subcommandGroup]!!.subcommands[interaction.subcommandName]!!
-				interaction.subcommandName != null -> baseCommand.subcommands[interaction.subcommandName]!!
-				else -> baseCommand
-			}
-			command.command?.invoke(source)
-				?: DiscordBot.LOGGER.warn("Command ${event.commandPath} has no implementation")
+			handleCommand(event.interaction as CommandInteraction, source)
 		}
 	}
 
-	fun handleCommand(command: String, source: CommandSourceStack, prefix: String = "", canRetry: Boolean = true) {
+	private fun handleCommand(command: String, source: CommandSourceStack, prefix: String = "", canRetry: Boolean = true) {
 		val reader = StringReader(command)
 		reader.cursor += prefix.length
 		while (reader.peek().isWhitespace()) {
@@ -235,7 +229,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				try {
 					dispatcher.execute(parseResults)
 				} catch (e: CollectorException) {
-					if (e.reason == CollectorEndReason.TIME && source.isFromType(ChannelType.PRIVATE)) {
+					if (e.reason == CollectorEndReason.TIME && source.guild == null) {
 						throw SimpleCommandExceptionType(LiteralMessage("Timed out while waiting for your response.")).create()
 					}
 				}
@@ -309,6 +303,52 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 			source.complete(null, EmbedBuilder().setColor(0xF04947).setDescription("❌ Cannot perform action due to a lack of Permission. Missing permission: " + e.permission.getName()).build())
 		} catch (e: Throwable) {
 			var additional = "\nCommand: ${reader.string}"
+			source.session.api.okHttpClient.proxy()?.let {
+				additional += "\nProxy: $it"
+			}
+			System.err.println("Unhandled exception while executing command$additional")
+			e.printStackTrace()
+			unhandledException(source, e, additional)
+		}
+	}
+
+	private fun handleCommand(interaction: CommandInteraction, source: CommandSourceStack, canRetry: Boolean = true) {
+		val baseCommand = slashCommands[interaction.name]!!
+		val command = when {
+			interaction.subcommandGroup != null -> baseCommand.subcommandGroups[interaction.subcommandGroup]!!.subcommands[interaction.subcommandName]!!
+			interaction.subcommandName != null -> baseCommand.subcommands[interaction.subcommandName]!!
+			else -> baseCommand
+		}
+		try {
+			try {
+				command.command?.invoke(source) ?: DiscordBot.LOGGER.warn("Command ${interaction.commandPath} has no implementation")
+			} catch (e: CommandSyntaxException) {
+				val embed = EmbedBuilder().setColor(0xF04947)
+				val lines = mutableListOf<String>()
+				// command error message and optionally context
+				val rawMessage = e.rawMessage
+				if (rawMessage is EmbedMessage) {
+					source.complete(null, rawMessage.embed)
+					return
+				}
+				lines.add("❌ " + rawMessage.string)
+				source.complete(null, embed.setDescription(lines.joinToString("\n")).build())
+			}
+		} catch (e: HttpException) {
+			if (httpError(source, e)) {
+				if (canRetry) {
+					handleCommand(interaction, source, canRetry)
+				} else {
+					client.dlog("__**Attempted to repeat a command more than once**__\nUser: ${source.author.asMention}\n```\n${e.getStackTraceAsString()}```", null)
+					DiscordBot.LOGGER.error("Attempted to repeat a command more than once", e)
+				}
+			}
+		} catch (e: SocketTimeoutException) {
+			source.complete("❌ Connection timed out. Please try again later.")
+		} catch (e: PermissionException) {
+			source.complete(null, EmbedBuilder().setColor(0xF04947).setDescription("❌ Cannot perform action due to a lack of Permission. Missing permission: " + e.permission.getName()).build())
+		} catch (e: Throwable) {
+			var additional = "\nCommand: ${interaction.commandPath}"
 			source.session.api.okHttpClient.proxy()?.let {
 				additional += "\nProxy: $it"
 			}

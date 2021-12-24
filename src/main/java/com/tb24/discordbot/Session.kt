@@ -5,6 +5,7 @@ import com.tb24.discordbot.commands.BrigadierCommand
 import com.tb24.discordbot.commands.CommandSourceStack
 import com.tb24.discordbot.managers.ChannelsManager
 import com.tb24.discordbot.managers.HomebaseManager
+import com.tb24.discordbot.managers.PartyManager
 import com.tb24.discordbot.util.*
 import com.tb24.discordbot.webcampaign.WebCampaign
 import com.tb24.fn.EpicApi
@@ -19,7 +20,6 @@ import com.tb24.fn.util.EAuthClient
 import com.tb24.fn.util.getPreviewImagePath
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
-import net.dv8tion.jda.api.entities.ChannelType
 import net.dv8tion.jda.api.entities.Message
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -40,6 +40,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 	val otherClientApis = ConcurrentHashMap<EAuthClient, EpicApi>()
 	var channelsManager: ChannelsManager
 	val homebaseManagers = hashMapOf<String, HomebaseManager>()
+	val partyManagers = hashMapOf<String, PartyManager>()
 	val webCampaignManagers = hashMapOf<String, WebCampaign>()
 	val avatarCache = hashMapOf<String /*accountId*/, Pair<String /*icon*/, Int /*background*/>>()
 
@@ -67,7 +68,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 	fun login(source: CommandSourceStack?, fields: Map<String, String>, auth: EAuthClient = EAuthClient.FORTNITE_ANDROID_GAME_CLIENT, sendMessages: Boolean = true): Int {
 		if (source != null) {
 			val grantType = fields["grant_type"]
-			if (grantType != "device_auth" && grantType != "device_code" && source.isFromType(ChannelType.TEXT) && source.guild!!.selfMember.hasPermission(Permission.MESSAGE_MANAGE) && sendMessages) {
+			if (grantType != "device_auth" && grantType != "device_code" && source.guild?.selfMember?.hasPermission(Permission.MESSAGE_MANAGE) == true && sendMessages) {
 				source.message.delete().queue()
 			}
 			if (api.userToken != null) {
@@ -205,6 +206,8 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		}
 		hb
 	}
+
+	fun getPartyManager(accountId: String) = partyManagers.getOrPut(accountId) { PartyManager(api) }
 
 	fun getWebCampaignManager(id: String): WebCampaign {
 		return webCampaignManagers.getOrPut(id) {

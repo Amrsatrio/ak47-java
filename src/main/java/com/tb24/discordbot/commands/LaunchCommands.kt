@@ -1,5 +1,7 @@
 package com.tb24.discordbot.commands
 
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
@@ -7,15 +9,21 @@ import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.util.await
-import com.tb24.discordbot.util.awaitConfirmation
-import com.tb24.discordbot.util.confirmationButtons
-import com.tb24.discordbot.util.exec
+import com.rethinkdb.RethinkDB.r
+import com.tb24.discordbot.HttpException
+import com.tb24.discordbot.Session
+import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.DeviceAuth
 import com.tb24.fn.util.EAuthClient
 import mslinks.ShellLink
-import net.dv8tion.jda.api.entities.ChannelType
+import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.utils.TimeFormat
+import okhttp3.MediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
 import java.io.ByteArrayOutputStream
+import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -25,10 +33,10 @@ class LaunchWindowsCommand : BrigadierCommand("launch", "Launches you into Fortn
 			val source = it.source
 			source.ensureSession()
 			val deviceData = if (true) null else source.client.savedLoginsManager.get(source.session.id, source.api.currentLoggedIn.id)
-			if (deviceData != null && !source.isFromType(ChannelType.PRIVATE)) {
+			if (deviceData != null && source.guild != null) {
 				throw SimpleCommandExceptionType(LiteralMessage("Please invoke the command again [in DMs](${source.getPrivateChannelLink()}), as we have to send you info that carries over your current session.")).create()
 			}
-			if (!source.isFromType(ChannelType.PRIVATE) && !source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
+			if (source.guild != null && !source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
 					.setTitle("✋ Hold up!")
 					.setDescription("We're about to send a code that carries your current session which will be valid for some time or until you log out. Make sure you trust the people here, or you may do the command again [in DMs](${source.getPrivateChannelLink()}).\n\nContinue?")
 					.build(), confirmationButtons()).awaitConfirmation(source.author).await()) {
@@ -50,7 +58,7 @@ class LaunchWindowsCommand : BrigadierCommand("launch", "Launches you into Fortn
 
 	private fun executeGenerateShortcuts(source: CommandSourceStack, gamePath: String = "C:\\Program Files\\Epic Games\\Fortnite"): Int {
 		throw SimpleCommandExceptionType(LiteralMessage("Shortcuts feature is disabled until further notice.")).create()
-		if (!source.isFromType(ChannelType.PRIVATE)) {
+		if (source.guild != null) {
 			throw SimpleCommandExceptionType(LiteralMessage("Please invoke the command again [in DMs](${source.getPrivateChannelLink()}), as we have to send you info that contains your saved logins.")).create()
 		}
 		gamePath.replace('/', '\\')

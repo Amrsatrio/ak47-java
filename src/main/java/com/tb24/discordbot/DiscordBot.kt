@@ -21,7 +21,7 @@ import com.tb24.uasset.AssetManager
 import me.fungames.jfortniteparse.ue4.io.TOC_READ_OPTION_READ_DIRECTORY_INDEX
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.Activity
-import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.requests.GatewayIntent
 import net.dv8tion.jda.api.sharding.DefaultShardManagerBuilder
@@ -185,10 +185,9 @@ class DiscordBot(token: String) {
 		if (ENV == "prod" || ENV == "stage") {
 			builder.enableIntents(GatewayIntent.GUILD_MEMBERS)
 		}
-		discord = builder.build()
 		commandManager = CommandManager(this)
-		discord.addEventListener(commandManager)
-		discord.addEventListener(GuildListeners(this))
+		builder.addEventListeners(commandManager, GuildListeners(this))
+		discord = builder.build()
 		//LOGGER.info("Logged in as {}! v{}", discord.selfUser.asTag, VERSION)
 		Runtime.getRuntime().addShutdownHook(Thread {
 			internalSession.logout()
@@ -243,7 +242,7 @@ class DiscordBot(token: String) {
 		val itemShopChannel = discord.getTextChannelById(BotConfig.get().itemShopChannelId)
 		if (itemShopChannel != null) {
 			ensureInternalSession()
-			val source = OnlyChannelCommandSource(this, itemShopChannel)
+			val source = CommandSourceStack(this, itemShopChannel)
 			executeShopText(source, ESubGame.Athena)
 			executeShopImage(source)
 		}
@@ -253,7 +252,7 @@ class DiscordBot(token: String) {
 	fun postMtxAlerts() {
 		val mtxAlertsChannel = discord.getTextChannelById(BotConfig.get().mtxAlertsChannelId)
 		if (mtxAlertsChannel != null) {
-			val source = OnlyChannelCommandSource(this, mtxAlertsChannel)
+			val source = CommandSourceStack(this, mtxAlertsChannel)
 			executeMtxAlerts(source)
 		}
 	}
@@ -305,11 +304,11 @@ class DiscordBot(token: String) {
 	// endregion
 
 	// region Prefix manager
-	fun getCommandPrefix(message: Message): String {
-		if (!message.isFromGuild /*|| ENV == "dev"*/) {
+	fun getCommandPrefix(guild: Guild?): String {
+		if (guild == null /*|| ENV == "dev"*/) {
 			return BotConfig.get().defaultPrefix
 		}
-		val guildId = message.guild.idLong
+		val guildId = guild.idLong
 		var dbEntry = prefixMap[guildId]
 		if (dbEntry == null) {
 			val guildIdString = java.lang.Long.toUnsignedString(guildId)

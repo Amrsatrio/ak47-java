@@ -14,7 +14,6 @@ import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.format
 import com.tb24.fn.model.account.DeviceAuth
 import net.dv8tion.jda.api.EmbedBuilder
-import net.dv8tion.jda.api.entities.ChannelType
 import net.dv8tion.jda.api.exceptions.ErrorResponseException
 
 class DeviceAuthCommand : BrigadierCommand("devices", "Device auth operation commands.", arrayOf("device")) {
@@ -103,7 +102,7 @@ private fun DeviceAuth.LocationIpDate.render() = "%s, %s (%s)".format(dateTime.f
 
 private fun create(c: CommandContext<CommandSourceStack>): Int {
 	val source = c.source
-	val inDMs = source.isFromType(ChannelType.PRIVATE)
+	val inDMs = source.guild == null
 	source.ensureSession()
 	val sessionId = source.session.id
 	val user = source.api.currentLoggedIn
@@ -137,7 +136,7 @@ private fun create(c: CommandContext<CommandSourceStack>): Int {
 		clientId = source.api.userToken.client_id
 	})
 	val embed = source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS)
-		.setTitle("✅ Device auth created and registered to ${source.message.jda.selfUser.name}")
+		.setTitle("✅ Device auth created and registered to ${source.jda.selfUser.name}")
 		.setFooter("Use ${source.prefix}deletesavedlogin to reverse the process")
 	if (inDMs) {
 		source.complete(null, embed.populateDeviceAuthDetails(response).build())
