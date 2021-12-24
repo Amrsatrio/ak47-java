@@ -152,7 +152,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 	}
 
 	override fun onReady(event: ReadyEvent) {
-		if (!client.isProd) return
+		if (client.isProd) return
 		client.discord.getGuildById(BotConfig.get().homeGuildId)!!.updateCommands().addCommands(slashCommands.values.map { it.build() }).complete()
 		DiscordBot.LOGGER.info("Updated home guild commands")
 	}
