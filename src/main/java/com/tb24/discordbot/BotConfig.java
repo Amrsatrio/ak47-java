@@ -41,6 +41,7 @@ public class BotConfig {
 
 	public DeviceAuthQuota deviceAuthQuota = new DeviceAuthQuota();
 	public boolean allowUsersToCreateDeviceAuth = true;
+	public boolean allowLegacyLoginInGuilds = true;
 
 	public String proxyHostsFile;
 	public String proxyUsername;

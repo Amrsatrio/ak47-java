@@ -7,8 +7,16 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 class LogoutCommand : BrigadierCommand("logout", "Logs out the Epic account.", arrayOf("o", "signout")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
-			it.source.ensureSession()
-			it.source.session.logout(it.source.message)
+			val source = it.source
+			source.ensureSession()
+			source.session.logout(source)
+			Command.SINGLE_SUCCESS
+		}
+
+	override fun getSlashCommand() = newCommandBuilder()
+		.executes { source ->
+			source.ensureSession()
+			source.session.logout(source)
 			Command.SINGLE_SUCCESS
 		}
 }

@@ -30,6 +30,7 @@ open class CommandSourceStack {
 	val interaction get() = _interaction!!
 	val commandInteraction get() = _interaction as CommandInteraction
 	var hook: InteractionHook? = null
+	val hasMessage get() = ::message.isInitialized
 
 	val jda: JDA
 	val guild: Guild?
@@ -67,7 +68,7 @@ open class CommandSourceStack {
 		channel = interaction.channel as MessageChannel // TODO IMPORTANT
 		initialSession = getInitialSession(sessionId, ignoreSessionLimit)
 		session = initialSession
-		prefix = client.getCommandPrefix(guild)
+		prefix = "/"
 	}
 
 	constructor(client: DiscordBot, channel: MessageChannel) {

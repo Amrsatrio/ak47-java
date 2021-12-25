@@ -27,17 +27,20 @@ import net.dv8tion.jda.api.interactions.components.selections.SelectionMenuInter
 
 class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest lodge.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes {
-			val source = it.source
-			source.ensureSession()
-			val winterfestData = loadObject<FortWinterfestData>("/WinterfestFrontend/UI/Data/WinterfestScreenData.WinterfestScreenData")
-				?: throw SimpleCommandExceptionType(LiteralMessage("No Winterfest right now.")).create()
-			source.loading("Getting Winterfest data")
-			source.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "athena").await()
-			execute(source, winterfestData)
-		}
+		.executes { execute(it.source) }
 
-	private fun execute(source: CommandSourceStack, winterfestData: FortWinterfestData): Int {
+	override fun getSlashCommand() = newCommandBuilder().executes(::execute)
+
+	private fun execute(source: CommandSourceStack): Int {
+		source.ensureSession()
+		val winterfestData = loadObject<FortWinterfestData>("/WinterfestFrontend/UI/Data/WinterfestScreenData.WinterfestScreenData")
+			?: throw SimpleCommandExceptionType(LiteralMessage("No Winterfest right now.")).create()
+		source.loading("Getting Winterfest data")
+		source.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "athena").await()
+		return display(source, winterfestData)
+	}
+
+	private fun display(source: CommandSourceStack, winterfestData: FortWinterfestData): Int {
 		var athena = source.api.profileManager.getProfileData("athena")
 		if (DiscordBot.ENV == "dev") {
 			athena.items["FAKE_W19_REWARD_GRAPH"] = FortItemStack(winterfestData.WinterfestItemTemplateId, 1).apply {
@@ -126,7 +129,7 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 			claimedEmbed.addFieldSeparate("You received", lootList.toList(), 0) { it.asItemStack().render(showType = true) }
 		}
 		source.channel.sendMessageEmbeds(claimedEmbed.build()).queue()
-		return execute(source, winterfestData)
+		return display(source, winterfestData)
 	}
 
 	class WinterfestState(val winterfestData: FortWinterfestData, val profile: McpProfile) {

@@ -6,6 +6,7 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.StringArgumentType.*
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.commands.arguments.StringArgument2.Companion.string2
 import com.tb24.discordbot.util.*
@@ -19,6 +20,7 @@ import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.entities.MessageReaction
 import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.Button
 import java.time.Instant
@@ -33,19 +35,38 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 		.executes { accountPicker_buttons(it.source) }
 		.then(literal("new").executes { startDefaultLoginFlow(it.source) })
 		.then(argument("authorization code", greedyString())
-			.executes {
-				val source = it.source
-				val arg = getString(it, "authorization code")
-				val accountIndex = arg.toIntOrNull()
-				if (accountIndex != null) {
-					val devices = source.client.savedLoginsManager.getAll(source.author.id)
-					val deviceData = devices.safeGetOneIndexed(accountIndex)
-					doDeviceAuthLogin(source, deviceData)
-				} else {
-					doLogin(source, EGrantType.authorization_code, arg, EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
-				}
-			}
+			.executes { executeWithParam(it.source, getString(it, "authorization code")) }
 		)
+
+	override fun getSlashCommand() = newCommandBuilder()
+		.option(OptionType.STRING, "code", "Saved account number or 32-character authorization code")
+		.executes {
+			val param = it.getOption("code")?.asString
+			if (param != null) {
+				if (param == "new") {
+					startDefaultLoginFlow(it)
+				} else {
+					executeWithParam(it, param)
+				}
+			} else {
+				accountPicker_buttons(it)
+			}
+		}
+
+	private fun executeWithParam(source: CommandSourceStack, param: String): Int {
+		val accountIndex = param.toIntOrNull()
+		return if (accountIndex != null) {
+			val devices = source.client.savedLoginsManager.getAll(source.author.id)
+			val deviceData = devices.safeGetOneIndexed(accountIndex)
+			doDeviceAuthLogin(source, deviceData)
+		} else {
+			if (source.hasMessage && source.guild != null && !BotConfig.get().allowLegacyLoginInGuilds) {
+				source.message.delete().queue()
+				throw SimpleCommandExceptionType(LiteralMessage("Please use the new `/login` slash command to log in. Using the legacy command could expose your code to the public if the bot fails to handle it in time.")).create()
+			}
+			doLogin(source, EGrantType.authorization_code, param, EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
+		}
+	}
 }
 
 class ExtendedLoginCommand : BrigadierCommand("loginx", "Login with arbitrary parameters.", arrayOf("lx")) {
@@ -166,7 +187,7 @@ fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 	//if (true) throw SimpleCommandExceptionType(LiteralMessage("Device code is disabled until further notice.")).create()
 	val timer = Timer()
 	if (source.api.userToken != null) {
-		source.session.logout(source.message)
+		source.session.logout()
 	}
 	source.loading("Preparing your login")
 	val ccLoginResponse = source.api.accountService.getAccessToken(authClient.asBasicAuthString(), clientCredentials(), "eg1", null).exec().body()!!

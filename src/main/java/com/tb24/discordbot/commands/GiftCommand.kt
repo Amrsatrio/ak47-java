@@ -45,8 +45,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts a friend an offer from the i
 		val commonCore = profileManager.getProfileData("common_core")
 		if (!(commonCore.stats as CommonCoreProfileStats).mfa_enabled) {
 			source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
-				.setTitle("⚠ Hold up before gifting!")
-				.setDescription("You haven't claimed the two-factor authentication reward, which needs to be claimed first before sending gifts. Please enable two-factor authentication and claim its rewards by doing `${source.prefix}claim2fa` or by logging in to the game.\n\n[Enable two-factor authentication on epicgames.com](${source.generateUrl("https://www.epicgames.com/account/password#2fa-signup")})")
+				.setDescription("⚠ You haven't claimed the two-factor authentication reward, which needs to be claimed first before sending gifts. Please enable two-factor authentication and claim its rewards by doing `${source.prefix}claim2fa` or by logging in to the game.\n\n[Enable two-factor authentication on epicgames.com](${source.generateUrl("https://www.epicgames.com/account/password#2fa-signup")})")
 				.build())
 			return 0
 		}

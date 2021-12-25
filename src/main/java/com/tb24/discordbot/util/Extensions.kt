@@ -339,7 +339,7 @@ fun Message.awaitConfirmation(author: User, inTime: Long = 60000L): CompletableF
 }
 
 fun Message.awaitOneReaction(source: CommandSourceStack, inTime: Long = 60000L) =
-	awaitReactions({ _, user, _ -> user?.idLong == source.message.author.idLong }, AwaitReactionsOptions().apply {
+	awaitReactions({ _, user, _ -> user?.idLong == source.author.idLong }, AwaitReactionsOptions().apply {
 		max = 1
 		time = inTime
 		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)

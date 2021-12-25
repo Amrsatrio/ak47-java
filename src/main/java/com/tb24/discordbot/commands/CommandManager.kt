@@ -1,16 +1,13 @@
 package com.tb24.discordbot.commands
 
 import com.mojang.brigadier.CommandDispatcher
-import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.StringReader
 import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
 import com.mojang.brigadier.exceptions.CommandSyntaxException
-import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.mojang.brigadier.tree.LiteralCommandNode
 import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
-import com.tb24.discordbot.util.CollectorEndReason
 import com.tb24.discordbot.util.CollectorException
 import com.tb24.discordbot.util.EmbedMessage
 import com.tb24.discordbot.util.getStackTraceAsString
@@ -151,9 +148,12 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 	}
 
 	override fun onReady(event: ReadyEvent) {
-		if (client.isProd) return
-		client.discord.getGuildById(BotConfig.get().homeGuildId)!!.updateCommands().addCommands(slashCommands.values.map { it.build() }).complete()
-		DiscordBot.LOGGER.info("Updated home guild commands")
+		if (client.isProd) {
+			event.jda.updateCommands()
+		} else {
+			client.discord.getGuildById(BotConfig.get().homeGuildId)!!.updateCommands()
+		}.addCommands(slashCommands.values.map { it.build() }).complete()
+		DiscordBot.LOGGER.info("Updated commands")
 	}
 
 	private fun register(command: BrigadierCommand): LiteralCommandNode<CommandSourceStack> {
@@ -225,13 +225,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				return
 			}
 			try {
-				try {
-					dispatcher.execute(parseResults)
-				} catch (e: CollectorException) {
-					if (e.reason == CollectorEndReason.TIME && source.guild == null) {
-						throw SimpleCommandExceptionType(LiteralMessage("Timed out while waiting for your response.")).create()
-					}
-				}
+				dispatcher.execute(parseResults)
 			} catch (e: CommandSyntaxException) {
 				val unkCmd = CommandSyntaxException.BUILT_IN_EXCEPTIONS.dispatcherUnknownCommand()
 				val unkArgs = CommandSyntaxException.BUILT_IN_EXCEPTIONS.dispatcherUnknownArgument()
@@ -287,6 +281,8 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				}
 				source.complete(null, embed.setDescription(lines.joinToString("\n")).build())
 			}
+		} catch (e: CollectorException) {
+			// Ignore
 		} catch (e: HttpException) {
 			if (httpError(source, e)) {
 				if (canRetry) {
@@ -333,6 +329,8 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				lines.add("❌ " + rawMessage.string)
 				source.complete(null, embed.setDescription(lines.joinToString("\n")).build())
 			}
+		} catch (e: CollectorException) {
+			// Ignore
 		} catch (e: HttpException) {
 			if (httpError(source, e)) {
 				if (canRetry) {

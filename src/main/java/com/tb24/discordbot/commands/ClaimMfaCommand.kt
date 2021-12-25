@@ -6,7 +6,6 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.BoolArgumentType.bool
 import com.mojang.brigadier.arguments.BoolArgumentType.getBool
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.util.await
@@ -15,17 +14,21 @@ import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commoncore.ClaimMfaEnabled
 import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
 import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
+import net.dv8tion.jda.api.interactions.commands.OptionType
 import java.util.concurrent.CompletableFuture
 
 class ClaimMfaCommand : BrigadierCommand("claimmfa", "Claim 2FA reward (Boogie Down emote for BR) on your account.", arrayOf("claim2fa", "boogiedown")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes(::execute)
+		.executes { execute(it.source) }
 		.then(argument("claim for STW", bool())
-			.executes { execute(it, getBool(it, "claim for STW")) }
+			.executes { execute(it.source, getBool(it, "claim for STW")) }
 		)
 
-	private fun execute(context: CommandContext<CommandSourceStack>, claimForStw: Boolean = false): Int {
-		val source = context.source
+	override fun getSlashCommand() = newCommandBuilder()
+		.option(OptionType.BOOLEAN, "stw", "True = Claim for Save the World, False (default) = Claim for Battle Royale")
+		.executes { execute(it, it.getOption("stw")?.asBoolean == true) }
+
+	private fun execute(source: CommandSourceStack, claimForStw: Boolean = false): Int {
 		source.ensureSession()
 		source.errorTitle = "Failed to claim 2FA reward"
 		source.loading(L10N.format("generic.loading"))
