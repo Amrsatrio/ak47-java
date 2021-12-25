@@ -26,7 +26,7 @@ import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
 
 val defaultScheduleRewards by lazy { loadObject<UDataTable>("/SaveTheWorld/Balance/DataTables/DailyRewards")!!.rows.map { it.value.mapToClass(FortLoginReward::class.java) } }
 
-class DailyRewardsCommand : BrigadierCommand("dailyrewards", "Claims the STW daily reward.", arrayOf("daily", "claimdaily", "d", "claim")) {
+class DailyRewardsCommand : BrigadierCommand("daily", "Claims the STW daily reward.", arrayOf("dailyrewards", "claimdaily", "d", "claim")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it.source) }
 

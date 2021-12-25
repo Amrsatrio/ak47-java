@@ -49,7 +49,7 @@ open class CommandSourceStack {
 		this.client = client
 		this.message = message
 		jda = message.jda
-		guild = message.guild
+		guild = if (message.isFromGuild) message.guild else null
 		member = message.member
 		_user = message.author
 		channel = message.channel

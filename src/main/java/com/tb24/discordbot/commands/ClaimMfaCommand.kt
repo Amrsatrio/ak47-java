@@ -17,7 +17,7 @@ import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import java.util.concurrent.CompletableFuture
 
-class ClaimMfaCommand : BrigadierCommand("claimmfa", "Claim 2FA reward (Boogie Down emote for BR) on your account.", arrayOf("claim2fa", "boogiedown")) {
+class ClaimMfaCommand : BrigadierCommand("claim2fa", "Claim 2FA reward (Boogie Down emote for BR) on your account.", arrayOf("claimmfa", "boogiedown")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it.source) }
 		.then(argument("claim for STW", bool())
