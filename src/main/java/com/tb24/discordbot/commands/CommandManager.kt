@@ -33,6 +33,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 	val commandMap = hashMapOf<String, BrigadierCommand>()
 	val redirects = hashMapOf<String, BrigadierCommand>()
 	val slashCommands = hashMapOf<String, BaseCommandBuilder<CommandSourceStack>>()
+	private var hasUpdatedCommands = false
 	private val threadPool = Executors.newCachedThreadPool()
 
 	init {
@@ -148,6 +149,10 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 	}
 
 	override fun onReady(event: ReadyEvent) {
+		if (hasUpdatedCommands) {
+			return
+		}
+		hasUpdatedCommands = true
 		if (client.isProd) {
 			event.jda.updateCommands()
 		} else {

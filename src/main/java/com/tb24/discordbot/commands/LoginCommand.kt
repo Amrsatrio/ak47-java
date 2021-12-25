@@ -60,11 +60,15 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 			val deviceData = devices.safeGetOneIndexed(accountIndex)
 			doDeviceAuthLogin(source, deviceData)
 		} else {
-			if (source.hasMessage && source.guild != null && !BotConfig.get().allowLegacyLoginInGuilds) {
-				source.message.delete().queue()
-				throw SimpleCommandExceptionType(LiteralMessage("Please use the new `/login` slash command to log in. Using the legacy command could expose your code to the public if the bot fails to handle it in time.")).create()
-			}
+			checkRestriction(source, true)
 			doLogin(source, EGrantType.authorization_code, param, EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
+		}
+	}
+
+	private fun checkRestriction(source: CommandSourceStack, deleteMessage: Boolean = false) {
+		if (source.hasMessage && source.guild != null && !BotConfig.get().allowLegacyLoginInGuilds) {
+			if (deleteMessage) source.message.delete().queue()
+			throw SimpleCommandExceptionType(LiteralMessage("Please use the new `/login` slash command to log in. Using the legacy command could expose your code to the public if the bot fails to handle it in time.")).create()
 		}
 	}
 }
@@ -270,7 +274,7 @@ fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): 
 ⚠ **We recommend that you only log into accounts that you have email access to!**
 1. Visit the link above to get your login code.
 2. Copy the 32 character code that looks like `aabbccddeeff11223344556677889900`, located after `?code=`.
-3. Send `${source.prefix}login <32 character code>` to complete your login.""")
+3. Send `/login <32 character code>` to complete your login.""")
 		.addField("Need to switch accounts?", "[Open this link instead]($link&prompt=login)", false)
 		.setColor(0x8AB4F8)
 		.build())
