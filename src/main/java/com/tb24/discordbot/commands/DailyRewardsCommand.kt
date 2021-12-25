@@ -28,31 +28,34 @@ val defaultScheduleRewards by lazy { loadObject<UDataTable>("/SaveTheWorld/Balan
 
 class DailyRewardsCommand : BrigadierCommand("dailyrewards", "Claims the STW daily reward.", arrayOf("daily", "claimdaily", "d", "claim")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { c ->
-			val source = c.source
-			source.ensureSession()
-			source.loading("Claiming daily rewards")
-			source.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "campaign").await()
-			try {
-				val response = source.api.profileManager.dispatchClientCommandRequest(ClaimLoginReward(), "campaign").await()
-				val campaign = source.api.profileManager.getProfileData("campaign")
-				notifyDailyRewardsClaimed(source, campaign, response.notifications.filterIsInstance<DailyRewardsNotification>().firstOrNull())
-				Command.SINGLE_SUCCESS
-			} catch (e: HttpException) {
-				if (e.epicError.errorCode == "errors.com.epicgames.fortnite.check_access_failed") {
-					source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "common_core").await()
-					val msg = if (source.api.profileManager.getProfileData("common_core").items.values.none { it.templateId == "Token:campaignaccess" }) {
-						"You don't have access to Save the World."
-					} else {
-						"You have access to STW, but you can start receiving daily rewards after completing Stonewood Storm Shield Defense 3."
-					}
-					source.complete(null, source.createEmbed().setColor(COLOR_ERROR)
-						.setDescription("❌ $msg")
-						.build())
-					0
-				} else throw e
-			}
+		.executes { execute(it.source) }
+
+	override fun getSlashCommand() = newCommandBuilder().executes(::execute)
+
+	private fun execute(source: CommandSourceStack): Int {
+		source.ensureSession()
+		source.loading("Claiming daily rewards")
+		source.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "campaign").await()
+		return try {
+			val response = source.api.profileManager.dispatchClientCommandRequest(ClaimLoginReward(), "campaign").await()
+			val campaign = source.api.profileManager.getProfileData("campaign")
+			notifyDailyRewardsClaimed(source, campaign, response.notifications.filterIsInstance<DailyRewardsNotification>().firstOrNull())
+			Command.SINGLE_SUCCESS
+		} catch (e: HttpException) {
+			if (e.epicError.errorCode == "errors.com.epicgames.fortnite.check_access_failed") {
+				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "common_core").await()
+				val msg = if (source.api.profileManager.getProfileData("common_core").items.values.none { it.templateId == "Token:campaignaccess" }) {
+					"You don't have access to Save the World."
+				} else {
+					"You have access to STW, but you can start receiving daily rewards after completing Stonewood Storm Shield Defense 3."
+				}
+				source.complete(null, source.createEmbed().setColor(COLOR_ERROR)
+					.setDescription("❌ $msg")
+					.build())
+				0
+			} else throw e
 		}
+	}
 }
 
 fun notifyDailyRewardsClaimed(source: CommandSourceStack, campaign: McpProfile, notification: DailyRewardsNotification?) {

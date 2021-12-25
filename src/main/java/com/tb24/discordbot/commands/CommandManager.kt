@@ -190,7 +190,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 
 	override fun onMessageReceived(event: MessageReceivedEvent) {
 		threadPool.submit {
-			val prefix = client.getCommandPrefix(event.guild)
+			val prefix = client.getCommandPrefix(if (event.isFromGuild) event.guild else null)
 			if (event.author === event.jda.selfUser || event.author.isBot || !event.message.contentRaw.startsWith(prefix))
 				return@submit
 

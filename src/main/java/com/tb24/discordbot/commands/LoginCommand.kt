@@ -66,7 +66,7 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 
 	private fun checkRestriction(source: CommandSourceStack) {
 		if (source.hasMessage && source.guild != null) {
-			source.message.reply("Please start using the new `/login` slash command to log in. Using the legacy command could let someone else access your account if the bot fails to handle your code in time.").complete()
+			source.message.reply("⚠ Please start using the new `/login` slash command to log in. Using the legacy command could let someone else access your account if the bot fails to handle your code in time.").queue()
 		}
 	}
 }
