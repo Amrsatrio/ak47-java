@@ -19,17 +19,13 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
 			val source = it.source
-			if (source.api.userToken == null) {
-				source.session = source.client.internalSession
-			}
+			source.conditionalUseInternalSession()
 			execute(source, null)
 		}
 		.then(argument("saved account name", users(1))
 			.executes {
 				val source = it.source
-				if (source.api.userToken == null) {
-					source.session = source.client.internalSession
-				}
+				source.conditionalUseInternalSession()
 				execute(source, getUsers(it, "saved account name").values.first())
 			}
 		)

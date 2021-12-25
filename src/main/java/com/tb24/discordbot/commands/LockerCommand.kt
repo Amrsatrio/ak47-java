@@ -28,6 +28,7 @@ import me.fungames.jfortniteparse.util.toPngArray
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.Button
 import net.dv8tion.jda.api.interactions.components.ButtonStyle
@@ -57,97 +58,12 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 	)
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { c ->
-			val source = c.source
-			source.ensureSession()
-			source.loading("Getting cosmetics")
-			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
-			val athena = source.api.profileManager.getProfileData("athena")
-			val typesToQuery = names.keys.map { it.substringBefore(':') }.toSet()
-			val itemsByType = typesToQuery.associateWith { mutableListOf<FortItemStack>() }
-			for (item in athena.items.values) {
-				itemsByType[item.primaryAssetType]?.add(item)
-			}
-			val finalItems = mutableMapOf<String, List<FortItemStack>>()
-			for (categoryKey in names.keys) {
-				if (categoryKey.contains(':')) {
-					val primaryAssetType = categoryKey.substringBefore(':')
-					val className = categoryKey.substringAfter(':')
-					finalItems[categoryKey] = itemsByType[primaryAssetType]!!.filter { it.defData?.exportType == className }
-				} else {
-					finalItems[categoryKey] = itemsByType[categoryKey]!!
-				}
-			}
-			val buttons = mutableListOf<Button>()
-			for ((categoryKey, items) in finalItems) {
-				if (items.isEmpty()) continue
-				buttons.add(Button.of(ButtonStyle.SECONDARY, categoryKey, "%s (%,d)".format(names[categoryKey]!!, items.size)))
-			}
-			val message = source.complete("**Pick a category**", null, *buttons.chunked(5, ActionRow::of).toTypedArray())
-			val choice = message.awaitOneInteraction(source.author).componentId
-			source.loading("Generating and uploading image")
-			perform(source, names[choice], finalItems[choice]).await()
-			source.loadingMsg!!.delete().queue()
-			Command.SINGLE_SUCCESS
-		}
+		.executes { execute(it.source) }
 		.then(argument("type", word())
-			.executes { c ->
-				val source = c.source
-				val filterType = parseCosmeticType(getString(c, "type"))
-				source.ensureSession()
-				source.loading("Getting cosmetics")
-				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
-				val athena = source.api.profileManager.getProfileData("athena")
-				val items = athena.items.values.filter { it.primaryAssetType == filterType }
-				if (items.isEmpty()) {
-					throw SimpleCommandExceptionType(LiteralMessage("Nothing here")).create()
-				}
-				source.loading("Generating and uploading image")
-				perform(source, names[filterType], items).await()
-				source.loadingMsg!!.delete().queue()
-				Command.SINGLE_SUCCESS
-			}
+			.executes { type(it.source, parseCosmeticType(getString(it, "type"))) }
 		)
 		.then(literal("fortnitegg")
-			.executes { c ->
-				val source = c.source
-				source.ensureSession()
-				source.loading("Getting cosmetics")
-				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
-				val athena = source.api.profileManager.getProfileData("athena")
-				val fnggItems = source.api.okHttpClient.newCall(Request.Builder().url("https://fortnite.gg/api/items.json").build()).exec().to<JsonObject>()
-				val types = arrayOf(
-					"AthenaCharacter",
-					"AthenaBackpack",
-					"AthenaPickaxe",
-					"AthenaGlider",
-					"AthenaSkyDiveContrail",
-					"AthenaDance",
-					"AthenaItemWrap",
-					"AthenaMusicPack",
-					"AthenaLoadingScreen"
-				)
-				val ints = mutableListOf<Int>()
-				for (item in athena.items.values) {
-					if (item.primaryAssetType !in types) {
-						continue
-					}
-					fnggItems.entrySet().firstOrNull { it.key.equals(item.primaryAssetName, true) }?.let { ints.add(it.value.asInt) }
-				}
-				ints.sort()
-				val diff = ints.mapIndexed { i, it -> if (i > 0) it - ints[i - 1] else it }
-				val os = ByteArrayOutputStream()
-				DeflaterOutputStream(os, Deflater(Deflater.DEFAULT_COMPRESSION, true)).use {
-					it.write((ISO8601Utils.format(athena.created) + ',' + diff.joinToString(",")).toByteArray())
-				}
-				val encodedCosmetics = Base64.getUrlEncoder().encodeToString(os.toByteArray())
-				var url = "https://fortnite.gg/my-locker?items=$encodedCosmetics"
-				url = url.shortenUrl(source)
-				source.complete(null, source.createEmbed()
-					.setTitle("View your locker on Fortnite.GG", url)
-					.build())
-				Command.SINGLE_SUCCESS
-			}
+			.executes { fortniteGG(it.source) }
 		)
 		.then(literal("text")
 			.executes { executeText(it.source) }
@@ -155,6 +71,120 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 				.executes { executeText(it.source, parseCosmeticType(getString(it, "type"))) }
 			)
 		)
+
+	override fun getSlashCommand() = newCommandBuilder()
+		.then(subcommand("image", description)
+			.option(OptionType.STRING, "type", "Type of the cosmetic to view.")
+			.executes {
+				val type = it.getOption("type")?.asString?.let(::parseCosmeticType)
+				if (type != null) {
+					type(it, type)
+				} else {
+					execute(it)
+				}
+			}
+		)
+		.then(subcommand("text", "Shows your BR locker in paginated text.")
+			.option(OptionType.STRING, "type", "Type of the cosmetic to view.")
+			.executes {
+				val type = it.getOption("type")?.asString?.let(::parseCosmeticType)
+				if (type != null) {
+					executeText(it, type)
+				} else {
+					executeText(it)
+				}
+			}
+		)
+		.then(subcommand("fortnitegg", "Shows your BR locker in Fortnite.GG website.")
+			.executes(::fortniteGG)
+		)
+
+	private fun execute(source: CommandSourceStack): Int {
+		source.ensureSession()
+		source.loading("Getting cosmetics")
+		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+		val athena = source.api.profileManager.getProfileData("athena")
+		val typesToQuery = names.keys.map { it.substringBefore(':') }.toSet()
+		val itemsByType = typesToQuery.associateWith { mutableListOf<FortItemStack>() }
+		for (item in athena.items.values) {
+			itemsByType[item.primaryAssetType]?.add(item)
+		}
+		val finalItems = mutableMapOf<String, List<FortItemStack>>()
+		for (categoryKey in names.keys) {
+			if (categoryKey.contains(':')) {
+				val primaryAssetType = categoryKey.substringBefore(':')
+				val className = categoryKey.substringAfter(':')
+				finalItems[categoryKey] = itemsByType[primaryAssetType]!!.filter { it.defData?.exportType == className }
+			} else {
+				finalItems[categoryKey] = itemsByType[categoryKey]!!
+			}
+		}
+		val buttons = mutableListOf<Button>()
+		for ((categoryKey, items) in finalItems) {
+			if (items.isEmpty()) continue
+			buttons.add(Button.of(ButtonStyle.SECONDARY, categoryKey, "%s (%,d)".format(names[categoryKey]!!, items.size)))
+		}
+		val message = source.complete("**Pick a category**", null, *buttons.chunked(5, ActionRow::of).toTypedArray())
+		val choice = message.awaitOneInteraction(source.author).componentId
+		source.loading("Generating and uploading image")
+		perform(source, names[choice], finalItems[choice]).await()
+		source.loadingMsg!!.delete().queue()
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun type(source: CommandSourceStack, filterType: String): Int {
+		source.ensureSession()
+		source.loading("Getting cosmetics")
+		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+		val athena = source.api.profileManager.getProfileData("athena")
+		val items = athena.items.values.filter { it.primaryAssetType == filterType }
+		if (items.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("Nothing here")).create()
+		}
+		source.loading("Generating and uploading image")
+		perform(source, names[filterType], items).await()
+		source.loadingMsg!!.delete().queue()
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun fortniteGG(source: CommandSourceStack): Int {
+		source.ensureSession()
+		source.loading("Getting cosmetics")
+		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+		val athena = source.api.profileManager.getProfileData("athena")
+		val fnggItems = source.api.okHttpClient.newCall(Request.Builder().url("https://fortnite.gg/api/items.json").build()).exec().to<JsonObject>()
+		val types = arrayOf(
+			"AthenaCharacter",
+			"AthenaBackpack",
+			"AthenaPickaxe",
+			"AthenaGlider",
+			"AthenaSkyDiveContrail",
+			"AthenaDance",
+			"AthenaItemWrap",
+			"AthenaMusicPack",
+			"AthenaLoadingScreen"
+		)
+		val ints = mutableListOf<Int>()
+		for (item in athena.items.values) {
+			if (item.primaryAssetType !in types) {
+				continue
+			}
+			fnggItems.entrySet().firstOrNull { it.key.equals(item.primaryAssetName, true) }?.let { ints.add(it.value.asInt) }
+		}
+		ints.sort()
+		val diff = ints.mapIndexed { i, it -> if (i > 0) it - ints[i - 1] else it }
+		val os = ByteArrayOutputStream()
+		DeflaterOutputStream(os, Deflater(Deflater.DEFAULT_COMPRESSION, true)).use {
+			it.write((ISO8601Utils.format(athena.created) + ',' + diff.joinToString(",")).toByteArray())
+		}
+		val encodedCosmetics = Base64.getUrlEncoder().encodeToString(os.toByteArray())
+		var url = "https://fortnite.gg/my-locker?items=$encodedCosmetics"
+		url = url.shortenUrl(source)
+		source.complete(null, source.createEmbed()
+			.setTitle("View your locker on Fortnite.GG", url)
+			.build())
+		return Command.SINGLE_SUCCESS
+	}
 
 	private fun executeText(source: CommandSourceStack, filterType: String = "AthenaCharacter"): Int {
 		source.ensureSession()
@@ -170,7 +200,7 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 			throw SimpleCommandExceptionType(LiteralMessage("No")).create()
 		}
 		source.queryUsers_map(queryAccountIds)
-		source.message.replyPaginated(entries, 12, source.loadingMsg) { content, page, pageCount ->
+		source.replyPaginated(entries, 12) { content, page, pageCount ->
 			val entriesStart = page * 12 + 1
 			val entriesEnd = entriesStart + content.size
 			val embed = source.createEmbed()
@@ -178,7 +208,7 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 				.setDescription("Showing %,d to %,d of %,d entries".format(entriesStart, entriesEnd - 1, entries.size))
 				.setFooter("Page %,d of %,d".format(page + 1, pageCount))
 			content.forEach { it.addTo(embed, source) }
-			MessageBuilder(embed).build()
+			MessageBuilder(embed)
 		}
 		return Command.SINGLE_SUCCESS
 	}
@@ -281,20 +311,26 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 	)
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { c ->
-			val source = c.source
-			source.ensureSession()
-			source.loading("Getting cosmetics")
-			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
-			val athena = source.api.profileManager.getProfileData("athena")
-			val items = getExclusiveItems(source, athena, false)
-			source.loading("Generating and uploading image")
-			perform(source, "Exclusives", items).await()
-			source.loadingMsg!!.delete().queue()
-			Command.SINGLE_SUCCESS
-		}
+		.executes { execute(it.source) }
 		.then(literal("favoriteall").executes { executeUpdateFavorite(it.source, true) })
 		.then(literal("unfavoriteall").executes { executeUpdateFavorite(it.source, false) })
+
+	override fun getSlashCommand() = newCommandBuilder()
+		.then(subcommand("view", description).executes { execute(it) })
+		.then(subcommand("favoriteall", "Favorites all of your exclusives.").executes { executeUpdateFavorite(it, true) })
+		.then(subcommand("unfavoriteall", "Unfavorites all of your exclusives.").executes { executeUpdateFavorite(it, false) })
+
+	private fun execute(source: CommandSourceStack): Int {
+		source.ensureSession()
+		source.loading("Getting cosmetics")
+		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+		val athena = source.api.profileManager.getProfileData("athena")
+		val items = getExclusiveItems(source, athena, false)
+		source.loading("Generating and uploading image")
+		perform(source, "Exclusives", items).await()
+		source.loadingMsg!!.delete().queue()
+		return Command.SINGLE_SUCCESS
+	}
 
 	private fun executeUpdateFavorite(source: CommandSourceStack, favorite: Boolean): Int {
 		source.ensureSession()

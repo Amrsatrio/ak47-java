@@ -36,7 +36,7 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Battle pass.", arrayOf
 		source.loading("Getting BR data")
 		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 		val context = BattlePassViewController(source.api.profileManager.getProfileData("athena"))
-		source.message.replyPaginated(context.rewards.pages, 1, source.loadingMsg) { (page), pageNum, pageCount ->
+		source.replyPaginated(context.rewards.pages, 1) { (page), pageNum, pageCount ->
 			val embed = EmbedBuilder().setColor(if (context.stats.book_purchased) 0xE1784D else 0x55C5FF)
 				.setAuthor("%s / Battle Pass".format(getFriendlySeasonText(context.stats.season_num)), null, Utils.benBotExportAsset(if (context.stats.book_purchased) {
 					"/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass.T-FNBR-BattlePass"
@@ -52,7 +52,7 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Battle pass.", arrayOf
 				.addField("Offers", page.entries.joinToString("\n") { it.render(context.stats) }, false)
 				.addField("Balance", "%s %,d".format(battleStarEmote?.asMention, context.stats.battlestars), false)
 				.setFooter("Page %,d of %,d".format(pageNum + 1, pageCount))
-			MessageBuilder(embed).build()
+			MessageBuilder(embed)
 		}
 		return Command.SINGLE_SUCCESS
 	}

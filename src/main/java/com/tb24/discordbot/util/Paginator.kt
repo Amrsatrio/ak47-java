@@ -1,6 +1,7 @@
 package com.tb24.discordbot.util
 
-import net.dv8tion.jda.api.entities.Message
+import com.tb24.discordbot.commands.CommandSourceStack
+import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.Button
@@ -9,17 +10,16 @@ import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 
-fun <T> Message.replyPaginated(all: List<T>,
-							   pageSize: Int,
-							   messageToEdit: Message? = null,
-							   initialPage: Int = 0,
-							   customReactions: PaginatorCustomComponents<T>? = null,
-							   render: (content: List<T>, page: Int, pageCount: Int) -> Message) {
+fun <T> CommandSourceStack.replyPaginated(all: List<T>,
+										  pageSize: Int,
+										  initialPage: Int = 0,
+										  customReactions: PaginatorCustomComponents<T>? = null,
+										  render: (content: List<T>, page: Int, pageCount: Int) -> MessageBuilder) {
 	val pageCount = ceil(all.size / pageSize.toFloat()).toInt()
 	var page = initialPage
-	val rendered = render(all.subList(page * pageSize, min(all.size, (page * pageSize) + pageSize)), page, pageCount)
+	val builder = render(all.subList(page * pageSize, min(all.size, (page * pageSize) + pageSize)), page, pageCount)
 	if (pageCount <= 1) {
-		(messageToEdit?.editMessage(rendered)?.override(true) ?: channel.sendMessage(rendered)).complete()
+		complete(builder.build())
 		return
 	}
 	val rows = mutableListOf<ActionRow>()
@@ -31,7 +31,8 @@ fun <T> Message.replyPaginated(all: List<T>,
 	)
 	rows.add(pageControlButtons)
 	customReactions?.modifyComponents(rows)
-	val msg = (messageToEdit?.editMessage(rendered)?.override(true) ?: channel.sendMessage(rendered)).setActionRows(rows).complete()
+	builder.setActionRows(rows)
+	val msg = complete(builder.build())
 	val collector = msg.createMessageComponentInteractionCollector({ _, user, _ -> user?.idLong == author.idLong }, MessageComponentInteractionCollectorOptions().apply {
 		idle = 90000L
 		//dispose = true
@@ -52,7 +53,7 @@ fun <T> Message.replyPaginated(all: List<T>,
 			}
 
 			if (page != oldPage) {
-				item.editMessage(render(all.subList(page * pageSize, min(all.size, (page * pageSize) + pageSize)), page, pageCount)).setActionRows(rows).queue()
+				item.editMessage(render(all.subList(page * pageSize, min(all.size, (page * pageSize) + pageSize)), page, pageCount).build()).setActionRows(rows).queue()
 			} else {
 				item.deferEdit().queue() // TODO disable the buttons when they actually don't do anything
 			}

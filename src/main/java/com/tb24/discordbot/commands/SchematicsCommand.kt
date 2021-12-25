@@ -26,7 +26,7 @@ class SchematicsCommand : BrigadierCommand("schematics", "Lists your or a given 
 				rating2.compareTo(rating1)
 			}
 		}
-		source.message.replyPaginated(schems, 6, source.loadingMsg) { content, page, pageCount ->
+		source.replyPaginated(schems, 6) { content, page, pageCount ->
 			val embed = source.createEmbed(campaign.owner)
 				.setTitle("Schematics")
 				.setFooter("Page %,d of %,d".format(page + 1, pageCount))
@@ -44,7 +44,7 @@ class SchematicsCommand : BrigadierCommand("schematics", "Lists your or a given 
 				}
 				embed.addField("%s (Level %,d)".format(schem.displayName.trim(), schem.attributes["level"]?.asInt ?: 0), alterations.joinToString("\n"), true)
 			}
-			MessageBuilder(embed).build()
+			MessageBuilder(embed)
 		}
 		return Command.SINGLE_SUCCESS
 	}

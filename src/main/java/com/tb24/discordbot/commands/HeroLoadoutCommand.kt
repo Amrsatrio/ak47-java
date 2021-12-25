@@ -44,7 +44,7 @@ class HeroLoadoutCommand : BrigadierCommand("heroloadout", "Manages your STW her
 		val isMine = source.api.currentLoggedIn.id == campaign.owner.id
 		val event = CompletableFuture<FortItemStack?>()
 		val available = loadoutsMap.values.toList()
-		source.message.replyPaginated(available, 1, source.loadingMsg, max(available.indexOfFirst { it.itemId == stats.selected_hero_loadout }, 0), if (isMine) HeroLoadoutReactions(available, event) else null) { content, page, pageCount ->
+		source.replyPaginated(available, 1, max(available.indexOfFirst { it.itemId == stats.selected_hero_loadout }, 0), if (isMine) HeroLoadoutReactions(available, event) else null) { content, page, pageCount ->
 			val loadoutItem = content[0]
 			val loadoutAttrs = loadoutItem.getAttributes(FortCampaignHeroLoadoutItem::class.java)
 			val embed = source.createEmbed(campaign.owner)
@@ -73,7 +73,7 @@ class HeroLoadoutCommand : BrigadierCommand("heroloadout", "Manages your STW her
 					gadgetItem.renderWithIcon()
 				} else "Empty"
 			}, false)
-			MessageBuilder(embed.build()).build()
+			MessageBuilder(embed.build())
 		}
 		if (!isMine) {
 			return Command.SINGLE_SUCCESS

@@ -35,9 +35,7 @@ class CreativeCommand : BrigadierCommand("creative", "Manages your creative isla
 				}
 				val mnemonic = matcher.group(1)
 				val version = matcher.group(2)?.substringAfterLast('=')?.toInt()
-				if (source.api.userToken == null) {
-					source.session = source.client.internalSession
-				}
+				source.conditionalUseInternalSession()
 				source.ensureSession()
 				source.loading("Searching island code")
 				val linkData = source.api.linksService.queryLinkByMnemonic("fn", mnemonic, null, version).exec().body()!!

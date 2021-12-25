@@ -65,9 +65,7 @@ class ShopDumpCommand : BrigadierCommand("shopdump", "Sends the current item sho
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { c ->
 			val source = c.source
-			if (source.api.userToken == null) {
-				source.session = source.client.internalSession
-			}
+			source.conditionalUseInternalSession()
 			val lang = "en"
 			val data = source.api.okHttpClient.newCall(source.api.fortniteService.storefrontCatalog(lang).request()).exec().body()!!.charStream().use(JsonParser::parseReader)
 			val df = SimpleDateFormat("dd-MM-yyyy").apply { timeZone = TimeZone.getTimeZone("UTC") }

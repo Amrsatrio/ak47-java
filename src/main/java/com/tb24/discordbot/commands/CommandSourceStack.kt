@@ -114,7 +114,10 @@ open class CommandSourceStack {
 		if (actionRows.isNotEmpty()) {
 			builder.setActionRows(*actionRows)
 		}
-		val message = builder.build()
+		return complete(builder.build())
+	}
+
+	fun complete(message: Message): Message {
 		_interaction?.let {
 			_interaction = null
 			val localHook = hook
@@ -137,6 +140,12 @@ open class CommandSourceStack {
 	fun ensureSession() {
 		if (api.userToken == null) {
 			throw SimpleCommandExceptionType(LiteralMessage("You're not logged in to an Epic account. Do `${prefix}login`, preferably in DMs, to log in.")).create()
+		}
+	}
+
+	fun conditionalUseInternalSession() {
+		if (api.userToken == null) {
+			session = client.internalSession
 		}
 	}
 

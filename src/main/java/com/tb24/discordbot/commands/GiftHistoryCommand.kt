@@ -87,12 +87,12 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 		if (idsToQuery.size > 0) {
 			source.queryUsers(idsToQuery).forEach { localUserMap[it.id] = it }
 		}
-		source.message.replyPaginated(data.entries.sortedByDescending { it.value }, 20, source.loadingMsg) { content, page, pageCount ->
+		source.replyPaginated(data.entries.sortedByDescending { it.value }, 20) { content, page, pageCount ->
 			MessageBuilder(source.createEmbed()
 				.setTitle("Gift History / ${if (isReceive) "Received" else "Sent"}")
 				.setDescription("Showing ${page * 20 + 1} to ${page * 20 + content.size} of ${data.size} entries" + "\n\n" + content.joinToString("\n") { "\u2022 ${renderUserDate(it, localUserMap)}" })
 				.setFooter("Page %,d of %,d".format(page + 1, pageCount))
-			).build()
+			)
 		}
 		return Command.SINGLE_SUCCESS
 	}

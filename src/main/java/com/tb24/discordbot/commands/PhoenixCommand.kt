@@ -31,7 +31,7 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 			.executes { c ->
 				val currentEvent = ObjectRef<EventRecord>()
 				val levels = getLevelRewards(c.source, currentEvent)
-				c.source.message.replyPaginated(levels, 10) { content, page, pageCount ->
+				c.source.replyPaginated(levels, 10) { content, page, pageCount ->
 					MessageBuilder(EmbedBuilder()
 						.setAuthor("Ventures: ${currentEvent.element.eventType.substringAfterLast('.')}")
 						.setTitle("Rewards")
@@ -42,7 +42,7 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 							}
 						}
 						.setFooter("Page %,d of %,d".format(page + 1, pageCount))
-					).build()
+					)
 				}
 				Command.SINGLE_SUCCESS
 			}

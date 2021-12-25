@@ -121,9 +121,7 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 			.sortedBy { it.displayName }
 
 	private fun executeBulk(source: CommandSourceStack, usersLazy: Lazy<Collection<GameProfile>>? = null): Int {
-		if (source.api.userToken == null) {
-			source.session = source.client.internalSession
-		}
+		source.conditionalUseInternalSession()
 		val users = if (usersLazy == null) {
 			source.loading("Resolving users")
 			val devices = source.client.savedLoginsManager.getAll(source.author.id)
@@ -219,7 +217,7 @@ class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR q
 					}
 				}
 			}
-			source.message.replyPaginated(entries, 15, source.loadingMsg) { content, page, pageCount ->
+			source.replyPaginated(entries, 15) { content, page, pageCount ->
 				val entriesStart = page * 15 + 1
 				val entriesEnd = entriesStart + content.size
 				val value = content.joinToString("\n") {
@@ -229,7 +227,7 @@ class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR q
 					.setTitle("Battle Royale Quests" + if (tab != null) " / " + tab.DisplayName.format() else "")
 					.setDescription("Showing %,d to %,d of %,d entries\n\n%s".format(entriesStart, entriesEnd - 1, entries.size, value))
 					.setFooter("Page %,d of %,d".format(page + 1, pageCount))
-				MessageBuilder(embed).build()
+				MessageBuilder(embed)
 			}
 		} else {
 			if (tab != null) {

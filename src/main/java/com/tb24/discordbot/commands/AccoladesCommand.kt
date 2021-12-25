@@ -27,7 +27,7 @@ class AccoladesCommand : BrigadierCommand("accolades", "Shows your earned BR acc
 			if (entries.isEmpty()) {
 				throw SimpleCommandExceptionType(LiteralMessage("You have earned no accolades yet. Play Battle Royale to earn some!")).create()
 			}
-			source.message.replyPaginated(entries, 10, source.loadingMsg) { content, page, pageCount ->
+			source.replyPaginated(entries, 10) { content, page, pageCount ->
 				val entriesStart = page * 10 + 1
 				val entriesEnd = entriesStart + content.size
 				val embed = source.createEmbed()
@@ -35,7 +35,7 @@ class AccoladesCommand : BrigadierCommand("accolades", "Shows your earned BR acc
 					.setDescription("Showing %,d to %,d of %,d entries".format(entriesStart, entriesEnd - 1, entries.size))
 					.setFooter("Page %,d of %,d".format(page + 1, pageCount))
 				content.forEach { it.addTo(embed) }
-				MessageBuilder(embed).build()
+				MessageBuilder(embed)
 			}
 			Command.SINGLE_SUCCESS
 		}

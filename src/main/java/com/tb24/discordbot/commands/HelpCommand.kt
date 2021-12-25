@@ -18,7 +18,7 @@ class HelpCommand : BrigadierCommand("help", "Shows all commands and their infos
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { c ->
 			val source = c.source
-			source.message.replyPaginated(source.client.commandManager.commandMap.values.filter { it.registeredNode.canUse(source) }.sortedBy { it.name }, 12) { content, page, pageCount ->
+			source.replyPaginated(source.client.commandManager.commandMap.values.filter { it.registeredNode.canUse(source) }.sortedBy { it.name }, 12) { content, page, pageCount ->
 				val embed = EmbedBuilder()
 					.setTitle(":mailbox_with_mail: Hey! Want some help?")
 					.setColor(0x408BFA)
@@ -26,7 +26,7 @@ class HelpCommand : BrigadierCommand("help", "Shows all commands and their infos
 				content.forEach {
 					embed.addField(source.prefix + it.name, it.description, true)
 				}
-				MessageBuilder(embed).build()
+				MessageBuilder(embed)
 			}
 			Command.SINGLE_SUCCESS
 		}

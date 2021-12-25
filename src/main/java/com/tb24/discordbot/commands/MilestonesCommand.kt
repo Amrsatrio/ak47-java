@@ -58,7 +58,7 @@ class MilestonesCommand : BrigadierCommand("milestones", "Shows your milestone q
 			}
 		}*/
 		entries.sort()
-		source.message.replyPaginated(entries, 10, source.loadingMsg) { content, page, pageCount ->
+		source.replyPaginated(entries, 10) { content, page, pageCount ->
 			val entriesStart = page * 10 + 1
 			val entriesEnd = entriesStart + content.size
 			val embed = source.createEmbed()
@@ -66,7 +66,7 @@ class MilestonesCommand : BrigadierCommand("milestones", "Shows your milestone q
 				.setDescription("Showing %,d to %,d of %,d entries".format(entriesStart, entriesEnd - 1, entries.size))
 				.setFooter("Page %,d of %,d".format(page + 1, pageCount))
 			content.forEach { it.addTo(embed, showCompleted) }
-			MessageBuilder(embed).build()
+			MessageBuilder(embed)
 		}
 		return Command.SINGLE_SUCCESS
 	}

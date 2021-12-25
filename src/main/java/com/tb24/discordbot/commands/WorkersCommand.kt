@@ -28,13 +28,13 @@ class WorkersCommand : BrigadierCommand("survivors", "Shows your or a given play
 				rating2.compareTo(rating1)
 			}
 		}
-		source.message.replyPaginated(survivors, 10, source.loadingMsg) { content, page, pageCount ->
+		source.replyPaginated(survivors, 10) { content, page, pageCount ->
 			val embed = source.createEmbed(campaign.owner).setTitle("Survivors")
 			val nothing = getEmoteByName("nothing")?.asMention ?: ""
 			embed.setDescription(content.joinToString("\n") { item ->
 				renderWorker(item, nothing)
 			})
-			MessageBuilder(embed).build()
+			MessageBuilder(embed)
 		}
 
 		return Command.SINGLE_SUCCESS

@@ -88,7 +88,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		if (entries.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("$type is empty")).create()
 		}
-		source.message.replyPaginated(entries, 30, source.loadingMsg) { content, page, pageCount ->
+		source.replyPaginated(entries, 30) { content, page, pageCount ->
 			val entriesStart = page * 30 + 1
 			var entriesEnd = entriesStart
 			var chunkStart = entriesStart
@@ -108,7 +108,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 				.setDescription("Showing %,d to %,d of %,d entries\n* = Not eligible for gifting".format(entriesStart, entriesEnd - 1, entries.size))
 				.setFooter("Page %,d of %,d".format(page + 1, pageCount))
 			chunks.forEach(embed::addField)
-			MessageBuilder(embed.build()).build()
+			MessageBuilder(embed.build())
 		}
 		return Command.SINGLE_SUCCESS
 	}
@@ -481,7 +481,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			}
 		}
 		check(entries.isNotEmpty())
-		source.message.replyPaginated(entries, 30, source.loadingMsg) { content, page, pageCount ->
+		source.replyPaginated(entries, 30) { content, page, pageCount ->
 			val entriesStart = page * 30 + 1
 			val entriesEnd = entriesStart + content.size
 			var chunkStart = entriesStart
@@ -495,7 +495,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 				.setDescription("Showing %,d to %,d of %,d entries".format(entriesStart, entriesEnd - 1, entries.size))
 				.setFooter("Page %,d of %,d".format(page + 1, pageCount))
 			chunks.forEach(embed::addField)
-			MessageBuilder(embed.build()).build()
+			MessageBuilder(embed.build())
 		}
 		return Command.SINGLE_SUCCESS
 	}

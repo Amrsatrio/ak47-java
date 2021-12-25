@@ -6,7 +6,6 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.StringArgumentType.*
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.commands.arguments.StringArgument2.Companion.string2
 import com.tb24.discordbot.util.*
@@ -60,15 +59,14 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 			val deviceData = devices.safeGetOneIndexed(accountIndex)
 			doDeviceAuthLogin(source, deviceData)
 		} else {
-			checkRestriction(source, true)
+			checkRestriction(source)
 			doLogin(source, EGrantType.authorization_code, param, EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
 		}
 	}
 
-	private fun checkRestriction(source: CommandSourceStack, deleteMessage: Boolean = false) {
-		if (source.hasMessage && source.guild != null && !BotConfig.get().allowLegacyLoginInGuilds) {
-			if (deleteMessage) source.message.delete().queue()
-			throw SimpleCommandExceptionType(LiteralMessage("Please use the new `/login` slash command to log in. Using the legacy command could expose your code to the public if the bot fails to handle it in time.")).create()
+	private fun checkRestriction(source: CommandSourceStack) {
+		if (source.hasMessage && source.guild != null) {
+			source.message.reply("Please start using the new `/login` slash command to log in. Using the legacy command could let someone else access your account if the bot fails to handle your code in time.").complete()
 		}
 	}
 }

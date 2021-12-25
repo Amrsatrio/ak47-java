@@ -59,7 +59,7 @@ class MissionAlertsCommand : BrigadierCommand("alerts", "Shows today's mission a
 				.build())
 			return Command.SINGLE_SUCCESS
 		}
-		source.message.replyPaginated(entries.sortedByDescending { it.first.redemptionDateUtc }, 5, source.loadingMsg) { content, page, pageCount ->
+		source.replyPaginated(entries.sortedByDescending { it.first.redemptionDateUtc }, 5) { content, page, pageCount ->
 			val entriesStart = page * 5 + 1
 			val entriesEnd = entriesStart + content.size
 			val embed = source.createEmbed(campaign.owner)
@@ -69,7 +69,7 @@ class MissionAlertsCommand : BrigadierCommand("alerts", "Shows today's mission a
 			for (entry in content) {
 				embed.addField(entry.second.first, entry.second.second + '\n' + entry.first.redemptionDateUtc.relativeFromNow(), false)
 			}
-			MessageBuilder(embed).build()
+			MessageBuilder(embed)
 		}
 		return Command.SINGLE_SUCCESS
 	}
@@ -86,9 +86,7 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 		)
 
 	private fun executeBulk(source: CommandSourceStack, usersLazy: Lazy<Collection<GameProfile>>? = null): Int {
-		if (source.api.userToken == null) {
-			source.session = source.client.internalSession
-		}
+		source.conditionalUseInternalSession()
 		source.loading("Getting mission alerts info")
 		val mtxAlerts = mutableMapOf<String, Int>()
 		var totalMtx = 0

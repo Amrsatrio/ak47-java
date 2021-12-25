@@ -20,7 +20,7 @@ class LibraryCommand : BrigadierCommand("library", "Shows your Epic Games Store 
 			val playtimes = launcherApi.libraryService.queryAllPlaytime(launcherApi.currentLoggedIn.id).exec().body()!!
 			val items = launcherApi.catalogService.queryItemsBulk(records.map { it.catalogItemId }, false, false, "US", "en").exec().body()!!
 			val entries = records.filter { items[it.catalogItemId]?.mainGameItem == null }.sortedBy { items[it.catalogItemId]?.title }
-			source.message.replyPaginated(entries, 30, source.loadingMsg) { content, page, pageCount ->
+			source.replyPaginated(entries, 30) { content, page, pageCount ->
 				val entriesStart = page * 30 + 1
 				val entriesEnd = entriesStart + content.size
 				val value = content.joinToString("\n") { record ->
@@ -36,7 +36,7 @@ class LibraryCommand : BrigadierCommand("library", "Shows your Epic Games Store 
 					.setTitle("Library")
 					.setDescription("Showing %,d to %,d of %,d entries\n\n%s".format(entriesStart, entriesEnd - 1, entries.size, value))
 					.setFooter("Page %,d of %,d".format(page + 1, pageCount))
-				MessageBuilder(embed).build()
+				MessageBuilder(embed)
 			}
 			Command.SINGLE_SUCCESS
 		}

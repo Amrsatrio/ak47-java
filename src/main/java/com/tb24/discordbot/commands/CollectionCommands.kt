@@ -103,7 +103,7 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 			source.complete(null, embed.build())
 			return Command.SINGLE_SUCCESS
 		}
-		source.message.replyPaginated(data, 1, source.loadingMsg) { content, page, pageCount ->
+		source.replyPaginated(data, 1) { content, page, pageCount ->
 			val entry = content.first()
 			val def = entry.def
 			val collectedProps = entry.collectedProps
@@ -125,7 +125,7 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 					embed.addField("Quests completed", Formatters.num.format(properties.questsCompleted), true)
 				}
 			}
-			MessageBuilder(embed).build()
+			MessageBuilder(embed)
 		}
 		return Command.SINGLE_SUCCESS
 	}
@@ -263,7 +263,7 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 			.map { source.api.statsproxyService.queryMultipleUserStats("collection_fish", QueryMultipleUserStats().apply { owners = it.toTypedArray() }).future() }
 			.apply { CompletableFuture.allOf(*toTypedArray()).await() }
 			.flatMap { it.get().body()!!.toList() }
-		source.message.replyPaginated(data, 1, source.loadingMsg) { content, page, pageCount ->
+		source.replyPaginated(data, 1) { content, page, pageCount ->
 			val entry = content.first()
 			val def = entry.def
 			val collectedProps = entry.collectedProps
@@ -318,7 +318,7 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 					"%s#%,d %s %.2f cm%s".format(bold, i + 1, dn.escapeMarkdown(), e.value, bold)
 				}
 				.joinToString("\n", limit = 10, truncated = ""), false)
-			MessageBuilder(embed).build()
+			MessageBuilder(embed)
 		}
 		return Command.SINGLE_SUCCESS
 	}

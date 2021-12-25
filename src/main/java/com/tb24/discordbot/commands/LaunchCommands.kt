@@ -65,9 +65,7 @@ class LaunchWindowsCommand : BrigadierCommand("launch", "Launches you into Fortn
 		if (!gamePath.endsWith("\\Fortnite")) {
 			throw SimpleCommandExceptionType(LiteralMessage("Path must be a folder named **Fortnite**, not **${gamePath.substringAfterLast('\\')}**. Example: `C:\\Program Files\\Epic Games\\Fortnite`")).create()
 		}
-		if (source.api.userToken == null) {
-			source.session = source.client.internalSession
-		}
+		source.conditionalUseInternalSession()
 		source.loading("Generating shortcut files")
 		val devices = source.client.savedLoginsManager.getAll(source.author.id)
 		if (devices.isEmpty()) {

@@ -49,9 +49,7 @@ abstract class BrigadierCommand @JvmOverloads constructor(val name: String, val 
 		.then(argument("user", UserArgument.users(1))
 			.executes {
 				val source = it.source
-				if (source.api.userToken == null) {
-					source.session = source.client.internalSession
-				}
+				source.conditionalUseInternalSession()
 				val user = UserArgument.getUsers(it, "user").values.first()
 				source.loading("$loadingMsg of ${user.displayName}")
 				source.api.profileManager.dispatchPublicCommandRequest(user, QueryPublicProfile(), profileId).await()

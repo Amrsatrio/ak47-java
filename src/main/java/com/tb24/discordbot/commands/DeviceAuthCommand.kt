@@ -20,35 +20,38 @@ class DeviceAuthCommand : BrigadierCommand("devices", "Device auth operation com
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes(::list)
 		.then(literal("list").executes(::list))
-		.then(literal("create").executes(::create))
+		.then(literal("create").executes { create(it.source) })
 		.then(literal("remove")
 			.then(argument("device ID", greedyString())
-				.executes {
-					val deviceId = getString(it, "device ID")
-					if (deviceId.length != 32) {
-						throw SimpleCommandExceptionType(LiteralMessage("The device ID should be a 32 character hexadecimal string")).create()
-					}
-					delete(it.source, deviceId)
-				}
+				.executes { delete(it.source, getString(it, "device ID")) }
 			)
 		)
+
+	override fun getSlashCommand(): BaseCommandBuilder<CommandSourceStack>? {
+		return super.getSlashCommand()
+	}
 }
 
 class SaveLoginCommand : BrigadierCommand("savelogin", "Saves the current account to the bot, for easy login.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes(::create)
+		.executes { create(it.source) }
+
+	override fun getSlashCommand() = newCommandBuilder().executes(::create)
 }
 
 class DeleteSavedLoginCommand : BrigadierCommand("deletesavedlogin", "Removes the current account from the bot.", arrayOf("removesavedlogin")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes {
-			val source = it.source
-			source.ensureSession()
-			val user = source.api.currentLoggedIn
-			val dbDevice = source.client.savedLoginsManager.get(source.session.id, user.id)
-				?: throw SimpleCommandExceptionType(LiteralMessage("You don't have a saved login for this account (${user.displayName}).")).create()
-			delete(it.source, dbDevice.deviceId)
-		}
+		.executes { execute(it.source) }
+
+	override fun getSlashCommand() = newCommandBuilder().executes(::execute)
+
+	private fun execute(source: CommandSourceStack): Int {
+		source.ensureSession()
+		val user = source.api.currentLoggedIn
+		val dbDevice = source.client.savedLoginsManager.get(source.session.id, user.id)
+			?: throw SimpleCommandExceptionType(LiteralMessage("You don't have a saved login for this account (${user.displayName}).")).create()
+		return delete(source, dbDevice.deviceId)
+	}
 }
 
 private fun list(c: CommandContext<CommandSourceStack>): Int {
@@ -100,8 +103,7 @@ private fun list(c: CommandContext<CommandSourceStack>): Int {
 
 private fun DeviceAuth.LocationIpDate.render() = "%s, %s (%s)".format(dateTime.format(), ipAddress, location)
 
-private fun create(c: CommandContext<CommandSourceStack>): Int {
-	val source = c.source
+private fun create(source: CommandSourceStack): Int {
 	val inDMs = source.guild == null
 	source.ensureSession()
 	val sessionId = source.session.id
@@ -159,6 +161,9 @@ private fun EmbedBuilder.populateDeviceAuthDetails(deviceAuth: DeviceAuth) =
 		.addField("Secret (Do not share!)", "||" + deviceAuth.secret + "||", false)
 
 private fun delete(source: CommandSourceStack, deviceId: String): Int {
+	if (deviceId.length != 32) {
+		throw SimpleCommandExceptionType(LiteralMessage("The device ID should be a 32 character hexadecimal string")).create()
+	}
 	source.ensureSession()
 	val sessionId = source.session.id
 	val user = source.api.currentLoggedIn
