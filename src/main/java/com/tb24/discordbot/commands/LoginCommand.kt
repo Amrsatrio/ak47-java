@@ -268,7 +268,7 @@ fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 
 fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): Int {
 	val link = Utils.login(Utils.redirect(authClient))
-	source.complete(null, EmbedBuilder()
+	val embed = EmbedBuilder()
 		.setTitle("📲 Log in to your Epic Games account", link)
 		.setDescription("""
 ⚠ **We recommend that you only log into accounts that you have email access to!**
@@ -277,7 +277,10 @@ fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): 
 3. Send `/login <32 character code>` to complete your login.""")
 		.addField("Need to switch accounts?", "[Open this link instead]($link&prompt=login)", false)
 		.setColor(0x8AB4F8)
-		.build())
+	if (source.hasMessage) {
+		embed.appendDescription("\nℹ **Important:** Please start using the new `/login` slash command as the old `${source.prefix}login` will no longer work.")
+	}
+	source.complete(null, embed.build())
 	return Command.SINGLE_SUCCESS
 }
 
