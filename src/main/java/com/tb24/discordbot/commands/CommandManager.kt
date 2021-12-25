@@ -148,7 +148,6 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(WorkersCommand())
 		register(WorthCommand())
 		register(FortniteAndroidApkCommand())
-		register(TrollCommand())
 	}
 
 	override fun onReady(event: ReadyEvent) {

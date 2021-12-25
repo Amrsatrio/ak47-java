@@ -83,7 +83,7 @@ open class CommandSourceStack {
 	}
 
 	private fun getInitialSession(sessionId: String?, ignoreSessionLimit: Boolean) =
-		sessionId?.let { client.getSession(sessionId, ignoreSessionLimit || hasPremium()) } ?: client.internalSession
+		sessionId?.let { client.getSession(sessionId) { ignoreSessionLimit || hasPremium() } } ?: client.internalSession
 
 	// region Flow control
 	var errorTitle: String? = null

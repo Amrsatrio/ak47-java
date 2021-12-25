@@ -274,7 +274,7 @@ class DiscordBot(token: String) {
 	// region Session manager
 	fun setupInternalSession() {
 		if (!::internalSession.isInitialized) {
-			internalSession = getSession("__internal__", true)
+			internalSession = getSession("__internal__") { true }
 		}
 		val internalDeviceData = savedLoginsManager.getAll("__internal__")[0]
 		try {
@@ -295,8 +295,8 @@ class DiscordBot(token: String) {
 		}
 	}
 
-	fun getSession(id: String, ignoreLimit: Boolean = false) = sessions.getOrPut(id) {
-		if (!ignoreLimit && sessions.size >= BotConfig.get().maxSessions) {
+	inline fun getSession(id: String, ignoreLimit: () -> Boolean = { false }) = sessions.getOrPut(id) {
+		if (sessions.size >= BotConfig.get().maxSessions && !ignoreLimit()) {
 			throw IllegalStateException(L10N.format("error.session.limit"))
 		}
 		Session(this, id)

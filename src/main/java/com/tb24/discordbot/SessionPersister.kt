@@ -8,10 +8,8 @@ object SessionPersister {
 	@JvmStatic
 	lateinit var client: DiscordBot
 
-	@Synchronized
 	fun get(sessionId: String) = r.table("sessions").get(sessionId).run(client.dbConn, PersistedSession::class.java).first()
 
-	@Synchronized
 	fun set(session: Session) {
 		val persistedSession = PersistedSession(session.id, session.api.userToken, session.api.currentLoggedIn.run { GameProfile(id, epicDisplayName) })
 		val existing = get(session.id)
@@ -22,7 +20,6 @@ object SessionPersister {
 		}
 	}
 
-	@Synchronized
 	fun remove(sessionId: String) = r.table("sessions").get(sessionId).delete().run(client.dbConn)
 
 	class PersistedSession(
