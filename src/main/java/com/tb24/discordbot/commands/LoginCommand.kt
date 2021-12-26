@@ -6,6 +6,7 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.StringArgumentType.*
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.commands.arguments.StringArgument2.Companion.string2
 import com.tb24.discordbot.util.*
@@ -276,7 +277,7 @@ fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): 
 3. Send `/login <32 character code>` to complete your login.""")
 		.addField("Need to switch accounts?", "[Open this link instead]($link&prompt=login)", false)
 		.setColor(0x8AB4F8)
-	if (source.message != null) {
+	if (BotConfig.get().slashCommandsEnabled && source.message != null) {
 		embed.appendDescription("\nℹ **Important:** Please start using the new `/login` slash command as the old `${source.prefix}login` will no longer work.")
 	}
 	source.complete(null, embed.build())

@@ -29,6 +29,7 @@ public class BotConfig {
 	public String defaultPrefix = ",";
 	public long sessionLifetimeMinutes = 40;
 	public int maxSessions = 3000;
+	public boolean slashCommandsEnabled = false;
 	public long homeGuildId;
 	public String homeGuildInviteLink;
 	public long itemShopChannelId;

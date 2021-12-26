@@ -149,7 +149,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 	}
 
 	override fun onReady(event: ReadyEvent) {
-		if (hasUpdatedCommands) {
+		if (hasUpdatedCommands || !BotConfig.get().slashCommandsEnabled) {
 			return
 		}
 		hasUpdatedCommands = true
@@ -205,6 +205,9 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 	}
 
 	override fun onSlashCommand(event: SlashCommandEvent) {
+		if (!hasUpdatedCommands) {
+			return
+		}
 		threadPool.submit {
 			val source = try {
 				CommandSourceStack(client, event.interaction, event.user.id)
