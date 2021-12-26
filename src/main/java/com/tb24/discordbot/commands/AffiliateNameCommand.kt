@@ -20,8 +20,8 @@ class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Su
 		)
 
 	override fun getSlashCommand() = newCommandBuilder()
-		.option(OptionType.STRING, "new code", "The new Support-a-Creator code to apply.")
-		.executes { execute(it, "sac", it.getOption("new code")?.asString) }
+		.option(OptionType.STRING, "new-code", "The new Support-a-Creator code to apply.")
+		.executes { execute(it, "sac", it.getOption("new-code")?.asString) }
 
 	private fun execute(source: CommandSourceStack, commandName: String, newCode: String?): Int {
 		source.ensureSession()

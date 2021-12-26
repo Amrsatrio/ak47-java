@@ -153,12 +153,12 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 			return
 		}
 		hasUpdatedCommands = true
-		if (client.isProd) {
+		val commands = if (client.isProd) {
 			event.jda.updateCommands()
 		} else {
 			client.discord.getGuildById(BotConfig.get().homeGuildId)!!.updateCommands()
 		}.addCommands(slashCommands.values.map { it.build() }).complete()
-		DiscordBot.LOGGER.info("Updated commands")
+		DiscordBot.LOGGER.info("Updated commands (total {})", commands.size)
 	}
 
 	private fun register(command: BrigadierCommand): LiteralCommandNode<CommandSourceStack> {
