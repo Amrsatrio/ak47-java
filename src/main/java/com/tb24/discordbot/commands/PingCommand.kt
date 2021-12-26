@@ -10,7 +10,7 @@ class PingCommand : BrigadierCommand("ping", "Returns latency and API ping.") {
 		.executes {
 			val source = it.source
 			val message = source.loading("Pinging")!!
-			source.complete("🏓 Pong!\nLatency is ${Formatters.num.format(message.timeCreated.toInstant().toEpochMilli() - source.message.timeCreated.toInstant().toEpochMilli())}ms\nAPI Latency is ${Formatters.num.format(source.jda.gatewayPing)}ms")
+			source.complete("🏓 Pong!\nLatency is ${Formatters.num.format(message.timeCreated.toInstant().toEpochMilli() - source.message!!.timeCreated.toInstant().toEpochMilli())}ms\nAPI Latency is ${Formatters.num.format(source.jda.gatewayPing)}ms")
 			Command.SINGLE_SUCCESS
 		}
 }

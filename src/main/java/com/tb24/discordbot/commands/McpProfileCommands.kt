@@ -11,6 +11,7 @@ import com.mojang.brigadier.arguments.StringArgumentType.*
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.L10N
+import com.tb24.discordbot.util.AttachmentUpload
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.discordbot.util.exec
@@ -56,8 +57,7 @@ class ComposeMcpCommand : BrigadierCommand("composemcp", "Perform an arbitrary M
 		fun result(data: JsonElement, lastNamePart: String) {
 			val dataAsString = GsonBuilder().setPrettyPrinting().create().toJson(data)
 			if (dataAsString.length > (Message.MAX_CONTENT_LENGTH - "```json\n```".length)) {
-				source.channel.sendFile(dataAsString.toByteArray(), "ComposeMCP-${source.api.currentLoggedIn.displayName}-${command}-${profileId}-${lastNamePart}.json").complete()
-				source.loadingMsg!!.delete().queue()
+				source.complete(AttachmentUpload(dataAsString.toByteArray(), "ComposeMCP-${source.api.currentLoggedIn.displayName}-${command}-${profileId}-${lastNamePart}.json"))
 			} else {
 				source.complete("```json\n$dataAsString```")
 			}

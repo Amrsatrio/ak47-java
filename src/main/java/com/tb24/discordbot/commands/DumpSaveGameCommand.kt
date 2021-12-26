@@ -6,6 +6,7 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.util.AttachmentUpload
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.commandName
 import com.tb24.discordbot.util.exec
@@ -28,7 +29,7 @@ class DumpSaveGameCommand : BrigadierCommand("dumpsav", "Prints out the data ins
 		)
 		.executes { c ->
 			val source = c.source
-			val attachedFile = source.message.attachments.firstOrNull()
+			val attachedFile = source.message?.attachments?.firstOrNull()
 				?: throw SimpleCommandExceptionType(LiteralMessage("Please attach a file, or use `${source.prefix}${c.commandName} <cloud storage file name>`.")).create()
 			if (!attachedFile.fileName.endsWith(".sav", true)) {
 				throw SimpleCommandExceptionType(LiteralMessage("Not valid save game file.")).create()
@@ -41,11 +42,10 @@ class DumpSaveGameCommand : BrigadierCommand("dumpsav", "Prints out the data ins
 		}
 
 	private fun display(source: CommandSourceStack, saveGame: FFortSaveGame): Int {
-		source.loadingMsg?.delete()?.queue()
 		val s = JWPSerializer.GSON.newBuilder().setPrettyPrinting().create().toJson(saveGame)
 		if (("```json\n\n```".length + s.length) > Message.MAX_CONTENT_LENGTH) {
 			val fileName = saveGame.name.substringAfterLast('/').substringBeforeLast('.') + ".json"
-			source.channel.sendFile(s.toByteArray(), fileName).complete()
+			source.complete(AttachmentUpload(s.toByteArray(), fileName))
 		} else {
 			source.complete("```json\n$s\n```")
 		}

@@ -67,8 +67,8 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 	fun login(source: CommandSourceStack?, fields: Map<String, String>, auth: EAuthClient = EAuthClient.FORTNITE_ANDROID_GAME_CLIENT, sendMessages: Boolean = true): Int {
 		if (source != null) {
 			val grantType = fields["grant_type"]
-			if (grantType != "device_auth" && grantType != "device_code" && source.hasMessage && source.guild?.selfMember?.hasPermission(Permission.MESSAGE_MANAGE) == true && sendMessages) {
-				source.message.delete().queue()
+			if (grantType != "device_auth" && grantType != "device_code" && source.message != null && source.guild?.selfMember?.hasPermission(Permission.MESSAGE_MANAGE) == true && sendMessages) {
+				source.message!!.delete().queue()
 			}
 			if (api.userToken != null) {
 				logout()

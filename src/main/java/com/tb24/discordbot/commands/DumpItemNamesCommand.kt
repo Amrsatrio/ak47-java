@@ -4,6 +4,7 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.tb24.discordbot.Rune
+import com.tb24.discordbot.util.AttachmentUpload
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.util.format
@@ -33,8 +34,7 @@ class DumpItemNamesCommand : BrigadierCommand("dumpitemnames", "Gives you a JSON
 					map[templateId] = text
 				}
 			}
-			source.channel.sendFile(EpicApi.GSON.newBuilder().setPrettyPrinting().create().toJson(map).toByteArray(), "result.json").complete()
-			source.loadingMsg!!.delete().queue()
+			source.complete(AttachmentUpload(EpicApi.GSON.newBuilder().setPrettyPrinting().create().toJson(map).toByteArray(), "result.json"))
 			Command.SINGLE_SUCCESS
 		}
 }

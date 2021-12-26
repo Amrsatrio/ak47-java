@@ -9,6 +9,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.MapProcessor
 import com.tb24.discordbot.Rune
 import com.tb24.discordbot.images.MapImageGenerator
+import com.tb24.discordbot.util.AttachmentUpload
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.assetdata.FortLevelOverlayConfig
@@ -217,8 +218,7 @@ class ItemCollectCommand : BrigadierCommand("collectibles", "Shows collectibles 
 			})
 		}
 
-		source.channel.sendFile(map.draw().toPngArray(), "XpCoins-${source.api.currentLoggedIn.displayName}-${athena.rvn}.png").complete()
-		source.loadingMsg!!.delete().queue()
+		source.complete(AttachmentUpload(map.draw().toPngArray(), "XpCoins-${source.api.currentLoggedIn.displayName}-${athena.rvn}.png"))
 		return Command.SINGLE_SUCCESS
 	}
 

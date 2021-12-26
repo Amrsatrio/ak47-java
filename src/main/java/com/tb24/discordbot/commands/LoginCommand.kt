@@ -65,8 +65,9 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 	}
 
 	private fun checkRestriction(source: CommandSourceStack) {
-		if (source.hasMessage && source.guild != null) {
-			source.message.reply("⚠ Please start using the new `/login` slash command to log in. Using the legacy command could let someone else access your account if the bot fails to handle your code in time.").queue()
+		val message = source.message
+		if (message != null && source.guild != null) {
+			message.reply("⚠ Please start using the new `/login` slash command to log in. Using the legacy command could let someone else access your account if the bot fails to handle your code in time.").queue()
 		}
 	}
 }
@@ -275,7 +276,7 @@ fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): 
 3. Send `/login <32 character code>` to complete your login.""")
 		.addField("Need to switch accounts?", "[Open this link instead]($link&prompt=login)", false)
 		.setColor(0x8AB4F8)
-	if (source.hasMessage) {
+	if (source.message != null) {
 		embed.appendDescription("\nℹ **Important:** Please start using the new `/login` slash command as the old `${source.prefix}login` will no longer work.")
 	}
 	source.complete(null, embed.build())

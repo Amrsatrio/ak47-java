@@ -7,6 +7,7 @@ import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.util.AttachmentUpload
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.exec
 import com.tb24.fn.util.Utils
@@ -41,7 +42,7 @@ class CloudStorageCommand : BrigadierCommand("cloudstorage", "List, download, or
 				val source = c.source
 				val fileName = getString(c, "file name")
 				source.ensureSession()
-				val fileToUpload = source.message.attachments.firstOrNull()
+				val fileToUpload = source.message?.attachments?.firstOrNull()
 				if (fileToUpload != null) {
 					source.loading("Uploading $fileName")
 					fileToUpload.retrieveInputStream().await().use {
@@ -55,9 +56,8 @@ class CloudStorageCommand : BrigadierCommand("cloudstorage", "List, download, or
 					source.loading("Downloading $fileName")
 					val response = source.api.fortniteService.readUserFile(source.api.currentLoggedIn.id, fileName).exec().body()!!
 					response.byteStream().use {
-						source.channel.sendFile(it, fileName).complete()
+						source.complete(AttachmentUpload(it, fileName))
 					}
-					source.loadingMsg!!.delete().queue()
 				}
 				Command.SINGLE_SUCCESS
 			}

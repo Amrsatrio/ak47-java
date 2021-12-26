@@ -35,6 +35,7 @@ import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
 import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.util.toPngArray
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.TextChannel
 import okhttp3.OkHttpClient
@@ -75,15 +76,14 @@ class ShopDumpCommand : BrigadierCommand("shopdump", "Sends the current item sho
 }
 
 fun executeShopImage(source: CommandSourceStack): Int {
-	val attachedFile = source.message.attachments.firstOrNull()
+	val attachedFile = source.message?.attachments?.firstOrNull()
 	if (attachedFile != null) {
 		source.loading("Processing your request")
 		val catalogManager = CatalogManager()
 		catalogManager.catalogData = InputStreamReader(attachedFile.retrieveInputStream().await()).use { EpicApi.GSON.fromJson(it, CatalogDownload::class.java) }
 		catalogManager.sectionsData = OkHttpClient().newCall(Request.Builder().url("https://fortnitecontent-website-prod07.ol.epicgames.com/content/api/pages/fortnite-game/shop-sections").build()).exec().to<FortCmsData.ShopSectionsData>()
 		catalogManager.validate()
-		source.channel.sendFile(generateShopImage(catalogManager, 2).toPngArray(), attachedFile.fileName.substringBeforeLast('.') + ".png").complete()
-		source.loadingMsg!!.delete().queue()
+		source.complete(AttachmentUpload(generateShopImage(catalogManager, 2).toPngArray(), attachedFile.fileName.substringBeforeLast('.') + ".png"))
 		return Command.SINGLE_SUCCESS
 	}
 	if (isUserAnIdiot(source)) {
@@ -97,8 +97,7 @@ fun executeShopImage(source: CommandSourceStack): Int {
 	val tz = TimeZone.getTimeZone("UTC")
 	val now = Date()
 	val fileName = "shop-${SimpleDateFormat("dd-MM-yyyy").apply { timeZone = tz }.format(now)}.png"
-	val message = source.channel.sendMessage("**Battle Royale Item Shop (%s)**".format(DateFormat.getDateInstance().apply { timeZone = tz }.format(now))).addFile(image, fileName).complete()
-	source.loadingMsg!!.delete().queue()
+	val message = source.complete(MessageBuilder("**Battle Royale Item Shop (%s)**".format(DateFormat.getDateInstance().apply { timeZone = tz }.format(now))).build(), AttachmentUpload(image, fileName))
 	if (source.channel.idLong == BotConfig.get().itemShopChannelId) {
 		/*message.addReaction("👍").queue()
 		message.addReaction("👎").queue()*/
@@ -183,8 +182,9 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 }
 
 private fun isUserAnIdiot(source: CommandSourceStack): Boolean {
-	if (source.channel.idLong == 709667951300706385L || source.channel.idLong == 708845713592811603L) {
-		source.message.reply("Hey ${source.author.asMention}, in this server there is an <#702307657989619744> channel.\nIf you believe that it is outdated, you can DM one of us to update it.").complete()
+	val itemShopChannelId = BotConfig.get().itemShopChannelId
+	if (itemShopChannelId != 0L && (source.channel.idLong == 709667951300706385L || source.channel.idLong == 708845713592811603L)) {
+		source.complete("Hey ${source.author.asMention}, in this server there is an <#$itemShopChannelId> channel.\nIf you believe that it is outdated, you can DM one of us to update it.")
 		return true
 	}
 	return false

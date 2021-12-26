@@ -17,6 +17,7 @@ import com.tb24.fn.model.account.DeviceAuth
 import com.tb24.fn.util.EAuthClient
 import mslinks.ShellLink
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.utils.TimeFormat
 import okhttp3.MediaType
 import okhttp3.OkHttpClient
@@ -87,8 +88,7 @@ class LaunchWindowsCommand : BrigadierCommand("launch", "Launches you into Fortn
 				zip.closeEntry()
 			}
 		}
-		source.channel.sendFile(os.toByteArray(), "LaunchShortcuts-${source.author.name}-${source.author.discriminator}.zip").complete()
-		source.loadingMsg!!.delete().queue()
+		source.complete(AttachmentUpload(os.toByteArray(), "LaunchShortcuts-${source.author.name}-${source.author.discriminator}.zip"))
 		return Command.SINGLE_SUCCESS
 	}
 

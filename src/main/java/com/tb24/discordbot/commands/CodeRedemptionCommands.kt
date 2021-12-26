@@ -10,10 +10,7 @@ import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.commands.arguments.StringArgument2.Companion.string2
-import com.tb24.discordbot.util.Utils
-import com.tb24.discordbot.util.exec
-import com.tb24.discordbot.util.format
-import com.tb24.discordbot.util.to
+import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.RedeemCodePayload
 import com.tb24.fn.model.catalog.StoreOffer
@@ -46,12 +43,12 @@ class CheckCodeCommand : BrigadierCommand("checkcode", "Evaluates an Epic Games 
 			val offerInfoResponse = launcherApi.okHttpClient.newCall(launcherApi.catalogService.queryOffersBulk(listOf(offerId), null, null, null).request()).exec().to<JsonObject>()
 			val offerInfo = offerInfoResponse.get(offerId)
 			val prettyPrintGson = GsonBuilder().setPrettyPrinting().create()
-			val action = source.channel.sendFile(prettyPrintGson.toJson(evaluateCodeResponse).toByteArray(), "Code-${data.code}.json")
+			val files = ArrayList<AttachmentUpload>(2)
+			files.add(AttachmentUpload(prettyPrintGson.toJson(evaluateCodeResponse).toByteArray(), "Code-${data.code}.json"))
 			if (offerInfo != null) {
-				action.addFile(prettyPrintGson.toJson(offerInfo).toByteArray(), "Offer-${offerId}.json")
+				files.add(AttachmentUpload(prettyPrintGson.toJson(offerInfo).toByteArray(), "Offer-${offerId}.json"))
 			}
-			action.complete()
-			source.loadingMsg!!.delete().queue()
+			source.complete(*files.toTypedArray())
 			return Command.SINGLE_SUCCESS
 		}
 		val data = launcherApi.codeRedemptionService.evaluateCode(launcherApi.currentLoggedIn.id, code).exec().body()!!

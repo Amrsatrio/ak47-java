@@ -52,10 +52,10 @@ class EmbedCommand : BrigadierCommand("embed", "Shiver me embeds!") {
 		buttons.add(Button.of(ButtonStyle.SECONDARY, "addField", "Add field", Emoji.fromUnicode("➕")))
 		buttons.add(Button.of(ButtonStyle.SECONDARY, "addMessage", "Add message", Emoji.fromUnicode("🗨")))
 		buttons.add(Button.of(ButtonStyle.PRIMARY, "send", "Send", Emoji.fromUnicode("📩")))
-		val bMsg = source.channel.sendMessage("*Preview:*\n$content").setEmbeds(embed.build()).setActionRow(*buttons.toTypedArray()).allowedMentions(setOf()).complete()
+		val bMsg = source.channel.sendMessage("*Preview:*\n$content").setEmbeds(embed.build()).setActionRow(*buttons.toTypedArray()).allowedMentions(emptySet()).complete()
 		val botHasMessageManage = bMsg.member!!.hasPermission(Permission.MESSAGE_MANAGE)
 		fun updateMessage() {
-			bMsg.editMessage("*Preview:*\n$content").setEmbeds(embed.build()).setActionRow(*buttons.toTypedArray()).allowedMentions(setOf()).queue()
+			bMsg.editMessage("*Preview:*\n$content").setEmbeds(embed.build()).setActionRow(*buttons.toTypedArray()).allowedMentions(emptySet()).queue()
 		}
 		while (true) {
 			when (bMsg.awaitOneInteraction(source.author, false, 600000L).componentId) {
@@ -87,7 +87,7 @@ class EmbedCommand : BrigadierCommand("embed", "Shiver me embeds!") {
 					updateMessage()
 				}
 				"send" -> {
-					channel.sendMessage(MessageBuilder().setContent(content).setEmbeds(embed.build()).setAllowedMentions(setOf()).build()).complete()
+					channel.sendMessage(MessageBuilder(content).setEmbeds(embed.build()).setAllowedMentions(emptySet()).build()).complete()
 					source.complete("✅ ${source.author.asMention}, successfully sent embed! Interaction design by a.bakedpotato.")
 					break
 				}

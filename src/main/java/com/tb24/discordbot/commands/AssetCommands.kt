@@ -7,6 +7,7 @@ import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.util.AttachmentUpload
 import com.tb24.uasset.*
 import me.fungames.jfortniteparse.fort.converters.createContainer
 import me.fungames.jfortniteparse.fort.exports.FortItemDefinition
@@ -20,6 +21,7 @@ import me.fungames.jfortniteparse.ue4.converters.meshes.convertMesh
 import me.fungames.jfortniteparse.ue4.converters.meshes.psk.export
 import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.util.toPngArray
+import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.Message
 import java.io.StringWriter
 import java.util.function.Predicate
@@ -96,8 +98,7 @@ class ExportObjectCommand : BrigadierCommand("export", "Export an object from th
 					}
 					else -> throw SimpleCommandExceptionType(LiteralMessage("${obj.exportType} is not an exportable type.")).create()
 				}
-				c.source.channel.sendMessage("`${obj.exportType}'${obj.getPathName(null)}'`").addFile(data, fileName).complete()
-				c.source.loadingMsg?.delete()?.complete()
+				c.source.complete(MessageBuilder("`${obj.exportType}'${obj.getPathName(null)}'`").build(), AttachmentUpload(data, fileName))
 				Command.SINGLE_SUCCESS
 			}
 		)

@@ -15,7 +15,7 @@ import java.nio.charset.StandardCharsets
 
 class PrefixCommand : BrigadierCommand("prefix", "Change prefix for the server/user. (Server admins only)", arrayOf("akprefix")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires { it.message.isFromGuild && it.member!!.hasPermission(Permission.ADMINISTRATOR) }
+		.requires { it.member?.hasPermission(Permission.ADMINISTRATOR) == true }
 		.executes {
 			it.source.channel.sendMessage("Current prefix: `${it.source.prefix}`\nUse ${it.source.prefix}prefix <new prefix> to change it.").queue()
 			Command.SINGLE_SUCCESS

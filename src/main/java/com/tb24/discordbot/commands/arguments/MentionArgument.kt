@@ -22,17 +22,17 @@ class MentionArgument private constructor(private val mentionType: MentionType) 
 	}
 
 	class Resolver(private val mentionType: MentionType, private val input: String) {
-		lateinit var message: Message
+		lateinit var source: CommandSourceStack
 
-		fun resolve(message: Message): Collection<IMentionable> {
-			this.message = message
+		fun resolve(source: CommandSourceStack): Collection<IMentionable> {
+			this.source = source
 			val id = input.toLongOrNull()
 			if (id != null) {
 				return when (mentionType) {
-					MentionType.USER -> setOf(message.jda.retrieveUserById(id).complete())
-					MentionType.ROLE -> (if (message.channelType.isGuild) message.guild.getRoleById(id) else message.jda.getRoleById(id))?.let(Collections::singleton)
-					MentionType.CHANNEL -> message.jda.getTextChannelById(id)?.let(Collections::singleton)
-					MentionType.EMOTE -> message.jda.getEmoteById(id)?.let(Collections::singleton)
+					MentionType.USER -> setOf(source.jda.retrieveUserById(id).complete())
+					MentionType.ROLE -> (source.guild?.getRoleById(id) ?: source.jda.getRoleById(id))?.let(Collections::singleton)
+					MentionType.CHANNEL -> source.jda.getTextChannelById(id)?.let(Collections::singleton)
+					MentionType.EMOTE -> source.jda.getEmoteById(id)?.let(Collections::singleton)
 					else -> null
 				} ?: emptySet()
 			}
@@ -62,28 +62,24 @@ class MentionArgument private constructor(private val mentionType: MentionType) 
 
 		private fun matchUser(matcher: Matcher): User? {
 			val userId = parseSnowflake(matcher.group(1))
-			return message.jda.getUserById(userId) ?: message.jda.retrieveUserById(userId).complete()
+			return source.jda.getUserById(userId) ?: source.jda.retrieveUserById(userId).complete()
 		}
 
 		private fun matchRole(matcher: Matcher): Role? {
 			val roleId = parseSnowflake(matcher.group(1))
-			return if (message.channelType.isGuild) {
-				message.guild.getRoleById(roleId)
-			} else {
-				message.jda.getRoleById(roleId)
-			}
+			return source.guild?.getRoleById(roleId) ?: source.jda.getRoleById(roleId)
 		}
 
 		private fun matchTextChannel(matcher: Matcher): TextChannel? {
 			val channelId = parseSnowflake(matcher.group(1))
-			return message.jda.getTextChannelById(channelId)
+			return source.jda.getTextChannelById(channelId)
 		}
 
 		private fun matchEmote(m: Matcher): Emote? {
 			val emoteId = parseSnowflake(m.group(2))
 			val name = m.group(1)
 			val animated = m.group(0).startsWith("<a:")
-			return message.jda.getEmoteById(emoteId) ?: EmoteImpl(emoteId, message.jda as JDAImpl).setName(name).setAnimated(animated)
+			return source.jda.getEmoteById(emoteId) ?: EmoteImpl(emoteId, source.jda as JDAImpl).setName(name).setAnimated(animated)
 		}
 	}
 
@@ -93,6 +89,6 @@ class MentionArgument private constructor(private val mentionType: MentionType) 
 
 		@JvmStatic
 		fun getMention(context: CommandContext<CommandSourceStack>, name: String) =
-			context.getArgument(name, Resolver::class.java).resolve(context.source.message)
+			context.getArgument(name, Resolver::class.java).resolve(context.source)
 	}
 }

@@ -26,12 +26,16 @@ import kotlin.math.min
 
 val lockEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Locks/T-Icon-Lock-128.T-Icon-Lock-128")
 
-class BattlePassCommand : BrigadierCommand("battlepass", "Battle pass.", arrayOf("bp")) {
+class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pass.", arrayOf("bp")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.then(literal("rewards").executes { rewards(it.source) })
 		.then(literal("buy").executes { purchaseBattlePass(it.source) })
 
-	private inline fun rewards(source: CommandSourceStack): Int {
+	override fun getSlashCommand() = newCommandBuilder()
+		.then(subcommand("rewards", "Shows Battle Pass rewards.").executes(::rewards))
+		.then(subcommand("buy", "Purchase Battle Pass or levels.").executes(::purchaseBattlePass))
+
+	private fun rewards(source: CommandSourceStack): Int {
 		source.ensureSession()
 		source.loading("Getting BR data")
 		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
@@ -79,7 +83,7 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Battle pass.", arrayOf
 		CurrencyItemTemplate.PrimaryAssetName.toString().toLowerCase(),
 		Cost)
 
-	private inline fun purchaseBattlePass(source: CommandSourceStack): Int {
+	private fun purchaseBattlePass(source: CommandSourceStack): Int {
 		source.ensureSession()
 		source.loading("Getting BR data")
 		CompletableFuture.allOf(

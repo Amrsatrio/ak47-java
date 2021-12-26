@@ -10,7 +10,7 @@ class DeleteMessageCommand : BrigadierCommand("deletemessage", "Deletes my messa
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.requires { it.guild == null }
 		.executes {
-			val message = it.source.message.referencedMessage
+			val message = it.source.message!!.referencedMessage
 				?: throw SimpleCommandExceptionType(LiteralMessage("Quote my message in here to delete it.")).create()
 			if (message.author != it.source.jda.selfUser) {
 				throw SimpleCommandExceptionType(LiteralMessage("Not my message, I can't delete it.")).create()

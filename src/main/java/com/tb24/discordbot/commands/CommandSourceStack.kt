@@ -16,6 +16,9 @@ import net.dv8tion.jda.api.interactions.Interaction
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.commands.CommandInteraction
 import net.dv8tion.jda.api.interactions.components.ActionRow
+import net.dv8tion.jda.internal.interactions.InteractionHookImpl
+import net.dv8tion.jda.internal.requests.restaction.MessageActionImpl
+import net.dv8tion.jda.internal.requests.restaction.interactions.ReplyActionImpl
 import java.net.URLEncoder
 import java.util.concurrent.CompletableFuture
 
@@ -25,12 +28,11 @@ open class CommandSourceStack {
 	}
 
 	val client: DiscordBot
-	lateinit var message: Message
+	var message: Message? = null
 	private var _interaction: Interaction? = null
 	val interaction get() = _interaction!!
 	val commandInteraction get() = _interaction as CommandInteraction
 	var hook: InteractionHook? = null
-	val hasMessage get() = ::message.isInitialized
 
 	val jda: JDA
 	val guild: Guild?
@@ -107,7 +109,7 @@ open class CommandSourceStack {
 	}
 
 	fun complete(text: String?, embed: MessageEmbed? = null, vararg actionRows: ActionRow): Message {
-		val builder = MessageBuilder().setContent(text)
+		val builder = MessageBuilder(text)
 		if (embed != null) {
 			builder.setEmbeds(embed)
 		}
@@ -117,18 +119,39 @@ open class CommandSourceStack {
 		return complete(builder.build())
 	}
 
-	fun complete(message: Message): Message {
-		_interaction?.let {
+	inline fun complete(vararg files: AttachmentUpload) = complete(null, *files)
+
+	fun complete(message: Message?, vararg files: AttachmentUpload): Message {
+		val interaction = _interaction
+		if (interaction != null) {
 			_interaction = null
 			val localHook = hook
 			return if (localHook != null) {
 				hook = null
-				localHook.editOriginal(message).complete()
+				val action = (localHook as InteractionHookImpl).editRequest("@original")
+				message?.let { action.applyMessage(it) }
+				if (files.isNotEmpty()) {
+					action.retainFiles(emptySet())
+					files.forEach { action.addFile(it.data, it.name, *it.options) }
+				}
+				action.complete()
 			} else {
-				it.reply(message).complete().retrieveOriginal().complete()
+				val action = interaction.deferReply()
+				message?.let { (action as ReplyActionImpl).applyMessage(it) }
+				if (files.isNotEmpty()) {
+					//action.retainFiles(emptySet())
+					files.forEach { action.addFile(it.data, it.name, *it.options) }
+				}
+				action.complete().retrieveOriginal().complete()
 			}
 		}
-		val sentMessage = (loadingMsg?.editMessage(message) ?: channel.sendMessage(message)).override(true).complete()
+		val action = loadingMsg?.let { MessageActionImpl(jda, it.id, channel) } ?: MessageActionImpl(jda, null, channel)
+		action.apply(message)
+		if (files.isNotEmpty()) {
+			action.retainFiles(emptySet())
+			files.forEach { action.addFile(it.data, it.name, *it.options) }
+		}
+		val sentMessage = action.override(true).complete()
 		loadingMsg = null
 		return sentMessage
 	}

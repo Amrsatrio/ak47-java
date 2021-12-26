@@ -128,7 +128,6 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		val choice = message.awaitOneInteraction(source.author).componentId
 		source.loading("Generating and uploading image")
 		perform(source, names[choice], finalItems[choice]).await()
-		source.loadingMsg!!.delete().queue()
 		return Command.SINGLE_SUCCESS
 	}
 
@@ -143,7 +142,6 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		}
 		source.loading("Generating and uploading image")
 		perform(source, names[filterType], items).await()
-		source.loadingMsg!!.delete().queue()
 		return Command.SINGLE_SUCCESS
 	}
 
@@ -328,7 +326,6 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 		val items = getExclusiveItems(source, athena, false)
 		source.loading("Generating and uploading image")
 		perform(source, "Exclusives", items).await()
-		source.loadingMsg!!.delete().queue()
 		return Command.SINGLE_SUCCESS
 	}
 
@@ -391,8 +388,7 @@ private fun perform(source: CommandSourceStack, name: String?, ids: Collection<F
 		//println("png size ${png.size} scale $scale")
 		scale -= 0.2f
 	}
-	source.channel.sendMessage("**$name** (${Formatters.num.format(ids.size)})")
-		.addFile(png, "$name-${source.api.currentLoggedIn.id}.png").complete()
+	source.complete(MessageBuilder("**$name** (${Formatters.num.format(ids.size)})").build(), AttachmentUpload(png, "$name-${source.api.currentLoggedIn.id}.png"))
 }
 
 class LockerEntry(val cosmetic: FortItemStack, queryAccountIds: MutableCollection<String>) {
