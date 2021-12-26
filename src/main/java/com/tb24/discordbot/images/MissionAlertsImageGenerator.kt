@@ -1,6 +1,7 @@
 package com.tb24.discordbot.images
 
 import com.tb24.discordbot.commands.iterateMissions
+import com.tb24.discordbot.commands.rarityData
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.assetdata.FortActiveTheaterInfo
@@ -14,6 +15,7 @@ import com.tb24.fn.util.getPreviewImagePath
 import com.tb24.uasset.AssetManager
 import com.tb24.uasset.StructJson
 import com.tb24.uasset.loadCDO
+import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.enums.EFortRarity
 import me.fungames.jfortniteparse.fort.objects.rows.GameDifficultyInfo
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
@@ -21,7 +23,6 @@ import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.util.drawCenteredString
 import me.fungames.jfortniteparse.util.toPngArray
 import okhttp3.OkHttpClient
-import java.awt.AlphaComposite
 import java.awt.Color
 import java.awt.Font
 import java.awt.Graphics2D
@@ -42,12 +43,12 @@ fun main() {
 	exitProcess(0)
 }
 
-private fun generateMissionAlertsImage(resp: FortActiveTheaterInfo): BufferedImage {
+fun generateMissionAlertsImage(resp: FortActiveTheaterInfo?): BufferedImage {
 	val stonewood = mutableListOf<MissionHolder>()
 	val plankerton = mutableListOf<MissionHolder>()
 	val cannyvalley = mutableListOf<MissionHolder>()
 	val twinepeaks = mutableListOf<MissionHolder>()
-	resp.iterateMissions { theater, mission, missionAlert ->
+	resp?.iterateMissions { theater, mission, missionAlert ->
 		val list = when (theater.UniqueId) {
 			"33A2311D4AE64B361CCE27BC9F313C8B" -> stonewood
 			"D477605B4FA48648107B649CE97FCF27" -> plankerton
@@ -62,82 +63,35 @@ private fun generateMissionAlertsImage(resp: FortActiveTheaterInfo): BufferedIma
 	}
 	val height = maxOf(stonewood.size, plankerton.size, cannyvalley.size, twinepeaks.size)
 	val imageW = 1920
-	val imageH = 30 * height + 295
+	val top = 64 + 128 + 48
+	val imageH = top + 70 + 30 * height + 64
 	return createAndDrawCanvas(imageW, imageH) { ctx ->
-		// Missions
-		//val Power = ImageIO.read(File("assets/images/missions/Power.png"))
-
-		// Info
-		//val watermark = ImageIO.read(File("assets/images/watermarks/Fortniters.png"))
-		//val Time = ImageIO.read(File("assets/images/time.png"))
-		//val Twitter = ImageIO.read(File("assets/images/watermarks/Twitter.png"))
-		//val Fortnite = ImageIO.read(File("assets/images/watermarks/Fortnite.png"))
-		//val VBuck1 = ImageIO.read(File("assets/images/vBuck1.png"))
-		//val Background = ImageIO.read(File("assets/images/background.png"))
-
-		// Draw Image
+		// Background
 		ctx.drawStretchedRadialGradient(0xFF099AFE, 0xFF0942B4, 0, 0, imageW, imageH)
 
-		var size = 40
+		// Header
+		val powerIcon = loadObject<UTexture2D>("/Game/UI/Foundation/Textures/Icons/Shell/T-Icon-Power-128.T-Icon-Power-128")?.toBufferedImage()
+		val textTime = SimpleDateFormat("EEEE, dd MMMM yyyy").format(Date())
+		ctx.drawHeader(powerIcon, "Mission Alerts", textTime, 64, 64, 1f)
+
 		ctx.color = Color.WHITE
 		ctx.font = ResourcesContext.burbankBigRegularBlack.deriveFont(40f)
 
-		ctx.color = Color.YELLOW
-		ctx.drawCenteredString("STONEWOOD", 271, 51)
+		ctx.color = ResourcesContext.primaryColor.awtColor()
+		ctx.drawCenteredString("STONEWOOD", 271, top + ctx.fontMetrics.ascent)
 
-		ctx.color = Color.YELLOW
-		ctx.drawCenteredString("PLANKERTON", 731, 51)
+		ctx.color = ResourcesContext.primaryColor.awtColor()
+		ctx.drawCenteredString("PLANKERTON", 731, top + ctx.fontMetrics.ascent)
 
-		ctx.color = Color.YELLOW
-		ctx.drawCenteredString("CANNY VALLEY", 1190, 51)
+		ctx.color = ResourcesContext.primaryColor.awtColor()
+		ctx.drawCenteredString("CANNY VALLEY", 1190, top + ctx.fontMetrics.ascent)
 
-		ctx.color = Color.YELLOW
-		ctx.drawCenteredString("TWINE PEAKS", 1650, 51)
-
-		// BOTTOM
-		ctx.color = Color.WHITE
-		ctx.font = Font("Segoe UI", Font.BOLD or Font.ITALIC, 35)
-
-		// Watermarks Text
-		//ctx.drawString(DiscordBot.getInstanceOrNull()?.discord?.selfUser?.name ?: "Development", 100, imageH - 55) // API
-
-		// Watermarks Images
-		val oldComposite = ctx.composite
-		ctx.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, .25f)
-		//ctx.drawImage(watermark, imageW - 180, imageH - 180, 130, 130, null) // Watermark
-		//ctx.drawImage(VBuck1, 25, imageH - 100, 62, 62, null) // API
-		//ctx.drawImage(Twitter, 100 + ssw + 20, imageH - 100, 79, 64, null) // Twitter
-		ctx.composite = oldComposite
-
-		// TOP
-		var textTime = SimpleDateFormat("EEEE, dd MMMM YYYY").format(Date())
-		var textFortnite = "Save The World - Mission Alerts"
-
-		var sz = 35
-		ctx.color = Color.WHITE
-		ctx.font = Font("Segoe UI", Font.BOLD or Font.ITALIC, sz)
-
-		while (ctx.fontMetrics.stringWidth("$textFortnite $textTime") > imageW - 600) {
-			sz--
-			ctx.font = Font("Segoe UI", Font.BOLD or Font.ITALIC, sz)
-			if (sz < 10) {
-				break
-			}
-		}
-
-		// Watermarks Images
-		/*ctx.globalAlpha = "0.25"
-		ctx.drawImage(Fortnite, 35, imageH - 180, 20, 47); // Fortnite
-		ctx.drawImage(Time, ctx.measureText(textFortnite).width + 80, imageH - 180, 50, 50); // Date
-		ctx.globalAlpha = "1"*/
-
-		// Watermarks Text
-		ctx.drawString(textFortnite, 70, imageH - 145) // Fortnite
-		ctx.drawString(textTime, 60 + ctx.fontMetrics.stringWidth(textFortnite) + 80, imageH - 145) // Date
+		ctx.color = ResourcesContext.primaryColor.awtColor()
+		ctx.drawCenteredString("TWINE PEAKS", 1650, top + ctx.fontMetrics.ascent)
 
 		fun drawEntries(ctx: Graphics2D, entries: List<MissionHolder>, col: Int) {
 			entries.sortedByDescending { it.difficulty.RecommendedRating }.forEachIndexed { i, it ->
-				it.draw(ctx, col * 460 + it.col * 20, i * 30)
+				it.draw(ctx, col * 460 + it.col * 20 + 70, top + 70 + i * 30)
 			}
 		}
 
@@ -154,17 +108,15 @@ class MissionHolder(val theater: FortTheaterInfo.FortTheaterMapData, val mission
 	val tile = theater.Tiles[mission.TileIndex]
 	val zoneTheme = loadCDO(tile.ZoneTheme.toString(), FortZoneTheme::class.java)
 	val prominentAlertReward = missionAlert.MissionAlertRewards.items.first().asItemStack()
-	val standoutType: EStandoutType
+	val backgroundColor: Int
 
 	init {
 		val rarity = prominentAlertReward.rarity
 		val isAccountResource = prominentAlertReward.primaryAssetType == "AccountResource"
-		standoutType = when {
-			prominentAlertReward.templateId == "Currency:currency_mtxswap" -> EStandoutType.Mtx
-			!isAccountResource && rarity == EFortRarity.Mythic -> EStandoutType.Mythic
-			!isAccountResource && rarity == EFortRarity.Legendary -> EStandoutType.Legendary
-			!isAccountResource && rarity == EFortRarity.Epic -> EStandoutType.Epic
-			else -> EStandoutType.None
+		backgroundColor = when {
+			prominentAlertReward.templateId == "Currency:currency_mtxswap" -> 0xB3ECBD45.toInt()
+			!isAccountResource && rarity >= EFortRarity.Epic -> (0xB3 shl 24) or (rarityData.forRarity(rarity).Color2.toFColor(true).toPackedARGB() and 0xFFFFFF)
+			else -> 0x4D000000
 		}
 	}
 
@@ -172,32 +124,22 @@ class MissionHolder(val theater: FortTheaterInfo.FortTheaterMapData, val mission
 	var col = 0
 
 	fun draw(ctx: Graphics2D, x: Int, y: Int) {
-		val i: Number = when (standoutType) {
-			EStandoutType.Mtx -> 0xB3ECBD45
-			EStandoutType.Mythic -> TODO()
-			EStandoutType.Legendary -> 0xB3D37841
-			EStandoutType.Epic -> 0xB3B15BE2
-			else -> 0x4D000000
-		}
-
 		// Shape
-		ctx.color = i.awtColor()
-		ctx.fillRect(x + 70, y + 70, 400, 25)
+		ctx.color = backgroundColor.awtColor()
+		ctx.fillRect(x, y, 400, 25)
 
 		// Mission Images
 		val missionIcon = missionGenerator?.MissionIcon?.ResourceObject?.value as? UTexture2D
 		if (missionIcon != null) {
-			ctx.drawImage(missionIcon.toBufferedImage(), x + 73, y + 73, 20, 20, null)
+			ctx.drawImage(missionIcon.toBufferedImage(), x + 3, y + 3, 20, 20, null)
 		}
 
 		// Power Level
 		val ratingText = Formatters.num.format(difficulty.RecommendedRating)
 		ctx.font = Font("Segoe UI", 1, 20)
-		val plW = ctx.fontMetrics.stringWidth(ratingText)
-
 
 		ctx.color = Color.WHITE
-		ctx.drawString(ratingText, x + 106, y + 90)
+		ctx.drawString(ratingText, x + 36, y + 20)
 
 		// Reward
 		var rewardsSz = 20
@@ -213,10 +155,10 @@ class MissionHolder(val theater: FortTheaterInfo.FortTheaterMapData, val mission
 			}
 		}
 
-		ctx.drawString(text, x + 160, y + 90)
+		ctx.drawString(text, x + 86, y + 20)
 		val rewardIcon = prominentAlertReward.getPreviewImagePath(false)?.load<UTexture2D>()
 		if (rewardIcon != null) {
-			ctx.drawImage(rewardIcon.toBufferedImage(), x + 70 + 400 - 22, y + 73, 20, 20, null)
+			ctx.drawImage(rewardIcon.toBufferedImage(), x + 400 - 22, y + 3, 20, 20, null)
 		}
 	}
 }

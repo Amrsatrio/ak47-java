@@ -8,6 +8,7 @@ import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.commands.arguments.UserArgument
+import com.tb24.discordbot.images.generateMissionAlertsImage
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.assetdata.FortActiveTheaterInfo
@@ -25,15 +26,29 @@ import com.tb24.fn.util.getPathName
 import com.tb24.uasset.StructJson
 import com.tb24.uasset.loadCDO
 import me.fungames.jfortniteparse.fort.objects.rows.GameDifficultyInfo
+import me.fungames.jfortniteparse.util.toPngArray
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import java.util.concurrent.CompletableFuture
 
 class MissionAlertsCommand : BrigadierCommand("alerts", "Shows today's mission alerts.", arrayOf("ma")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.then(literal("image")
+			.executes { image(it.source) }
+		)
 		.then(literal("completed")
 			.withPublicProfile(::execute, "Getting mission alerts info")
 		)
+
+	private fun image(source: CommandSourceStack): Int {
+		source.conditionalUseInternalSession()
+		source.loading("Getting mission alerts")
+		val theaters = queryTheaters(source)
+		source.loading("Generating and uploading image")
+		val image = generateMissionAlertsImage(theaters)
+		source.complete(AttachmentUpload(image.toPngArray(), "mission_alerts.png"))
+		return Command.SINGLE_SUCCESS
+	}
 
 	private fun execute(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
 		val source = c.source

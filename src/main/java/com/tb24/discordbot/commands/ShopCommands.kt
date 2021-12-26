@@ -214,16 +214,12 @@ class OfferDisplayData {
 			if (subtitle == null) subtitle = L10N.TOTAL_BUNDLE_ITEMS.format()?.replace("{total bundle items}", Formatters.num.format(offer.dynamicBundleInfo.bundleItems.size))
 		}
 		firstGrant?.also { item ->
-			val defData = item.defData
 			val softPath = item.getPreviewImagePath(true)
 			if (loadImage) image = softPath?.load<UTexture2D>()?.toBufferedImage()
 			imagePath = softPath.toString()
 			if (title == null) title = item.displayName
 			if (subtitle == null) subtitle = item.shortDescription.format()
-			palette = rarityData.forRarity(item.rarity)
-			defData?.Series?.value?.also {
-				palette = it.Colors
-			}
+			palette = item.palette
 		}
 		val newDisplayAssetPath = offer.getMeta("NewDisplayAssetPath")
 		if (loadDAV2 && newDisplayAssetPath != null) {

@@ -65,16 +65,7 @@ fun generateShopImage(catalogManager: CatalogManager, grid: Int = 0): BufferedIm
 			}
 		}
 		if (grid == 1) {
-			return createAttachmentOfIcons(entries.map {
-				val offer = it.offer
-				val displayData = it.displayData
-				GridSlot(
-					image = displayData.image,
-					name = if (displayData.title.isNullOrEmpty()) offer.devName else displayData.title,
-					rarity = if (offer.getMeta("HideRarityBorder").equals("true", true)) null else offer.itemGrants.firstOrNull()?.rarity,
-					index = offer.__ak47_index
-				)
-			}, "shop")
+			throw UnsupportedOperationException("Legacy shop style is no longer supported")
 		} else if (grid == 2) {
 			val columns = ceil(sqrt(entries.size.toDouble())).toInt()
 			val padding = 6
