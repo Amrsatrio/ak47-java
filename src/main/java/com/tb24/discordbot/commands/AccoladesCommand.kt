@@ -17,28 +17,31 @@ import net.dv8tion.jda.api.MessageBuilder
 
 class AccoladesCommand : BrigadierCommand("accolades", "Shows your earned BR accolades, this includes medals and XP grants.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { c ->
-			val source = c.source
-			source.ensureSession()
-			source.loading("Getting BR data")
-			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
-			val athena = source.api.profileManager.getProfileData("athena")
-			val entries = athena.items.values.filter { it.primaryAssetType == "Accolades" }.map { AccoladeEntry(it) }.sortedBy { it.displayName }
-			if (entries.isEmpty()) {
-				throw SimpleCommandExceptionType(LiteralMessage("You have earned no accolades yet. Play Battle Royale to earn some!")).create()
-			}
-			source.replyPaginated(entries, 10) { content, page, pageCount ->
-				val entriesStart = page * 10 + 1
-				val entriesEnd = entriesStart + content.size
-				val embed = source.createEmbed()
-					.setTitle("Accolades")
-					.setDescription("Showing %,d to %,d of %,d entries".format(entriesStart, entriesEnd - 1, entries.size))
-					.setFooter("Page %,d of %,d".format(page + 1, pageCount))
-				content.forEach { it.addTo(embed) }
-				MessageBuilder(embed)
-			}
-			Command.SINGLE_SUCCESS
+		.executes { execute(it.source) }
+
+	override fun getSlashCommand() = newCommandBuilder().executes(::execute)
+
+	private fun execute(source: CommandSourceStack): Int {
+		source.ensureSession()
+		source.loading("Getting BR data")
+		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+		val athena = source.api.profileManager.getProfileData("athena")
+		val entries = athena.items.values.filter { it.primaryAssetType == "Accolades" }.map { AccoladeEntry(it) }.sortedBy { it.displayName }
+		if (entries.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("You have earned no accolades yet. Play Battle Royale to earn some!")).create()
 		}
+		source.replyPaginated(entries, 10) { content, page, pageCount ->
+			val entriesStart = page * 10 + 1
+			val entriesEnd = entriesStart + content.size
+			val embed = source.createEmbed()
+				.setTitle("Accolades")
+				.setDescription("Showing %,d to %,d of %,d entries".format(entriesStart, entriesEnd - 1, entries.size))
+				.setFooter("Page %,d of %,d".format(page + 1, pageCount))
+			content.forEach { it.addTo(embed) }
+			MessageBuilder(embed)
+		}
+		return Command.SINGLE_SUCCESS
+	}
 
 	class AccoladeEntry(val accolade: FortItemStack) {
 		var displayName = accolade.defData?.DisplayName.format()
