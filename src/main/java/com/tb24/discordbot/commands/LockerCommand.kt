@@ -216,7 +216,6 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 	private val exclusivesOverride = listOf(
 		"AthenaBackpack:bid_055_psburnout",
 		"AthenaBackpack:bid_138_celestial",
-		"AthenaBackpack:bid_142_raptorarcticcamo",
 		"AthenaBackpack:bid_169_mathmale",
 		"AthenaBackpack:bid_224_techopsblue",
 		"AthenaBackpack:bid_234_speedymidnight",
