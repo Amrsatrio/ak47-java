@@ -300,6 +300,7 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 		"CosmeticVariantToken:vtid_828_m_jupiter_styleb",
 		"CosmeticVariantToken:vtid_837_m_historian_styleb",
 		"CosmeticVariantToken:vtid_976_alchemy_styleb",
+		"CosmeticVariantToken:vtid_a_410_rustyboltmale_styleb"
 	)
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
