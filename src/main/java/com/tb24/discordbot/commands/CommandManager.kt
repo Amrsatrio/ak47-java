@@ -52,6 +52,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(PingCommand())
 		register(PrefixCommand())
 
+		register(AccessTokenCommand())
 		register(AccoladesCommand())
 		register(AccountCommand())
 		register(AffiliateNameCommand())

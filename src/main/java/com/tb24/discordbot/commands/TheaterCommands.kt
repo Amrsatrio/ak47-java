@@ -18,7 +18,6 @@ import com.tb24.fn.model.assetdata.FortMissionGenerator
 import com.tb24.fn.model.assetdata.FortTheaterInfo.FortTheaterMapData
 import com.tb24.fn.model.assetdata.FortZoneTheme
 import com.tb24.fn.model.mcpprofile.McpProfile
-import com.tb24.fn.model.mcpprofile.commands.QueryPublicProfile
 import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
 import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats.FortMissionAlertClaimData
 import com.tb24.fn.util.format
@@ -29,7 +28,6 @@ import me.fungames.jfortniteparse.fort.objects.rows.GameDifficultyInfo
 import me.fungames.jfortniteparse.util.toPngArray
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
-import java.util.concurrent.CompletableFuture
 
 class MissionAlertsCommand : BrigadierCommand("alerts", "Shows today's mission alerts.", arrayOf("ma")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -115,32 +113,17 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 		if (mtxAlerts.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("There are no V-Bucks mission alerts today :(")).create()
 		}
-		val users = if (usersLazy == null) {
-			source.loading("Resolving users")
-			val devices = source.client.savedLoginsManager.getAll(source.author.id)
-			source.queryUsers_map(devices.map { it.accountId })
-			devices.mapNotNull { source.userCache[it.accountId] }
-		} else usersLazy.value
-		if (users.isEmpty()) {
-			throw SimpleCommandExceptionType(LiteralMessage("No users that we can display.")).create()
-		}
-		source.loading("Querying STW data for %,d user(s)".format(users.size))
-		CompletableFuture.allOf(*users.map {
-			source.api.profileManager.dispatchPublicCommandRequest(it, QueryPublicProfile(), "campaign")
-		}.toTypedArray()).await()
-		val entries = mutableListOf<Pair<String, String>>()
-		for (user in users) {
-			val campaign = source.api.profileManager.getProfileData(user.id, "campaign") ?: continue
+		val entries = stwBulk(source, usersLazy) { campaign ->
 			//val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:homebaseonboarding" }?.attributes?.get("completion_hbonboarding_completezone")?.asInt ?: 0) > 0
 			val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
 			if (/*!completedTutorial ||*/ !canReceiveMtxCurrency) {
-				continue
+				return@stwBulk null
 			}
 			val attrs = campaign.stats as CampaignProfileStats
-			entries.add(user.displayName to mtxAlerts.entries.joinToString(" ") { (alertGuid, rating) ->
+			campaign.owner.displayName to mtxAlerts.entries.joinToString(" ") { (alertGuid, rating) ->
 				val hasCompletedMissionAlert = attrs.mission_alert_redemption_record?.claimData?.any { it.missionAlertId == alertGuid } == true
 				"%,d: %s".format(rating, if (hasCompletedMissionAlert) "✅" else "❌")
-			})
+			}
 		}
 		if (entries.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("All users we're trying to display don't have STW founders.")).create()

@@ -380,7 +380,7 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 
 private fun perform(source: CommandSourceStack, name: String?, icon: String?, ids: Collection<FortItemStack>?) = CompletableFuture.supplyAsync {
 	if (ids.isNullOrEmpty()) {
-		return@supplyAsync null
+		throw SimpleCommandExceptionType(LiteralMessage("No $name.")).create()
 	}
 	val items = ids.sortedWith(SimpleAthenaLockerItemComparator().apply { bPrioritizeFavorites = false })
 	val image = generateLockerImage(items, name, icon, source.api.currentLoggedIn, source.author)

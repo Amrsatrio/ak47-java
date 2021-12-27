@@ -21,7 +21,6 @@ import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.assetdata.RewardCategoryTabData
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
-import com.tb24.fn.model.mcpprofile.commands.QueryPublicProfile
 import com.tb24.fn.model.mcpprofile.commands.subgame.FortRerollDailyQuest
 import com.tb24.fn.model.mcpprofile.stats.IQuestManager
 import com.tb24.fn.util.format
@@ -40,7 +39,6 @@ import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.Message
-import java.util.concurrent.CompletableFuture
 
 class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manages your active BR daily challenges.", arrayOf("dailychals", "brdailies", "bd")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -122,33 +120,15 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 
 	private fun executeBulk(source: CommandSourceStack, usersLazy: Lazy<Collection<GameProfile>>? = null): Int {
 		source.conditionalUseInternalSession()
-		val users = if (usersLazy == null) {
-			source.loading("Resolving users")
-			val devices = source.client.savedLoginsManager.getAll(source.author.id)
-			source.queryUsers_map(devices.map { it.accountId })
-			devices.mapNotNull { source.userCache[it.accountId] }
-		} else usersLazy.value
-		if (users.isEmpty()) {
-			throw SimpleCommandExceptionType(LiteralMessage("No users that we can display.")).create()
-		}
-		source.loading("Querying STW data for %,d user(s)".format(users.size))
-		CompletableFuture.allOf(*users.map {
-			source.api.profileManager.dispatchPublicCommandRequest(it, QueryPublicProfile(), "campaign")
-		}.toTypedArray()).await()
-		val entries = mutableListOf<Pair<String, String>>()
-		for (user in users) {
-			val campaign = source.api.profileManager.getProfileData(user.id, "campaign") ?: continue
+		val entries = stwBulk(source, usersLazy) { campaign ->
 			val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:homebaseonboarding" }?.attributes?.get("completion_hbonboarding_completezone")?.asInt ?: 0) > 0
-			if (!completedTutorial) continue
+			if (!completedTutorial) return@stwBulk null
 
-			val quests = getCampaignDailyQuests(campaign)
-				.mapIndexed { i, it -> renderChallenge(it, "\u2800", null, allowBold = false) }
-				.joinToString("\n")
-
-			entries.add(Pair<String, String>(user.displayName, quests.ifEmpty { "\u2800✅ All dailies completed!" }))
+			val quests = getCampaignDailyQuests(campaign).joinToString("\n") { renderChallenge(it, "\u2800", null, allowBold = false) }
+			campaign.owner.displayName to quests.ifEmpty { "\u2800✅ All dailies completed!" }
 		}
 		if (entries.isEmpty()) {
-			throw SimpleCommandExceptionType(LiteralMessage("All users we're trying to display don't have STW founders.")).create()
+			throw SimpleCommandExceptionType(LiteralMessage("All users we're trying to display aren't eligible to do daily quests.")).create()
 		}
 		val embed = EmbedBuilder().setColor(COLOR_INFO)
 		for (entry in entries) {
