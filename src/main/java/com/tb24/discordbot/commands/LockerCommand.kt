@@ -209,7 +209,6 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 	private val exclusivesOverride = listOf(
 		"AthenaBackpack:bid_055_psburnout",
 		"AthenaBackpack:bid_138_celestial",
-		"AthenaBackpack:bid_142_raptorarcticcamo",
 		"AthenaBackpack:bid_169_mathmale",
 		"AthenaBackpack:bid_224_techopsblue",
 		"AthenaBackpack:bid_234_speedymidnight",
@@ -300,7 +299,7 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 		"CosmeticVariantToken:vtid_828_m_jupiter_styleb",
 		"CosmeticVariantToken:vtid_837_m_historian_styleb",
 		"CosmeticVariantToken:vtid_976_alchemy_styleb",
-		"CosmeticVariantToken:vtid_a_410_rustyboltmale_styleb"
+		"CosmeticVariantToken:vtid_a_410_rustyboltmale_styleb",
 	)
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
