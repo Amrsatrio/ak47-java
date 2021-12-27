@@ -79,8 +79,8 @@ class PartyManager(private val api: EpicApi) {
 
 	fun invite(accountId: String): Response<Void> =
 		api.partyService.sendInvite("Fortnite", partyInfo!!.id, accountId, true, MetaStringMap().apply {
-			putAll(partyInfo!!.join_info.connection.meta)
-			putAll(partyInfo!!.join_info.meta)
+			putAll(getMember(api.currentLoggedIn.id).connections.first().meta)
+			put("urn:epic:member:dn", api.currentLoggedIn.displayName)
 			put("urn:epic:cfg:build-id", partyInfo!!.meta.getString("urn:epic:cfg:build-id", "1:3:"))
 			put("urn:epic:invite:platformdata", "")
 		}).exec()

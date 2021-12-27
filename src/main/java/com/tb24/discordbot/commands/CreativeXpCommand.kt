@@ -9,7 +9,6 @@ import com.tb24.discordbot.RESET_HOUR_UTC
 import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
-import com.tb24.discordbot.util.textureEmote
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
 import com.tb24.fn.util.getDateISO
@@ -38,7 +37,7 @@ class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your 
 		var playtimeXp = "`%s`\n%,d / %,d minutes played\n%,d / %,d %s".format(
 			Utils.progress(current, max, 32),
 			current, max,
-			current / delta * xpCount, max / delta * xpCount, textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-XPSmall-L.T-FNBR-XPSmall-L")?.asMention)
+			current / delta * xpCount, max / delta * xpCount, xpEmote?.asMention)
 		val hasMoreXp = current < max
 		if (hasMoreXp) {
 			playtimeXp += "\nLast XP grant at 🕒 " + formatDurationSeconds((235L - (max - current)) * 60L)

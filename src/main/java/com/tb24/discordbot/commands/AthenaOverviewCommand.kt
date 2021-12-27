@@ -22,6 +22,7 @@ val battleStarEmote = textureEmote("/Game/Athena/UI/Frontend/Art/T_UI_BP_BattleS
 //val styleCurrencyEmote = textureEmote("/Game/Athena/UI/Frontend/Art/T_UI_BP_StyleCurrency_L.T_UI_BP_StyleCurrency_L")
 val battlePassEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass-L.T-FNBR-BattlePass-L")
 val freePassEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass-Default-L.T-FNBR-BattlePass-Default-L")
+val xpEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T_UI_FNBR_XPeverywhere_L.T_UI_FNBR_XPeverywhere_L")
 
 class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your Battle Royale data, such as current level and supercharged XP.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()

@@ -1,0 +1,160 @@
+package com.tb24.discordbot.images
+
+import com.google.gson.JsonParser
+import com.mojang.brigadier.LiteralMessage
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.util.*
+import com.tb24.fn.EpicApi
+import com.tb24.fn.model.FortItemStack
+import com.tb24.fn.model.account.GameProfile
+import com.tb24.fn.model.mcpprofile.McpProfile
+import com.tb24.fn.util.getPreviewImagePath
+import com.tb24.fn.util.getString
+import com.tb24.uasset.AssetManager
+import com.tb24.uasset.loadObject
+import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
+import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
+import me.fungames.jfortniteparse.util.toPngArray
+import net.dv8tion.jda.api.entities.User
+import okhttp3.OkHttpClient
+import java.awt.*
+import java.awt.font.TextLayout
+import java.awt.geom.Path2D
+import java.awt.image.BufferedImage
+import java.io.File
+import java.io.FileReader
+import kotlin.math.ceil
+import kotlin.math.sqrt
+import kotlin.system.exitProcess
+
+fun main() {
+	val api = EpicApi(OkHttpClient())
+	fun loadProfile(s: String) {
+		FileReader("D:\\Downloads\\ComposeMCP\\$s.json").use {
+			val d = JsonParser.parseReader(it).asJsonObject
+			api.profileManager.localProfileGroup.profileData[d.getString("profileId")] = EpicApi.GSON.fromJson(d, McpProfile::class.java)
+		}
+	}
+	AssetManager.INSTANCE.loadPaks()
+	loadProfile("ComposeMCP-amrsatrio-queryprofile-athena-26541")
+	val athena = api.profileManager.getProfileData("athena")
+	athena.owner = GameProfile("11223344556677889900aabbccddeeff", "amrsatrio")
+	val items = athena.items.values.filter { it.primaryAssetType == "AthenaCharacter" }
+	if (items.isEmpty()) {
+		throw SimpleCommandExceptionType(LiteralMessage("Nothing here")).create()
+	}
+	File("locker.png").writeBytes(generateLockerImage(items, "Outfits", "/Game/UI/Foundation/Textures/Icons/Locker/T_Ui_Outfit_256.T_Ui_Outfit_256", athena.owner).toPngArray())
+	exitProcess(0)
+}
+
+fun generateLockerImage(items: List<FortItemStack>, name: String?, icon: String?, epicUser: GameProfile? = null, discordUser: User? = null): BufferedImage {
+	val items = items.sortedWith(SimpleAthenaLockerItemComparator().apply { bPrioritizeFavorites = false })
+	val columns = ceil(sqrt(items.size.toDouble())).toInt()
+	val padding = 6
+	val doublePadding = 2 * padding
+	val tileSize = 200 + doublePadding
+	val imageW = columns * tileSize + doublePadding
+	val headerScale = imageW / 1600f
+	val topContentHeight = (headerScale * 128).toInt()
+	val top = doublePadding + topContentHeight
+	val imageH = top + ceil(items.size.toDouble() / columns.toDouble()).toInt() * tileSize + doublePadding
+	val image = createAndDrawCanvas(imageW, imageH) { ctx ->
+		// Background
+		ctx.color = 0x161616.awtColor()
+		ctx.fillRect(0, 0, imageW, imageH)
+
+		// Header
+		val icon = icon?.let { loadObject<UTexture2D>(it) }?.toBufferedImage()
+		ctx.drawHeader(icon, "Locker", name ?: "", doublePadding, doublePadding, headerScale)
+
+		// Owner
+		if (epicUser != null) {
+			ctx.font = ResourcesContext.burbankSmallBlack.deriveFont(48f * headerScale)
+			val ownerEpicText = epicUser.displayName
+			val ownerEpicTextWidth = ctx.fontMetrics.stringWidth(ownerEpicText)
+			ctx.color = ResourcesContext.primaryColor.awtColor()
+			ctx.drawString(ownerEpicText, imageW - doublePadding - ownerEpicTextWidth, doublePadding + ctx.fontMetrics.ascent + ctx.fontMetrics.height / 2)
+			val epicGamesLogo = loadObject<UTexture2D>("/Game/UI/Foundation/Textures/Icons/Social/T-Icon-EpicGamesLogo-64.T-Icon-EpicGamesLogo-64")?.toBufferedImage()
+			val logoSize = (64 * headerScale).toInt()
+			val logoPadding = (8 * headerScale).toInt()
+			ctx.drawImage(epicGamesLogo, imageW - doublePadding - ownerEpicTextWidth - logoPadding - logoSize, doublePadding + (topContentHeight - logoSize) / 2, logoSize, logoSize, null)
+		}
+		// TODO Show Discord user
+
+		// Contents
+		val rarityPathBg = Path2D.Float()
+		val rarityPathFg = Path2D.Float()
+
+		for (i in items.indices) {
+			val item = items[i]
+
+			val x = doublePadding + (i % columns * tileSize)
+			val y = top + doublePadding + (i / columns * tileSize)
+			val w = tileSize - padding * 2
+			val h = tileSize - padding * 2
+
+			// Background
+			val palette = item.palette
+			ctx.drawStretchedRadialGradient(palette.Color2.toFColor(true).toPackedARGB(), palette.Color3.toFColor(true).toPackedARGB(), x, y, w, h)
+
+			// Icon
+			item.getPreviewImagePath()?.load<UTexture2D>()?.toBufferedImage()?.let {
+				ctx.drawImage(it, x, y, w, h, null)
+			}
+
+			// Rarity overlay
+			val rarityGrad = LinearGradientPaint(0f, 0f, w.toFloat(), 0f, floatArrayOf(0f, 1f), arrayOf(palette.Color1.toColor(), palette.Color2.toColor()))
+			val lo = h / 12f
+			val ro = h / 7f
+			rarityPathBg.reset()
+			rarityPathBg.moveTo(0f, h - lo)
+			rarityPathBg.lineTo(w.toFloat(), h - ro)
+			rarityPathBg.lineTo(w.toFloat(), h.toFloat())
+			rarityPathBg.lineTo(0f, h.toFloat())
+			rarityPathBg.closePath()
+			val thicknessLeft = h / 25f //20f
+			val thicknessRight = h / 25f //20f
+			rarityPathFg.reset()
+			rarityPathFg.moveTo(0f, h - lo)
+			rarityPathFg.lineTo(w.toFloat(), h - ro)
+			rarityPathFg.lineTo(w.toFloat(), h - ro + thicknessRight)
+			rarityPathFg.lineTo(0f, h - lo + thicknessLeft)
+			rarityPathFg.closePath()
+			ctx.translate(x, y)
+			ctx.paint = rarityGrad
+			val oldComposite = ctx.composite
+			ctx.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.7f)
+			ctx.fill(rarityPathBg)
+			ctx.composite = oldComposite
+			ctx.fill(rarityPathFg)
+			ctx.translate(-x, -y)
+
+			// Item display name
+			val name = item.displayName
+			if (!name.isNullOrEmpty()) {
+				val text = name.toUpperCase()
+				val hpad = 10
+				var fontSize = 25f
+				ctx.font = ResourcesContext.burbankBigCondensedBlack.deriveFont(Font.PLAIN, fontSize)
+				var fm = ctx.fontMetrics
+				while (fm.stringWidth(text) > (w - hpad * 2)) {
+					fontSize--
+					ctx.font = ctx.font.deriveFont(Font.PLAIN, fontSize)
+					fm = ctx.fontMetrics
+				}
+				val textDimen = TextLayout(text, ctx.font, ctx.fontRenderContext)
+				val shape = textDimen.getOutline(null)
+				val tx = x + hpad
+				val ty = y + h - 6
+				ctx.translate(tx, ty)
+				ctx.stroke = BasicStroke(6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
+				ctx.color = Color.BLACK
+				ctx.draw(shape)
+				ctx.color = Color.WHITE
+				ctx.fill(shape)
+				ctx.translate(-tx, -ty)
+			}
+		}
+	}
+	return image
+}

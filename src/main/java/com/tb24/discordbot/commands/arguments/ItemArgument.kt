@@ -35,7 +35,16 @@ class ItemArgument(private val greedy: Boolean) : ArgumentType<ItemArgument.Resu
 
 	class Result(val search: String) {
 		fun resolve(profile: McpProfile, vararg itemTypes: String): FortItemStack {
-			val items = if (itemTypes.isNotEmpty()) profile.items.filter { it.value.primaryAssetType in itemTypes } else profile.items
+			val items = if (itemTypes.isNotEmpty()) {
+				if (itemTypes.size == 1 && itemTypes[0].contains(':')) {
+					val (primaryAssetType, itemDefClassName) = itemTypes[0].split(':')
+					profile.items.filter { it.value.primaryAssetType == primaryAssetType && it.value.defData?.exportType == itemDefClassName }
+				} else {
+					profile.items.filter { it.value.primaryAssetType in itemTypes }
+				}
+			} else {
+				profile.items
+			}
 			return items[search]
 				?: items.values.search(search) { it.displayName.trim() }
 				?: throw SimpleCommandExceptionType(LiteralMessage("Item not found.")).create()

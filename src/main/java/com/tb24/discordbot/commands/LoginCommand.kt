@@ -127,6 +127,16 @@ fun doLogin(source: CommandSourceStack, grantType: EGrantType, params: String, a
 			}
 			source.session.login(source, exchangeCode(params), authClient ?: EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
 		}
+		EGrantType.external_auth -> {
+			val split = params.split(":")
+			if (split.size != 2) {
+				throw SimpleCommandExceptionType(LiteralMessage("Login arguments for device auth must be in this format: `auth_type:auth_code`")).create()
+			}
+			source.session.login(source, externalAuth(split[0], split[1]), authClient ?: EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
+		}
+		EGrantType.refresh_token -> {
+			source.session.login(source, refreshToken(params), authClient ?: EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
+		}
 		EGrantType.token_to_token -> {
 			source.session.login(source, tokenToToken(params), authClient ?: EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
 		}
@@ -290,9 +300,9 @@ enum class EGrantType {
 	device_auth,
 	device_code,
 	exchange_code,
-	//external_auth,
+	external_auth,
 	//otp,
 	//password,
-	//refresh_token,
+	refresh_token,
 	token_to_token
 }
