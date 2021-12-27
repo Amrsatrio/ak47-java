@@ -334,8 +334,8 @@ fun confirmationButtons() = ActionRow.of(
 )
 
 @Throws(CommandSyntaxException::class)
-fun Message.awaitConfirmation(author: User, inTime: Long = 60000L): CompletableFuture<Boolean> = CompletableFuture.supplyAsync {
-	awaitOneInteraction(author, inTime = inTime).componentId == "positive"
+fun Message.awaitConfirmation(author: User, inFinalizeComponentsOnEnd: Boolean = true, inTime: Long = 60000L): CompletableFuture<Boolean> = CompletableFuture.supplyAsync {
+	awaitOneInteraction(author, inFinalizeComponentsOnEnd, inTime).componentId == "positive"
 }
 
 fun Message.awaitOneReaction(source: CommandSourceStack, inTime: Long = 60000L) =
