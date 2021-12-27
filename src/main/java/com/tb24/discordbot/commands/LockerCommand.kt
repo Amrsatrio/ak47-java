@@ -139,6 +139,7 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		val choice = message.awaitOneInteraction(source.author).componentId
 		source.loading("Generating and uploading image")
 		perform(source, names[choice], icons[choice], finalItems[choice]).await()
+			?: throw SimpleCommandExceptionType(LiteralMessage("No ${names[choice]}.")).create()
 		return Command.SINGLE_SUCCESS
 	}
 
@@ -153,6 +154,7 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		}
 		source.loading("Generating and uploading image")
 		perform(source, names[filterType], icons[filterType], items).await()
+			?: throw SimpleCommandExceptionType(LiteralMessage("No ${names[filterType]}.")).create()
 		return Command.SINGLE_SUCCESS
 	}
 
@@ -337,6 +339,7 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 		val items = getExclusiveItems(source, athena, false)
 		source.loading("Generating and uploading image")
 		perform(source, "Exclusives", "/Game/Athena/UI/Frontend/Art/T_UI_BP_BattleStar_L.T_UI_BP_BattleStar_L", items).await()
+			?: throw SimpleCommandExceptionType(LiteralMessage("No Exclusives.")).create()
 		return Command.SINGLE_SUCCESS
 	}
 
@@ -380,7 +383,7 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 
 private fun perform(source: CommandSourceStack, name: String?, icon: String?, ids: Collection<FortItemStack>?) = CompletableFuture.supplyAsync {
 	if (ids.isNullOrEmpty()) {
-		throw SimpleCommandExceptionType(LiteralMessage("No $name.")).create()
+		return@supplyAsync null
 	}
 	val items = ids.sortedWith(SimpleAthenaLockerItemComparator().apply { bPrioritizeFavorites = false })
 	val image = generateLockerImage(items, name, icon, source.api.currentLoggedIn, source.author)
