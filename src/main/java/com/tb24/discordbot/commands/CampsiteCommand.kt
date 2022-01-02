@@ -28,7 +28,7 @@ class CampsiteCommand : BrigadierCommand("tent", "Shows your stored items in you
 		for ((i, stashedItem) in campsiteData.stashed_items.withIndex()) {
 			val item = stashedItem.asItemStack()
 			if (item == null) {
-				embed.addField("Slot %,d".format(i + 1), "<Empty>", true)
+				embed.addField("Slot %,d".format(i + 1), "<Empty>", false)
 				continue
 			}
 			val rarityIcon = getEmoteByName(item.rarity.name.toLowerCase() + '2')?.asMention
