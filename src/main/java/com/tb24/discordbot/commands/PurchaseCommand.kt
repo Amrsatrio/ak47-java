@@ -301,11 +301,11 @@ fun EmbedBuilder.renewAffiliateAndPopulateMtxFields(source: CommandSourceStack, 
 				source.api.profileManager.dispatchClientCommandRequest(SetAffiliateName().apply { affiliateName = stats.mtx_affiliate }, "common_core").await()
 				additional = "ℹ " + "Renewed"
 			} catch (e: HttpException) {
-				additional = "⚠ " + "Renew failed: " + e.epicError.displayText
+				additional = "⚠ " + "Expired, renew failed: " + e.epicError.displayText + '\n' + "Please change supported creator using `%ssac <new creator code>`".format(source.prefix)
 			}
 		}
 		addField(L10N.format("catalog.mtx_platform"), stats.current_mtx_platform.name, true)
-		addField(L10N.format("sac.verb"), (getAffiliateNameRespectingSetDate(commonCore) ?: ("🚫 " + L10N.format("common.none"))) + if (additional != null) "\n$additional" else "", false)
+		addField(L10N.format("sac.verb"), (stats.mtx_affiliate?.ifEmpty { null } ?: ("🚫 " + L10N.format("common.none"))) + if (additional != null) "\n$additional" else "", false)
 	} else this
 }
 
@@ -320,8 +320,13 @@ fun claimFreeLlamas(source: CommandSourceStack): Int {
 	).await()
 	for (offer in freeLlamas) {
 		try {
-			purchaseOffer(source, offer, 1, 0)
-		} catch (ignored: CommandSyntaxException) {
+			val sd = offer.holder().apply { resolve(source.api.profileManager) }
+			val numToPurchase = sd.purchaseLimit - sd.purchasesCount
+			repeat(numToPurchase) {
+				purchaseOffer(source, offer, 1, 0)
+			}
+		} catch (e: CommandSyntaxException) {
+			source.complete(null, source.createEmbed().setDescription("❌ " + e.message).build())
 		}
 	}
 	return Command.SINGLE_SUCCESS
