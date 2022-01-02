@@ -16,7 +16,8 @@ import com.tb24.fn.model.mcpprofile.commands.QueryPublicProfile
 import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
 
-class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll your saved accounts for automatic daily rewards claiming.", arrayOf("autostw", "auto")) {
+// TODO Duplicated AutoDailyRewardsCommand for now, refactor later
+class AutoFreeLlamaCommand : BrigadierCommand("autollama", "Enroll/unenroll your saved accounts for automatic free llama claiming.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
 			val source = it.source
@@ -33,19 +34,22 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 		.then(literal("exec")
 			.requires(Rune::isBotDev)
 			.executes {
+				if (it.source.client.catalogManager.freeLlamas.isEmpty()) {
+					throw SimpleCommandExceptionType(LiteralMessage("No free llamas right now")).create()
+				}
 				it.source.loading("Executing the task now")
-				it.source.client.autoLoginRewardTask.run()
+				it.source.client.autoFreeLlamaTask.run()
 				it.source.complete("✅ Task executed successfully with no failures.")
 				Command.SINGLE_SUCCESS
 			}
 		)
 
 	fun execute(source: CommandSourceStack, user: GameProfile?): Int {
-		source.ensurePremium("Automatically claim STW daily rewards every day")
+		source.ensurePremium("Automatically claim free llamas")
 		var accountId = user?.id
 		var user = user
 		val discordId = source.author.id
-		val autoClaimEntries = r.table("auto_claim").run(source.client.dbConn, AutoClaimEntry::class.java).toList()
+		val autoClaimEntries = r.table("auto_llama").run(source.client.dbConn, AutoClaimEntry::class.java).toList()
 		val devices = source.client.savedLoginsManager.getAll(source.author.id)
 		if (devices.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("You don't have saved logins. Please perform `.savelogin` before continuing.")).create()
@@ -53,7 +57,7 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 		if (user == null) {
 			val users = source.queryUsers(devices.map { it.accountId })
 			source.complete(null, EmbedBuilder()
-				.setTitle("Auto STW daily rewards claiming")
+				.setTitle("Auto STW free llama claiming")
 				.setDescription("Enroll/unenroll an account by typing the account number. ⏱ 30s")
 				.addField("Your saved accounts", devices.mapIndexed { i, it ->
 					val id = devices[i].accountId
@@ -84,22 +88,17 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 			source.api.profileManager.dispatchPublicCommandRequest(user, QueryPublicProfile(), "campaign").await()
 			val campaign = source.api.profileManager.getProfileData(user.id, "campaign")
 			source.ensureCompletedCampaignTutorial(campaign)
-			r.table("auto_claim").insert(AutoClaimEntry(accountId, discordId)).run(source.client.dbConn)
-			val millisInDay = 24L * 60L * 60L * 1000L
-			val nextUtcMidnight = (System.currentTimeMillis() / millisInDay + 1) * millisInDay
+			r.table("auto_llama").insert(AutoClaimEntry(accountId, discordId)).run(source.client.dbConn)
 			source.complete(null, EmbedBuilder().setColor(COLOR_SUCCESS)
-				.setTitle("✅ Enrolled auto daily rewards claiming for account `${user.displayName ?: accountId}`")
-				.setDescription("${source.jda.selfUser.name} will automatically claim it after UTC midnight.")
-				.addField("Next claim", nextUtcMidnight.relativeFromNow(), false)
+				.setTitle("✅ Enrolled auto free llama claiming for account `${user.displayName ?: accountId}`")
 				.build())
 		} else {
 			if (autoClaimEntries.any { it.id == accountId && it.registrantId != discordId }) {
 				throw SimpleCommandExceptionType(LiteralMessage("Cannot unenroll because that account wasn't enrolled by you.")).create()
 			}
-			r.table("auto_claim").get(accountId).delete().run(source.client.dbConn)
+			r.table("auto_llama").get(accountId).delete().run(source.client.dbConn)
 			source.complete(null, EmbedBuilder().setColor(COLOR_SUCCESS)
-				.setTitle("✅ Unenrolled auto daily rewards claiming for account `${user.displayName ?: accountId}`.")
-				.setDescription("${source.jda.selfUser.name} will no longer automatically claim the daily rewards of that account.")
+				.setTitle("✅ Unenrolled auto free llama claiming for account `${user.displayName ?: accountId}`.")
 				.build())
 		}
 		return Command.SINGLE_SUCCESS

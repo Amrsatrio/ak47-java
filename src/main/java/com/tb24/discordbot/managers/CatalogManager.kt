@@ -2,7 +2,9 @@ package com.tb24.discordbot.managers
 
 import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.DiscordBot
+import com.tb24.discordbot.tasks.AutoLoginRewardTask
 import com.tb24.discordbot.util.exec
+import com.tb24.discordbot.util.getStackTraceAsString
 import com.tb24.discordbot.util.to
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortCmsData
@@ -33,6 +35,7 @@ class CatalogManager {
 	private var athenaHash = 0
 	private var campaignHash = 0
 	private val updateJob = JobBuilder.newJob(UpdateCatalogJob::class.java).withIdentity("updateCatalog").build()
+	var freeLlamas = emptyList<CatalogOffer>()
 
 	fun initialize(client: DiscordBot?) {
 		this.client = client
@@ -124,9 +127,16 @@ class CatalogManager {
 	}
 
 	private fun onCampaignCatalogUpdated() {
-		val freeLlamas = llamas.items.filter { it.devName == "RandomFree.FreePack.01" || it.title == "Upgrade Llama (Seasonal Sale Freebie!)" }
+		freeLlamas = llamas.items.filter { it.devName == "RandomFree.FreePack.01" || it.title == "Upgrade Llama (Seasonal Sale Freebie!)" }
 		client?.discord?.getTextChannelById(BotConfig.get().itemShopChannelId)?.sendMessage("Free llamas: " + freeLlamas.joinToString { "#%,d".format(it.__ak47_index + 1) }.ifEmpty { "🚫 None" })?.queue()
-		// TODO auto claim free llamas
+		if (freeLlamas.isNotEmpty()) {
+			try {
+				client?.autoFreeLlamaTask?.run()
+			} catch (e: Throwable) {
+				client?.dlog("__**AutoFreeLlamaTask failure**__\n```\n${e.getStackTraceAsString()}```", null)
+				AutoLoginRewardTask.TASK_IS_RUNNING.set(false)
+			}
+		}
 	}
 
 	class ShopSection(val sectionData: FortCmsData.ShopSection) {

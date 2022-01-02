@@ -8,6 +8,7 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.IntegerArgumentType.getInteger
 import com.mojang.brigadier.arguments.IntegerArgumentType.integer
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.HttpException
@@ -21,6 +22,7 @@ import com.tb24.fn.model.gamesubcatalog.EAppStore
 import com.tb24.fn.model.gamesubcatalog.ECatalogOfferType
 import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.commands.campaign.PopulatePrerolledOffers
 import com.tb24.fn.model.mcpprofile.commands.commoncore.PurchaseCatalogEntry
 import com.tb24.fn.model.mcpprofile.commands.commoncore.SetAffiliateName
 import com.tb24.fn.model.mcpprofile.notifications.CatalogPurchaseNotification
@@ -34,9 +36,7 @@ import net.dv8tion.jda.api.entities.Role
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.Button
 import net.dv8tion.jda.api.interactions.components.ButtonStyle
-import okhttp3.MediaType
-import okhttp3.Request
-import okhttp3.RequestBody
+import okhttp3.*
 import java.text.NumberFormat
 import java.time.Instant
 import java.util.*
@@ -63,7 +63,6 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 		profileManager.dispatchClientCommandRequest(QueryProfile()),
 		profileManager.dispatchClientCommandRequest(QueryProfile(), if (offer.__ak47_storefront.startsWith("BR")) "athena" else "campaign") // there must be a better way to do this
 	).await()
-	var commonCore = profileManager.getProfileData("common_core")
 	if (priceIndex < 0) { // find a free price
 		priceIndex = offer.prices.indexOfFirst { it.currencyType != EStoreCurrencyType.RealMoney && it.basePrice == 0 }
 	}
@@ -73,7 +72,7 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 			.addField("Prices", offer.prices.joinToString("\n") { it.render(quantity) }, true)
 			.addField("Balances", offer.prices.joinToString("\n") { it.getAccountBalanceText(profileManager) }, true)
 		val buttons = offer.prices.mapIndexed { i, price ->
-			val emote = price.emote() ?: throw SimpleCommandExceptionType(LiteralMessage(price.render(quantity) + " is missing an emote. Please report this problem to the devs.")).create()
+			val emote = price.emote()!!
 			Button.of(ButtonStyle.SECONDARY, i.toString(), Emoji.fromEmote(emote))
 		}
 		val priceSelectionMsg = source.complete(null, priceSelectionEbd.build(), ActionRow.of(buttons))
@@ -137,7 +136,7 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 			gameContext = "Frontend.ItemShopScreen"
 		}).await()
 		val results = response.notifications.filterIsInstance<CatalogPurchaseNotification>().firstOrNull()?.lootResult?.items ?: emptyArray()
-		commonCore = profileManager.getProfileData("common_core")
+		val commonCore = profileManager.getProfileData("common_core")
 		val successEmbed = source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS)
 			.setTitle("✅ " + L10N.format("purchase.success.title"))
 			.addFieldSeparate(L10N.format("purchase.success.received"), results.toList(), 0) { it.asItemStack().render(showType = true) }
@@ -174,24 +173,121 @@ private fun realMoneyPurchase(source: CommandSourceStack, offer: CatalogOffer, s
 	}).exec().body()!!.lineOffers.first().price
 	val priceFormatter = NumberFormat.getCurrencyInstance()
 	priceFormatter.currency = Currency.getInstance(rmPrice.currencyCode)
+	val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
+		.populateOffer(storeOffer, false)
+		.addField("Price", priceFormatter.format(rmPrice.discountPrice / 100.0) + (if (rmPrice.originalPrice != rmPrice.discountPrice) " ~~" + priceFormatter.format(rmPrice.originalPrice / 100.0) + "~~" else "") + if (rmPrice.vatRate > 0.0) '\n' + "VAT included if applicable" else "", false)
+	if (true || rmPrice.discountPrice > 0) {
+		// Method 1: Let user access the payment UI
+		// Will not work on non EGS offers when they've reached some traffic threshold
+		val purchaseToken = generatePurchaseToken(source, epicAppStoreId)
+		val purchaseLink = "https://payment-website-pci.ol.epicgames.com/payment/v1/purchase?purchaseToken=$purchaseToken&uePlatform=FNGame"
+		source.complete("Visit this link to purchase the item shown below:\n${source.generateUrl(purchaseLink)}", embed.build())
+	} else {
+		source.loading("Purchasing " + storeOffer?.title)
+
+		// Method 2: Use the orders service directly
+		// Only works for free offers, but goodbye when you encounter a captcha
+
+		// Quick purchase API no longer works
+		/*val quickPurchasePayload = JsonObject().apply {
+			addProperty("salesChannel", "Launcher-purchase-client")
+			addProperty("entitlementSource", "Launcher-purchase-client")
+			addProperty("returnSplitPaymentItems", false)
+			add("lineOffers", JsonArray().apply {
+				add(JsonObject().apply {
+					addProperty("offerId", epicAppStoreId)
+					addProperty("quantity", 1)
+					addProperty("namespace", "fn")
+				})
+			})
+		}
+		val response = source.session.getApiForOtherClient(EAuthClient.LAUNCHER_APP_CLIENT_2).okHttpClient.newCall(Request.Builder()
+			.url("https://orderprocessor-public-service-ecomprod01.ol.epicgames.com/orderprocessor/api/shared/accounts/${source.api.currentLoggedIn.id}/orders/quickPurchase")
+			.post(RequestBody.create(MediaType.get("application/json"), quickPurchasePayload.toString()))
+			.build()).exec().to<JsonObject>()*/
+		// Response is always {"quickPurchaseStatus":"CHECKOUT"}
+
+		// Use payment-website-pci API
+		val purchaseToken = generatePurchaseToken(source, epicAppStoreId)
+		val okHttpClient = OkHttpClient()
+		val userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"
+		val orderPreviewPayload = JsonObject().apply {
+			addProperty("useDefault", true)
+			addProperty("setDefault", false)
+			addProperty("namespace", "fn")
+			add("country", null)
+			add("countryName", null)
+			add("orderId", null)
+			add("orderComplete", null)
+			add("orderError", null)
+			add("orderPending", null)
+			add("offers", JsonArray().apply {
+				add(epicAppStoreId)
+			})
+			addProperty("offerPrice", "")
+		}
+		val orderPreviewResponse = okHttpClient.newCall(Request.Builder()
+			.url("https://payment-website-pci.ol.epicgames.com/purchase/order-preview")
+			.post(RequestBody.create(MediaType.get("application/json"), orderPreviewPayload.toString()))
+			.addHeader("User-Agent", userAgent)
+			.addHeader("x-requested-with", purchaseToken)
+			.build()).execute().handleResponse()
+		if (!orderPreviewResponse.has("syncToken")) {
+			throw SimpleCommandExceptionType(LiteralMessage("orderPreviewResponse.syncToken == null")).create()
+		}
+		val confirmOrderPayload = JsonObject().apply {
+			addProperty("useDefault", true)
+			addProperty("setDefault", false)
+			addProperty("namespace", orderPreviewResponse.getString("namespace"))
+			addProperty("country", orderPreviewResponse.getString("country"))
+			addProperty("countryName", orderPreviewResponse.getString("countryName"))
+			add("orderId", null)
+			add("orderComplete", null)
+			add("orderError", null)
+			add("orderPending", null)
+			add("offers", orderPreviewResponse.getAsJsonArray("offers"))
+			addProperty("includeAccountBalance", false)
+			addProperty("totalAmount", orderPreviewResponse.getAsJsonObject("orderResponse").getInt("totalPrice"))
+			addProperty("affiliateId", "")
+			addProperty("creatorSource", "")
+			addProperty("syncToken", orderPreviewResponse.getString("syncToken"))
+		}
+		val confirmOrderResponse = okHttpClient.newCall(Request.Builder()
+			.url("https://payment-website-pci.ol.epicgames.com/purchase/confirm-order")
+			.post(RequestBody.create(MediaType.get("application/json"), confirmOrderPayload.toString()))
+			.addHeader("User-Agent", userAgent)
+			.addHeader("x-requested-with", purchaseToken)
+			.build()).execute().handleResponse()
+		if (!confirmOrderResponse.getBoolean("confirmation")) {
+			throw SimpleCommandExceptionType(LiteralMessage("orderPreviewResponse.confirmation != true")).create()
+		}
+		source.complete(null, embed.setTitle("✅ Purchased").build())
+	}
+	return Command.SINGLE_SUCCESS
+}
+
+private fun generatePurchaseToken(source: CommandSourceStack, offerId: String): String {
 	val purchaseTokenPayload = JsonObject().apply {
 		addProperty("locale", "")
 		add("offers", JsonArray().apply {
-			add(epicAppStoreId)
+			add(offerId)
 		})
 		addProperty("subscriptionSlug", "")
 		addProperty("namespace", "fn")
 	}
-	val purchaseToken = source.api.okHttpClient.newCall(Request.Builder()
+	val response = source.api.okHttpClient.newCall(Request.Builder()
 		.url("https://payment-website-pci.ol.epicgames.com/payment/v1/purchaseToken")
 		.post(RequestBody.create(MediaType.get("application/json"), purchaseTokenPayload.toString()))
-		.build()).exec().to<JsonObject>().getString("purchaseToken")
-	val purchaseLink = "https://payment-website-pci.ol.epicgames.com/payment/v1/purchase?purchaseToken=$purchaseToken&uePlatform=FNGame"
-	source.complete("Visit this link to purchase the item shown below:\n${source.generateUrl(purchaseLink)}", EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
-		.populateOffer(storeOffer, false)
-		.addField("Price", priceFormatter.format(rmPrice.discountPrice / 100.0) + (if (rmPrice.originalPrice != rmPrice.discountPrice) " ~~" + priceFormatter.format(rmPrice.originalPrice / 100.0) + "~~" else "") + if (rmPrice.vatRate > 0.0) '\n' + "VAT included if applicable" else "", false)
-		.build())
-	return Command.SINGLE_SUCCESS
+		.build()).exec().to<JsonObject>()
+	return response.getString("purchaseToken", "")
+}
+
+private fun Response.handleResponse(): JsonObject {
+	if (isSuccessful) {
+		return to()
+	}
+	val error = to<JsonObject>().getString("message")
+	throw SimpleCommandExceptionType(LiteralMessage(error)).create()
 }
 
 fun EmbedBuilder.renewAffiliateAndPopulateMtxFields(source: CommandSourceStack, price: CatalogOffer.CatalogItemPrice): EmbedBuilder {
@@ -211,4 +307,22 @@ fun EmbedBuilder.renewAffiliateAndPopulateMtxFields(source: CommandSourceStack, 
 		addField(L10N.format("catalog.mtx_platform"), stats.current_mtx_platform.name, true)
 		addField(L10N.format("sac.verb"), (getAffiliateNameRespectingSetDate(commonCore) ?: ("🚫 " + L10N.format("common.none"))) + if (additional != null) "\n$additional" else "", false)
 	} else this
+}
+
+fun claimFreeLlamas(source: CommandSourceStack): Int {
+	val freeLlamas = source.client.catalogManager.freeLlamas
+	if (freeLlamas.isEmpty()) {
+		return 0//throw SimpleCommandExceptionType(LiteralMessage("There are no free llamas right now.")).create()
+	}
+	CompletableFuture.allOf(
+		source.api.profileManager.dispatchClientCommandRequest(QueryProfile()),
+		source.api.profileManager.dispatchClientCommandRequest(PopulatePrerolledOffers(), "campaign")
+	).await()
+	for (offer in freeLlamas) {
+		try {
+			purchaseOffer(source, offer, 1, 0)
+		} catch (ignored: CommandSyntaxException) {
+		}
+	}
+	return Command.SINGLE_SUCCESS
 }

@@ -8,6 +8,7 @@ import com.rethinkdb.net.Connection
 import com.tb24.discordbot.commands.*
 import com.tb24.discordbot.managers.CatalogManager
 import com.tb24.discordbot.managers.SavedLoginsManager
+import com.tb24.discordbot.tasks.AutoFreeLlamaTask
 import com.tb24.discordbot.tasks.AutoLoginRewardTask
 import com.tb24.discordbot.tasks.KeychainTask
 import com.tb24.discordbot.util.createRequest
@@ -90,6 +91,7 @@ class DiscordBot(token: String) {
 	val prefixMap = hashMapOf<Long, PrefixConfig>()
 
 	val autoLoginRewardTask = AutoLoginRewardTask(this)
+	val autoFreeLlamaTask = AutoFreeLlamaTask(this)
 	val keychainTask = KeychainTask(this)
 	private val scheduledExecutor = ScheduledThreadPoolExecutor(2)
 	val scheduler = StdSchedulerFactory.getDefaultScheduler()
@@ -209,7 +211,7 @@ class DiscordBot(token: String) {
 	/** Schedules item shop poster and auto daily at 00:00 UTC */
 	private fun scheduleUtcMidnightTask() {
 		val now = ZonedDateTime.now(ZoneOffset.UTC)
-		var nextRun = now.withHour(0).withMinute(0).withSecond(30)
+		var nextRun = now.withHour(0).withMinute(1).withSecond(0) // 1 minute offset because ScheduledExecutorService is inaccurate
 		if (now > nextRun) {
 			nextRun = nextRun.plusDays(1)
 		}
@@ -233,7 +235,7 @@ class DiscordBot(token: String) {
 				AutoLoginRewardTask.TASK_IS_RUNNING.set(false)
 			}
 		}
-		scheduledExecutor.scheduleAtFixedRate(task, Duration.between(now, nextRun).seconds, TimeUnit.DAYS.toSeconds(1), TimeUnit.SECONDS)
+		scheduledExecutor.scheduleAtFixedRate(task, Duration.between(now, nextRun).seconds, TimeUnit.DAYS.toSeconds(1), TimeUnit.SECONDS) // TODO Use Quartz scheduler instead of ScheduledExecutorService
 	}
 
 	/** Decoupled and public, so you can manually invoke this through eval */

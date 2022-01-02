@@ -4,13 +4,12 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
 import com.tb24.discordbot.DiscordBot
-import com.tb24.discordbot.HttpException
-import com.tb24.discordbot.Session
 import com.tb24.discordbot.commands.CommandSourceStack
 import com.tb24.discordbot.commands.notifyDailyRewardsClaimed
+import com.tb24.discordbot.model.AutoClaimEntry
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
-import com.tb24.fn.model.EpicError
+import com.tb24.discordbot.util.withDevice
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.commands.campaign.ClaimLoginReward
 import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
@@ -56,49 +55,29 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 	private fun perform(entry: AutoClaimEntry, users: Map<String, GameProfile>): Boolean {
 		val epicId = entry.id
 		val discordId = entry.registrantId
-		var source: CommandSourceStack? = null
 		var displayName: String? = null
 		try {
-			try {
-				displayName = users[epicId]?.displayName
-				val user = client.discord.getUserById(discordId) ?: client.discord.retrieveUserById(discordId).complete()
-				val channel = user.openPrivateChannel().complete()
-				source = CommandSourceStack(client, channel)
-				if (displayName == null) {
-					disableAutoClaim(epicId)
-					source.complete("Disabled automatic daily rewards claiming of `$epicId` because that account has been deleted or deactivated.")
-					return true
-				}
-				var session = client.sessions[discordId]
-				var requiresLogin = false
-				if (session?.api?.currentLoggedIn?.id != epicId) {
-					session = Session(client, discordId, false)
-					requiresLogin = true
-				} else {
-					val verifyResponse = session.api.accountService.verify(null).execute()
-					if (verifyResponse.code() == 401) {
-						requiresLogin = true
-					} else if (verifyResponse.code() != 200) {
-						source.complete("API error occurred whilst trying to login to automatically claim the daily rewards of `$displayName`:\n${EpicError.parse(verifyResponse).displayText}")
-						return true
-					}
-				}
-				source.session = session
-				if (requiresLogin) {
-					val savedDevice = client.savedLoginsManager.get(discordId, epicId)
-					if (savedDevice == null) {
-						disableAutoClaim(epicId)
-						source.complete("Disabled automatic daily rewards claiming of `$displayName` because we couldn't find a saved login.")
-						return true
-					}
-					session.login(source, savedDevice.generateAuthFields(), savedDevice.authClient, false)
-				}
+			displayName = users[epicId]?.displayName
+			val user = client.discord.retrieveUserById(discordId).complete()
+			val channel = user.openPrivateChannel().complete()
+			val source = CommandSourceStack(client, channel)
+			if (displayName == null) {
+				disableAutoClaim(epicId)
+				source.complete("Disabled automatic daily rewards claiming of `$epicId` because that account has been deleted or deactivated.")
+				return true
+			}
+			val savedDevice = client.savedLoginsManager.get(discordId, epicId)
+			if (savedDevice == null) {
+				disableAutoClaim(epicId)
+				source.complete("Disabled automatic daily rewards claiming of `$displayName` because we couldn't find a saved login.")
+				return true
+			}
+			withDevice(source, savedDevice, { session ->
 				session.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "campaign").await()
 				val dailyRewardStat = (source.api.profileManager.getProfileData("campaign").stats as CampaignProfileStats).daily_rewards
 				val millisInDay = 24L * 60L * 60L * 1000L
 				if (dailyRewardStat?.lastClaimDate?.time?.let { it / millisInDay == System.currentTimeMillis() / millisInDay } != false) {
-					//if (user.idLong == 624299014388711455L) notifyDailyRewardsClaimed(source, dailyRewardStat, null)
-					return true
+					return@withDevice
 				}
 				val response = session.api.profileManager.dispatchClientCommandRequest(ClaimLoginReward(), "campaign").await()
 				notifyDailyRewardsClaimed(
@@ -106,22 +85,8 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 					source.api.profileManager.getProfileData("campaign"),
 					response.notifications.filterIsInstance<DailyRewardsNotification>().firstOrNull()
 				)
-				if (requiresLogin) {
-					source.session.logout()
-				}
-				return true
-			} catch (e: HttpException) {
-				if (e.epicError.errorCode == "errors.com.epicgames.account.invalid_account_credentials" || e.epicError.errorCode == "errors.com.epicgames.account.account_not_active") {
-					disableAutoClaim(epicId)
-					client.savedLoginsManager.remove(discordId, epicId)
-					source?.complete("Disabled automatic daily rewards claiming of `${displayName ?: epicId}` because the saved login is no longer valid.")
-					return true
-				}
-				if (source != null) client.commandManager.httpError(source, e, "Failed to automatically claim daily rewards")
-				client.dlog("Failed to claim dailies for ${displayName ?: epicId} (registered by <@$discordId>)\n$e", null)
-				logger.warn("Failed to claim dailies for ${entry.id}", e)
-				return true
-			}
+			}, { disableAutoClaim(epicId) })
+			return true
 		} catch (e: ErrorResponseException) {
 			client.dlog("Failed to claim dailies for ${displayName ?: epicId} (registered by <@$discordId>)\n$e", null)
 			logger.warn("Failed to claim dailies for ${entry.id}", e)
@@ -136,8 +101,4 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 	private fun disableAutoClaim(accountId: String) {
 		r.table("auto_claim").get(accountId).delete().run(client.dbConn)
 	}
-}
-
-class AutoClaimEntry(@JvmField var id: String, @JvmField var registrantId: String) {
-	constructor() : this("", "")
 }
