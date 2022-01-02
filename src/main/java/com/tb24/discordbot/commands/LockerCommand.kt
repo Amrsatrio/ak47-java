@@ -240,7 +240,7 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 		"AthenaCharacter:cid_138_athena_commando_m_psburnout",
 		"AthenaCharacter:cid_174_athena_commando_f_carbidewhite",
 		"AthenaCharacter:cid_175_athena_commando_m_celestial",
-		"AthenaCharacter:cid_183_athena_commando_m_modernmilitaryred",,
+		"AthenaCharacter:cid_183_athena_commando_m_modernmilitaryred",
 		"AthenaCharacter:cid_296_athena_commando_m_math",
 		"AthenaCharacter:cid_313_athena_commando_m_kpopfashion",
 		"AthenaCharacter:cid_342_athena_commando_m_streetracermetallic",
