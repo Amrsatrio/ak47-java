@@ -229,7 +229,6 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 	private val exclusivesOverride = listOf(
 		"AthenaBackpack:bid_055_psburnout",
 		"AthenaBackpack:bid_138_celestial",
-		"AthenaBackpack:bid_142_raptorarcticcamo",
 		"AthenaBackpack:bid_169_mathmale",
 		"AthenaBackpack:bid_224_techopsblue",
 		"AthenaBackpack:bid_234_speedymidnight",
@@ -289,6 +288,7 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 		"AthenaGlider:glider_id_131_speedymidnight",
 		"AthenaGlider:glider_id_137_streetopsstealth",
 		"AthenaGlider:glider_id_137_streetopsstealth",
+		"AthenaGlider:glider_id_211_wildcatblue",
 		"AthenaGlider:glider_id_217_longshortsmale",
 		"AthenaGlider:glider_warthog",
 		"AthenaItemWrap:wrap_121_techopsblue",
@@ -304,6 +304,8 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 		"AthenaPickaxe:pickaxe_id_237_warpaint",
 		"AthenaPickaxe:pickaxe_id_256_techopsblue",
 		"AthenaPickaxe:pickaxe_id_294_candycane",
+		"AthenaPickaxe:pickaxe_id_398_wildcatfemale",
+		"AthenaPickaxe:cid_850_athena_commando_f_skullbritecube",
 		"AthenaPickaxe:pickaxe_id_464_longshortsmale",
 		"AthenaPickaxe:pickaxe_id_stw001_tier_1",
 		"AthenaPickaxe:pickaxe_id_stw006_tier_7",
@@ -319,6 +321,7 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 		"CosmeticVariantToken:vtid_828_m_jupiter_styleb",
 		"CosmeticVariantToken:vtid_837_m_historian_styleb",
 		"CosmeticVariantToken:vtid_976_alchemy_styleb",
+		"CosmeticVariantToken:vtid_a_410_rustyboltmale_styleb",
 	)
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
