@@ -7,6 +7,7 @@ import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.rethinkdb.RethinkDB
 import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.Rune
 import com.tb24.uasset.AssetManager
@@ -20,6 +21,7 @@ class EvalCommand : BrigadierCommand("eval", "Evaluate an expression for debuggi
 	private val engine = Context.newBuilder("js").allowAllAccess(true).build().apply {
 		getBindings("js").apply {
 			putMember("provider", AssetManager.INSTANCE)
+			putMember("r", RethinkDB.r)
 		}
 	}
 
@@ -39,6 +41,7 @@ class EvalCommand : BrigadierCommand("eval", "Evaluate an expression for debuggi
 					putMember("client", source.client)
 					putMember("source", source)
 					putMember("config", BotConfig.get())
+					putMember("db", source.client.dbConn)
 				}
 				source.complete("```\n${engine.eval("js", code)}```", null)
 			}

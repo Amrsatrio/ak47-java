@@ -66,7 +66,7 @@ class AutoFreeLlamaTask(val client: DiscordBot) : Runnable {
 				source.complete("Disabled automatic free llama claiming of `$displayName` because we couldn't find a saved login.")
 				return true
 			}
-			withDevice(source, savedDevice, { claimFreeLlamas(source) }, { disableAutoClaim(epicId) })
+			withDevice(source, savedDevice, { claimFreeLlamas(source) }, { disableAutoClaim(epicId) }, users)
 			return true
 		} catch (e: ErrorResponseException) {
 			client.dlog("Failed to claim free llamas for ${displayName ?: epicId} (registered by <@$discordId>)\n$e", null)

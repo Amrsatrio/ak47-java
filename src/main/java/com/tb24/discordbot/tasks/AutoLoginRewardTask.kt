@@ -85,7 +85,7 @@ class AutoLoginRewardTask(val client: DiscordBot) : Runnable {
 					source.api.profileManager.getProfileData("campaign"),
 					response.notifications.filterIsInstance<DailyRewardsNotification>().firstOrNull()
 				)
-			}, { disableAutoClaim(epicId) })
+			}, { disableAutoClaim(epicId) }, users)
 			return true
 		} catch (e: ErrorResponseException) {
 			client.dlog("Failed to claim dailies for ${displayName ?: epicId} (registered by <@$discordId>)\n$e", null)

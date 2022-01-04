@@ -51,7 +51,8 @@ fun <T> forEachSavedAccounts(source: CommandSourceStack, devices: List<DeviceAut
 	return results
 }
 
-fun <T> withDevice(source: CommandSourceStack, device: DeviceAuth, callback: (Session) -> T, onInvalid: () -> Unit = {}): T? {
+fun <T> withDevice(source: CommandSourceStack, device: DeviceAuth, callback: (Session) -> T, onInvalid: () -> Unit = {}, users: Map<String, GameProfile>? = null): T? {
+	var users = users
 	try {
 		var session = source.client.sessions[source.author.id]
 		var requiresLogin = false
@@ -76,8 +77,11 @@ fun <T> withDevice(source: CommandSourceStack, device: DeviceAuth, callback: (Se
 		}
 		return result
 	} catch (e: HttpException) {
-		source.queryUsers_map(setOf(device.accountId))
-		val dn = source.userCache[device.accountId]?.displayName ?: device.accountId
+		if (users == null) {
+			source.queryUsers_map(setOf(device.accountId))
+			users = source.userCache
+		}
+		val dn = users[device.accountId]?.displayName ?: device.accountId
 		if (e.epicError.errorCode == "errors.com.epicgames.account.invalid_account_credentials" || e.epicError.errorCode == "errors.com.epicgames.account.account_not_active") {
 			onInvalid()
 			source.client.savedLoginsManager.remove(source.author.id, device.accountId)

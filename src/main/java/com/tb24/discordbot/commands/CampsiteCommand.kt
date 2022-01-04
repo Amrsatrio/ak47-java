@@ -22,14 +22,14 @@ class CampsiteCommand : BrigadierCommand("tent", "Shows your stored items in you
 		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 		val athena = source.api.profileManager.getProfileData("athena")
 		val campsite = athena.items.values.firstOrNull { it.templateId == "Campsite:defaultcampsite" }
+		val campsiteData = campsite?.getAttributes(FortCampsiteAccountItem::class.java)?.campsite_account_data
 			?: throw SimpleCommandExceptionType(LiteralMessage("Tent data not found")).create()
-		val campsiteData = campsite.getAttributes(FortCampsiteAccountItem::class.java).campsite_account_data
 		val embed = source.createEmbed().setThumbnail(Utils.benBotExportAsset("/CampsiteGameplay/Icons/T-T-Icon-BR-CampingTentItem.T-T-Icon-BR-CampingTentItem"))
-		for ((i, stashedItem) in campsiteData.stashed_items.withIndex()) {
+		campsiteData.stashed_items?.forEachIndexed { i, stashedItem ->
 			val item = stashedItem.asItemStack()
 			if (item == null) {
 				embed.addField("Slot %,d".format(i + 1), "<Empty>", false)
-				continue
+				return@forEachIndexed
 			}
 			val rarityIcon = getEmoteByName(item.rarity.name.toLowerCase() + '2')?.asMention
 			embed.addField("Slot %,d".format(i + 1), rarityIcon + ' ' + item.render(), false)
