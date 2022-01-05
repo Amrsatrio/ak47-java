@@ -45,7 +45,6 @@ import kotlin.jvm.JvmField as F
 
 class DiscordBot(token: String) {
 	companion object {
-		const val VERSION = "6.6.0"
 		@F val LOGGER: Logger = LoggerFactory.getLogger("DiscordBot")
 		@F val ENV: String = System.getProperty("env", "dev")
 		lateinit var instance: DiscordBot
@@ -190,11 +189,10 @@ class DiscordBot(token: String) {
 		commandManager = CommandManager(this)
 		builder.addEventListeners(commandManager, GuildListeners(this))
 		discord = builder.build()
-		//LOGGER.info("Logged in as {}! v{}", discord.selfUser.asTag, VERSION)
 		Runtime.getRuntime().addShutdownHook(Thread {
 			internalSession.logout()
 		})
-		discord.setActivityProvider { Activity.playing(".help \u00b7 $it \u00b7 v$VERSION") }
+		discord.setActivityProvider { Activity.playing(".help \u00b7 $it") }
 
 		// Schedule tasks
 		if (ENV != "dev") {
@@ -267,7 +265,6 @@ class DiscordBot(token: String) {
 				keychainTask.run()
 			} catch (e: Throwable) {
 				dlog("__**Keychain task failure**__\n```\n${e.getStackTraceAsString()}```", null)
-				AutoLoginRewardTask.TASK_IS_RUNNING.set(false)
 			}
 		}, timeUntilNext, interval, TimeUnit.MILLISECONDS)
 	}

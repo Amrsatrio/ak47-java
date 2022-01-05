@@ -3,7 +3,6 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.util.AwaitReactionsOptions
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.awaitReactions
@@ -15,7 +14,7 @@ class AboutCommand : BrigadierCommand("about", "Shows credits of this bot.") {
 		.executes {
 			val selfUser = it.source.jda.selfUser
 			val embed = EmbedBuilder()
-				.setTitle("${selfUser.name} Kotlin/JVM Rewrite v${DiscordBot.VERSION}")
+				.setTitle("${selfUser.name} Kotlin/JVM")
 				.addField("Developers", "kemo, amrsatrio", false)
 				.addField("Helpers", "a.bakedpotato, Beat YT, FunGames, HYPEX, Liimiitz, Officer, Sprayxe", false)
 				.addField("Third party libraries", arrayOf(

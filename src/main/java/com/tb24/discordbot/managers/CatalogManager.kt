@@ -2,7 +2,7 @@ package com.tb24.discordbot.managers
 
 import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.DiscordBot
-import com.tb24.discordbot.tasks.AutoLoginRewardTask
+import com.tb24.discordbot.tasks.AutoFreeLlamaTask
 import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.getStackTraceAsString
 import com.tb24.discordbot.util.to
@@ -134,7 +134,7 @@ class CatalogManager {
 				client?.autoFreeLlamaTask?.run()
 			} catch (e: Throwable) {
 				client?.dlog("__**AutoFreeLlamaTask failure**__\n```\n${e.getStackTraceAsString()}```", null)
-				AutoLoginRewardTask.TASK_IS_RUNNING.set(false)
+				AutoFreeLlamaTask.TASK_IS_RUNNING.set(false)
 			}
 		}
 	}
