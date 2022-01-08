@@ -218,13 +218,11 @@ class DiscordBot(token: String) {
 				postItemShop()
 			} catch (e: Throwable) {
 				dlog("__**Failed to auto post item shop**__\n```\n${e.getStackTraceAsString()}```", null)
-				return@Runnable
 			}*/
 			try {
 				postMtxAlerts()
 			} catch (e: Throwable) {
 				dlog("__**Failed to auto post V-Bucks alerts**__\n```\n${e.getStackTraceAsString()}```", null)
-				return@Runnable
 			}
 			try {
 				autoLoginRewardTask.run()

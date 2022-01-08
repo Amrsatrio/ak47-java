@@ -5,25 +5,26 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.tb24.discordbot.ui.ResearchViewController
-import com.tb24.discordbot.util.*
+import com.tb24.discordbot.util.await
+import com.tb24.discordbot.util.awaitOneInteraction
+import com.tb24.discordbot.util.dispatchClientCommandRequest
+import com.tb24.discordbot.util.textureEmote
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.commands.campaign.ClaimCollectedResources
 import com.tb24.fn.model.mcpprofile.commands.campaign.PurchaseResearchStatUpgrade
 import com.tb24.fn.model.mcpprofile.notifications.CollectedResourceResultNotification
-import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
+import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
 import com.tb24.fn.util.getDateISO
-import com.tb24.uasset.loadObject
-import me.fungames.jfortniteparse.fort.enums.EFortStatType.*
-import me.fungames.jfortniteparse.ue4.assets.exports.UCurveTable
-import me.fungames.jfortniteparse.ue4.objects.uobject.FName
-import net.dv8tion.jda.api.Permission
+import me.fungames.jfortniteparse.fort.enums.EFortStatType
+import me.fungames.jfortniteparse.fort.enums.EFortStatType.Invalid
+import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.entities.MessageEmbed
-import net.dv8tion.jda.api.entities.MessageReaction
-import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.interactions.components.ActionRow
+import net.dv8tion.jda.api.interactions.components.Button
+import net.dv8tion.jda.api.interactions.components.ButtonStyle
 
 class ResearchCommand : BrigadierCommand("research", "Collect your research points, or upgrade your F.O.R.T stats.") {
-	private val researchSystem by lazy { loadObject<UCurveTable>("/SaveTheWorld/Research/ResearchSystem.ResearchSystem")!! }
 	private val researchPointIcon by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/Currency/T-Icon-ResearchPoint-128.T-Icon-ResearchPoint-128") }
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -33,54 +34,30 @@ class ResearchCommand : BrigadierCommand("research", "Collect your research poin
 		val source = c.source
 		source.ensureCompletedCampaignTutorial(campaign)
 		val ctx = ResearchViewController(campaign)
-		val message = source.complete(null, renderEmbed(source, campaign, ctx))
 		if (campaign.owner.id != source.api.currentLoggedIn.id) {
+			source.complete(null, renderEmbed(source, campaign, ctx))
 			return Command.SINGLE_SUCCESS
 		}
-		message.addReaction(researchPointIcon!!).queue()
-		for (emote in ctx.icons.values) {
-			message.addReaction(emote).queue()
-		}
-		val collector = message.createReactionCollector({ _, user, _ -> user == source.author }, ReactionCollectorOptions().apply {
-			idle = 45000L
-		})
-		collector.callback = object : CollectorListener<MessageReaction> {
-			override fun onCollect(item: MessageReaction, user: User?) {
-				try {
-					if (message.member?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
-						item.removeReaction(source.author).queue()
-					}
-					val emote = item.reactionEmote
-					if (emote.isEmoji) return
-					if (item.reactionEmote.idLong == researchPointIcon!!.idLong) {
-						val response = source.api.profileManager.dispatchClientCommandRequest(ClaimCollectedResources().apply { collectorsToClaim = arrayOf(ctx.resourceCollectorItem!!.itemId) }, "campaign").await()
-						ctx.collected = response.notifications?.filterIsInstance<CollectedResourceResultNotification>()?.firstOrNull()?.loot?.items?.firstOrNull()?.quantity ?: 0
-					} else {
-						val statType = ctx.icons.entries.firstOrNull { it.value.idLong == emote.idLong }?.key ?: return
-						val researchLevel = (campaign.stats as CampaignProfileStats).research_levels[statType]
-						if (researchLevel >= 120 || ctx.points < (ctx.costs[statType] ?: Integer.MAX_VALUE)) return
-						source.api.profileManager.dispatchClientCommandRequest(PurchaseResearchStatUpgrade().apply { statId = statType.name }, "campaign").await()
-					}
-					val campaignModified = source.api.profileManager.getProfileData(campaign.owner.id, "campaign")
-					ctx.populateItems(campaignModified)
-					message.editMessage(renderEmbed(source, campaignModified, ctx)).queue()
-				} catch (e: Throwable) {
-					e.printStackTrace()
-					// TODO handle async errors
-				}
+		while (true) {
+			val buttons = mutableListOf<Button>()
+			buttons.add(Button.secondary("collect", Emoji.fromEmote(researchPointIcon!!))) // TODO Show number of points to be collected
+			for ((statType, stat) in ctx.stats) {
+				buttons.add(Button.of(ButtonStyle.SECONDARY, statType.name, if (stat.researchLevel < 120) Formatters.num.format(stat.costToNextLevel) else "MAX", Emoji.fromEmote(textureEmote(statType.icon)!!)).withDisabled(!stat.canUpgrade()))
 			}
-
-			override fun onRemove(item: MessageReaction, user: User?) {}
-
-			override fun onDispose(item: MessageReaction, user: User?) {}
-
-			override fun onEnd(collected: Map<Any, MessageReaction>, reason: CollectorEndReason) {
-				if (reason == CollectorEndReason.IDLE && message.member?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
-					message.clearReactions().queue()
-				}
+			val message = source.complete(null, renderEmbed(source, campaign, ctx), ActionRow.of(buttons))
+			source.loadingMsg = message
+			val choice = message.awaitOneInteraction(source.author, false).componentId
+			if (choice == "collect") {
+				val response = source.api.profileManager.dispatchClientCommandRequest(ClaimCollectedResources().apply { collectorsToClaim = arrayOf(ctx.resourceCollectorItem!!.itemId) }, "campaign").await()
+				ctx.collected = response.notifications?.filterIsInstance<CollectedResourceResultNotification>()?.firstOrNull()?.loot?.items?.firstOrNull()?.quantity ?: 0
+			} else {
+				val statType = EFortStatType.from(choice)
+				check(statType != Invalid && ctx.stats[statType]!!.canUpgrade())
+				source.api.profileManager.dispatchClientCommandRequest(PurchaseResearchStatUpgrade().apply { statId = statType.name }, "campaign").await()
 			}
+			val campaignModified = source.api.profileManager.getProfileData(campaign.owner.id, "campaign")
+			ctx.populateItems(campaignModified)
 		}
-		return Command.SINGLE_SUCCESS
 	}
 
 	private fun renderEmbed(source: CommandSourceStack, campaign: McpProfile, ctx: ResearchViewController): MessageEmbed {
@@ -93,25 +70,11 @@ class ResearchCommand : BrigadierCommand("research", "Collect your research poin
 			embed.setFooter("Last collected").setTimestamp(it.toInstant())
 		}
 		ctx.collected = 0
-		for (statType in arrayOf(Fortitude, Offense, Resistance, Technology)) {
-			val researchLevel = (campaign.stats as CampaignProfileStats).research_levels[statType]
-			val s = statType.name.toLowerCase()
-			val cost = FName(s + "_cost")
-			val personal = FName(s + "_personal")
-			val personal_cumulative = FName(s + "_personal_cumulative")
-			val team = FName(s + "_team")
-			val team_cumulative = FName(s + "_team_cumulative")
-			val gainToNextLevel = researchSystem.findCurve(personal)!!.eval(researchLevel + 1f).toInt() + researchSystem.findCurve(team)!!.eval(researchLevel + 1f).toInt()
-			val currentBonusPersonal = researchSystem.findCurve(personal_cumulative)!!.eval(researchLevel.toFloat()).toInt()
-			val currentBonusTeam = researchSystem.findCurve(team_cumulative)!!.eval(researchLevel.toFloat()).toInt()
-			val costToNextLevel = researchSystem.findCurve(cost)!!.eval(researchLevel + 1f).toInt()
-			ctx.costs[statType] = costToNextLevel
-			val statIconEmote = textureEmote(statType.icon)!!
-			ctx.icons[statType] = statIconEmote
-			val name = "%s %s (Lv %,d)".format(statIconEmote.asMention, statType.displayName.format(), researchLevel)
-			var value = "+%,d (+%,d Party)".format(currentBonusPersonal, currentBonusTeam)
-			if (researchLevel < 120) {
-				value += "\n**Next:** %s %,d for +%,d".format(researchPointIcon?.asMention, costToNextLevel, gainToNextLevel)
+		for ((statType, stat) in ctx.stats) {
+			val name = "%s %s (Lv %,d)".format(stat.statIconEmote.asMention, statType.displayName.format(), stat.researchLevel)
+			var value = "+%,d (+%,d Party)".format(stat.currentBonusPersonal, stat.currentBonusTeam)
+			if (stat.researchLevel < 120) {
+				value += "\n**Next:** %s %,d for +%,d".format(researchPointIcon?.asMention, stat.costToNextLevel, stat.gainToNextLevel)
 			}
 			embed.addField(name, value, true)
 		}
