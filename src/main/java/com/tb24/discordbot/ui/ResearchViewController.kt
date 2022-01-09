@@ -54,7 +54,7 @@ class ResearchViewController {
 		for (statType in arrayOf(EFortStatType.Fortitude, EFortStatType.Offense, EFortStatType.Resistance, EFortStatType.Technology)) {
 			stats[statType] = Stat(statType, campaign)
 		}
-		val homebaseNodeAttrs = homebaseManager.getHomebaseNodeAttributes()
+		val homebaseNodeAttrs = homebaseManager.homebaseNodeAttributes
 		val collectorAttrs = collectorItem.attributes
 		val storedValue = collectorAttrs.get("stored_value").asFloat
 		collectorLastUpdated = collectorAttrs.getDateISO("last_updated")

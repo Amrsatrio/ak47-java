@@ -145,6 +145,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(SyncPremiumRoleCommand())
 		register(UndoCommand())
 		register(WinterfestCommand())
+		register(WorkerSquadsCommand())
 		register(WorkersCommand())
 		register(WorthCommand())
 		register(FortniteAndroidApkCommand())
