@@ -228,7 +228,7 @@ class DiscordBot(token: String) {
 				autoLoginRewardTask.run()
 			} catch (e: Throwable) {
 				dlog("__**AutoLoginRewardTask failure**__\n```\n${e.getStackTraceAsString()}```", null)
-				AutoLoginRewardTask.TASK_IS_RUNNING.set(false)
+				autoLoginRewardTask.isRunning.set(false)
 			}
 		}
 		scheduledExecutor.scheduleAtFixedRate(task, Duration.between(now, nextRun).seconds, TimeUnit.DAYS.toSeconds(1), TimeUnit.SECONDS) // TODO Use Quartz scheduler instead of ScheduledExecutorService

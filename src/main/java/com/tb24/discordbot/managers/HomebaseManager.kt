@@ -10,10 +10,12 @@ import me.fungames.jfortniteparse.fort.enums.EFortStatType
 import me.fungames.jfortniteparse.fort.exports.FortHomebaseManager
 import me.fungames.jfortniteparse.fort.exports.FortHomebaseNodeItemDefinition
 import me.fungames.jfortniteparse.fort.exports.FortWorkerType
+import me.fungames.jfortniteparse.fort.objects.rows.HomebaseNodeGameplayEffectDataTableRow
 import me.fungames.jfortniteparse.fort.objects.rows.HomebaseSquad
 import me.fungames.jfortniteparse.fort.objects.rows.HomebaseSquad.*
 import me.fungames.jfortniteparse.ue4.assets.exports.UCurveTable
 import me.fungames.jfortniteparse.ue4.assets.exports.UDataTable
+import me.fungames.jfortniteparse.ue4.assets.objects.FStructFallback
 import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import org.greenrobot.eventbus.Subscribe
@@ -22,8 +24,9 @@ import java.util.*
 @JvmField val squadsDataTable = loadObject<UDataTable>("/SaveTheWorld/CommandConsole/CCSquads")!!
 @JvmField val managerData = loadObject<FortHomebaseManager>("/SaveTheWorld/CommandConsole/CommandConsole_Manager")!!
 @JvmField val powerPointToRatingConversion = loadObject<UCurveTable>("/SaveTheWorld/Characters/Enemies/DataTables/HomebaseRatingMapping")!!.findCurve(FName("UIMonsterRating"))
+@JvmField val homebaseNodeGameplayEffectDataTable = loadObject<UDataTable>("/SaveTheWorld/Abilities/CommandConsole/CommandConsole_GEImporter_NewSkillTree.CommandConsole_GEImporter_NewSkillTree")!!
 
-class HomebaseManager(val accountId: String, api: EpicApi) {
+class HomebaseManager(val accountId: String, val api: EpicApi) {
 	@JvmField val squads = LinkedHashMap<String, Squad>(squadsDataTable.rows.size).apply {
 		for ((k, v) in squadsDataTable.rows) {
 			val squadId = k.text.toLowerCase(Locale.ROOT)
@@ -32,6 +35,8 @@ class HomebaseManager(val accountId: String, api: EpicApi) {
 	}
 	@JvmField val bonuses = mutableMapOf<EFortStatType, Int>()
 	@JvmField val phoenixBonuses = mutableMapOf<EFortStatType, Int>()
+	private var cachedHomebaseNodeAttributesRevision = -1L
+	private var cachedHomebaseNodeAttributes = emptyMap<String, Float>()
 
 	init {
 		api.eventBus.register(this)
@@ -88,6 +93,55 @@ class HomebaseManager(val accountId: String, api: EpicApi) {
 		val fortAttributeToPowerMultiplier = 4f
 		return powerPointToRatingConversion?.eval(calculatedFortPoints * fortAttributeToPowerMultiplier) ?: 0f
 	}
+
+	fun getHomebaseNodeAttributes(): Map<String, Float> {
+		synchronized(cachedHomebaseNodeAttributes) {
+			val campaign = api.profileManager.getProfileData(accountId, "campaign")
+			if (campaign.rvn == cachedHomebaseNodeAttributesRevision) {
+				return cachedHomebaseNodeAttributes
+			}
+
+			val allLevelData = mutableListOf<FortHomebaseNodeItemDefinition.HomebaseNodeLevel>()
+			for (item in campaign.items.values) {
+				if (item.primaryAssetType != "HomebaseNode") {
+					continue
+				}
+				val defData = item.defData as? FortHomebaseNodeItemDefinition ?: continue
+				allLevelData.addAll(defData.LevelData.take(item.quantity))
+			}
+
+			val result = mutableMapOf<String, Float>()
+			for (level in allLevelData) {
+				for (rowName in level.GameplayEffectRowNames) {
+					val row = homebaseNodeGameplayEffectDataTable.findRow(rowName)!!
+					val operation = row.get<HomebaseNodeGameplayEffectDataTableRow.EGameplayModOp>("Operation")
+					if (operation != HomebaseNodeGameplayEffectDataTableRow.EGameplayModOp.Additive) {
+						continue
+					}
+					val attributeName = row.get<FStructFallback>("Attribute").get<String>("AttributeName")
+					val magnitude = row.get<Float>("Magnitude")
+					result[attributeName] = (result[attributeName] ?: 0.0f) + magnitude
+				}
+			}
+			cachedHomebaseNodeAttributesRevision = campaign.rvn
+			cachedHomebaseNodeAttributes = result
+			return result
+		}
+	}
+
+	fun getAccountInventorySize(): Int {
+		val attributes = getHomebaseNodeAttributes()
+		val bonusItem = api.profileManager.getProfileData(accountId, "campaign").items.values.firstOrNull { it.templateId == "Token:accountinventorybonus" }
+		return (attributes["InventorySizeBonus"]?.toInt() ?: 0) + (bonusItem?.quantity ?: 0)
+	}
+
+	fun getWorldInventorySize(): Int {
+		val attributes = getHomebaseNodeAttributes()
+		val bonusItem = api.profileManager.getProfileData(accountId, "campaign").items.values.firstOrNull { it.templateId == "Token:worldinventorybonus" }
+		return (attributes["WorldInventorySizeBonus"]?.toInt() ?: 0) + (bonusItem?.quantity ?: 0)
+	}
+
+	fun getStorageInventorySize() = getHomebaseNodeAttributes()["StorageInventorySizeBonus"]?.toInt() ?: 0
 
 	class Squad(@JvmField val squadId: String, @JvmField val backing: HomebaseSquad) {
 		@JvmField val slots = Array(backing.CrewSlots.size) { SquadSlot(backing.CrewSlots[it], it) }

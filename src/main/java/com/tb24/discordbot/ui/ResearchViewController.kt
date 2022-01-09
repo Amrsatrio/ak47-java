@@ -2,15 +2,19 @@ package com.tb24.discordbot.ui
 
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.managers.HomebaseManager
 import com.tb24.discordbot.util.textureEmote
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
+import com.tb24.fn.util.getDateISO
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.enums.EFortStatType
 import me.fungames.jfortniteparse.ue4.assets.exports.UCurveTable
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import net.dv8tion.jda.api.entities.Emote
+import java.util.*
+import kotlin.math.min
 import kotlin.jvm.JvmField as F
 
 class ResearchViewController {
@@ -18,36 +22,53 @@ class ResearchViewController {
 		private val researchSystem by lazy { loadObject<UCurveTable>("/SaveTheWorld/Research/ResearchSystem.ResearchSystem")!! }
 	}
 
-	lateinit var campaign: McpProfile
-	@F var resourceCollectorItem: FortItemStack? = null
+	lateinit var collectorItem: FortItemStack
 	@F var points = 0
 	@F var collected = 0
 	@F val stats = mutableMapOf<EFortStatType, Stat>()
 
-	constructor(campaign: McpProfile) {
-		populateItems(campaign)
+	lateinit var collectorLastUpdated: Date
+	lateinit var collectorFullDate: Date
+	@F var collectorPoints = 0
+	@F var collectorRatePerHour = 0
+	@F var collectorLimit = 0
+	@F var pointLimit = 0
+
+	constructor(campaign: McpProfile, homebaseManager: HomebaseManager) {
+		populateItems(campaign, homebaseManager)
 	}
 
 	@Synchronized
-	fun populateItems(campaign: McpProfile) {
-		this.campaign = campaign
+	fun populateItems(campaign: McpProfile, homebaseManager: HomebaseManager) {
 		points = 0
 		for (item in campaign.items.values) {
 			if (item.templateId == "CollectedResource:Token_collectionresource_nodegatetoken01") {
-				resourceCollectorItem = item
+				collectorItem = item
 			} else if (item.templateId == "Token:collectionresource_nodegatetoken01") {
 				points += item.quantity
 			}
 		}
-		if (resourceCollectorItem == null) {
+		if (!::collectorItem.isInitialized) {
 			throw SimpleCommandExceptionType(LiteralMessage("Please complete the Audition quest (one quest after Stonewood SSD 3) to unlock Research.")).create()
 		}
 		for (statType in arrayOf(EFortStatType.Fortitude, EFortStatType.Offense, EFortStatType.Resistance, EFortStatType.Technology)) {
-			stats[statType] = Stat(statType)
+			stats[statType] = Stat(statType, campaign)
 		}
+		val homebaseNodeAttrs = homebaseManager.getHomebaseNodeAttributes()
+		val collectorAttrs = collectorItem.attributes
+		val storedValue = collectorAttrs.get("stored_value").asFloat
+		collectorLastUpdated = collectorAttrs.getDateISO("last_updated")
+		val secondsSinceLastCollectorUpdate = (System.currentTimeMillis() - collectorLastUpdated.time) / 1000L
+		val ratePerSecond = homebaseNodeAttrs["rate_per_second_collector_Token_collectionresource_nodegatetoken01"] ?: 0.0f
+		collectorRatePerHour = (ratePerSecond * 3600.0f).toInt()
+		collectorLimit = (homebaseNodeAttrs["max_capacity_collector_Token_collectionresource_nodegatetoken01"] ?: 0.0f).toInt()
+		collectorPoints = min(collectorLimit, (storedValue + ratePerSecond * secondsSinceLastCollectorUpdate).toInt())
+		pointLimit = (homebaseNodeAttrs["ResearchPointMaxBonus"] ?: 0.0f).toInt()
+		val secondsUntilFull = (collectorLimit.toFloat() - storedValue) / ratePerSecond
+		collectorFullDate = Date(collectorLastUpdated.time + (secondsUntilFull * 1000.0f).toLong())
 	}
 
-	inner class Stat(statType: EFortStatType) {
+	inner class Stat(statType: EFortStatType, campaign: McpProfile) {
 		val researchLevel: Int
 		val gainToNextLevel: Int
 		val currentBonusPersonal: Int
