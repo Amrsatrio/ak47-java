@@ -22,7 +22,7 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
-private val order = arrayOf(Technology, Fortitude, Offense, Resistance)
+private val order = arrayOf(Technology, Offense, Fortitude, Resistance)
 
 class AutoResearchManager(val client: DiscordBot) {
 	private val logger = LoggerFactory.getLogger(javaClass)
@@ -40,6 +40,7 @@ class AutoResearchManager(val client: DiscordBot) {
 	fun schedule(enrollment: AutoResearchEnrollment, offset: Long = 0L) {
 		val nextRun = enrollment.nextRun.time
 		val nextRunWithOffset = nextRun + offset
+		logger.info("{}: Scheduled at {}", enrollment.id, Date(nextRunWithOffset))
 		scheduled[enrollment.id] = scheduler.schedule({
 			scheduled.remove(enrollment.id)
 			var attempts = 5
@@ -59,7 +60,6 @@ class AutoResearchManager(val client: DiscordBot) {
 				unenroll(enrollment.id)
 			}
 		}, nextRunWithOffset - System.currentTimeMillis(), TimeUnit.MILLISECONDS)
-		logger.info("{}: Scheduled at {}", enrollment.id, Date(nextRunWithOffset))
 	}
 
 	fun unschedule(epicId: String) {
@@ -128,7 +128,7 @@ class AutoResearchManager(val client: DiscordBot) {
 
 		// Schedule next
 		val nextRun = try {
-			if (enrollment.ensureData(source)) {
+			if (enrollment.ensureData(source, ctx)) {
 				r.table("auto_research").get(enrollment.id).update(enrollment).run(client.dbConn)
 			}
 			enrollment.nextRun
