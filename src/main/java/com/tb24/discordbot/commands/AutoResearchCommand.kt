@@ -78,6 +78,7 @@ class AutoResearchCommand : BrigadierCommand("autoresearch", "Enroll/unenroll yo
 			val data = AutoResearchEnrollment(accountId, discordId)
 			check(data.ensureData(source))
 			r.table("auto_research").insert(data).run(source.client.dbConn)
+			source.client.autoResearchManager.schedule(data)
 			source.complete(null, EmbedBuilder().setColor(COLOR_SUCCESS)
 				.setTitle("✅ Enrolled auto research for account `${user.displayName ?: accountId}`")
 				.setDescription("${source.jda.selfUser.name} will automatically research every time the collector reaches capacity.")
@@ -88,6 +89,7 @@ class AutoResearchCommand : BrigadierCommand("autoresearch", "Enroll/unenroll yo
 				throw SimpleCommandExceptionType(LiteralMessage("Cannot unenroll because that account wasn't enrolled by you.")).create()
 			}
 			r.table("auto_research").get(accountId).delete().run(source.client.dbConn)
+			source.client.autoResearchManager.unschedule(accountId)
 			source.complete(null, EmbedBuilder().setColor(COLOR_SUCCESS)
 				.setTitle("✅ Unenrolled auto research for account `${user.displayName ?: accountId}`.")
 				.build())

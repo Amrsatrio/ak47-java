@@ -37,7 +37,7 @@ class AutoResearchManager(val client: DiscordBot) {
 		logger.info("Scheduled {} accounts", enrolledAccounts.size)
 	}
 
-	private fun schedule(enrollment: AutoResearchEnrollment, offset: Long = 0L) {
+	fun schedule(enrollment: AutoResearchEnrollment, offset: Long = 0L) {
 		val nextRun = enrollment.nextRun.time
 		val nextRunWithOffset = nextRun + offset
 		scheduled[enrollment.id] = scheduler.schedule({
@@ -60,6 +60,10 @@ class AutoResearchManager(val client: DiscordBot) {
 			}
 		}, nextRunWithOffset - System.currentTimeMillis(), TimeUnit.MILLISECONDS)
 		logger.info("{}: Scheduled at {}", enrollment.id, Date(nextRunWithOffset))
+	}
+
+	fun unschedule(epicId: String) {
+		scheduled.remove(epicId)?.cancel(false)
 	}
 
 	private fun perform(enrollment: AutoResearchEnrollment): Boolean {
