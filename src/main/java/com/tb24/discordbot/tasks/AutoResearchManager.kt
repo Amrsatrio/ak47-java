@@ -108,19 +108,31 @@ class AutoResearchManager(val client: DiscordBot) {
 
 		// Research
 		var iteration = -1
-		var statsAtMax = 0
+		val statsAtMax = hashSetOf<EFortStatType>()
+		val statsWithNotEnoughPoints = hashSetOf<EFortStatType>()
 		while (true) {
 			val statType = order[++iteration % order.size]
 			val stat = ctx.stats[statType]!!
-			if (stat.researchLevel >= 120) { // Reached max
-				if (++statsAtMax >= order.size) {
+			if (statType in statsAtMax) {
+				continue
+			}
+			if (stat.researchLevel >= 120) {
+				statsAtMax.add(statType)
+				if (statsAtMax.size >= order.size) {
 					results.add("🎉 Reached max on all stats! Disabled auto research.")
 					break
 				}
 				continue
 			}
+			if (statType in statsWithNotEnoughPoints) {
+				continue
+			}
 			if (ctx.points < stat.costToNextLevel) {
-				break // Not enough points
+				statsWithNotEnoughPoints.add(statType)
+				if (statsWithNotEnoughPoints.size >= order.size) {
+					break
+				}
+				continue
 			}
 			ctx.research(source.api, homebase, statType)
 			results.add("%s %s: Lv %,d \u2192 Lv %,d for %s %,d".format(textureEmote(statType.icon)?.asMention, statType.displayName.format(), stat.researchLevel, stat.researchLevel + 1, researchPointIcon?.asMention, stat.costToNextLevel))
@@ -165,15 +177,19 @@ fun AutoResearchEnrollment.ensureData(source: CommandSourceStack, inCtx: Researc
 
 	// Calculate points to collect
 	var iteration = -1
-	var statsAtMax = 0
+	val statsAtMax = hashSetOf<EFortStatType>()
 	val statUpgrades = hashMapOf<EFortStatType, Int>()
 	var collectorTarget = 0
 	while (true) {
 		val statType = order[++iteration % order.size]
 		val stat = ctx.stats[statType]!!
+		if (statType in statsAtMax) {
+			continue
+		}
 		val previewStatLevel = stat.researchLevel + (statUpgrades[statType] ?: 0)
-		if (previewStatLevel >= 120) { // Reached max
-			if (++statsAtMax >= order.size) {
+		if (previewStatLevel >= 120) {
+			statsAtMax.add(statType)
+			if (statsAtMax.size >= order.size) {
 				break // Reached max on all stats
 			}
 			continue
