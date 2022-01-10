@@ -16,7 +16,6 @@ import com.tb24.fn.util.Utils
 import com.tb24.fn.util.format
 import com.tb24.fn.util.getPathName
 import me.fungames.jfortniteparse.fort.enums.EFortStatType
-import me.fungames.jfortniteparse.fort.exports.FortHomebaseManager.WorkerSetBonusData
 import me.fungames.jfortniteparse.fort.objects.rows.HomebaseSquad.ESquadSlotType
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.Emote
@@ -143,13 +142,7 @@ class WorkerSquadsCommand : BrigadierCommand("survivorsquads", "Shows your or a 
 			// - Set Bonuses
 			for ((setBonus, count) in setBonusMap) {
 				val setBonusCategory = ItemTypeResolver.matchCategory(setBonus, true)
-				var setBonusData: WorkerSetBonusData? = null
-
-				for (setBonusData_ in managerData.WorkerSetBonuses) {
-					if (setBonusData_.SetBonusTypeTag.toString().equals(setBonus, true)) {
-						setBonusData = setBonusData_
-					}
-				}
+				val setBonusData = managerData.WorkerSetBonuses.firstOrNull { it.SetBonusTypeTag.toString().equals(setBonus, true) }
 				val setBonusIcon = textureEmote(setBonusCategory?.CategoryBrush?.Brush_XL?.ResourceObject?.getPathName())
 				simple(setBonusIcon, setBonusCategory!!.CategoryName.format(), count, if (setBonusData != null) setBonusData.RequiredWorkersCount else -1)
 			}

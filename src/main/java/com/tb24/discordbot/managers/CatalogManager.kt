@@ -59,7 +59,7 @@ class CatalogManager {
 			catalogData = api.fortniteService.storefrontCatalog("en").exec().body()
 			sectionsData = api.okHttpClient.newCall(Request.Builder().url("https://fortnitecontent-website-prod07.ol.epicgames.com/content/api/pages/fortnite-game/shop-sections").build()).exec().to<ShopSectionsData>()
 			validate(firstLoad)
-			LOGGER.info("Loaded catalog. Expires: " + catalogData!!.expiration)
+			LOGGER.info("Loaded catalog. Expires: {}", catalogData!!.expiration)
 			return true
 		}
 		return false

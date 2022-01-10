@@ -34,16 +34,8 @@ class ItemTypeResolver {
 			if (tags == null) {
 				return null
 			}
-			for (category in if (bTertiary) itemCategories.TertiaryCategories else itemCategories.SecondaryCategories) {
-				for (categoryTag in category.TagContainer.gameplayTags) {
-					for (tag in tags) {
-						if (tag.toString().startsWith(categoryTag.toString(), true)) {
-							return category
-						}
-					}
-				}
-			}
-			return null
+			val categories = if (bTertiary) itemCategories.TertiaryCategories else itemCategories.SecondaryCategories
+			return categories.firstOrNull { ctg -> ctg.TagContainer.gameplayTags.any { ctgTag -> tags.any { it.toString().startsWith(ctgTag.toString(), true) } } }
 		}
 
 		@JvmStatic
@@ -51,14 +43,8 @@ class ItemTypeResolver {
 			if (tag == null) {
 				return null
 			}
-			for (category in if (bTertiary) itemCategories.TertiaryCategories else itemCategories.SecondaryCategories) {
-				for (categoryTag in category.TagContainer.gameplayTags) {
-					if (tag.startsWith(categoryTag.toString(), true)) {
-						return category
-					}
-				}
-			}
-			return null
+			val categories = if (bTertiary) itemCategories.TertiaryCategories else itemCategories.SecondaryCategories
+			return categories.firstOrNull { ctg -> ctg.TagContainer.gameplayTags.any { tag.startsWith(it.toString(), true) } }
 		}
 
 		@JvmStatic

@@ -5,14 +5,12 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.tb24.discordbot.ui.ResearchViewController
-import com.tb24.discordbot.util.*
+import com.tb24.discordbot.util.awaitOneInteraction
+import com.tb24.discordbot.util.relativeFromNow
+import com.tb24.discordbot.util.textureEmote
 import com.tb24.fn.model.mcpprofile.McpProfile
-import com.tb24.fn.model.mcpprofile.commands.campaign.ClaimCollectedResources
-import com.tb24.fn.model.mcpprofile.commands.campaign.PurchaseResearchStatUpgrade
-import com.tb24.fn.model.mcpprofile.notifications.CollectedResourceResultNotification
 import com.tb24.fn.util.format
 import me.fungames.jfortniteparse.fort.enums.EFortStatType
-import me.fungames.jfortniteparse.fort.enums.EFortStatType.Invalid
 import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.components.ActionRow
@@ -20,16 +18,17 @@ import net.dv8tion.jda.api.interactions.components.Button
 import net.dv8tion.jda.api.interactions.components.ButtonStyle
 import kotlin.math.min
 
-class ResearchCommand : BrigadierCommand("research", "Collect your research points, or upgrade your F.O.R.T stats.") {
-	private val researchPointIcon by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/Currency/T-Icon-ResearchPoint-128.T-Icon-ResearchPoint-128") }
+val researchPointIcon by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/Currency/T-Icon-ResearchPoint-128.T-Icon-ResearchPoint-128") }
 
+class ResearchCommand : BrigadierCommand("research", "Collect your research points, or upgrade your F.O.R.T stats.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.withPublicProfile(::execute, "Getting research data")
 
 	private fun execute(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
 		val source = c.source
 		source.ensureCompletedCampaignTutorial(campaign)
-		val ctx = ResearchViewController(campaign, source.session.getHomebase(campaign.owner.id))
+		val homebase = source.session.getHomebase(campaign.owner.id)
+		val ctx = ResearchViewController(campaign, homebase)
 		if (campaign.owner.id != source.api.currentLoggedIn.id) {
 			source.complete(null, renderEmbed(source, campaign, ctx), *createComponents(ctx, false))
 			return Command.SINGLE_SUCCESS
@@ -39,15 +38,10 @@ class ResearchCommand : BrigadierCommand("research", "Collect your research poin
 			source.loadingMsg = message
 			val choice = message.awaitOneInteraction(source.author, false, 90000L).componentId
 			if (choice == "collect") {
-				val response = source.api.profileManager.dispatchClientCommandRequest(ClaimCollectedResources().apply { collectorsToClaim = arrayOf(ctx.collectorItem.itemId) }, "campaign").await()
-				ctx.collected = response.notifications?.filterIsInstance<CollectedResourceResultNotification>()?.firstOrNull()?.loot?.items?.firstOrNull()?.quantity ?: 0
+				ctx.collect(source.api, homebase)
 			} else {
-				val statType = EFortStatType.from(choice)
-				check(statType != Invalid && ctx.stats[statType]!!.canUpgrade())
-				source.api.profileManager.dispatchClientCommandRequest(PurchaseResearchStatUpgrade().apply { statId = statType.name }, "campaign").await()
+				ctx.research(source.api, homebase, EFortStatType.from(choice))
 			}
-			val campaignModified = source.api.profileManager.getProfileData(campaign.owner.id, "campaign")
-			ctx.populateItems(campaignModified, source.session.getHomebase(campaign.owner.id))
 		}
 	}
 

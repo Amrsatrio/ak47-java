@@ -10,6 +10,7 @@ import com.tb24.discordbot.managers.CatalogManager
 import com.tb24.discordbot.managers.SavedLoginsManager
 import com.tb24.discordbot.tasks.AutoFreeLlamaTask
 import com.tb24.discordbot.tasks.AutoLoginRewardTask
+import com.tb24.discordbot.tasks.AutoResearchManager
 import com.tb24.discordbot.tasks.KeychainTask
 import com.tb24.discordbot.util.createRequest
 import com.tb24.discordbot.util.exec
@@ -62,6 +63,7 @@ class DiscordBot(token: String) {
 			LOGGER.info("Starting Discord Bot...")
 			try {
 				instance = DiscordBot(token)
+				instance.initTasks()
 			} catch (e: Throwable) {
 				LOGGER.error("Initialization failure", e)
 				exitProcess(1)
@@ -91,6 +93,7 @@ class DiscordBot(token: String) {
 
 	val autoLoginRewardTask = AutoLoginRewardTask(this)
 	val autoFreeLlamaTask = AutoFreeLlamaTask(this)
+	val autoResearchManager = AutoResearchManager(this)
 	val keychainTask = KeychainTask(this)
 	private val scheduledExecutor = ScheduledThreadPoolExecutor(2)
 	val scheduler = StdSchedulerFactory.getDefaultScheduler()
@@ -193,18 +196,19 @@ class DiscordBot(token: String) {
 			internalSession.logout()
 		})
 		discord.setActivityProvider { Activity.playing(".help \u00b7 $it") }
+	}
 
-		// Schedule tasks
+	// region Scheduled tasks
+	private fun initTasks() {
 		if (ENV != "dev") {
 			scheduleUtcMidnightTask()
-			if (loadGameFiles != BotConfig.EGameFileLoadOption.NoLoad) {
+			if (BotConfig.get().loadGameFiles != BotConfig.EGameFileLoadOption.NoLoad) {
 				scheduleKeychainTask()
 			}
 		}
 		catalogManager.initialize(this)
+		autoResearchManager.initSchedule()
 	}
-
-	// region Scheduled tasks
 
 	/** Schedules item shop poster and auto daily at 00:00 UTC */
 	private fun scheduleUtcMidnightTask() {
