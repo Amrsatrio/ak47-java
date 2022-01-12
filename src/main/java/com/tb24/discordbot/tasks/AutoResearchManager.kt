@@ -108,30 +108,15 @@ class AutoResearchManager(val client: DiscordBot) {
 
 		// Research
 		var iteration = -1
-		val statsAtMax = hashSetOf<EFortStatType>()
-		val statsWithNotEnoughPoints = hashSetOf<EFortStatType>()
-		while (true) {
+		val unpurchasableStats = hashSetOf<EFortStatType>()
+		while (unpurchasableStats.size < order.size) {
 			val statType = order[++iteration % order.size]
+			if (statType in unpurchasableStats) {
+				continue
+			}
 			val stat = ctx.stats[statType]!!
-			if (statType in statsAtMax) {
-				continue
-			}
-			if (stat.researchLevel >= 120) {
-				statsAtMax.add(statType)
-				if (statsAtMax.size >= order.size) {
-					results.add("🎉 Reached max on all stats! Disabled auto research.")
-					break
-				}
-				continue
-			}
-			if (statType in statsWithNotEnoughPoints) {
-				continue
-			}
-			if (ctx.points < stat.costToNextLevel) {
-				statsWithNotEnoughPoints.add(statType)
-				if (statsWithNotEnoughPoints.size >= order.size) {
-					break
-				}
+			if (stat.researchLevel >= 120 || ctx.points < stat.costToNextLevel) { // Max or not enough points
+				unpurchasableStats.add(statType)
 				continue
 			}
 			ctx.research(source.api, homebase, statType)
@@ -177,30 +162,24 @@ fun AutoResearchEnrollment.ensureData(source: CommandSourceStack, inCtx: Researc
 
 	// Calculate points to collect
 	var iteration = -1
-	val statsAtMax = hashSetOf<EFortStatType>()
+	val unpurchasableStats = hashSetOf<EFortStatType>()
 	val statUpgrades = hashMapOf<EFortStatType, Int>()
 	var collectorTarget = 0
-	while (true) {
+	while (unpurchasableStats.size < order.size) {
 		val statType = order[++iteration % order.size]
+		if (statType in unpurchasableStats) {
+			continue
+		}
 		val stat = ctx.stats[statType]!!
-		if (statType in statsAtMax) {
-			continue
-		}
 		val previewStatLevel = stat.researchLevel + (statUpgrades[statType] ?: 0)
-		if (previewStatLevel >= 120) {
-			statsAtMax.add(statType)
-			if (statsAtMax.size >= order.size) {
-				break // Reached max on all stats
-			}
+		val previewCollectorTarget = collectorTarget + stat.getCostToLevel(previewStatLevel + 1)
+		if (previewStatLevel >= 120 || previewCollectorTarget > ctx.collectorLimit) { // Max or target exceeds collector capacity
+			unpurchasableStats.add(statType)
 			continue
-		}
-		val after = collectorTarget + stat.getCostToLevel(previewStatLevel + 1)
-		if (after > ctx.collectorLimit) {
-			break
 		}
 		// Stat will be upgraded
 		statUpgrades[statType] = (statUpgrades[statType] ?: 0) + 1
-		collectorTarget = after
+		collectorTarget = previewCollectorTarget
 	}
 	nextRun = ctx.getTimeAtCollectorTarget(collectorTarget)
 	rvn = campaign.rvn
