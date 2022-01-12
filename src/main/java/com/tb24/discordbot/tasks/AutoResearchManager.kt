@@ -37,10 +37,8 @@ class AutoResearchManager(val client: DiscordBot) {
 		logger.info("Scheduled {} accounts", enrolledAccounts.size)
 	}
 
-	fun schedule(enrollment: AutoResearchEnrollment, offset: Long = 0L) {
-		val nextRun = enrollment.nextRun.time
-		val nextRunWithOffset = nextRun + offset
-		logger.info("{}: Scheduled at {}", enrollment.id, Date(nextRunWithOffset))
+	fun schedule(enrollment: AutoResearchEnrollment, time: Long = enrollment.nextRun.time) {
+		logger.info("{}: Scheduled at {}", enrollment.id, Date(time))
 		scheduled[enrollment.id] = scheduler.schedule({
 			scheduled.remove(enrollment.id)
 			var attempts = 5
@@ -51,15 +49,16 @@ class AutoResearchManager(val client: DiscordBot) {
 				}
 			}
 			if (enrollment.rvn != -1L) {
-				val nextScheduleOffset = if (enrollment.nextRun.time == nextRun) {
+				if (enrollment.runSuccessful) {
+					schedule(enrollment)
+				} else {
 					client.dlog("Auto research for account ${enrollment.id} failed, will try again in 1 hour", null)
-					TimeUnit.HOURS.toMillis(1)
-				} else 0
-				schedule(enrollment, nextScheduleOffset)
+					schedule(enrollment, System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1))
+				}
 			} else {
 				unenroll(enrollment.id)
 			}
-		}, nextRunWithOffset - System.currentTimeMillis(), TimeUnit.MILLISECONDS)
+		}, time - System.currentTimeMillis(), TimeUnit.MILLISECONDS)
 	}
 
 	fun unschedule(epicId: String) {
@@ -130,6 +129,7 @@ class AutoResearchManager(val client: DiscordBot) {
 			}
 			enrollment.nextRun
 		} catch (e: CommandSyntaxException) {
+			results.add("🎉 Reached max on all stats! Auto research will be disabled.")
 			enrollment.rvn = -1L
 			null
 		}
@@ -141,6 +141,7 @@ class AutoResearchManager(val client: DiscordBot) {
 			embed.addField("Next run", nextRun.relativeFromNow(), false)
 		}
 		source.complete(null, embed.build())
+		enrollment.runSuccessful = true
 	}
 
 	private fun unenroll(accountId: String) {

@@ -7,6 +7,7 @@ public class AutoResearchEnrollment {
 	public String registrantId;
 	public Date nextRun;
 	public long rvn = -1;
+	public transient boolean runSuccessful;
 
 	public AutoResearchEnrollment() {}
 
