@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 private val order = arrayOf(Technology, Offense, Fortitude, Resistance)
 
@@ -28,6 +29,7 @@ class AutoResearchManager(val client: DiscordBot) {
 	private val logger = LoggerFactory.getLogger(javaClass)
 	private val scheduler = ScheduledThreadPoolExecutor(2)
 	private val scheduled = ConcurrentHashMap<String, ScheduledFuture<*>>()
+	private val isEmergencyStopped = AtomicBoolean(false)
 
 	fun initSchedule() {
 		val enrolledAccounts = r.table("auto_research").run(client.dbConn, AutoResearchEnrollment::class.java).toList()
@@ -38,6 +40,9 @@ class AutoResearchManager(val client: DiscordBot) {
 	}
 
 	fun schedule(enrollment: AutoResearchEnrollment, time: Long = enrollment.nextRun.time) {
+		if (isEmergencyStopped.get()) {
+			throw SimpleCommandExceptionType(LiteralMessage("Emergency stop is in effect. Cannot schedule any more accounts.")).create()
+		}
 		logger.info("{}: Scheduled at {}", enrollment.id, Date(time))
 		scheduled[enrollment.id] = scheduler.schedule({
 			scheduled.remove(enrollment.id)
@@ -55,8 +60,6 @@ class AutoResearchManager(val client: DiscordBot) {
 					client.dlog("Auto research for account ${enrollment.id} failed, will try again in 1 hour", null)
 					schedule(enrollment, System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1))
 				}
-			} else {
-				unenroll(enrollment.id)
 			}
 		}, time - System.currentTimeMillis(), TimeUnit.MILLISECONDS)
 	}
@@ -68,7 +71,7 @@ class AutoResearchManager(val client: DiscordBot) {
 	private fun perform(enrollment: AutoResearchEnrollment): Boolean {
 		val epicId = enrollment.id
 		val discordId = enrollment.registrantId
-		client.setupInternalSession()
+		client.ensureInternalSession()
 		val epicUser = client.internalSession.queryUsers(setOf(epicId)).firstOrNull()
 		val displayName = epicUser?.displayName
 		try {
@@ -77,11 +80,11 @@ class AutoResearchManager(val client: DiscordBot) {
 			val source = CommandSourceStack(client, channel)
 			val savedDevice = if (displayName != null) client.savedLoginsManager.get(discordId, epicId) else null
 			if (savedDevice == null) {
-				unenroll(epicId)
+				unenroll(enrollment)
 				source.complete("Disabled auto research of `$displayName` because we couldn't login to the account.")
 				return true
 			}
-			withDevice(source, savedDevice, { performForAccount(source, enrollment) }, { unenroll(epicId) }, mapOf(epicId to epicUser!!))
+			withDevice(source, savedDevice, { performForAccount(source, enrollment) }, { unenroll(enrollment) }, mapOf(epicId to epicUser!!))
 			return true
 		} catch (e: IOException) {
 			client.dlog("Failed to research for ${displayName ?: epicId} (registered by <@$discordId>). Retrying\n$e", null)
@@ -130,7 +133,7 @@ class AutoResearchManager(val client: DiscordBot) {
 			enrollment.nextRun
 		} catch (e: CommandSyntaxException) {
 			results.add("🎉 Reached max on all stats! Auto research will be disabled.")
-			enrollment.rvn = -1L
+			unenroll(enrollment)
 			null
 		}
 
@@ -144,8 +147,15 @@ class AutoResearchManager(val client: DiscordBot) {
 		enrollment.runSuccessful = true
 	}
 
-	private fun unenroll(accountId: String) {
-		r.table("auto_research").get(accountId).delete().run(client.dbConn)
+	private fun unenroll(enrollment: AutoResearchEnrollment) {
+		r.table("auto_research").get(enrollment.id).delete().run(client.dbConn)
+		enrollment.rvn = -1L
+	}
+
+	fun emergencyStop() {
+		scheduler.shutdownNow()
+		scheduled.clear()
+		isEmergencyStopped.set(true)
 	}
 }
 

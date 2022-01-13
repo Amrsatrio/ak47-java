@@ -32,8 +32,11 @@ class AutoResearchCommand : BrigadierCommand("autoresearch", "Enroll/unenroll yo
 				execute(source, getUsers(it, "saved account name").values.first())
 			}
 		)
+		.then(literal("emergencystop")
+			.executes { executeEmergencyStop(it.source) }
+		)
 
-	fun execute(source: CommandSourceStack, user: GameProfile?): Int {
+	private fun execute(source: CommandSourceStack, user: GameProfile?): Int {
 		source.ensurePremium("Automatically research")
 		var accountId = user?.id
 		var user = user
@@ -94,6 +97,20 @@ class AutoResearchCommand : BrigadierCommand("autoresearch", "Enroll/unenroll yo
 				.setTitle("✅ Unenrolled auto research for account `${user.displayName ?: accountId}`.")
 				.build())
 		}
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun executeEmergencyStop(source: CommandSourceStack): Int {
+		source.ensurePremium("Automatically research")
+		if (!source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
+				.setTitle("✋ Hold up!")
+				.setDescription("By pressing \"Confirm\", you will prevent the auto research function from running further until the bot is restarted. This function should only be used if you are experiencing login or message spams related to auto research.\n**Please only use this feature if auto research misbehaves! Misuse of this feature will result in loss of your premium status!**\nContinue?")
+				.build(), confirmationButtons()).awaitConfirmation(source.author).await()) {
+			source.complete("👌 Alright.")
+			return Command.SINGLE_SUCCESS
+		}
+		source.client.autoResearchManager.emergencyStop()
+		source.client.dlog("🛑 **Auto research emergency stopped by %s (%s)**".format(source.author.asMention, source.author.id), null)
 		return Command.SINGLE_SUCCESS
 	}
 }
