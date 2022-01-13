@@ -40,10 +40,11 @@ class AutoResearchManager(val client: DiscordBot) {
 		logger.info("Scheduled {} accounts", enrolledAccounts.size)
 	}
 
-	fun schedule(enrollment: AutoResearchEnrollment, time: Long = enrollment.nextRun.time) {
+	fun schedule(enrollment: AutoResearchEnrollment) {
 		if (isEmergencyStopped.get()) {
 			throw SimpleCommandExceptionType(LiteralMessage("Emergency stop is in effect. Cannot schedule any more accounts.")).create()
 		}
+		val time = enrollment.nextRun.time
 		logger.info("{}: Scheduled at {}", enrollment.id, Date(time))
 		scheduled[enrollment.id] = scheduler.schedule({
 			scheduled.remove(enrollment.id)
@@ -55,12 +56,12 @@ class AutoResearchManager(val client: DiscordBot) {
 				}
 			}
 			if (enrollment.rvn != -1L) {
-				if (enrollment.runSuccessful) {
-					schedule(enrollment)
-				} else {
+				if (!enrollment.runSuccessful) {
 					client.dlog("Auto research for account ${enrollment.id} failed, will try again in 1 hour", null)
-					schedule(enrollment, System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1))
+					enrollment.nextRun = Date(System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1))
+					save(enrollment)
 				}
+				schedule(enrollment)
 			}
 		}, time - System.currentTimeMillis(), TimeUnit.MILLISECONDS)
 	}
@@ -130,7 +131,7 @@ class AutoResearchManager(val client: DiscordBot) {
 		// Schedule next
 		val nextRun = try {
 			if (enrollment.ensureData(source, ctx)) {
-				r.table("auto_research").get(enrollment.id).update(enrollment).run(client.dbConn)
+				save(enrollment)
 			}
 			enrollment.nextRun
 		} catch (e: CommandSyntaxException) {
@@ -147,6 +148,10 @@ class AutoResearchManager(val client: DiscordBot) {
 		}
 		source.complete(null, embed.build())
 		enrollment.runSuccessful = true
+	}
+
+	private fun save(enrollment: AutoResearchEnrollment) {
+		r.table("auto_research").get(enrollment.id).update(enrollment).run(client.dbConn)
 	}
 
 	private fun unenroll(enrollment: AutoResearchEnrollment) {
