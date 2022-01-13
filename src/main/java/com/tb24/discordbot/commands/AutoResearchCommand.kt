@@ -110,6 +110,7 @@ class AutoResearchCommand : BrigadierCommand("autoresearch", "Enroll/unenroll yo
 			return Command.SINGLE_SUCCESS
 		}
 		source.client.autoResearchManager.emergencyStop()
+		source.complete("🚨 You've pressed the emergency stop button for auto research. Please let the bot authors know about the issues you've been experiencing.")
 		source.client.dlog("🛑 **Auto research emergency stopped by %s (%s)**".format(source.author.asMention, source.author.id), null)
 		return Command.SINGLE_SUCCESS
 	}

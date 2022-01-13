@@ -1,7 +1,5 @@
 package com.tb24.discordbot.ui
 
-import com.mojang.brigadier.LiteralMessage
-import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.managers.HomebaseManager
 import com.tb24.discordbot.managers.managerData
 import com.tb24.discordbot.util.await
@@ -41,12 +39,14 @@ class ResearchViewController {
 	@F var collectorLimit = 0
 	@F var pointLimit = 0
 
+	constructor()
+
 	constructor(campaign: McpProfile, homebaseManager: HomebaseManager) {
 		populateItems(campaign, homebaseManager)
 	}
 
 	@Synchronized
-	fun populateItems(campaign: McpProfile, homebaseManager: HomebaseManager) {
+	fun populateItems(campaign: McpProfile, homebaseManager: HomebaseManager): Boolean {
 		points = 0
 		for (item in campaign.items.values) {
 			if (item.templateId == "CollectedResource:Token_collectionresource_nodegatetoken01") {
@@ -56,7 +56,7 @@ class ResearchViewController {
 			}
 		}
 		if (!::collectorItem.isInitialized) {
-			throw SimpleCommandExceptionType(LiteralMessage("Please complete the Audition quest (one quest after Stonewood SSD 3) to unlock Research.")).create()
+			return false
 		}
 		for (statType in arrayOf(EFortStatType.Fortitude, EFortStatType.Offense, EFortStatType.Resistance, EFortStatType.Technology)) {
 			stats[statType] = Stat(statType, campaign)
@@ -70,6 +70,7 @@ class ResearchViewController {
 		collectorLimit = (homebaseNodeAttrs["max_capacity_collector_Token_collectionresource_nodegatetoken01"] ?: 0.0f).toInt()
 		collectorPoints = min(collectorLimit, (collectorStoredValue + collectorRatePerSecond * secondsSinceLastCollectorUpdate).toInt())
 		pointLimit = (homebaseNodeAttrs["ResearchPointMaxBonus"] ?: 0.0f).toInt()
+		return true
 	}
 
 	fun getTimeAtCollectorTarget(target: Int): Date {

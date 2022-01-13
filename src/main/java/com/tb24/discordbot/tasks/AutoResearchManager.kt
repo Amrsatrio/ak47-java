@@ -6,6 +6,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.commands.CommandSourceStack
+import com.tb24.discordbot.commands.createResearchViewController
 import com.tb24.discordbot.commands.researchPointIcon
 import com.tb24.discordbot.model.AutoResearchEnrollment
 import com.tb24.discordbot.ui.ResearchViewController
@@ -113,6 +114,7 @@ class AutoResearchManager(val client: DiscordBot) {
 		val unpurchasableStats = hashSetOf<EFortStatType>()
 		while (unpurchasableStats.size < order.size) {
 			val statType = order[++iteration % order.size]
+			check(iteration < 1000) { "Too many iterations" }
 			if (statType in unpurchasableStats) {
 				continue
 			}
@@ -132,7 +134,7 @@ class AutoResearchManager(val client: DiscordBot) {
 			}
 			enrollment.nextRun
 		} catch (e: CommandSyntaxException) {
-			results.add("🎉 Reached max on all stats! Auto research will be disabled.")
+			results.add(e.rawMessage.string + " Auto research will be disabled.")
 			unenroll(enrollment)
 			null
 		}
@@ -164,35 +166,30 @@ fun AutoResearchEnrollment.ensureData(source: CommandSourceStack, inCtx: Researc
 	if (campaign.rvn == rvn) {
 		return false // Already up to date
 	}
-	val ctx = inCtx ?: ResearchViewController(campaign, source.session.getHomebase(id)) // Will throw an exception if research is not yet unlocked
+	val ctx = inCtx ?: createResearchViewController(campaign, source.session.getHomebase(id)) // Will throw an exception if research is not yet unlocked
 
-	// Check if all stats are at max
-	if (ctx.stats.values.count { it.researchLevel >= 120 } >= 4) {
-		throw SimpleCommandExceptionType(LiteralMessage("You have reached max research levels. There is no need to research further.")).create()
+	// Check for:
+	// - All stats are at max
+	// - No stats can be upgraded until the account is progressed because point limit is too low
+	var statsAtMax = 0
+	var cheapestUpgradeCost = Int.MAX_VALUE
+	for (stat in ctx.stats.values) {
+		if (stat.researchLevel >= 120) {
+			++statsAtMax
+		}
+		if (stat.costToNextLevel < cheapestUpgradeCost) {
+			cheapestUpgradeCost = stat.costToNextLevel
+		}
+	}
+	if (statsAtMax >= 4) {
+		throw SimpleCommandExceptionType(LiteralMessage("You have reached max research levels.")).create()
+	}
+	if (cheapestUpgradeCost > ctx.pointLimit) {
+		throw SimpleCommandExceptionType(LiteralMessage("Please increase the account level in order to continue researching. The cheapest stat upgrade cost for you (%,d) is higher than your point limit (%,d).".format(cheapestUpgradeCost, ctx.pointLimit))).create()
 	}
 
-	// Calculate points to collect
-	var iteration = -1
-	val unpurchasableStats = hashSetOf<EFortStatType>()
-	val statUpgrades = hashMapOf<EFortStatType, Int>()
-	var collectorTarget = 0
-	while (unpurchasableStats.size < order.size) {
-		val statType = order[++iteration % order.size]
-		if (statType in unpurchasableStats) {
-			continue
-		}
-		val stat = ctx.stats[statType]!!
-		val previewStatLevel = stat.researchLevel + (statUpgrades[statType] ?: 0)
-		val previewCollectorTarget = collectorTarget + stat.getCostToLevel(previewStatLevel + 1)
-		if (previewStatLevel >= 120 || previewCollectorTarget > ctx.collectorLimit) { // Max or target exceeds collector capacity
-			unpurchasableStats.add(statType)
-			continue
-		}
-		// Stat will be upgraded
-		statUpgrades[statType] = (statUpgrades[statType] ?: 0) + 1
-		collectorTarget = previewCollectorTarget
-	}
-	nextRun = ctx.getTimeAtCollectorTarget(collectorTarget)
+	// Update next run time
+	nextRun = ctx.collectorFullDate
 	rvn = campaign.rvn
 	return true
 }

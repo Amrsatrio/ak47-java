@@ -2,8 +2,11 @@ package com.tb24.discordbot.commands
 
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.managers.HomebaseManager
 import com.tb24.discordbot.ui.ResearchViewController
 import com.tb24.discordbot.util.awaitOneInteraction
 import com.tb24.discordbot.util.relativeFromNow
@@ -28,7 +31,7 @@ class ResearchCommand : BrigadierCommand("research", "Collect your research poin
 		val source = c.source
 		source.ensureCompletedCampaignTutorial(campaign)
 		val homebase = source.session.getHomebase(campaign.owner.id)
-		val ctx = ResearchViewController(campaign, homebase)
+		val ctx = createResearchViewController(campaign, homebase)
 		if (campaign.owner.id != source.api.currentLoggedIn.id) {
 			source.complete(null, renderEmbed(source, campaign, ctx), *createComponents(ctx, false))
 			return Command.SINGLE_SUCCESS
@@ -79,4 +82,12 @@ class ResearchCommand : BrigadierCommand("research", "Collect your research poin
 		val collectBtn = Button.of(ButtonStyle.SECONDARY, "collect", collectText, Emoji.fromEmote(researchPointIcon!!)).withDisabled(!isSelf || isMaxPoints)
 		return arrayOf(ActionRow.of(buttons), ActionRow.of(collectBtn))
 	}
+}
+
+fun createResearchViewController(campaign: McpProfile, homebase: HomebaseManager): ResearchViewController {
+	val ctx = ResearchViewController()
+	if (!ctx.populateItems(campaign, homebase)) {
+		throw SimpleCommandExceptionType(LiteralMessage("Please complete the Audition quest (one quest after Stonewood SSD 3) to unlock Research.")).create()
+	}
+	return ctx
 }
