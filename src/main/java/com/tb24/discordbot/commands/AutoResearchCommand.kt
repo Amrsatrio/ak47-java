@@ -8,7 +8,6 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
-import com.tb24.discordbot.model.AutoClaimEntry
 import com.tb24.discordbot.model.AutoResearchEnrollment
 import com.tb24.discordbot.tasks.ensureData
 import com.tb24.discordbot.util.*
@@ -41,7 +40,7 @@ class AutoResearchCommand : BrigadierCommand("autoresearch", "Enroll/unenroll yo
 		var accountId = user?.id
 		var user = user
 		val discordId = source.author.id
-		val autoClaimEntries = r.table("auto_research").run(source.client.dbConn, AutoClaimEntry::class.java).toList()
+		val autoClaimEntries = r.table("auto_research").run(source.client.dbConn, AutoResearchEnrollment::class.java).toList()
 		val devices = source.client.savedLoginsManager.getAll(source.author.id)
 		if (devices.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("You don't have saved logins. Please perform `.savelogin` before continuing.")).create()
@@ -51,9 +50,10 @@ class AutoResearchCommand : BrigadierCommand("autoresearch", "Enroll/unenroll yo
 			source.complete(null, EmbedBuilder()
 				.setTitle("Auto research")
 				.setDescription("Enroll/unenroll an account by typing the account number. ⏱ 30s")
-				.addField("Your saved accounts", devices.mapIndexed { i, it ->
+				.addField("Your saved accounts", List(devices.size) { i ->
 					val id = devices[i].accountId
-					"${Formatters.num.format(i + 1)}. ${users.firstOrNull { it.id == id }?.displayName ?: id} ${if (autoClaimEntries.any { it.id == id && it.registrantId == discordId }) " ✅" else ""}"
+					val enrollment = autoClaimEntries.firstOrNull { it.id == id && it.registrantId == discordId }
+					"${Formatters.num.format(i + 1)}. ${users.firstOrNull { it.id == id }?.displayName ?: id}${if (enrollment != null) " ✅ " + enrollment.nextRun.relativeFromNow() else ""}"
 				}.joinToString("\n"), false)
 				.setColor(0x8AB4F8)
 				.build())
