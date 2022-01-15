@@ -28,7 +28,7 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 		fun users(max: Int = Integer.MAX_VALUE, greedy: Boolean = true) = UserArgument(max, greedy)
 
 		@JvmStatic
-		fun getUsers(context: CommandContext<CommandSourceStack>, name: String, friends: Array<FriendV2>? = null, loadingText: String = "Resolving users") =
+		fun getUsers(context: CommandContext<CommandSourceStack>, name: String, friends: Array<FriendV2>? = null, loadingText: String? = "Resolving users") =
 			context.getArgument(name, Result::class.java).getUsers(context.source, loadingText, friends)
 	}
 
@@ -82,16 +82,16 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 	override fun getExamples() = EXAMPLES
 
 	fun interface Result {
-		fun getUsers(source: CommandSourceStack, loadingText: String, friends: Array<FriendV2>?): Map<String, GameProfile>
+		fun getUsers(source: CommandSourceStack, loadingText: String?, friends: Array<FriendV2>?): Map<String, GameProfile>
 	}
 
 	class FriendEntryQuery(val index: Int, val reader: StringReader, val start: Int = reader.cursor)
 
 	class UserResult(val ids: List<Any>) : Result {
 		@Suppress("UNCHECKED_CAST")
-		override fun getUsers(source: CommandSourceStack, loadingText: String, friends: Array<FriendV2>?): Map<String, GameProfile> {
+		override fun getUsers(source: CommandSourceStack, loadingText: String?, friends: Array<FriendV2>?): Map<String, GameProfile> {
 			source.ensureSession()
-			source.loading(loadingText)
+			loadingText?.let(source::loading)
 			val users = Array<GameProfile?>(ids.size) { null } as Array<GameProfile>
 			val idsToQuery = mutableSetOf<String>()
 			val idIndices = mutableListOf<Int>()
