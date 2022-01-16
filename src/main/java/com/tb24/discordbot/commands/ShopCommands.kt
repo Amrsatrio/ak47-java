@@ -4,7 +4,9 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.images.FMergedMaterialParams
@@ -21,6 +23,7 @@ import com.tb24.fn.model.gamesubcatalog.ECatalogOfferType
 import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.campaign.PopulatePrerolledOffers
+import com.tb24.fn.model.mcpprofile.commands.commoncore.PurchaseCatalogEntry
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
 import com.tb24.fn.util.getPathName
@@ -60,6 +63,9 @@ class ShopTextCommand : BrigadierCommand("shoptext", "Sends the current item sho
 class CampaignShopCommand : BrigadierCommand("stwshop", "Sends the current Save the World item shop items as a text.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { executeShopText(it.source, ESubGame.Campaign) }
+		.then(literal("buyall")
+			.executes{ execBuyAllCampaign(it.source) }
+		)
 }
 
 class ShopDumpCommand : BrigadierCommand("shopdump", "Sends the current item shop as a JSON.") {
@@ -144,7 +150,7 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 			if (ownedOrSoldOut && subGame == ESubGame.Athena) {
 				numOwned++
 			}
-			lines.add("%,d. %s%s".format(catalogEntry.__ak47_index + 1, sd.friendlyName, if (ownedOrSoldOut) " ✅" else if (showAccInfo && !sd.eligible) " ❌" else ""))
+			lines.add("%,d. %s%s".format(catalogEntry.__ak47_index + 1, sd.friendlyName, if (ownedOrSoldOut) " ✅" else if (showAccInfo && !sd.eligible) " ❌" else if (sd.purchaseLimit >= 0) " **${sd.purchasesCount}/${sd.purchaseLimit}**" else ""))
 			catalogEntry.prices.forEach { prices.putIfAbsent(it.currencyType.name + ' ' + it.currencySubType, it) }
 			numShownItems++
 		}
@@ -178,6 +184,59 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 	if (!showAccInfo && (source.channel as TextChannel).isNews) {
 		message.crosspost().queue()
 	}
+	return Command.SINGLE_SUCCESS
+}
+
+fun execBuyAllCampaign(source: CommandSourceStack): Int {
+	source.ensureSession()
+	source.loading("Getting the shop")
+	val catalogManager = source.client.catalogManager
+	val profileManager = source.api.profileManager
+	catalogManager.ensureCatalogData(source.client.internalSession.api)
+	CompletableFuture.allOf(
+		profileManager.dispatchClientCommandRequest(QueryProfile()),
+		profileManager.dispatchClientCommandRequest(PopulatePrerolledOffers(), "campaign")
+	).await()
+	val sections = catalogManager.campaignSections.values.withIndex()
+	val campaign = profileManager.getProfileData("campaign")
+	var intGold = campaign.items.values.firstOrNull { it.templateId == "AccountResource:eventcurrency_scaling" }?.quantity
+		?: throw SimpleCommandExceptionType(LiteralMessage("Could not find the gold balance.")).create()
+	source.loading("Purchasing offers")
+	val finalPurchasedItems = mutableListOf<String>()
+	var totalSpent = 0
+	for ((i, section) in sections) {
+		for (catalogEntry in section.items) {
+			if (catalogEntry.offerType == ECatalogOfferType.StaticPrice && (catalogEntry.prices.isEmpty() || catalogEntry.prices.first().currencyType == EStoreCurrencyType.RealMoney)) continue
+			val sd = catalogEntry.holder().apply { resolve(profileManager) }
+			val ownedOrSoldOut = sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit
+			if (!ownedOrSoldOut){
+				// IMPORTANT: Ignore the items that have infinite quantity purchase limit
+				if (sd.price.currencySubType != "AccountResource:eventcurrency_scaling" || sd.purchaseLimit == -1) continue
+				val quantity = sd.purchaseLimit - sd.purchasesCount
+				val price = quantity * sd.price.basePrice
+				if (intGold < price) {
+					continue
+				}
+				intGold -= price
+				source.api.profileManager.dispatchClientCommandRequest(PurchaseCatalogEntry().apply {
+					offerId = catalogEntry.offerId
+					purchaseQuantity = quantity
+					currency = sd.price.currencyType
+					currencySubType = "AccountResource:eventcurrency_scaling"
+					expectedTotalPrice = price
+					gameContext = "Frontend.ItemShopScreen"
+				}).await()
+				totalSpent += price
+				finalPurchasedItems.add("%dx %s".format(quantity, sd.friendlyName))
+			}
+		}
+	}
+	val embed = EmbedBuilder()
+		.setColor(0x0099FF)
+		.setTitle("Purchased: ")
+		.setDescription(finalPurchasedItems.joinToString("\n"))
+		.setFooter("Total spent: %,d".format(totalSpent))
+	source.complete(null, embed.build())
 	return Command.SINGLE_SUCCESS
 }
 
