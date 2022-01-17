@@ -122,12 +122,12 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		}
 		val finalItems = mutableMapOf<String, List<FortItemStack>>()
 		for (categoryKey in names.keys) {
-			if (categoryKey.contains(':')) {
+			finalItems[categoryKey] = if (categoryKey.contains(':')) {
 				val primaryAssetType = categoryKey.substringBefore(':')
 				val className = categoryKey.substringAfter(':')
-				finalItems[categoryKey] = itemsByType[primaryAssetType]!!.filter { it.defData?.exportType == className }
+				itemsByType[primaryAssetType]!!.filter { it.defData?.exportType == className }
 			} else {
-				finalItems[categoryKey] = itemsByType[categoryKey]!!
+				itemsByType[categoryKey]!!
 			}
 		}
 		val buttons = mutableListOf<Button>()
@@ -148,7 +148,13 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		source.loading("Getting cosmetics")
 		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 		val athena = source.api.profileManager.getProfileData("athena")
-		val items = athena.items.values.filter { it.primaryAssetType == filterType }
+		val items = if (filterType.contains(':')) {
+			val primaryAssetType = filterType.substringBefore(':')
+			val className = filterType.substringAfter(':')
+			athena.items.values.filter { it.primaryAssetType == primaryAssetType && it.defData?.exportType == className }
+		} else {
+			athena.items.values.filter { it.primaryAssetType == filterType }
+		}
 		if (items.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("Nothing here")).create()
 		}
@@ -443,6 +449,7 @@ class VariantContainer(val cosmeticVariant: FortCosmeticVariant, backendVariants
 	val channelName get() = cosmeticVariant.VariantChannelName.format()
 
 	val activeVariantDisplayName get() = when (cosmeticVariant) {
+		is FortCosmeticItemTexture -> cosmeticVariant.getActive(backendVariant).let { "%s (%s)".format(it.displayName, it.shortDescription) }
 		is FortCosmeticVariantBackedByArray -> cosmeticVariant.getActive(backendVariant)?.VariantName?.format() ?: "**UNKNOWN SUBTYPE PLEASE REPORT**"
 		is FortCosmeticFloatSliderVariant -> "%d/%d".format(cosmeticVariant.getActive(backendVariant).toInt(), cosmeticVariant.MaxParamValue.toInt())
 		is FortCosmeticNumericalVariant -> Formatters.num.format(cosmeticVariant.getActive(backendVariant))

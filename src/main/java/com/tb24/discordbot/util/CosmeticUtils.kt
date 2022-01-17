@@ -3,6 +3,7 @@ package com.tb24.discordbot.util
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.DiscordBot
+import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.McpVariantReader
 import me.fungames.jfortniteparse.fort.exports.variants.*
 import me.fungames.jfortniteparse.fort.objects.variants.BaseVariantDef
@@ -64,6 +65,19 @@ fun FortCosmeticFloatSliderVariant.getActive(backendVariant: McpVariantReader?):
 		}
 	}
 	return number
+}
+
+fun FortCosmeticItemTexture.getActive(backendVariant: McpVariantReader?): FortItemStack {
+	var item = ItemTextureVar.InnerDef.DefaultSelectedItem
+	val activeValue = backendVariant?.active
+	if (activeValue != null) {
+		try {
+			item = activeValue.substringAfter("ItemTexture.")
+		} catch (e: Exception) {
+			DiscordBot.LOGGER.warn("Couldn't parse ItemTexture variant data: $backendVariant", e)
+		}
+	}
+	return FortItemStack(item, 1)
 }
 
 fun FortCosmeticNumericalVariant.getActive(backendVariant: McpVariantReader?): Int {
