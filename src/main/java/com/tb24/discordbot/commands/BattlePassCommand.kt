@@ -16,9 +16,11 @@ import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
 import com.tb24.fn.util.asItemStack
 import com.tb24.fn.util.countMtxCurrency
+import com.tb24.uasset.JWPSerializer
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.Emoji
+import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.Button
 import java.util.concurrent.CompletableFuture
@@ -29,6 +31,7 @@ val lockEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Locks/T-Icon-Lo
 class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pass.", arrayOf("bp")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.then(literal("rewards").executes { rewards(it.source) })
+		.then(literal("gatherids").executes { gatherIds(it.source) })
 		.then(literal("buy").executes { purchaseBattlePass(it.source) })
 
 	override fun getSlashCommand() = newCommandBuilder()
@@ -59,6 +62,46 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 			MessageBuilder(embed)
 		}
 		return Command.SINGLE_SUCCESS
+	}
+
+	private fun gatherIds(source: CommandSourceStack): Int {
+		source.ensureSession()
+		source.loading("Getting BR data")
+		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+		val athena = source.api.profileManager.getProfileData("athena")
+		val context = BattlePassViewController(athena)
+		val ids = mutableListOf<String>()
+		context.rewards.gatherOfferIds(ids)
+		context.bonuses.gatherOfferIds(ids)
+		val s = JWPSerializer.GSON.newBuilder().setPrettyPrinting().create().toJson(ids)
+		if (("```json\n\n```".length + s.length) > Message.MAX_CONTENT_LENGTH) {
+			val fileName = "BPOfferIds-%s-%d.json".format(source.api.currentLoggedIn.id, athena.rvn)
+			source.complete(AttachmentUpload(s.toByteArray(), fileName))
+		} else {
+			source.complete("```json\n$s\n```")
+		}
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun BattlePassViewController.Section.gatherOfferIds(ids: MutableList<String>) {
+		for (page in pages) {
+			if (!page.isUnlocked) continue
+			val deferred = mutableListOf<BattlePassViewController.Entry>()
+			for (entry in page.entries) {
+				if (entry.purchaseRecord == null) continue
+				val data = entry.backing as AthenaSeasonItemEntryReward
+				val rewardsNeededForUnlock = data.RewardsNeededForUnlock ?: 0
+				if (rewardsNeededForUnlock != 0) {
+					deferred.add(entry)
+				} else {
+					ids.add(data.BattlePassOffer.OfferId)
+				}
+			}
+			for (entry in deferred) {
+				val data = entry.backing as AthenaSeasonItemEntryReward
+				ids.add(data.BattlePassOffer.OfferId)
+			}
+		}
 	}
 
 	private fun BattlePassViewController.Entry.render(stats: AthenaProfileStats): String {
