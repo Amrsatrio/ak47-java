@@ -67,6 +67,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(AutoResearchCommand())
 		register(BattlePassCommand())
 		register(BlurlCommand())
+		register(CampaignCosmeticCommand())
 		register(CampaignLoadoutsCommand())
 		register(CampaignOverviewCommand())
 		register(CampaignShopCommand())
