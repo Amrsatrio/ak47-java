@@ -139,7 +139,7 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		val choice = message.awaitOneInteraction(source.author).componentId
 		source.loading("Generating and uploading image")
 		perform(source, names[choice], icons[choice], finalItems[choice]).await()
-			?: throw SimpleCommandExceptionType(LiteralMessage("No ${names[choice]}.")).create()
+			?: throw SimpleCommandExceptionType(LiteralMessage("You have no ${names[choice]}.")).create()
 		return Command.SINGLE_SUCCESS
 	}
 
@@ -147,20 +147,9 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		source.ensureSession()
 		source.loading("Getting cosmetics")
 		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
-		val athena = source.api.profileManager.getProfileData("athena")
-		val items = if (filterType.contains(':')) {
-			val primaryAssetType = filterType.substringBefore(':')
-			val className = filterType.substringAfter(':')
-			athena.items.values.filter { it.primaryAssetType == primaryAssetType && it.defData?.exportType == className }
-		} else {
-			athena.items.values.filter { it.primaryAssetType == filterType }
-		}
-		if (items.isEmpty()) {
-			throw SimpleCommandExceptionType(LiteralMessage("Nothing here")).create()
-		}
+		val items = getLockerItems(source.api.profileManager.getProfileData("athena"), filterType)
 		source.loading("Generating and uploading image")
 		perform(source, names[filterType], icons[filterType], items).await()
-			?: throw SimpleCommandExceptionType(LiteralMessage("No ${names[filterType]}.")).create()
 		return Command.SINGLE_SUCCESS
 	}
 
@@ -207,15 +196,10 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		source.ensureSession()
 		source.loading("Getting cosmetics")
 		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
-		val athena = source.api.profileManager.getProfileData("athena")
+		val items = getLockerItems(source.api.profileManager.getProfileData("athena"), filterType)
 		val queryAccountIds = mutableSetOf<String>()
-		val entries = athena.items.values
-			.filter { it.primaryAssetType == filterType }
-			.sortedWith(SimpleAthenaLockerItemComparator().apply { bPrioritizeFavorites = false })
+		val entries = items.sortedWith(SimpleAthenaLockerItemComparator().apply { bPrioritizeFavorites = false })
 			.map { LockerEntry(it, queryAccountIds) }
-		if (entries.isEmpty()) {
-			throw SimpleCommandExceptionType(LiteralMessage("No")).create()
-		}
 		source.queryUsers_map(queryAccountIds)
 		source.replyPaginated(entries, 12) { content, page, pageCount ->
 			val entriesStart = page * 12 + 1
@@ -228,6 +212,20 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 			MessageBuilder(embed)
 		}
 		return Command.SINGLE_SUCCESS
+	}
+
+	private fun getLockerItems(athena: McpProfile, filterType: String): Collection<FortItemStack> {
+		val items = if (filterType.contains(':')) {
+			val primaryAssetType = filterType.substringBefore(':')
+			val className = filterType.substringAfter(':')
+			athena.items.values.filter { it.primaryAssetType == primaryAssetType && it.defData?.exportType == className }
+		} else {
+			athena.items.values.filter { it.primaryAssetType == filterType }
+		}
+		if (items.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("You have no ${names[filterType]}.")).create()
+		}
+		return items
 	}
 }
 
