@@ -33,11 +33,13 @@ class AutoResearchManager(val client: DiscordBot) {
 	private val isEmergencyStopped = AtomicBoolean(false)
 
 	fun initSchedule() {
-		val enrolledAccounts = r.table("auto_research").run(client.dbConn, AutoResearchEnrollment::class.java).toList()
-		for (enrollment in enrolledAccounts) {
-			schedule(enrollment)
-		}
-		logger.info("Scheduled {} accounts", enrolledAccounts.size)
+		scheduler.schedule({
+			val enrolledAccounts = r.table("auto_research").run(client.dbConn, AutoResearchEnrollment::class.java).toList()
+			for (enrollment in enrolledAccounts) {
+				schedule(enrollment)
+			}
+			logger.info("Scheduled {} accounts", enrolledAccounts.size)
+		}, 30L, TimeUnit.SECONDS) // Give it enough time to wait for the emote guilds to be loaded
 	}
 
 	fun schedule(enrollment: AutoResearchEnrollment) {
