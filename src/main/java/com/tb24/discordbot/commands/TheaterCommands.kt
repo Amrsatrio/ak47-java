@@ -170,7 +170,7 @@ fun executeMtxAlerts(source: CommandSourceStack, campaign: McpProfile? = null): 
 			?: source.guild.getRolesByName("V-Bucks Alerts Ping", true).firstOrNull()
 	} else null
 	val message = source.complete(if (role != null && embed.fields.isNotEmpty()) role.asMention else null, embed.build())
-	if ((source.channel as TextChannel).isNews) {
+	if ((source.channel as? TextChannel)?.isNews == true) {
 		message.crosspost().queue()
 	}
 	return Command.SINGLE_SUCCESS
