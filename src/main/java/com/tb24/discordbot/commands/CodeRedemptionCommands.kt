@@ -31,7 +31,7 @@ class CheckCodeCommand : BrigadierCommand("checkcode", "Evaluates an Epic Games 
 		)
 
 	private fun executeCheckCode(source: CommandSourceStack, code: String, raw: Boolean = false): Int {
-		source.session = source.client.internalSession
+		source.conditionalUseInternalSession()
 		source.ensureSession()
 		source.loading("Checking code")
 		val launcherApi = source.session.getApiForOtherClient(EAuthClient.LAUNCHER_APP_CLIENT_2)

@@ -73,10 +73,7 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 				false
 			}
 		}
-		if (ids.size > max) {
-			throw SimpleCommandExceptionType(LiteralMessage("No more than ${Formatters.num.format(max)} users")).create()
-		}
-		return UserResult(ids)
+		return UserResult(ids, max)
 	}
 
 	override fun getExamples() = EXAMPLES
@@ -87,9 +84,16 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 
 	class FriendEntryQuery(val index: Int, val reader: StringReader, val start: Int = reader.cursor)
 
-	class UserResult(val ids: List<Any>) : Result {
+	class UserResult(val ids: List<Any>, val max: Int) : Result {
 		@Suppress("UNCHECKED_CAST")
 		override fun getUsers(source: CommandSourceStack, loadingText: String?, friends: Array<FriendV2>?): Map<String, GameProfile> {
+			var max = max
+			if (max == -1) {
+				max = source.getSavedAccountsLimit()
+			}
+			if (ids.size > max) {
+				throw SimpleCommandExceptionType(LiteralMessage("No more than ${Formatters.num.format(max)} users")).create()
+			}
 			source.ensureSession()
 			loadingText?.let(source::loading)
 			val users = Array<GameProfile?>(ids.size) { null } as Array<GameProfile>

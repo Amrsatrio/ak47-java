@@ -9,12 +9,14 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.L10N
+import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.images.FMergedMaterialParams
 import com.tb24.discordbot.images.generateShopImage
 import com.tb24.discordbot.managers.CatalogManager
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortCmsData
+import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.assetdata.ESubGame
 import com.tb24.fn.model.gamesubcatalog.CatalogDownload
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
@@ -65,6 +67,13 @@ class CampaignShopCommand : BrigadierCommand("stwshop", "Sends the current Save 
 		.executes { executeShopText(it.source, ESubGame.Campaign) }
 		.then(literal("buyall")
 			.executes{ execBuyAllCampaign(it.source) }
+			.then(literal("bulk")
+				.executes{ execBuyAllCampaignBulk(it.source, null) }
+			)
+			.then(argument("bulk users", UserArgument.users(-1))
+				.executes { execBuyAllCampaignBulk(it.source, UserArgument.getUsers(it, "bulk users", loadingText = null)) }
+			)
+
 		)
 }
 
@@ -189,13 +198,13 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 
 fun execBuyAllCampaign(source: CommandSourceStack): Int {
 	source.ensureSession()
-	source.loading("Getting the shop")
+	source.loading("Getting offers")
 	val catalogManager = source.client.catalogManager
 	val profileManager = source.api.profileManager
 	catalogManager.ensureCatalogData(source.client.internalSession.api)
 	CompletableFuture.allOf(
 		profileManager.dispatchClientCommandRequest(QueryProfile()),
-		profileManager.dispatchClientCommandRequest(PopulatePrerolledOffers(), "campaign")
+		profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign")
 	).await()
 	val sections = catalogManager.campaignSections.values.withIndex()
 	val campaign = profileManager.getProfileData("campaign")
@@ -204,14 +213,16 @@ fun execBuyAllCampaign(source: CommandSourceStack): Int {
 	source.loading("Purchasing offers")
 	val finalPurchasedItems = mutableListOf<String>()
 	var totalSpent = 0
-	for ((i, section) in sections) {
+	var intTotalItems = 0
+	var intTotalOwned = 0
+	for ((_, section) in sections) {
 		for (catalogEntry in section.items) {
 			if (catalogEntry.offerType == ECatalogOfferType.StaticPrice && (catalogEntry.prices.isEmpty() || catalogEntry.prices.first().currencyType == EStoreCurrencyType.RealMoney)) continue
 			val sd = catalogEntry.holder().apply { resolve(profileManager) }
+			if (sd.price.currencySubType != "AccountResource:eventcurrency_scaling" || sd.purchaseLimit == -1) continue
 			val ownedOrSoldOut = sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit
+			intTotalItems++
 			if (!ownedOrSoldOut){
-				// IMPORTANT: Ignore the items that have infinite quantity purchase limit
-				if (sd.price.currencySubType != "AccountResource:eventcurrency_scaling" || sd.purchaseLimit == -1) continue
 				val quantity = sd.purchaseLimit - sd.purchasesCount
 				val price = quantity * sd.price.basePrice
 				if (intGold < price) {
@@ -228,15 +239,22 @@ fun execBuyAllCampaign(source: CommandSourceStack): Int {
 				}).await()
 				totalSpent += price
 				finalPurchasedItems.add("%dx %s".format(quantity, sd.friendlyName))
-			}
+			} else intTotalOwned++
 		}
 	}
-	val embed = EmbedBuilder()
-		.setColor(0x0099FF)
-		.setTitle("Purchased: ")
-		.setDescription(finalPurchasedItems.joinToString("\n"))
-		.setFooter("Total spent: %,d".format(totalSpent))
-	source.complete(null, embed.build())
+	if (finalPurchasedItems.isEmpty()) {
+		source.complete(null, source.createEmbed().setColor(BrigadierCommand.COLOR_ERROR).setDescription(if (intTotalItems == intTotalOwned) "❌ You already own everything." else "❌ Not enough gold to purchase the remaining offers.").build())
+	} else {
+		source.complete(null, source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS).setTitle("✅ Purchased:").setDescription(finalPurchasedItems.joinToString("\n")).setFooter("Total spent: %,d".format(totalSpent)).build())
+	}
+	return Command.SINGLE_SUCCESS
+}
+
+fun execBuyAllCampaignBulk(source: CommandSourceStack, users: Map<String, GameProfile>?): Int {
+	val devices = source.client.savedLoginsManager.getAll(source.author.id)
+	forEachSavedAccounts(source, if (users != null) devices.filter { it.accountId in users } else devices) {
+		execBuyAllCampaign(source)
+	}
 	return Command.SINGLE_SUCCESS
 }
 
