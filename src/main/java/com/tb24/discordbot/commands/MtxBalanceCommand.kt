@@ -3,10 +3,9 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.tb24.discordbot.util.Utils
-import com.tb24.discordbot.util.addFieldSeparate
-import com.tb24.discordbot.util.await
-import com.tb24.discordbot.util.dispatchClientCommandRequest
+import com.tb24.discordbot.commands.arguments.UserArgument
+import com.tb24.discordbot.util.*
+import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.util.Formatters
@@ -25,6 +24,7 @@ class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { balance(it.source) }
 		.then(literal("totalpurchased").executes { totalPurchased(it.source) })
+		.then(literal("bulk").executes { bulk(it.source, null) }.then(argument("bulk users", UserArgument.users(-1)).executes { bulk(it.source, UserArgument.getUsers(it, "bulk users", loadingText = null)) }))
 
 	override fun getSlashCommand() = newCommandBuilder()
 		.then(subcommand("balance", description).executes { balance(it) })
@@ -74,6 +74,15 @@ class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the
 			.setFooter("V-Bucks platform: " + current + (if (source.hasPremium()) " (" + source.prefix + "vbucksplatform to change)" else ""))
 			.setThumbnail(Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Items/T-Items-MTX-L.T-Items-MTX-L"))
 			.build())
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun bulk(source: CommandSourceStack, users: Map<String, GameProfile>?): Int {
+		source.ensurePremium("View all the balance of all your accounts at once")
+		val devices = source.client.savedLoginsManager.getAll(source.author.id)
+		forEachSavedAccounts(source, if (users != null) devices.filter { it.accountId in users } else devices) {
+			balance(source)
+		}
 		return Command.SINGLE_SUCCESS
 	}
 }
