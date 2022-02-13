@@ -20,8 +20,6 @@ import com.tb24.fn.model.mcpprofile.commands.subgame.SetItemFavoriteStatus
 import com.tb24.fn.model.mcpprofile.item.FortCosmeticLockerItem
 import com.tb24.fn.util.format
 import com.tb24.fn.util.getPreviewImagePath
-import com.tb24.uasset.AssetManager
-import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.exports.*
 import me.fungames.jfortniteparse.fort.exports.variants.FortCosmeticItemTexture
 import me.fungames.jfortniteparse.fort.exports.variants.FortCosmeticProfileBannerVariant
@@ -53,7 +51,7 @@ class CosmeticCommand : BrigadierCommand("cosmetic", "Shows info and options abo
 					source.loading("Getting cosmetics")
 					source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 					val athena = source.api.profileManager.getProfileData("athena")
-					execute(it.source, ItemArgument.getItem(it, "item", athena, itemType), athena)
+					execute(it.source, ItemArgument.getItemWithFallback(it, "item", athena, itemType), athena)
 				}
 			)
 		)
@@ -74,7 +72,7 @@ class CampaignCosmeticCommand : BrigadierCommand("stwcosmetic", "Shows info and 
 					).await()
 					val athena = source.api.profileManager.getProfileData("athena")
 					val campaign = source.api.profileManager.getProfileData("campaign")
-					execute(it.source, ItemArgument.getItem(it, "item", athena, itemType), campaign)
+					execute(it.source, ItemArgument.getItemWithFallback(it, "item", athena, itemType), campaign)
 				}
 			)
 		)
@@ -82,12 +80,43 @@ class CampaignCosmeticCommand : BrigadierCommand("stwcosmetic", "Shows info and 
 
 private fun execute(source: CommandSourceStack, item: FortItemStack, profile: McpProfile, alert: String? = null): Int {
 	val defData = item.defData as? AthenaCosmeticItemDefinition ?: throw SimpleCommandExceptionType(LiteralMessage("Not found")).create()
+	val owned = item.itemId != null
 	val embed = EmbedBuilder().setColor(item.palette.Color2.toColor())
 		.setAuthor((item.defData?.Series?.value?.DisplayName ?: item.rarity.rarityName).format() + " \u00b7 " + item.shortDescription.format())
-		.setTitle((if (item.isItemSeen) "" else bangEmote?.asMention + ' ') + item.displayName.ifEmpty { defData.name })
+		.setTitle((if (item.isItemSeen) "" else bangEmote?.asMention + ' ') + (if (owned) "" else "Preview: ") + item.displayName.ifEmpty { defData.name })
 		.setDescription(item.description)
 		.setThumbnail(Utils.benBotExportAsset(item.getPreviewImagePath(true)?.toString()))
 	val buttons = mutableListOf<Button>()
+
+	if (!owned) {
+		embed.setFooter("Wishlist and auto-buy coming soon!")
+		source.complete(alert, embed.build())
+		return Command.SINGLE_SUCCESS
+	}
+
+	/*if (!owned) {
+		val wishlistEnrollment = r.table("wishlist").get(source.api.currentLoggedIn.id).run(source.client.dbConn, WishlistEnrollment::class.java).first()
+		val isInWishlist = wishlistEnrollment != null && !wishlistEnrollment.autoBuy
+		val isInAutobuy = wishlistEnrollment != null && wishlistEnrollment.autoBuy
+
+		if (isInWishlist) {
+			buttons.add(Button.of(ButtonStyle.SECONDARY, "wishlist", "Remove from wishlist"))
+		} else if (isInAutobuy) {
+			buttons.add(Button.of(ButtonStyle.SECONDARY, "autobuy", "Unenroll auto-buy"))
+		} else {
+			buttons.add(Button.of(ButtonStyle.PRIMARY, "wishlist", "Wishlist"))
+			buttons.add(Button.of(ButtonStyle.PRIMARY, "autobuy", "Auto-buy"))
+		}
+
+		val message = source.complete(alert, embed.build(), ActionRow.of(buttons))
+		source.loadingMsg = message
+		return when (message.awaitOneInteraction(source.author, false).componentId) {
+			"wishlist" -> {
+				return execute(source, item, profile)
+			}
+			else -> Command.SINGLE_SUCCESS
+		}
+	}*/
 
 	// Prepare loadout stuff
 	val loadoutItemId = Ref.ObjectRef<String>()
@@ -237,24 +266,9 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 			return execute(source, item, source.api.profileManager.getProfileData("athena"))
 		}
 		source.loading("Searching for `$search`")
-		var result: String? = null
-		for ((templateId, objectPath) in AssetManager.INSTANCE.assetRegistry.templateIdToObjectPathMap.entries) {
-			if (!templateId.startsWith("athenadance")) {
-				continue
-			}
-			val itemDef = loadObject<FortItemDefinition>(objectPath) ?: continue
-			if (itemDef.exportType != choice) {
-				continue
-			}
-			if (itemDef.DisplayName.format()?.trim()?.equals(search, true) == true) {
-				result = templateId.substringAfter(':')
-				break
-			}
-		}
-		if (result == null) {
-			return execute(source, item, source.api.profileManager.getProfileData("athena"), "⚠ No %s found for `%s`".format(typeName, search))
-		}
-		"ItemTexture.AthenaDance:$result"
+		val (_, itemDef) = searchItemDefinition(search, "AthenaDance", choice)
+			?: return execute(source, item, source.api.profileManager.getProfileData("athena"), "⚠ No %s found for `%s`".format(typeName, search))
+		"ItemTexture.AthenaDance:${itemDef.name.toLowerCase()}"
 	} else if (cosmeticVariant is FortCosmeticVariantBackedByArray) {
 		embed.appendDescription("Pick a new style to apply.")
 		val selectionMenu = SelectionMenu.create("choice")
@@ -325,8 +339,9 @@ private fun markSeen(source: CommandSourceStack, item: FortItemStack): Int {
 	return execute(source, item, source.api.profileManager.getProfileData("athena"))
 }
 
-private val EAthenaCustomizationCategory.numItems get() = when (this) {
-	EAthenaCustomizationCategory.Dance -> 6
-	EAthenaCustomizationCategory.ItemWrap -> 7
-	else -> 1
-}
+private val EAthenaCustomizationCategory.numItems
+	get() = when (this) {
+		EAthenaCustomizationCategory.Dance -> 6
+		EAthenaCustomizationCategory.ItemWrap -> 7
+		else -> 1
+	}

@@ -7,6 +7,7 @@ import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.commands.CommandSourceStack
 import com.tb24.discordbot.util.search
+import com.tb24.discordbot.util.searchItemDefinition
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
 
@@ -18,6 +19,10 @@ class ItemArgument(private val greedy: Boolean) : ArgumentType<ItemArgument.Resu
 		@JvmStatic
 		fun getItem(context: CommandContext<CommandSourceStack>, name: String, profile: McpProfile, vararg itemTypes: String) =
 			context.getArgument(name, Result::class.java).resolve(profile, *itemTypes)
+
+		@JvmStatic
+		fun getItemWithFallback(context: CommandContext<CommandSourceStack>, name: String, profile: McpProfile, itemType: String) =
+			context.getArgument(name, Result::class.java).resolveWithFallback(profile, itemType)
 	}
 
 	override fun parse(reader: StringReader): Result {
@@ -35,7 +40,27 @@ class ItemArgument(private val greedy: Boolean) : ArgumentType<ItemArgument.Resu
 
 	class Result(val search: String) {
 		fun resolve(profile: McpProfile, vararg itemTypes: String): FortItemStack {
-			val items = if (itemTypes.isNotEmpty()) {
+			val items = filterItems(profile, *itemTypes)
+			return items[search]
+				?: items.values.search(search) { it.displayName.trim() }
+				?: throw SimpleCommandExceptionType(LiteralMessage("Item not found.")).create()
+		}
+
+		fun resolveWithFallback(profile: McpProfile, itemType: String): FortItemStack {
+			val items = filterItems(profile, itemType)
+			items[search]?.let { return it }
+			val (templateId, itemDef) = if (itemType.contains(':')) {
+				val (primaryAssetType, itemDefClassName) = itemType.split(':')
+				searchItemDefinition(search, primaryAssetType, itemDefClassName)
+			} else {
+				searchItemDefinition(search, itemType)
+			} ?: throw SimpleCommandExceptionType(LiteralMessage("Item not found.")).create()
+			return items.values.firstOrNull { it.templateId.toLowerCase() == templateId }
+				?: FortItemStack(itemDef, 1) // Will have null itemId
+		}
+
+		private fun filterItems(profile: McpProfile, vararg itemTypes: String) =
+			if (itemTypes.isNotEmpty()) {
 				if (itemTypes.size == 1 && itemTypes[0].contains(':')) {
 					val (primaryAssetType, itemDefClassName) = itemTypes[0].split(':')
 					profile.items.filter { it.value.primaryAssetType == primaryAssetType && it.value.defData?.exportType == itemDefClassName }
@@ -45,9 +70,5 @@ class ItemArgument(private val greedy: Boolean) : ArgumentType<ItemArgument.Resu
 			} else {
 				profile.items
 			}
-			return items[search]
-				?: items.values.search(search) { it.displayName.trim() }
-				?: throw SimpleCommandExceptionType(LiteralMessage("Item not found.")).create()
-		}
 	}
 }

@@ -559,6 +559,23 @@ fun similarity(s1: String, s2: String): Float {
 	return (longerLength - Utils.damerauLevenshteinDistance(longer, shorter)) / longerLength.toFloat()
 }
 
+fun searchItemDefinition(displayName: String, primaryAssetType: String, className: String? = null): Pair<String, FortItemDefinition>? {
+	val lowerPrimaryAssetType = primaryAssetType.toLowerCase()
+	for ((templateId, objectPath) in AssetManager.INSTANCE.assetRegistry.templateIdToObjectPathMap.entries) {
+		if (!templateId.startsWith(lowerPrimaryAssetType)) {
+			continue
+		}
+		val itemDef = loadObject<FortItemDefinition>(objectPath) ?: continue
+		if (className != null && itemDef.exportType != className) {
+			continue
+		}
+		if (itemDef.DisplayName.format()?.trim()?.equals(displayName, true) == true) {
+			return templateId to itemDef
+		}
+	}
+	return null
+}
+
 inline fun <reified T : AthenaSeasonItemData> AthenaSeasonItemDefinition.getAdditionalDataOfType() = AdditionalSeasonData?.firstOrNull { it.value is T }?.value as T?
 
 val AthenaProfileStats.purchasedBpOffers get() = (purchased_bp_offers as? JsonArray)?.let { EpicApi.GSON.fromJson(it, Array<AthenaProfileStats.BattlePassOfferPurchaseRecord>::class.java).associateBy { it.offerId } } ?: emptyMap()
