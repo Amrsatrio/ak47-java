@@ -70,7 +70,7 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 		val currentStylePoints = stats.style_points ?: 0
 		embed.addField("Season Resources", "%s %s **%,d**\n%s %s **%,d**\n%s %s **%,d**".format(
 			"Battle Stars", battleStarEmote?.asMention, currentBattleStars,
-			"Feathers", styleCurrencyEmote?.asMention, currentStylePoints,
+			"Feather", styleCurrencyEmote?.asMention, currentStylePoints,
 			"Bars", barsEmote?.asMention, inventory.stash["globalcash"] ?: 0
 		), false)
 		stats.last_match_end_datetime?.apply {
