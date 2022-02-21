@@ -1,5 +1,6 @@
 package com.tb24.discordbot.commands
 
+import com.google.gson.JsonObject
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.StringArgumentType.getString
@@ -10,14 +11,22 @@ import com.tb24.discordbot.util.*
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commoncore.SetAffiliateName
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
+import com.tb24.fn.util.getString
 import net.dv8tion.jda.api.interactions.commands.OptionType
+import java.text.NumberFormat
+import java.util.*
 
 class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Support-a-Creator code.", arrayOf("code")) {
+	companion object {
+		const val MIN_PAYOUT_ELIGIBILITY = 100.0
+	}
+
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it.source, it.commandName, null) }
 		.then(argument("new code", greedyString())
 			.executes { execute(it.source, it.commandName, getString(it, "new code")) }
 		)
+		.then(literal("earnings").executes { earnings(it.source) })
 
 	override fun getSlashCommand() = newCommandBuilder()
 		.option(OptionType.STRING, "new-code", "The new Support-a-Creator code to apply.")
@@ -52,6 +61,23 @@ class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Su
 				.setDescription("✅ Support-a-Creator code set to **$newCode**.")
 				.build())
 		}
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun earnings(source: CommandSourceStack): Int {
+		source.ensureSession()
+		source.loading("Getting Support-a-Creator earnings")
+		val data = source.api.performWebApiRequest<JsonObject>("https://www.epicgames.com/affiliate/api/v2/get-earnings-data?version=2").getAsJsonObject("data")
+		val priceFormatter = NumberFormat.getCurrencyInstance()
+		priceFormatter.currency = Currency.getInstance(data.getString("lifetimePayoutsCurrency"))
+		val eligibleEarnings = data.get("eligibleEarnings").asDouble
+		val eligibleForPayout = eligibleEarnings >= MIN_PAYOUT_ELIGIBILITY
+		//val lastPayoutDate = if (data.getString("lastPayoutDate") != null) data.getDateISO("lastPayoutDate") else null TODO date formats returned by the API are broken
+		val embed = source.createEmbed()
+			.addField("Unpaid", if (eligibleForPayout) priceFormatter.format(eligibleEarnings) else "`%s`\n%s / %s".format(Utils.progress(eligibleEarnings.toFloat(), MIN_PAYOUT_ELIGIBILITY.toFloat(), 32), priceFormatter.format(eligibleEarnings), priceFormatter.format(MIN_PAYOUT_ELIGIBILITY)), false)
+			.addField("Last payment"/*.format(lastPayoutDate?.let { TimeFormat.DATE_TIME_SHORT.format(it.toInstant()) } ?: "N/A")*/, priceFormatter.format(data.get("lastPayout").asDouble), true)
+			.addField("Lifetime", priceFormatter.format(data.get("lifetimePayouts").asDouble), true)
+		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS
 	}
 }

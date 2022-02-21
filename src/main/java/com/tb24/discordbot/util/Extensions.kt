@@ -102,6 +102,13 @@ fun okhttp3.Call.exec(): okhttp3.Response = execute().apply {
 
 inline fun <reified T> okhttp3.Response.to(): T = body()!!.charStream().use { EpicApi.GSON.fromJson(it, T::class.java) }
 
+inline fun <reified T> EpicApi.performWebApiRequest(url: String): T {
+	val request = Request.Builder().url(url)
+		.header("Cookie", "EPIC_BEARER_TOKEN=" + userToken.access_token)
+		.build()
+	return okHttpClient.newCall(request).exec().to()
+}
+
 val CommandContext<*>.commandName: String get() = nodes.first().node.name
 
 inline fun Date.format(): String = TimeFormat.DATE_TIME_SHORT.format(this.time)

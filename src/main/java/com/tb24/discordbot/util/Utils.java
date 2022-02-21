@@ -92,8 +92,12 @@ public class Utils {
 	}
 
 	public static String progress(int current, int max, int width) {
+		return progress((float) current, (float) max, width);
+	}
+
+	public static String progress(float current, float max, int width) {
 		int barWidth = width - 2;
-		float ratio = (float) current / (float) max;
+		float ratio = current / max;
 		int barEnd = (int) (ratio * barWidth + 0.5F);
 
 		char[] chars = new char[width];
