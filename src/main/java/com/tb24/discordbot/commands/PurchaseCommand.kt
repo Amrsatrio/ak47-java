@@ -10,6 +10,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType.integer
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.L10N
@@ -290,18 +291,65 @@ private fun Response.handleResponse(): JsonObject {
 	throw SimpleCommandExceptionType(LiteralMessage(error)).create()
 }
 
+enum class EOfferDevsCodeReason {
+	None,
+	NoCodeSet,
+	RenewFailed
+}
+
 fun EmbedBuilder.renewAffiliateAndPopulateMtxFields(source: CommandSourceStack, price: CatalogOffer.CatalogItemPrice): EmbedBuilder {
 	return if (price.currencyType == EStoreCurrencyType.MtxCurrency) {
 		// Renew SAC if it has expired
 		val commonCore = source.api.profileManager.getProfileData("common_core")
 		val stats = commonCore.stats as CommonCoreProfileStats
 		var additional: String? = null
-		if (!stats.mtx_affiliate.isNullOrEmpty() && stats.mtx_affiliate_set_time != null && System.currentTimeMillis() > stats.mtx_affiliate_set_time.time + 14L * 24L * 60L * 60L * 1000L) {
-			try {
-				source.api.profileManager.dispatchClientCommandRequest(SetAffiliateName().apply { affiliateName = stats.mtx_affiliate }, "common_core").await()
-				additional = "ℹ " + "Renewed"
-			} catch (e: HttpException) {
-				additional = "⚠ " + "Expired, renew failed: " + e.epicError.displayText + '\n' + "Please change supported creator using `%ssac <new creator code>`".format(source.prefix)
+		var offerToUseDevsCode = EOfferDevsCodeReason.None
+		if (!stats.mtx_affiliate.isNullOrEmpty() && stats.mtx_affiliate_set_time != null) {
+			if (System.currentTimeMillis() > stats.mtx_affiliate_set_time.time + 14L * 24L * 60L * 60L * 1000L) {
+				try {
+					source.api.profileManager.dispatchClientCommandRequest(SetAffiliateName().apply { affiliateName = stats.mtx_affiliate }, "common_core").await()
+					additional = "ℹ " + "Renewed"
+				} catch (e: HttpException) {
+					if (e.code() == 400 || e.code() == 404) {
+						additional = "⚠ " + "Expired, renew failed: " + e.epicError.displayText + '\n' + "Please change supported creator using `%ssac <new creator code>`".format(source.prefix)
+						offerToUseDevsCode = EOfferDevsCodeReason.RenewFailed
+					} else {
+						source.errorTitle = "Failed to renew support-a-creator code"
+						throw e
+					}
+				}
+			}
+		} else {
+			offerToUseDevsCode = EOfferDevsCodeReason.NoCodeSet
+		}
+		if (offerToUseDevsCode != EOfferDevsCodeReason.None) {
+			val devAffiliateName = BotConfig.get().devAffiliateName
+			if (devAffiliateName != null) {
+				val embed = source.createEmbed()
+					.setTitle("A little offer")
+					.setDescription(when (offerToUseDevsCode) {
+						EOfferDevsCodeReason.NoCodeSet -> "You have not yet set your support-a-creator code."
+						EOfferDevsCodeReason.RenewFailed -> "Your support-a-creator code (%s) has expired and cannot be renewed.".format(stats.mtx_affiliate)
+						else -> throw AssertionError()
+					} + " Would you like to use the developer's creator code (%s)?\n\nYou can set the code to another one's by using `%ssac <new creator code>`".format(devAffiliateName, source.prefix))
+				val useDevsCode = source.complete(null, embed.build(), ActionRow.of(
+					Button.of(ButtonStyle.PRIMARY, "positive", "Yes, use code %s".format(devAffiliateName)),
+					Button.of(ButtonStyle.SECONDARY, "negative", "No, just proceed")
+				)).awaitConfirmation(source.author).await()
+				if (useDevsCode) {
+					try {
+						source.api.profileManager.dispatchClientCommandRequest(SetAffiliateName().apply { affiliateName = devAffiliateName }, "common_core").await()
+						additional = "ℹ " + "Thank you for using the developer's code :)"
+					} catch (e: HttpException) {
+						if (e.code() == 400 || e.code() == 404) {
+							additional = "ℹ " + "Developer's code is invalid :("
+							BotConfig.get().devAffiliateName = null
+						} else {
+							source.errorTitle = "Failed to set support-a-creator code"
+							throw e
+						}
+					}
+				}
 			}
 		}
 		addField(L10N.format("catalog.mtx_platform"), stats.current_mtx_platform.name, true)
