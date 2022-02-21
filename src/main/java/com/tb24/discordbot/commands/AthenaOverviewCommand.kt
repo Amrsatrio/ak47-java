@@ -4,14 +4,13 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.tb24.discordbot.util.*
+import com.tb24.discordbot.util.Utils
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.assetdata.AthenaSeasonItemData_Level
 import com.tb24.fn.model.assetdata.AthenaSeasonItemDefinition
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
-import com.tb24.fn.util.Formatters
-import com.tb24.fn.util.asItemStack
-import com.tb24.fn.util.getPreviewImagePath
+import com.tb24.fn.util.*
 import me.fungames.jfortniteparse.fort.exports.FortItemDefinition
 import me.fungames.jfortniteparse.fort.objects.rows.AthenaExtendedXPCurveEntry
 import me.fungames.jfortniteparse.fort.objects.rows.AthenaSeasonalXPCurveEntry
@@ -23,6 +22,7 @@ val styleCurrencyEmote = textureEmote("/BattlePassS19/Icons/T-T-Icon-BR-IslandFe
 val battlePassEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass-L.T-FNBR-BattlePass-L")
 val freePassEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass-Default-L.T-FNBR-BattlePass-Default-L")
 val xpEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T_UI_FNBR_XPeverywhere_L.T_UI_FNBR_XPeverywhere_L")
+val victoryCrownEmote = textureEmote("/VictoryCrownsGameplay/Icons/T-T-Icon-BR-VictoryCrownItem-L.T-T-Icon-BR-VictoryCrownItem-L")
 
 class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your Battle Royale data, such as current level and supercharged XP.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -39,7 +39,8 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 		source.ensureSession()
 		source.loading("Getting BR data")
 		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
-		val stats = source.api.profileManager.getProfileData("athena").stats as AthenaProfileStats
+		val athena = source.api.profileManager.getProfileData("athena")
+		val stats = athena.stats as AthenaProfileStats
 		val seasonData = FortItemStack("AthenaSeason:athenaseason${stats.season_num}", 1).defData as? AthenaSeasonItemDefinition
 		val xpToNextLevel = getXpToNextLevel(seasonData, stats.level)
 		val nextLevelReward = getNextLevelReward(seasonData, stats.level, stats.book_purchased)
@@ -65,7 +66,6 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 			}
 			embed.addField("Supercharged XP", restedXpText, false)
 		}
-		embed.addField("Account Level", Formatters.num.format(stats.accountLevel), false)
 		val currentBattleStars = stats.battlestars ?: 0
 		val currentStylePoints = stats.style_points ?: 0
 		embed.addField("Season Resources", "%s %s **%,d**\n%s %s **%,d**\n%s %s **%,d**".format(
@@ -73,6 +73,13 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 			"Feather", styleCurrencyEmote?.asMention, currentStylePoints,
 			"Bars", barsEmote?.asMention, inventory.stash["globalcash"] ?: 0
 		), false)
+		val victoryCrown = athena.items.values.firstOrNull { it.templateId == "VictoryCrown:defaultvictorycrown" }
+		if (victoryCrown != null) {
+			val victoryCrownAccountData = victoryCrown.attributes.getAsJsonObject("victory_crown_account_data")
+			val hasVictoryCrown = victoryCrownAccountData.getBoolean("has_victory_crown")
+			val totalRoyalRoyalesAchievedCount = victoryCrownAccountData.getInt("total_royal_royales_achieved_count")
+			embed.addField("Victory Crown", "Owned %s\nCrowned Wins %s %,d".format(if (hasVictoryCrown) "✅" else "❌", victoryCrownEmote?.asMention, totalRoyalRoyalesAchievedCount), false)
+		}
 		stats.last_match_end_datetime?.apply {
 			embed.setFooter("Last match end").setTimestamp(toInstant())
 		}
@@ -92,6 +99,7 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 			TimeFormat.DATE_LONG.format(athena.updated.time)
 		), true)
 		embed.addField("Wins", "**Season:** %,d\n**Lifetime:** %,d".format(stats.season?.numWins ?: 0, stats.lifetime_wins), true)
+		embed.addField("Account Level", Formatters.num.format(stats.accountLevel), true)
 		embed.addField("2FA reward claimed", if (stats.mfa_reward_claimed) "✅" else "❌", true)
 		val currentBattleStars = stats.battlestars ?: 0
 		val totalBattleStars = stats.battlestars_season_total ?: 0
