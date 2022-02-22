@@ -106,7 +106,11 @@ inline fun <reified T> EpicApi.performWebApiRequest(url: String): T {
 	val request = Request.Builder().url(url)
 		.header("Cookie", "EPIC_BEARER_TOKEN=" + userToken.access_token)
 		.build()
-	return okHttpClient.newCall(request).exec().to()
+	val response = okHttpClient.newCall(request).exec()
+	if (response.request().url().toString().contains("epicgames.com/id/logout")) {
+		throw HttpException(response)
+	}
+	return response.to()
 }
 
 val CommandContext<*>.commandName: String get() = nodes.first().node.name
