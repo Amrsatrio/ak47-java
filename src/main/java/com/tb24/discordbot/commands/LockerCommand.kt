@@ -455,7 +455,7 @@ class VariantContainer(val cosmeticVariant: FortCosmeticVariant, backendVariants
 		is FortCosmeticProfileBannerVariant -> null // Always the currently equipped banner, cannot be displayed
 		is FortCosmeticRichColorVariant -> {
 			val activeColor = cosmeticVariant.getActive(backendVariant)
-			val swatch = cosmeticVariant.InlineVariant.RichColorVar.ColorSwatchForChoices.load<CustomDynamicColorSwatch>()
+			val swatch = cosmeticVariant.InlineVariant.RichColorVar.ColorSwatchForChoices?.load<CustomDynamicColorSwatch>()
 			val colorDef = swatch?.ColorPairs?.firstOrNull { it.ColorValue.r == activeColor.r && it.ColorValue.g == activeColor.g && it.ColorValue.b == activeColor.b && it.ColorValue.a == activeColor.a }
 			colorDef?.ColorDisplayName?.format() ?: "#%08X".format(activeColor.toFColor(true).toPackedARGB())
 		}

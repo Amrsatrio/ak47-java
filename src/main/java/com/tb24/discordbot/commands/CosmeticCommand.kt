@@ -276,7 +276,7 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 	} else if (cosmeticVariant is FortCosmeticRichColorVariant) {
 		embed.appendDescription("Pick a new color to apply.")
 		val selectionMenu = SelectionMenu.create("choice")
-		val colors = cosmeticVariant.InlineVariant.RichColorVar.ColorSwatchForChoices.load<CustomDynamicColorSwatch>()?.ColorPairs
+		val colors = cosmeticVariant.InlineVariant.RichColorVar.ColorSwatchForChoices?.load<CustomDynamicColorSwatch>()?.ColorPairs
 			?: throw SimpleCommandExceptionType(LiteralMessage("No color swatch for %s. Custom colors are not yet supported.".format(variant.channelName))).create()
 		for (color in colors) {
 			val colorName = color.ColorName.toString()
