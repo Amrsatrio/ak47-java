@@ -12,6 +12,7 @@ import com.tb24.fn.EpicApi
 import com.tb24.fn.model.EAthenaCustomizationCategory
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.McpVariantReader
+import com.tb24.fn.model.assetdata.CustomDynamicColorSwatch
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.commands.MarkItemSeen
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
@@ -23,7 +24,9 @@ import com.tb24.fn.util.getPreviewImagePath
 import me.fungames.jfortniteparse.fort.exports.*
 import me.fungames.jfortniteparse.fort.exports.variants.FortCosmeticItemTexture
 import me.fungames.jfortniteparse.fort.exports.variants.FortCosmeticProfileBannerVariant
+import me.fungames.jfortniteparse.fort.exports.variants.FortCosmeticRichColorVariant
 import me.fungames.jfortniteparse.fort.exports.variants.FortCosmeticVariantBackedByArray
+import me.fungames.jfortniteparse.util.printHexBinary
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.interactions.components.ActionRow
@@ -31,6 +34,7 @@ import net.dv8tion.jda.api.interactions.components.Button
 import net.dv8tion.jda.api.interactions.components.ButtonStyle
 import net.dv8tion.jda.api.interactions.components.selections.SelectionMenu
 import net.dv8tion.jda.api.interactions.components.selections.SelectionMenuInteraction
+import java.nio.ByteBuffer
 import java.util.concurrent.CompletableFuture
 import kotlin.jvm.internal.Ref
 
@@ -163,7 +167,7 @@ private fun execute(source: CommandSourceStack, item: FortItemStack, profile: Mc
 	}
 	if (variants.isNotEmpty()) {
 		embed.addField("Styles", variants.joinToString("\n") {
-			"%s (%s)".format(it.channelName, it.activeVariantDisplayName)
+			"%s: %s".format(it.channelName, it.activeVariantDisplayName)
 		}, false)
 		if (numItems == 1) { // TODO support editing variants for multiple slot items
 			buttons.add(Button.of(ButtonStyle.SECONDARY, "editVariants", "Edit styles", Emoji.fromEmote(editStylesEmote!!)))
@@ -269,6 +273,34 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 		val (_, itemDef) = searchItemDefinition(search, "AthenaDance", choice)
 			?: return execute(source, item, source.api.profileManager.getProfileData("athena"), "⚠ No %s found for `%s`".format(typeName, search))
 		"ItemTexture.AthenaDance:${itemDef.name.toLowerCase()}"
+	} else if (cosmeticVariant is FortCosmeticRichColorVariant) {
+		embed.appendDescription("Pick a new color to apply.")
+		val selectionMenu = SelectionMenu.create("choice")
+		val colors = cosmeticVariant.InlineVariant.RichColorVar.ColorSwatchForChoices.load<CustomDynamicColorSwatch>()?.ColorPairs
+			?: throw SimpleCommandExceptionType(LiteralMessage("No color swatch for %s. Custom colors are not yet supported.".format(variant.channelName))).create()
+		for (color in colors) {
+			val colorName = color.ColorName.toString()
+			selectionMenu.addOption(color.ColorDisplayName.format() ?: colorName, colorName)
+		}
+		val message = source.complete(null, embed.build(), ActionRow.of(selectionMenu.build()), ActionRow.of(Button.of(ButtonStyle.SECONDARY, "cancel", "Cancel", Emoji.fromUnicode("❌"))))
+		source.loadingMsg = message
+		val interaction = message.awaitOneInteraction(source.author, false)
+		if (interaction.componentId == "cancel") {
+			return execute(source, item, source.api.profileManager.getProfileData("athena"))
+		}
+		val selectedVariant = (interaction as SelectionMenuInteraction).selectedOptions!!.first()
+		if (selectedVariant.emoji != null) {
+			throw SimpleCommandExceptionType(LiteralMessage("That style is locked.")).create()
+		}
+		val selectedColorName = selectedVariant.value
+		val selectedColor = colors.first { it.ColorName.toString() == selectedColorName }
+		val colorValue = selectedColor.ColorValue
+		val buf = ByteBuffer.allocate(4 * 4)
+		buf.putFloat(colorValue.r)
+		buf.putFloat(colorValue.g)
+		buf.putFloat(colorValue.b)
+		buf.putFloat(colorValue.a)
+		"RichColor." + buf.array().printHexBinary()
 	} else if (cosmeticVariant is FortCosmeticVariantBackedByArray) {
 		embed.appendDescription("Pick a new style to apply.")
 		val selectionMenu = SelectionMenu.create("choice")
@@ -318,7 +350,7 @@ private fun equip(source: CommandSourceStack, profileId: String, inLockerItem: S
 		variantUpdates = inVariantUpdates
 		optLockerUseCountOverride = -1
 	}, profileId).await()
-	if (profileId == "athena") {
+	if (inCategory == EAthenaCustomizationCategory.Character && profileId == "athena") {
 		source.session.avatarCache.remove(source.api.currentLoggedIn.id)
 	}
 	return execute(source, item, source.api.profileManager.getProfileData(profileId))

@@ -13,6 +13,7 @@ import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.McpVariantReader
+import com.tb24.fn.model.assetdata.CustomDynamicColorSwatch
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.subgame.SetItemFavoriteStatusBatch
@@ -427,7 +428,7 @@ class LockerEntry(val cosmetic: FortItemStack, queryAccountIds: MutableCollectio
 		defData?.ItemVariants?.forEach { lazyVariant ->
 			val variantContainer = VariantContainer(lazyVariant.value, backendVariants)
 			val activeVariantDisplayName = variantContainer.activeVariantDisplayName ?: return@forEach
-			descriptionParts.add("%s (%s)".format(variantContainer.channelName, activeVariantDisplayName))
+			descriptionParts.add("%s: %s".format(variantContainer.channelName, activeVariantDisplayName))
 		}
 		giftFromAccountId?.let {
 			descriptionParts.add("🎁 ${source.userCache[it]?.displayName ?: "Unknown"}")
@@ -452,7 +453,12 @@ class VariantContainer(val cosmeticVariant: FortCosmeticVariant, backendVariants
 		is FortCosmeticFloatSliderVariant -> "%d/%d".format(cosmeticVariant.getActive(backendVariant).toInt(), cosmeticVariant.MaxParamValue.toInt())
 		is FortCosmeticNumericalVariant -> Formatters.num.format(cosmeticVariant.getActive(backendVariant))
 		is FortCosmeticProfileBannerVariant -> null // Always the currently equipped banner, cannot be displayed
-		is FortCosmeticRichColorVariant -> "#%08X".format(cosmeticVariant.getActive(backendVariant).toFColor(true).toPackedARGB())
+		is FortCosmeticRichColorVariant -> {
+			val activeColor = cosmeticVariant.getActive(backendVariant)
+			val swatch = cosmeticVariant.InlineVariant.RichColorVar.ColorSwatchForChoices.load<CustomDynamicColorSwatch>()
+			val colorDef = swatch?.ColorPairs?.firstOrNull { it.ColorValue.r == activeColor.r && it.ColorValue.g == activeColor.g && it.ColorValue.b == activeColor.b && it.ColorValue.a == activeColor.a }
+			colorDef?.ColorDisplayName?.format() ?: "#%08X".format(activeColor.toFColor(true).toPackedARGB())
+		}
 		else -> "**UNKNOWN TYPE PLEASE REPORT**"
 	}
 
