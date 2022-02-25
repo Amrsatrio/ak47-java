@@ -425,14 +425,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		val (source, friend, user) = ctx
 		//addField("Epic Display Name", friend.displayName, false)
 		addField("Account ID", user.id, false)
-		user.externalAuths?.run {
-			values.forEach {
-				if (it.type == "psn" || it.type == "xbl" || it.type == "nintendo") {
-					val externalDisplayName = it.externalDisplayName
-					addField(L10N.format("account.ext.${it.type}.name"), if (externalDisplayName.isNullOrEmpty()) "<linked>" else externalDisplayName, true)
-				}
-			}
-		}
+		setDescription(user.renderPublicExternalAuths().joinToString(" "))
 		val alias = friend?.alias
 		if (!alias.isNullOrEmpty()) {
 			addField("Nickname", alias.escapeMarkdown(), false)

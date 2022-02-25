@@ -445,6 +445,25 @@ fun getFriendlySeasonText(seasonNum: Int): String {
 	return if (chapter != null) "Chapter $chapter, Season $season" else "Season $season"
 }
 
+val psnEmote by lazy { textureEmote("/Game/UI/Friends_UI/Social/PS4_w-backing_PlatformIcon_64x.PS4_w-backing_PlatformIcon_64x") }
+val xblEmote by lazy { textureEmote("/Game/UI/Friends_UI/Social/xBox_PlatformIcon_64x.xBox_PlatformIcon_64x") }
+val switchEmote by lazy { textureEmote("/Game/UI/Friends_UI/Social/Switch_PlatformIcon_64x.Switch_PlatformIcon_64x") }
+
+fun externalAuthEmote(externalAuthType: String) = when (externalAuthType) {
+	"psn" -> psnEmote
+	"xbl" -> xblEmote
+	"nintendo" -> switchEmote
+	else -> null
+}
+
+val PUBLIC_EXTERNAL_AUTH_TYPES = arrayOf("psn", "xbl", "nintendo")
+
+fun GameProfile.renderPublicExternalAuths() = PUBLIC_EXTERNAL_AUTH_TYPES.mapNotNull { externalAuths[it] }.map {
+	val type = it.type
+	val externalDisplayName = it.externalDisplayName
+	(externalAuthEmote(type)?.asMention ?: type) + ' ' + (if (externalDisplayName.isNullOrEmpty()) "<linked>" else externalDisplayName)
+}
+
 // region Copy of Throwable.printStackTrace but with frame limit
 fun Throwable.getStackTraceAsString(limit: Int = 4): String {
 	val writer = StringWriter()

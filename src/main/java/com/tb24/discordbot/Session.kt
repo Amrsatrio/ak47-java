@@ -150,14 +150,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 				embed.setDescription("Have questions, issues, or suggestions? Want to stay updated with the bot's development or vibe with us? [Join our support server!](%s)".format(inviteLink))
 			}
 		}
-		user.externalAuths?.run {
-			values.forEach {
-				if (it.type == "psn" || it.type == "xbl" || it.type == "nintendo") {
-					val externalDisplayName = it.externalDisplayName
-					embed.addField(L10N.format("account.ext.${it.type}.name"), if (externalDisplayName.isNullOrEmpty()) "<linked>" else externalDisplayName, true)
-				}
-			}
-		}
+		embed.setDescription(user.renderPublicExternalAuths().joinToString(" "))
 		val dbDevices = client.savedLoginsManager.getAll(id)
 		if (BotConfig.get().allowUsersToCreateDeviceAuth && dbDevices.none { it.accountId == user.id } && dbDevices.size < source.getSavedAccountsLimit()) {
 			embed.setFooter("Tip: do %ssavelogin to stay logged in".format(source.prefix))
