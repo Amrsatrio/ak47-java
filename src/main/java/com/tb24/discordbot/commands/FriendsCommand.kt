@@ -390,7 +390,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			}
 		}
 		source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
-			.setTitle("✅ " + L10N.format("friends.$type.bulk.done", Formatters.num.format(success)))
+			.setTitle("✅ " + TextFormatter.format(L10N.format("friends.$type.bulk.done"), mapOf("0" to success)))
 			.build())
 		return Command.SINGLE_SUCCESS
 	}

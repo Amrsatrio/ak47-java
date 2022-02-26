@@ -65,7 +65,7 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 		// Key count
 		val unusedKeys = state.unusedKeys
 		if (unusedKeys > 0) {
-			descriptionParts.add("Open **%,d presents!**".format(unusedKeys))
+			descriptionParts.add(TextFormatter.format("Open **{0} {0}|plural(one=present,other=presents)!**", mapOf("0" to unusedKeys)))
 		} else {
 			descriptionParts.add("Come back every day to open a new present!")
 		}
