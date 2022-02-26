@@ -196,7 +196,7 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 	return Command.SINGLE_SUCCESS
 }
 
-fun execBuyAllCampaign(source: CommandSourceStack): Int {
+private fun execBuyAllCampaign(source: CommandSourceStack): Int {
 	source.ensureSession()
 	source.loading("Getting offers")
 	val catalogManager = source.client.catalogManager
@@ -250,7 +250,7 @@ fun execBuyAllCampaign(source: CommandSourceStack): Int {
 	return Command.SINGLE_SUCCESS
 }
 
-fun execBuyAllCampaignBulk(source: CommandSourceStack, users: Map<String, GameProfile>?): Int {
+private fun execBuyAllCampaignBulk(source: CommandSourceStack, users: Map<String, GameProfile>?): Int {
 	val devices = source.client.savedLoginsManager.getAll(source.author.id)
 	forEachSavedAccounts(source, if (users != null) devices.filter { it.accountId in users } else devices) {
 		execBuyAllCampaign(source)

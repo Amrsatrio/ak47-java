@@ -17,7 +17,7 @@ import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
 
 // TODO Duplicated AutoDailyRewardsCommand for now, refactor later
-class AutoFreeLlamaCommand : BrigadierCommand("autollama", "Enroll/unenroll your saved accounts for automatic free llama claiming.") {
+class AutoFreeLlamaCommand : BrigadierCommand("autollama", "Enroll/unenroll your saved accounts for automatic free llama claiming.", arrayOf("al")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
 			val source = it.source

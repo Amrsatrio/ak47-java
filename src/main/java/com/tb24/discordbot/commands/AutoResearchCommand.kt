@@ -17,7 +17,7 @@ import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
 
 // TODO Duplicated AutoDailyRewardsCommand for now, refactor later
-class AutoResearchCommand : BrigadierCommand("autoresearch", "Enroll/unenroll your saved accounts for automatic research.") {
+class AutoResearchCommand : BrigadierCommand("autoresearch", "Enroll/unenroll your saved accounts for automatic research.", arrayOf("ar")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
 			val source = it.source
