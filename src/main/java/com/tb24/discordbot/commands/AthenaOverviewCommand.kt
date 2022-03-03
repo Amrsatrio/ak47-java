@@ -78,7 +78,7 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 			val victoryCrownAccountData = victoryCrown.attributes.getAsJsonObject("victory_crown_account_data")
 			val hasVictoryCrown = victoryCrownAccountData.getBoolean("has_victory_crown")
 			val totalRoyalRoyalesAchievedCount = victoryCrownAccountData.getInt("total_royal_royales_achieved_count")
-			embed.addField("Victory Crown", "Owned %s\nCrowned Wins %s *%,d**".format(if (hasVictoryCrown) "✅" else "❌", victoryCrownEmote?.asMention, totalRoyalRoyalesAchievedCount), false)
+			embed.addField("Victory Crown", "Owned %s\nCrowned Wins %s **%,d**".format(if (hasVictoryCrown) "✅" else "❌", victoryCrownEmote?.asMention, totalRoyalRoyalesAchievedCount), false)
 		}
 		stats.last_match_end_datetime?.apply {
 			embed.setFooter("Last match end").setTimestamp(toInstant())
