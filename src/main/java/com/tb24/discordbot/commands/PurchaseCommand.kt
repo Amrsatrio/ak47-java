@@ -331,7 +331,7 @@ fun EmbedBuilder.renewAffiliateAndPopulateMtxFields(source: CommandSourceStack, 
 						EOfferDevsCodeReason.NoCodeSet -> "You have not yet set your support-a-creator code."
 						EOfferDevsCodeReason.RenewFailed -> "Your support-a-creator code (%s) has expired and cannot be renewed.".format(stats.mtx_affiliate)
 						else -> throw AssertionError()
-					} + " Would you like to use the developer's creator code (%s)?\n\nYou can set the code to another one's by ignoring this and using `%ssac <new creator code>`.".format(devAffiliateName, source.prefix))
+					} + " Would you like to support the bot's development by using the developer's creator code (%s)?\n\nYou can set the code to another one's by ignoring this and using `%ssac <new creator code>`.".format(devAffiliateName, source.prefix))
 				val useDevsCode = source.complete(null, embed.build(), ActionRow.of(
 					Button.of(ButtonStyle.PRIMARY, "positive", "Yes, use code %s".format(devAffiliateName)),
 					Button.of(ButtonStyle.SECONDARY, "negative", "No, just proceed")

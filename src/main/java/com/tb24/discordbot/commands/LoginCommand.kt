@@ -18,14 +18,18 @@ import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Emoji
+import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageReaction
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.Button
+import net.jodah.expiringmap.ExpirationPolicy
+import net.jodah.expiringmap.ExpiringMap
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
 import kotlin.concurrent.schedule
 import kotlin.math.min
@@ -60,7 +64,7 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 			val deviceData = devices.safeGetOneIndexed(accountIndex)
 			doDeviceAuthLogin(source, deviceData)
 		} else {
-			checkRestriction(source)
+			//checkRestriction(source)
 			doLogin(source, EGrantType.authorization_code, param, EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
 		}
 	}
@@ -276,7 +280,18 @@ fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 	return Command.SINGLE_SUCCESS
 }
 
+private val existingAuthCodeHintMessages = ExpiringMap.builder()
+	.expiration(5, TimeUnit.MINUTES)
+	.expirationPolicy(ExpirationPolicy.ACCESSED)
+	.build<Long, Message>()
+
 fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): Int {
+	existingAuthCodeHintMessages[source.channel.idLong]?.let {
+		source.complete(null, EmbedBuilder().setColor(0x8AB4F8)
+			.setDescription("Please check [the message above](${it.jumpUrl}) for instructions.")
+			.build())
+		return 0
+	}
 	val link = Utils.login(Utils.redirect(authClient))
 	val embed = EmbedBuilder()
 		.setTitle("📲 Log in to your Epic Games account", link)
@@ -284,13 +299,13 @@ fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): 
 ⚠ **We recommend that you only log into accounts that you have email access to!**
 1. Visit the link above to get your login code.
 2. Copy the 32 character code that looks like `aabbccddeeff11223344556677889900`, located after `?code=`.
-3. Send `/login <32 character code>` to complete your login.""")
+3. Send `/login <32 character code>` within 30 seconds of opening the page to complete your login. Reload the page to get a new code.""")
 		.addField("Need to switch accounts?", "[Open this link instead]($link&prompt=login)", false)
 		.setColor(0x8AB4F8)
 	if (BotConfig.get().slashCommandsEnabled && source.message != null) {
-		embed.appendDescription("\nℹ **Important:** Please start using the new `/login` slash command as the old `${source.prefix}login` will no longer work.")
+		embed.appendDescription("\nℹ Please start using the new `/login` slash command as the old `${source.prefix}login` will no longer work.")
 	}
-	source.complete(null, embed.build())
+	existingAuthCodeHintMessages[source.channel.idLong] = source.complete(null, embed.build())
 	return Command.SINGLE_SUCCESS
 }
 
