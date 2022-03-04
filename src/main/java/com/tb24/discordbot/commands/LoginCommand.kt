@@ -24,7 +24,6 @@ import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.Button
-import net.jodah.expiringmap.ExpirationPolicy
 import net.jodah.expiringmap.ExpiringMap
 import java.time.Instant
 import java.util.*
@@ -282,7 +281,6 @@ fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 
 private val existingAuthCodeHintMessages = ExpiringMap.builder()
 	.expiration(5, TimeUnit.MINUTES)
-	.expirationPolicy(ExpirationPolicy.ACCESSED)
 	.build<Long, Message>()
 
 fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): Int {

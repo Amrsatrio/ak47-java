@@ -14,19 +14,19 @@ import java.util.*
 
 fun parseCosmeticType(type: String): String {
 	val lowerType = type.toLowerCase(Locale.ROOT)
-	val filterType = when (if (lowerType.endsWith('s')) lowerType.substring(0, lowerType.length - 1) else lowerType) {
-		"character", "outfit", "skin" -> "AthenaCharacter"
-		"backpack", "backbling" -> "AthenaBackpack"
-		"pickaxe", "harvestingtool" -> "AthenaPickaxe"
-		"glider" -> "AthenaGlider"
-		"skydivecontrail", "contrail" -> "AthenaSkyDiveContrail"
-		"dance", "emote" -> "AthenaDance:AthenaDanceItemDefinition"
-		"emoticon" -> "AthenaDance:AthenaEmojiItemDefinition"
-		"spray" -> "AthenaDance:AthenaSprayItemDefinition"
-		"toy" -> "AthenaDance:AthenaToyItemDefinition"
-		"itemwrap", "wrap" -> "AthenaItemWrap"
-		"musicpack", "music" -> "AthenaMusicPack"
-		"loadingscreen" -> "AthenaLoadingScreen"
+	val filterType = when (if (lowerType.length > 2 && lowerType.endsWith('s')) lowerType.substring(0, lowerType.length - 1) else lowerType) {
+		"o", "s", "character", "outfit", "skin" -> "AthenaCharacter"
+		"b", "backpack", "backbling" -> "AthenaBackpack"
+		"p", "pickaxe", "harvestingtool" -> "AthenaPickaxe"
+		"g", "glider" -> "AthenaGlider"
+		"c", "skydivecontrail", "contrail" -> "AthenaSkyDiveContrail"
+		"d", "dance", "emote" -> "AthenaDance:AthenaDanceItemDefinition"
+		"e", "emoticon" -> "AthenaDance:AthenaEmojiItemDefinition"
+		"sp", "spray" -> "AthenaDance:AthenaSprayItemDefinition"
+		"t", "toy" -> "AthenaDance:AthenaToyItemDefinition"
+		"w", "itemwrap", "wrap" -> "AthenaItemWrap"
+		"m", "musicpack", "music" -> "AthenaMusicPack"
+		"l", "ls", "loadingscreen" -> "AthenaLoadingScreen"
 		else -> throw SimpleCommandExceptionType(LiteralMessage("Unknown cosmetic type $type. Valid values are: (case insensitive)```\nOutfit, BackBling, HarvestingTool, Glider, Contrail, Emote, Spray, Emoticon, Toy, Wrap, Music, LoadingScreen\n```")).create()
 	}
 	return filterType
