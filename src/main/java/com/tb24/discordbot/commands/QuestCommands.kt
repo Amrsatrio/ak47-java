@@ -120,11 +120,15 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 
 	private fun executeBulk(source: CommandSourceStack, usersLazy: Lazy<Collection<GameProfile>>? = null): Int {
 		source.conditionalUseInternalSession()
+		val usersWith3dailies = ArrayList<String>()
 		val entries = stwBulk(source, usersLazy) { campaign ->
 			val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:outpostquest_t1_l3" }?.attributes?.get("completion_complete_outpost_1_3")?.asInt ?: 0) > 0
 			if (!completedTutorial) return@stwBulk null
-
-			val quests = getCampaignDailyQuests(campaign).joinToString("\n") { renderChallenge(it, "\u2800", null, allowBold = false) }
+			val dailies = getCampaignDailyQuests(campaign)
+			val quests = dailies.joinToString("\n") { renderChallenge(it, "\u2800", null, allowBold = false) }
+			if (dailies.count() == 3) {
+				usersWith3dailies.add(campaign.owner.displayName)
+			}
 			campaign.owner.displayName to quests.ifEmpty { "\u2800✅ All dailies completed!" }
 		}
 		if (entries.isEmpty()) {
@@ -133,6 +137,9 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 		val embed = EmbedBuilder().setColor(COLOR_INFO)
 		for (entry in entries) {
 			embed.addField(entry.first, entry.second, false)
+		}
+		if (usersWith3dailies.isNotEmpty()) {
+			embed.setFooter("Users with 3 dailies: ${usersWith3dailies.joinToString(", ")}")
 		}
 		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS
