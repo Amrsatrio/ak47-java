@@ -2,7 +2,9 @@ package com.tb24.discordbot.commands
 
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
@@ -13,6 +15,7 @@ import com.tb24.fn.util.Utils.sumKV
 import com.tb24.fn.util.countMtxCurrency
 import com.tb24.fn.util.getString
 import com.tb24.fn.util.isApplicableOn
+import net.dv8tion.jda.api.EmbedBuilder
 import java.text.DateFormat
 import java.util.regex.Pattern
 
@@ -79,10 +82,25 @@ class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the
 
 	private fun bulk(source: CommandSourceStack, users: Map<String, GameProfile>?): Int {
 		source.ensurePremium("View all the balance of all your accounts at once")
+		source.loading("Getting balances")
+		val embed = EmbedBuilder().setColor(COLOR_INFO)
 		val devices = source.client.savedLoginsManager.getAll(source.author.id)
-		forEachSavedAccounts(source, if (users != null) devices.filter { it.accountId in users } else devices) {
-			balance(source)
+		if (devices.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("You have no saved accounts.")).create()
 		}
+		var total = 0
+		if (users != null && total == 0 && devices.filter { it.accountId in users }.isNullOrEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("You don't have saved accounts that are matching the name(s).")).create()
+		}
+		forEachSavedAccounts(source, if (users != null) devices.filter { it.accountId in users } else devices) {
+			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
+			val commonCore = source.api.profileManager.getProfileData("common_core")
+			val mtx = countMtxCurrency(commonCore)
+			embed.addField(source.api.currentLoggedIn.displayName, "${Utils.MTX_EMOJI} ${Formatters.num.format(mtx)}", true)
+			total += mtx
+		}
+		embed.addField("__Total__", "${Utils.MTX_EMOJI} ${Formatters.num.format(total)}", false)
+		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS
 	}
 }
