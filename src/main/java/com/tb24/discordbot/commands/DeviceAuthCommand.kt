@@ -3,6 +3,7 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
+import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
@@ -10,9 +11,11 @@ import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.HttpException
+import com.tb24.discordbot.commands.arguments.StringArgument2
 import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.format
 import com.tb24.fn.model.account.DeviceAuth
+import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.exceptions.ErrorResponseException
 
@@ -24,6 +27,13 @@ class DeviceAuthCommand : BrigadierCommand("devices", "Device auth operation com
 		.then(literal("remove")
 			.then(argument("device ID", greedyString())
 				.executes { delete(it.source, getString(it, "device ID")) }
+			)
+		)
+		.then(literal("import")
+			.then(argument("params", StringArgument2.string2())
+				.then(argument("auth client", StringArgumentType.word())
+					.executes { import(it.source, getString(it, "params"), getString(it, "auth client")) }
+				)
 			)
 		)
 
@@ -186,5 +196,53 @@ private fun delete(source: CommandSourceStack, deviceId: String): Int {
 			throw e
 		}
 	}
+	return Command.SINGLE_SUCCESS
+}
+
+private fun import(source: CommandSourceStack, device: String, inAuthClient: String): Int {
+	source.message!!.delete().queue()
+	source.loading("Saving device auth")
+	val authClient = inAuthClient.replace("_", "")?.run {
+		EAuthClient.values().firstOrNull { it.name.replace("_", "").equals(this, true) }?.clientId
+			?: throw SimpleCommandExceptionType(LiteralMessage("Invalid auth client `$inAuthClient`. Valid clients are:```\n${EAuthClient.values().joinToString()}```")).create()
+	}
+	val split = device.split(":")
+	if (split.size != 3) {
+		throw SimpleCommandExceptionType(LiteralMessage("Device auth must be in this format: `\"account_id:device_id:secret\"`")).create()
+	}
+	if (split.any { it.length != 32 }) {
+		throw SimpleCommandExceptionType(LiteralMessage("All device auth params must be 32 characters long")).create()
+	}
+	val dbDevices = source.client.savedLoginsManager.getAll(source.session.id)
+	val dbDevice = dbDevices.firstOrNull { it.accountId == split[0] }
+	if (dbDevice != null) {
+		throw SimpleCommandExceptionType(LiteralMessage("You already have this account's device auth.")).create()
+	}
+	val limit = source.getSavedAccountsLimit()
+	if (dbDevices.size >= limit) {
+		if (dbDevices.isEmpty() && limit == 0) {
+			val quotaSettings = BotConfig.get().deviceAuthQuota
+			source.ensurePremium("Your Discord account must be older than %,d days in order to have %,d complimentary saved logins.\nGet %,d saved logins regardless of account age".format(
+				quotaSettings.minAccountAgeInDaysForComplimentary,
+				quotaSettings.maxForComplimentary,
+				quotaSettings.maxForPremium
+			))
+			check(false) // We should never reach this point
+		}
+		throw SimpleCommandExceptionType(LiteralMessage("Maximum number of saved logins (%,d) has been reached.".format(limit))).create()
+	}
+	if (!BotConfig.get().allowUsersToCreateDeviceAuth) {
+		throw SimpleCommandExceptionType(LiteralMessage("The current instance of the bot does not allow saving logins.")).create()
+	}
+	source.client.savedLoginsManager.put(source.session.id, DeviceAuth().apply {
+		accountId = split[0]
+		deviceId = split[1]
+		secret = split[2]
+		clientId = authClient
+	})
+	val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_SUCCESS)
+		.setTitle("✅ Device auth saved to ${source.jda.selfUser.name}")
+		.setColor(BrigadierCommand.COLOR_SUCCESS)
+	source.complete(null, embed.build())
 	return Command.SINGLE_SUCCESS
 }
