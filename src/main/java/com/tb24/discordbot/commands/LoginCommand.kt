@@ -15,6 +15,7 @@ import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.account.PinGrantInfo
 import com.tb24.fn.network.AccountService.GrantType.*
 import com.tb24.fn.util.EAuthClient
+import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Emoji
@@ -35,7 +36,7 @@ import kotlin.math.min
 
 class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", arrayOf("i", "signin")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { accountPicker_buttons(it.source) }
+		.executes { accountPicker(it.source) }
 		.then(literal("new").executes { startDefaultLoginFlow(it.source) })
 		.then(argument("authorization code", greedyString())
 			.executes { executeWithParam(it.source, getString(it, "authorization code")) }
@@ -52,7 +53,7 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 					executeWithParam(it, param)
 				}
 			} else {
-				accountPicker_buttons(it)
+				accountPicker(it)
 			}
 		}
 
@@ -157,7 +158,7 @@ private fun extractCode(s: String): String {
 	return if (matcher.matches()) matcher.group(1) else ""
 }
 
-private inline fun accountPicker_buttons(source: CommandSourceStack): Int {
+private inline fun accountPicker(source: CommandSourceStack): Int {
 	val devices = source.client.savedLoginsManager.getAll(source.author.id)
 	if (devices.isEmpty()) {
 		return startDefaultLoginFlow(source)
@@ -165,6 +166,14 @@ private inline fun accountPicker_buttons(source: CommandSourceStack): Int {
 	source.loading("Preparing your login")
 	source.session = source.client.internalSession
 	val users = source.queryUsers(devices.map { it.accountId })
+	return if (devices.size > 25 - 1) {
+		accountPicker_prompt(source, devices, users)
+	} else {
+		accountPicker_buttons(source, devices, users)
+	}
+}
+
+private inline fun accountPicker_buttons(source: CommandSourceStack, devices: List<DeviceAuth>, users: List<GameProfile>): Int {
 	val buttons = mutableListOf<Button>()
 	devices.mapIndexedTo(buttons) { i, device ->
 		val accountId = device.accountId
@@ -181,6 +190,28 @@ private inline fun accountPicker_buttons(source: CommandSourceStack): Int {
 			?: throw SimpleCommandExceptionType(LiteralMessage("Invalid input.")).create()
 		doDeviceAuthLogin(source, device, lazy { users })
 	}
+}
+
+private inline fun accountPicker_prompt(source: CommandSourceStack, devices: List<DeviceAuth>, users: List<GameProfile>): Int {
+	val description = devices.mapIndexed { i, device ->
+		val accountId = device.accountId
+		"`${Formatters.num.format(i + 1)}` ${users.firstOrNull { it.id == accountId }?.displayName ?: accountId}"
+	}
+	source.complete(null, EmbedBuilder().setColor(0x8AB4F8)
+		.setTitle("Pick an account")
+		.setDescription(description.joinToString("\n"))
+		.setFooter("Type the account number within 30 seconds to log in")
+		.build())
+	val choice = source.channel.awaitMessages({ _, user, _ -> user == source.author }, AwaitMessagesOptions().apply {
+		max = 1
+		time = 30000
+		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
+	}).await().first().contentRaw.toIntOrNull()
+		?: throw SimpleCommandExceptionType(LiteralMessage("The provided choice is not a number.")).create()
+	val selectedDevice = devices.getOrNull(choice - 1)
+		?: throw SimpleCommandExceptionType(LiteralMessage("Invalid choice.")).create()
+	source.session = source.initialSession
+	return doDeviceAuthLogin(source, selectedDevice, lazy { users })
 }
 
 fun doDeviceAuthLogin(source: CommandSourceStack, deviceData: DeviceAuth, users: Lazy<List<GameProfile>> = lazy {
@@ -201,7 +232,7 @@ fun doDeviceAuthLogin(source: CommandSourceStack, deviceData: DeviceAuth, users:
 
 private inline fun startDefaultLoginFlow(source: CommandSourceStack) =
 	authorizationCodeHint(source, EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
-	//deviceCode(source, EAuthClient.FORTNITE_NEW_SWITCH_GAME_CLIENT)
+//deviceCode(source, EAuthClient.FORTNITE_NEW_SWITCH_GAME_CLIENT)
 
 fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 	//if (true) throw SimpleCommandExceptionType(LiteralMessage("Device code is disabled until further notice.")).create()
