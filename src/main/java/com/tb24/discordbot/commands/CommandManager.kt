@@ -15,6 +15,7 @@ import com.tb24.fn.network.AccountService.GrantType
 import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
+import net.dv8tion.jda.api.entities.TextChannel
 import net.dv8tion.jda.api.events.ReadyEvent
 import net.dv8tion.jda.api.events.interaction.SlashCommandEvent
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
@@ -224,6 +225,8 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		}
 	}
 
+	val byGuild = hashMapOf<Long, Int>()
+
 	private fun handleCommand(command: String, source: CommandSourceStack, prefix: String = "", canRetry: Boolean = true) {
 		val reader = StringReader(command)
 		reader.cursor += prefix.length
@@ -238,6 +241,9 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				return
 			}
 			try {
+				if (source.channel is TextChannel) {
+					byGuild[source.guild!!.idLong] = byGuild.getOrDefault(source.guild.idLong, 0) + 1
+				}
 				dispatcher.execute(parseResults)
 			} catch (e: CommandSyntaxException) {
 				val unkCmd = CommandSyntaxException.BUILT_IN_EXCEPTIONS.dispatcherUnknownCommand()

@@ -146,14 +146,14 @@ private fun execute(source: CommandSourceStack, item: FortItemStack, profile: Mc
 		if (isEquipped) {
 			buttons.add(Button.of(ButtonStyle.SECONDARY, "equip", "Equipped", Emoji.fromUnicode("✅")).asDisabled())
 		} else {
-			buttons.add(Button.of(ButtonStyle.SECONDARY, "equip", "Equip", Emoji.fromEmote(equipEmote!!)))
+			buttons.add(Button.of(ButtonStyle.SECONDARY, "equip", "Equip", equipEmote?.let(Emoji::fromEmote)))
 		}
 	} else {
 		val equippedIndices = currentLoadout.locker_slots_data.getSlotItems(category).withIndex().filter { it.value == item.templateId }.map { it.index + 1 }
 		if (equippedIndices.isNotEmpty()) {
 			embed.setFooter("Equipped at slot(s) " + equippedIndices.joinToString(", "))
 		}
-		buttons.add(Button.of(ButtonStyle.SECONDARY, "equipTo", "Equip to...", Emoji.fromEmote(equipEmote!!)))
+		buttons.add(Button.of(ButtonStyle.SECONDARY, "equipTo", "Equip to...", equipEmote?.let(Emoji::fromEmote)))
 	}
 
 	// Prepare variants
@@ -170,20 +170,20 @@ private fun execute(source: CommandSourceStack, item: FortItemStack, profile: Mc
 			"%s: %s".format(it.channelName, it.activeVariantDisplayName)
 		}, false)
 		if (numItems == 1) { // TODO support editing variants for multiple slot items
-			buttons.add(Button.of(ButtonStyle.SECONDARY, "editVariants", "Edit styles", Emoji.fromEmote(editStylesEmote!!)))
+			buttons.add(Button.of(ButtonStyle.SECONDARY, "editVariants", "Edit styles", editStylesEmote?.let(Emoji::fromEmote)))
 		}
 	}
 
 	// Favorite button
 	if (item.isFavorite) {
-		buttons.add(Button.of(ButtonStyle.SUCCESS, "favorite", "Favorited", Emoji.fromEmote(favoritedEmote!!)))
+		buttons.add(Button.of(ButtonStyle.SUCCESS, "favorite", "Favorited", favoritedEmote?.let(Emoji::fromEmote)))
 	} else {
-		buttons.add(Button.of(ButtonStyle.SECONDARY, "favorite", "Favorite", Emoji.fromEmote(favoriteEmote!!)))
+		buttons.add(Button.of(ButtonStyle.SECONDARY, "favorite", "Favorite", favoriteEmote?.let(Emoji::fromEmote)))
 	}
 
 	// Mark seen button
 	if (!item.isItemSeen) {
-		buttons.add(Button.of(ButtonStyle.SECONDARY, "markSeen", "Mark seen", Emoji.fromEmote(bangEmote!!)))
+		buttons.add(Button.of(ButtonStyle.SECONDARY, "markSeen", "Mark seen", bangEmote?.let(Emoji::fromEmote)))
 	}
 
 	val message = source.complete(alert, embed.build(), ActionRow.of(buttons))
@@ -225,7 +225,7 @@ private fun editVariants(source: CommandSourceStack, profileId: String, lockerIt
 	}
 	val buttons = mutableListOf<Button>()
 	for (variant in variants) {
-		buttons.add(Button.of(ButtonStyle.PRIMARY, variant.cosmeticVariant.backendChannelName, "%s (%s)".format(variant.channelName, variant.activeVariantDisplayName)))
+		buttons.add(Button.of(ButtonStyle.PRIMARY, variant.cosmeticVariant.backendChannelName, "%s: %s".format(variant.channelName, variant.activeVariantDisplayName)))
 	}
 	buttons.add(Button.of(ButtonStyle.SECONDARY, "cancel", "Cancel", Emoji.fromUnicode("❌")))
 	val message = source.complete("**Select style to edit**", null, *buttons.chunked(5, ActionRow::of).toTypedArray())
