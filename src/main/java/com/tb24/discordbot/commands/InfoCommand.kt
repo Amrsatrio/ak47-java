@@ -34,7 +34,7 @@ class InfoCommand : BrigadierCommand("info", "Shows general info about the bot."
 
 	private fun executeGuilds(source: CommandSourceStack): Int {
 		source.complete(source.client.commandManager.byGuild.entries.sortedByDescending { it.value }.take(25).joinToString("\n") {
-			val guild = source.jda.getGuildById(it.key)
+			val guild = source.client.discord.getGuildById(it.key)
 			"%s (%s): %s".format(guild?.name, it.key, it.value)
 		})
 		return Command.SINGLE_SUCCESS
