@@ -89,7 +89,7 @@ class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the
 			throw SimpleCommandExceptionType(LiteralMessage("You have no saved accounts.")).create()
 		}
 		var total = 0
-		if (users != null && total == 0 && devices.filter { it.accountId in users }.isNullOrEmpty()) {
+		if (users != null && devices.filter { it.accountId in users }.isNullOrEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("You don't have saved accounts that are matching the name(s).")).create()
 		}
 		forEachSavedAccounts(source, if (users != null) devices.filter { it.accountId in users } else devices) {

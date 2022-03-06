@@ -139,7 +139,7 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 			embed.addField(entry.first, entry.second, false)
 		}
 		if (usersWith3dailies.isNotEmpty()) {
-			embed.setFooter("Users with 3 dailies: ${usersWith3dailies.joinToString(", ")}")
+			embed.setFooter("3 dailies: ${usersWith3dailies.joinToString(", ")}")
 		}
 		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS
