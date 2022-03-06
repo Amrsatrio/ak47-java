@@ -137,6 +137,10 @@ class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active 
 		val embed = EmbedBuilder().setColor(COLOR_INFO)
 		for (entry in entries) {
 			embed.addField(entry.first, entry.second, false)
+			if (embed.fields.size == 25) {
+				source.complete(null, embed.build())
+				embed.clearFields()
+			}
 		}
 		if (usersWith3dailies.isNotEmpty()) {
 			embed.setFooter("3 dailies: ${usersWith3dailies.joinToString(", ")}")

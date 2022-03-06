@@ -134,7 +134,11 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 		val inline = entries.size >= 6
 		for (entry in entries) {
             embed.addField(entry.first, entry.second, inline)
-        }
+			if (embed.fields.size == 25) {
+				source.complete(null, embed.build())
+				embed.clearFields()
+			}
+		}
 		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS
 	}
@@ -173,6 +177,7 @@ fun executeMtxAlerts(source: CommandSourceStack, campaign: McpProfile? = null): 
 	if ((source.channel as? TextChannel)?.isNews == true) {
 		message.crosspost().queue()
 	}
+	if (embed.fields.isEmpty()) message.addReaction("a:spoingbob:849313537142554684").complete()
 	return Command.SINGLE_SUCCESS
 }
 
