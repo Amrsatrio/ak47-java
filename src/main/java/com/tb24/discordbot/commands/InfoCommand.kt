@@ -14,7 +14,10 @@ import java.lang.management.ManagementFactory
 class InfoCommand : BrigadierCommand("info", "Shows general info about the bot.", arrayOf("memory", "mem")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it.source) }
-		.then(literal("guilds").requires(Rune::isBotDev).executes { executeGuilds(it.source) })
+		.then(literal("guilds").requires(Rune::isBotDev)
+			.executes { executeGuilds(it.source) }
+			.then(literal("clear").executes { it.source.client.commandManager.byGuild.clear(); it.source.complete("Cleared"); 1 })
+		)
 
 	override fun getSlashCommand() = newCommandBuilder().executes(::execute)
 

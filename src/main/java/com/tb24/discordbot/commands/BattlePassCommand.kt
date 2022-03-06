@@ -26,7 +26,7 @@ import net.dv8tion.jda.api.interactions.components.Button
 import java.util.concurrent.CompletableFuture
 import kotlin.math.min
 
-val lockEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Locks/T-Icon-Lock-128.T-Icon-Lock-128")
+val lockEmote by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/Locks/T-Icon-Lock-128.T-Icon-Lock-128") }
 
 class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pass.", arrayOf("bp")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()

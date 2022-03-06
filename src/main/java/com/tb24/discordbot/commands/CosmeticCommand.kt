@@ -28,10 +28,12 @@ import me.fungames.jfortniteparse.fort.exports.variants.FortCosmeticRichColorVar
 import me.fungames.jfortniteparse.fort.exports.variants.FortCosmeticVariantBackedByArray
 import me.fungames.jfortniteparse.util.printHexBinary
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.Button
 import net.dv8tion.jda.api.interactions.components.ButtonStyle
+import net.dv8tion.jda.api.interactions.components.selections.SelectOption
 import net.dv8tion.jda.api.interactions.components.selections.SelectionMenu
 import net.dv8tion.jda.api.interactions.components.selections.SelectionMenuInteraction
 import java.nio.ByteBuffer
@@ -242,7 +244,7 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 	val (cosmeticVariant, backendVariant) = variant
 	val embed = EmbedBuilder().setColor(item.palette.Color2.toColor())
 		.setTitle("✏ Editing: " + variant.channelName)
-		.setDescription("**Current:** " + variant.activeVariantDisplayName + '\n')
+		.setDescription("**Current:** " + variant.activeVariantDisplayName)
 	val selected = if (cosmeticVariant is FortCosmeticItemTexture) {
 		embed.appendDescription("Emoticon or spray?")
 		val message = source.complete(null, embed.build(), ActionRow.of(
@@ -261,11 +263,15 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 		}
 		val typeName = (interaction.component as Button).label
 		source.loadingMsg = source.complete("Type in the exact name of the %s that you want to pick, or `cancel` to cancel:".format(typeName))
-		val search = source.channel.awaitMessages({ collected, _, _ -> collected.author == source.author }, AwaitMessagesOptions().apply {
+		val response = source.channel.awaitMessages({ collected, _, _ -> collected.author == source.author }, AwaitMessagesOptions().apply {
 			max = 1
 			time = 60000L
 			errors = arrayOf(CollectorEndReason.TIME)
-		}).await().first().contentRaw
+		}).await().first()
+		val search = response.contentRaw
+		if (source.guild?.selfMember?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
+			response.delete().queue()
+		}
 		if (search == "cancel") {
 			return execute(source, item, source.api.profileManager.getProfileData("athena"))
 		}
@@ -274,26 +280,17 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 			?: return execute(source, item, source.api.profileManager.getProfileData("athena"), "⚠ No %s found for `%s`".format(typeName, search))
 		"ItemTexture.AthenaDance:${itemDef.name.toLowerCase()}"
 	} else if (cosmeticVariant is FortCosmeticRichColorVariant) {
-		embed.appendDescription("Pick a new color to apply.")
-		val selectionMenu = SelectionMenu.create("choice")
 		val colors = cosmeticVariant.InlineVariant.RichColorVar.ColorSwatchForChoices?.load<CustomDynamicColorSwatch>()?.ColorPairs
 			?: throw SimpleCommandExceptionType(LiteralMessage("No color swatch for %s. Custom colors are not yet supported.".format(variant.channelName))).create()
-		for (color in colors) {
-			val colorName = color.ColorName.toString()
-			selectionMenu.addOption(color.ColorDisplayName.format() ?: colorName, colorName)
+		val options = colors.map {
+			val colorName = it.ColorName.toString()
+			SelectOption.of(it.ColorDisplayName.format() ?: colorName, colorName)
 		}
-		val message = source.complete(null, embed.build(), ActionRow.of(selectionMenu.build()), ActionRow.of(Button.of(ButtonStyle.SECONDARY, "cancel", "Cancel", Emoji.fromUnicode("❌"))))
-		source.loadingMsg = message
-		val interaction = message.awaitOneInteraction(source.author, false)
-		if (interaction.componentId == "cancel") {
-			return execute(source, item, source.api.profileManager.getProfileData("athena"))
+		val selectedColor = when (val selectedColorName = askChoice(source, embed, options, "Pick a new color to apply")) {
+			null -> return execute(source, item, source.api.profileManager.getProfileData("athena"))
+			"__locked__" -> throw SimpleCommandExceptionType(LiteralMessage("That color is locked.")).create()
+			else -> colors.first { it.ColorName.toString() == selectedColorName }
 		}
-		val selectedVariant = (interaction as SelectionMenuInteraction).selectedOptions!!.first()
-		if (selectedVariant.emoji != null) {
-			throw SimpleCommandExceptionType(LiteralMessage("That style is locked.")).create()
-		}
-		val selectedColorName = selectedVariant.value
-		val selectedColor = colors.first { it.ColorName.toString() == selectedColorName }
 		val colorValue = selectedColor.ColorValue
 		val buf = ByteBuffer.allocate(4 * 4)
 		buf.putFloat(colorValue.r)
@@ -302,8 +299,7 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 		buf.putFloat(colorValue.a)
 		"RichColor." + buf.array().printHexBinary()
 	} else if (cosmeticVariant is FortCosmeticVariantBackedByArray) {
-		embed.appendDescription("Pick a new style to apply.")
-		val selectionMenu = SelectionMenu.create("choice")
+		val options = mutableListOf<SelectOption>()
 		val variantDefs = cosmeticVariant.variants ?: emptyList()
 		for (variantDef in variantDefs) {
 			val backendName = variantDef.backendVariantName
@@ -318,27 +314,54 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 				}
 			}
 			if (lockReason == null) {
-				selectionMenu.addOption(variantDef.VariantName.format() ?: variantDef.backendVariantName, variantDef.backendVariantName)
+				options.add(SelectOption.of(variantDef.VariantName.format() ?: backendName, backendName))
 			} else {
-				selectionMenu.addOption((variantDef.VariantName.format() ?: variantDef.backendVariantName) + " (" + lockReason.format() + ")", variantDef.backendVariantName, Emoji.fromEmote(lockEmote!!))
+				options.add(SelectOption.of((variantDef.VariantName.format() ?: backendName) + " (" + lockReason.format() + ")", backendName).withEmoji(Emoji.fromEmote(lockEmote!!)))
 			}
 		}
-		val message = source.complete(null, embed.build(), ActionRow.of(selectionMenu.build()), ActionRow.of(Button.of(ButtonStyle.SECONDARY, "cancel", "Cancel", Emoji.fromUnicode("❌"))))
+		when (val selectedVariantName = askChoice(source, embed, options, "Pick a new style to apply")) {
+			null -> return execute(source, item, source.api.profileManager.getProfileData("athena"))
+			"__locked__" -> throw SimpleCommandExceptionType(LiteralMessage("That style is locked.")).create()
+			else -> variantDefs.firstOrNull { it.backendVariantName == selectedVariantName }?.backendVariantName ?: return Command.SINGLE_SUCCESS
+		}
+	} else {
+		throw SimpleCommandExceptionType(LiteralMessage("Unsupported ${cosmeticVariant.exportType} ${variant.channelName}. Channel tag is ${variant.cosmeticVariant.backendChannelName}.")).create()
+	}
+	return equip(source, profileId, lockerItem, category, item, 0, arrayOf(McpVariantReader(cosmeticVariant.backendChannelName, selected, emptyArray())))
+}
+
+fun askChoice(source: CommandSourceStack, embed: EmbedBuilder, options: List<SelectOption>, hint: String): String? {
+	val selected = if (options.size > 25) {
+		embed.addFieldSeparate(hint, options, inline = true) { (it.emoji?.asMention?.let { "$it " } ?: "") + it.label }
+		embed.setFooter("Type the number of the option you want to select, or 'cancel' to return.")
+		val message = source.complete(null, embed.build())
+		source.loadingMsg = message
+		val response = source.channel.awaitMessages({ msg, user, _ -> user == source.author && (msg.contentRaw.equals("cancel", true) || msg.contentRaw.toIntOrNull()?.let { it >= 1 && it <= options.size } == true) }, AwaitMessagesOptions().apply {
+			max = 1
+			time = 30000
+			errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
+		}).await().first()
+		val choice = message.contentRaw.toIntOrNull()
+		if (source.guild?.selfMember?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
+			response.delete().queue()
+		}
+		if (choice == null) {
+			return null
+		}
+		options[choice - 1]
+	} else {
+		val message = source.complete(null, embed.build(), ActionRow.of(SelectionMenu.create("choice").setPlaceholder(hint).addOptions(options).build()), ActionRow.of(Button.of(ButtonStyle.SECONDARY, "cancel", "Cancel", Emoji.fromUnicode("❌"))))
 		source.loadingMsg = message
 		val interaction = message.awaitOneInteraction(source.author, false)
 		if (interaction.componentId == "cancel") {
-			return execute(source, item, source.api.profileManager.getProfileData("athena"))
+			return null
 		}
-		val selectedVariant = (interaction as SelectionMenuInteraction).selectedOptions!!.first()
-		if (selectedVariant.emoji != null) {
-			throw SimpleCommandExceptionType(LiteralMessage("That style is locked.")).create()
-		}
-		val selectedVariantName = selectedVariant.value
-		variantDefs.firstOrNull { it.backendVariantName == selectedVariantName }?.backendVariantName ?: return Command.SINGLE_SUCCESS
-	} else {
-		throw SimpleCommandExceptionType(LiteralMessage("Unsupported ${cosmeticVariant.exportType} ${variant.channelName}. Channel tag is ${variant.cosmeticVariant.backendChannelName}. Please report this to the devs.")).create()
+		(interaction as SelectionMenuInteraction).selectedOptions!!.first()
 	}
-	return equip(source, profileId, lockerItem, category, item, 0, arrayOf(McpVariantReader(cosmeticVariant.backendChannelName, selected, emptyArray())))
+	if (selected.emoji != null) {
+		return "__locked__"
+	}
+	return selected.value
 }
 
 private fun equip(source: CommandSourceStack, profileId: String, inLockerItem: String, inCategory: EAthenaCustomizationCategory, item: FortItemStack, inSlotIndex: Int, inVariantUpdates: Array<McpVariantReader>? = emptyArray()): Int {
