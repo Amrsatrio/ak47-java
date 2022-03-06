@@ -8,11 +8,16 @@ import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.util.*
+import com.tb24.fn.EpicApi
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commoncore.SetAffiliateName
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
+import com.tb24.fn.network.AccountService
+import com.tb24.fn.util.EAuthClient
 import com.tb24.fn.util.getString
+import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.interactions.commands.OptionType
+import okhttp3.OkHttpClient
 import java.text.NumberFormat
 import java.util.*
 
@@ -27,6 +32,9 @@ class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Su
 			.executes { execute(it.source, it.commandName, getString(it, "new code")) }
 		)
 		.then(literal("earnings").executes { earnings(it.source) })
+		.then(literal("bulk").then(argument("code", greedyString())
+			.executes { bulk(it.source, getString(it, "code")) }
+		))
 
 	override fun getSlashCommand() = newCommandBuilder()
 		.option(OptionType.STRING, "new-code", "The new Support-a-Creator code to apply.")
@@ -61,6 +69,28 @@ class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Su
 				.setDescription("✅ Support-a-Creator code set to **$newCode**.")
 				.build())
 		}
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun bulk(source: CommandSourceStack, newCode: String): Int {
+		source.loading("Applying Support-a-Creator code")
+		val api = EpicApi(OkHttpClient())
+		val token = api.accountService.getAccessToken(EAuthClient.FORTNITE_PC_GAME_CLIENT.asBasicAuthString(), AccountService.GrantType.clientCredentials(), null, null).exec().body()
+		api.userToken = token
+		api.affiliateService.checkAffiliateSlug(newCode).exec().body()!!
+		api.accountService.killSession(api.userToken.access_token).exec()
+		val devices = source.client.savedLoginsManager.getAll(source.author.id)
+		var i = 0
+		val embed = EmbedBuilder()
+		forEachSavedAccounts(source, devices) {
+			source.api.profileManager.dispatchClientCommandRequest(SetAffiliateName().apply {
+				affiliateName = newCode
+			}).await()
+			i++
+		}
+		embed.setColor(COLOR_SUCCESS)
+		embed.setDescription("✅ Applied **$newCode** to **$i/${devices.count()}** accounts.")
+		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS
 	}
 
