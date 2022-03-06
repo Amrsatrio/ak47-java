@@ -120,6 +120,9 @@ fun doLogin(source: CommandSourceStack, grantType: EGrantType, params: String, a
 			if (split.size != 3) {
 				throw SimpleCommandExceptionType(LiteralMessage("Login arguments for device auth must be in this format: `account_id:device_id:secret`")).create()
 			}
+			if (source.message != null && source.guild?.selfMember?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
+				source.message!!.delete().queue()
+			}
 			source.session.login(source, deviceAuth(split[0], split[1], split[2]), authClient ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT)
 		}
 		EGrantType.device_code -> deviceCode(source, authClient ?: EAuthClient.FORTNITE_NEW_SWITCH_GAME_CLIENT)
