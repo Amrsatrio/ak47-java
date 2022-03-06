@@ -232,7 +232,7 @@ fun doDeviceAuthLogin(source: CommandSourceStack, deviceData: DeviceAuth, users:
 
 private inline fun startDefaultLoginFlow(source: CommandSourceStack) =
 	authorizationCodeHint(source, EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
-//deviceCode(source, EAuthClient.FORTNITE_NEW_SWITCH_GAME_CLIENT)
+	//deviceCode(source, EAuthClient.FORTNITE_NEW_SWITCH_GAME_CLIENT)
 
 fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 	//if (true) throw SimpleCommandExceptionType(LiteralMessage("Device code is disabled until further notice.")).create()

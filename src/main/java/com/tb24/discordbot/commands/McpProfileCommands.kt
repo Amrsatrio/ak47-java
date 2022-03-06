@@ -25,7 +25,20 @@ class ComposeMcpCommand : BrigadierCommand("composemcp", "Perform an arbitrary M
 		.then(argument("command", word())
 			.executes { exec(it.source, getString(it, "command")) }
 			.then(argument("profile ID", word())
-				.executes { exec(it.source, getString(it, "command"), getString(it, "profile ID").toLowerCase()) }
+				.executes { c ->
+					val source = c.source
+					val bodyFile = source.message?.attachments?.firstOrNull()
+					if (bodyFile != null) {
+						val maxAcceptedFileSize = 1 shl 20
+						if (bodyFile.size > maxAcceptedFileSize) {
+							throw SimpleCommandExceptionType(LiteralMessage("Request body may not be larger than 1 MB.")).create()
+						}
+						val body = bodyFile.retrieveInputStream().await().bufferedReader().use { it.readText() }
+						exec(source, getString(c, "command"), getString(c, "profile ID").toLowerCase(), body)
+					} else {
+						exec(source, getString(c, "command"), getString(c, "profile ID").toLowerCase())
+					}
+				}
 				.then(argument("body", greedyString())
 					.executes { exec(it.source, getString(it, "command"), getString(it, "profile ID").toLowerCase(), getString(it, "body")) }
 				)
