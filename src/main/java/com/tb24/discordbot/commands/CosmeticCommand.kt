@@ -313,10 +313,14 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 					lockReason = variantDef.UnlockRequirements.format() ?: "Unknown"
 				}
 			}
+			var variantDisplayName = variantDef.VariantName.format()
+			if (variantDisplayName.isNullOrEmpty()) {
+				variantDisplayName = backendName!!
+			}
 			if (lockReason == null) {
-				options.add(SelectOption.of(variantDef.VariantName.format() ?: backendName, backendName))
+				options.add(SelectOption.of(variantDisplayName, backendName))
 			} else {
-				options.add(SelectOption.of((variantDef.VariantName.format() ?: backendName) + " (" + lockReason.format() + ")", backendName).withEmoji(Emoji.fromEmote(lockEmote!!)))
+				options.add(SelectOption.of(variantDisplayName + if (lockReason.isNotEmpty()) " (" + lockReason.format() + ")" else "", backendName).withEmoji(Emoji.fromEmote(lockEmote!!)))
 			}
 		}
 		when (val selectedVariantName = askChoice(source, embed, options, "Pick a new style to apply")) {

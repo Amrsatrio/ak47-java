@@ -449,7 +449,11 @@ class VariantContainer(val cosmeticVariant: FortCosmeticVariant, backendVariants
 
 	val activeVariantDisplayName get() = when (cosmeticVariant) {
 		is FortCosmeticItemTexture -> cosmeticVariant.getActive(backendVariant).let { "%s (%s)".format(it.displayName, it.shortDescription) }
-		is FortCosmeticVariantBackedByArray -> cosmeticVariant.getActive(backendVariant)?.VariantName?.format() ?: "**UNKNOWN SUBTYPE PLEASE REPORT**"
+		is FortCosmeticVariantBackedByArray -> {
+			val activeVariant = cosmeticVariant.getActive(backendVariant)
+			val variantName = activeVariant?.VariantName?.format() ?: "**UNKNOWN SUBTYPE PLEASE REPORT**"
+			variantName.ifEmpty { activeVariant?.backendVariantName }
+		}
 		is FortCosmeticFloatSliderVariant -> "%d/%d".format(cosmeticVariant.getActive(backendVariant).toInt(), cosmeticVariant.MaxParamValue.toInt())
 		is FortCosmeticNumericalVariant -> Formatters.num.format(cosmeticVariant.getActive(backendVariant))
 		is FortCosmeticProfileBannerVariant -> null // Always the currently equipped banner, cannot be displayed
