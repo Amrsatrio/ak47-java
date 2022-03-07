@@ -102,13 +102,15 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 	private fun executeBulk(source: CommandSourceStack, usersLazy: Lazy<Collection<GameProfile>>? = null): Int {
 		source.conditionalUseInternalSession()
 		source.loading("Getting mission alerts info")
-		val mtxAlerts = mutableMapOf<String, Int>()
+		val mtxAlerts = mutableMapOf<String, Pair<Int, Int>>()
 		var totalMtx = 0
+		var completedCount = 0
+		var totalEarnedMtx = 0
 		queryTheaters(source).iterateMissions { _, mission, missionAlert ->
 			val mtxLoot = missionAlert?.MissionAlertRewards?.items?.firstOrNull { it.itemType == "AccountResource:currency_mtxswap" }
 				?: return@iterateMissions true
 			totalMtx += mtxLoot.quantity
-			mtxAlerts[missionAlert.MissionAlertGuid] = mission.MissionDifficultyInfo.getRowMapped<GameDifficultyInfo>()!!.RecommendedRating
+			mtxAlerts[missionAlert.MissionAlertGuid] = mission.MissionDifficultyInfo.getRowMapped<GameDifficultyInfo>()!!.RecommendedRating to mtxLoot.quantity
 			true
 		}
 		if (mtxAlerts.isEmpty()) {
@@ -121,25 +123,34 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 				return@stwBulk null
 			}
 			val attrs = campaign.stats as CampaignProfileStats
-			campaign.owner.displayName to mtxAlerts.entries.joinToString(" ") { (alertGuid, rating) ->
+			campaign.owner.displayName to mtxAlerts.entries.joinToString(" ") { (alertGuid, ratingAndNumMtx) ->
 				val hasCompletedMissionAlert = attrs.mission_alert_redemption_record?.claimData?.any { it.missionAlertId == alertGuid } == true
-				"%,d: %s".format(rating, if (hasCompletedMissionAlert) "✅" else "❌")
+				"%,d: %s".format(ratingAndNumMtx.first, if (hasCompletedMissionAlert) {
+					completedCount++
+					totalEarnedMtx += ratingAndNumMtx.second
+					"✅"
+				} else "❌")
 			}
 		}
 		if (entries.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("All users we're trying to display don't have STW founders.")).create()
 		}
 		val embed = EmbedBuilder().setColor(COLOR_INFO)
-			.setFooter("%,d V-Bucks today".format(totalMtx))
+			.setTitle("%s %,d/%,d @ %,d".format(Utils.MTX_EMOJI, completedCount * totalMtx, entries.size * totalMtx, totalMtx))
 		val inline = entries.size >= 6
 		for (entry in entries) {
-            embed.addField(entry.first, entry.second, inline)
 			if (embed.fields.size == 25) {
 				source.complete(null, embed.build())
-				embed.clearFields()
+				embed.setTitle(null).clearFields()
 			}
+			embed.addField(entry.first, entry.second, inline)
 		}
-		source.complete(null, embed.build())
+		val footerInfo = StringBuilder("%,d/%,d alerts completed".format(completedCount, entries.size))
+		val remaining = entries.size - completedCount
+		if (remaining > 0) {
+			footerInfo.append(", %,d remaining".format(remaining))
+		}
+		source.complete(null, embed.setFooter(footerInfo.toString()).build())
 		return Command.SINGLE_SUCCESS
 	}
 }

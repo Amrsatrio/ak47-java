@@ -96,12 +96,12 @@ class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 			val commonCore = source.api.profileManager.getProfileData("common_core")
 			val mtx = countMtxCurrency(commonCore)
-			embed.addField(source.api.currentLoggedIn.displayName, "${Utils.MTX_EMOJI} ${Formatters.num.format(mtx)}", true)
 			if (embed.fields.size == 25) {
 				source.complete(null, embed.build())
 				embed.clearFields()
 				source.loading("Getting balances")
 			}
+			embed.addField(source.api.currentLoggedIn.displayName, "${Utils.MTX_EMOJI} ${Formatters.num.format(mtx)}", true)
 			total += mtx
 		}
 		embed.setFooter("Total: %,d V-Bucks".format(total))

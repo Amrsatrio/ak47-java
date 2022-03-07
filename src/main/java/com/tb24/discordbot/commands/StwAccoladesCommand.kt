@@ -76,11 +76,11 @@ class StwAccoladesCommand : BrigadierCommand("stwaccolades", "Shows the amount o
 		val embed = EmbedBuilder().setColor(COLOR_INFO)
 		val inline = entries.size >= 6
 		for (entry in entries) {
-			embed.addField(entry.first, entry.second, inline)
 			if (embed.fields.size == 25) {
 				source.complete(null, embed.build())
 				embed.clearFields()
 			}
+			embed.addField(entry.first, entry.second, inline)
 		}
 		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS
