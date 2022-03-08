@@ -62,7 +62,6 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 fun purchaseFree(source: CommandSourceStack): Int {
 	val devices = source.client.savedLoginsManager.getAll(source.author.id)
 	forEachSavedAccounts(source, devices) {
-		source.ensureSession()
 		source.loading("Getting the shop")
 		val catalogManager = source.client.catalogManager
 		val profileManager = source.api.profileManager
@@ -98,13 +97,16 @@ fun purchaseFree(source: CommandSourceStack): Int {
 				}
 			}
 		}
-		if (numPurchased == 0) {
-			throw SimpleCommandExceptionType(LiteralMessage(if (numFreeOffers == 0) "No free offers to purchase" else "You already own all free offers")).create()
+		if (numPurchased != 0) {
+			val embed = source.createEmbed()
+				.addField("✅ Successfully Purchased", purchased.toString(), false)
+				.setColor(0x00FF00)
+			source.complete(null, embed.build())
+		} else {
+			val embed = source.createEmbed()
+				.setDescription("❌ %s".format(if (numFreeOffers == 0) "No free offers found" else "You already own all free offers"))
+			source.complete(null, embed.build())
 		}
-		val embed = source.createEmbed()
-			.addField("✅ Successfully Purchased", purchased.toString(), false)
-			.setColor(0x00FF00)
-		source.complete(null, embed.build())
 	}
 	return Command.SINGLE_SUCCESS
 }
