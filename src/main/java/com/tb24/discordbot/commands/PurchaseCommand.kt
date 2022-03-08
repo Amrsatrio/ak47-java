@@ -54,6 +54,59 @@ class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry fro
 				)
 			)
 		)
+		.then(literal("freebulk")
+			.executes { purchaseFree(it.source) }
+		)
+}
+
+fun purchaseFree(source: CommandSourceStack): Int {
+	val devices = source.client.savedLoginsManager.getAll(source.author.id)
+	forEachSavedAccounts(source, devices) {
+		source.ensureSession()
+		source.loading("Getting the shop")
+		val catalogManager = source.client.catalogManager
+		val profileManager = source.api.profileManager
+		catalogManager.ensureCatalogData(source.client.internalSession.api)
+		CompletableFuture.allOf(
+			profileManager.dispatchClientCommandRequest(QueryProfile()),
+			profileManager.dispatchClientCommandRequest(QueryProfile(), "athena")
+		).await()
+		val sections = catalogManager.athenaSections.values
+		var purchased = StringBuilder()
+		var numPurchased = 0
+		var numFreeOffers = 0
+		for ((_, section) in sections.withIndex()) {
+			for (catalogEntry in section.items) {
+				if (catalogEntry.offerType == ECatalogOfferType.StaticPrice && (catalogEntry.prices.isEmpty() || catalogEntry.prices.first().currencyType == EStoreCurrencyType.RealMoney)) continue
+				val sd = catalogEntry.holder().apply { resolve(profileManager) }
+				catalogEntry.prices.forEach {
+					if (it.currencyType == EStoreCurrencyType.MtxCurrency && it.finalPrice == 0) {
+						numFreeOffers++
+						if (sd.canPurchase) {
+							source.api.profileManager.dispatchClientCommandRequest(PurchaseCatalogEntry().apply {
+								offerId = catalogEntry.offerId
+								purchaseQuantity = 1
+								currency = it.currencyType
+								currencySubType = it.currencySubType
+								expectedTotalPrice = 0
+								gameContext = "Frontend.ItemShopScreen"
+							}).await()
+							purchased.append("${sd.ce.devName.substring("[VIRTUAL]".length, sd.ce.devName.lastIndexOf(" for ")).replace("1 x ", "").replace(" x ", " \u00d7 ")}\n")
+							numPurchased++
+						}
+					}
+				}
+			}
+		}
+		if (numPurchased == 0) {
+			throw SimpleCommandExceptionType(LiteralMessage(if (numFreeOffers == 0) "No free offers to purchase" else "You already own all free offers")).create()
+		}
+		val embed = source.createEmbed()
+			.addField("✅ Successfully Purchased", purchased.toString(), false)
+			.setColor(0x00FF00)
+		source.complete(null, embed.build())
+	}
+	return Command.SINGLE_SUCCESS
 }
 
 fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int = 1, priceIndex: Int = -1): Int {
