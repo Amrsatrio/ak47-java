@@ -251,12 +251,15 @@ private fun execBuyAllCampaign(source: CommandSourceStack): Int {
 }
 
 private fun execBuyAllCampaignBulk(source: CommandSourceStack, users: Map<String, GameProfile>?): Int {
-	source.conditionalUseInternalSession()
+	source.ensureSession()
 	source.loading("Getting offers")
 	val catalogManager = source.client.catalogManager
 	val sections = catalogManager.campaignSections.values.withIndex()
 	catalogManager.ensureCatalogData(source.client.internalSession.api)
 	val devices = source.client.savedLoginsManager.getAll(source.author.id)
+	if (devices.isEmpty()) {
+		throw SimpleCommandExceptionType(LiteralMessage("You don't have saved logins. Please perform `.savelogin` before continuing.")).create()
+	}
 	val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
 	forEachSavedAccounts(source, if (users != null) devices.filter { it.accountId in users } else devices) {
 		val profileManager = source.api.profileManager

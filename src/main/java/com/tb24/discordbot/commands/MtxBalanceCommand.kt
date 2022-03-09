@@ -86,7 +86,7 @@ class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the
 		val embed = EmbedBuilder().setColor(COLOR_INFO)
 		val devices = source.client.savedLoginsManager.getAll(source.author.id)
 		if (devices.isEmpty()) {
-			throw SimpleCommandExceptionType(LiteralMessage("You have no saved accounts.")).create()
+			throw SimpleCommandExceptionType(LiteralMessage("You don't have saved logins. Please perform `.savelogin` before continuing.")).create()
 		}
 		var total = 0
 		if (users != null && devices.filter { it.accountId in users }.isNullOrEmpty()) {

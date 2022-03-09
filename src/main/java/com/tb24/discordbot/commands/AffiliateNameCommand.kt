@@ -3,9 +3,11 @@ package com.tb24.discordbot.commands
 import com.google.gson.JsonObject
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
@@ -74,12 +76,15 @@ class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Su
 
 	private fun bulk(source: CommandSourceStack, newCode: String): Int {
 		source.loading("Applying Support-a-Creator code")
+		val devices = source.client.savedLoginsManager.getAll(source.author.id)
+		if (devices.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("You don't have saved logins. Please perform `.savelogin` before continuing.")).create()
+		}
 		val api = EpicApi(OkHttpClient())
 		val token = api.accountService.getAccessToken(EAuthClient.FORTNITE_PC_GAME_CLIENT.asBasicAuthString(), AccountService.GrantType.clientCredentials(), null, null).exec().body()
 		api.userToken = token
 		api.affiliateService.checkAffiliateSlug(newCode).exec().body()!!
 		api.accountService.killSession(api.userToken.access_token).exec()
-		val devices = source.client.savedLoginsManager.getAll(source.author.id)
 		var i = 0
 		val embed = EmbedBuilder()
 		forEachSavedAccounts(source, devices) {
