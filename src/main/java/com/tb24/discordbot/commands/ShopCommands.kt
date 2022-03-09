@@ -251,7 +251,6 @@ private fun execBuyAllCampaign(source: CommandSourceStack): Int {
 }
 
 private fun execBuyAllCampaignBulk(source: CommandSourceStack, users: Map<String, GameProfile>?): Int {
-	source.ensureSession()
 	source.loading("Getting offers")
 	val catalogManager = source.client.catalogManager
 	val sections = catalogManager.campaignSections.values.withIndex()
