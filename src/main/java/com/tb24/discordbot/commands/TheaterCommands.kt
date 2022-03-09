@@ -136,7 +136,7 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 			throw SimpleCommandExceptionType(LiteralMessage("All users we're trying to display don't have STW founders.")).create()
 		}
 		val embed = EmbedBuilder().setColor(COLOR_INFO)
-			.setTitle("%s %,d/%,d @ %,d".format(Utils.MTX_EMOJI, completedCount * totalMtx, entries.size * totalMtx, totalMtx))
+			.setTitle("%s %,d/%,d @ %,d".format(Utils.MTX_EMOJI, totalEarnedMtx, entries.size * totalMtx, totalMtx))
 		val inline = entries.size >= 6
 		for (entry in entries) {
 			if (embed.fields.size == 25) {
@@ -145,7 +145,7 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 			}
 			embed.addField(entry.first, entry.second, inline)
 		}
-		val footerInfo = StringBuilder("%,d/%,d alerts completed".format(completedCount, entries.size))
+		val footerInfo = StringBuilder("%,d/%,d alerts completed".format(completedCount, entries.size * mtxAlerts.size))
 		val remaining = entries.size - completedCount
 		if (remaining > 0) {
 			footerInfo.append(", %,d remaining".format(remaining))
