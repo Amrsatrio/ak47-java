@@ -32,7 +32,7 @@ class DeviceAuthCommand : BrigadierCommand("devices", "Device auth operation com
 		.then(literal("import")
 			.then(argument("device auth", StringArgument2.string2())
 				.then(argument("auth client", StringArgumentType.word())
-					.executes { import(it.source, getString(it, "params"), getString(it, "auth client")) }
+					.executes { import(it.source, getString(it, "device auth"), getString(it, "auth client")) }
 				)
 			)
 		)
