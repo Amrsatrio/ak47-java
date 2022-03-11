@@ -145,8 +145,9 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 			}
 			embed.addField(entry.first, entry.second, inline)
 		}
-		val footerInfo = StringBuilder("%,d/%,d alerts completed".format(completedCount, entries.size * mtxAlerts.size))
-		val remaining = entries.size - completedCount
+		val numAlerts = entries.size * mtxAlerts.size
+		val footerInfo = StringBuilder("%,d/%,d alerts completed".format(completedCount, numAlerts))
+		val remaining = numAlerts - completedCount
 		if (remaining > 0) {
 			footerInfo.append(", %,d remaining".format(remaining))
 		}
