@@ -283,7 +283,6 @@ private fun execBuyAllCampaignBulk(source: CommandSourceStack, users: Map<String
 				val ownedOrSoldOut = sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit
 				intTotalItems++
 				if (!ownedOrSoldOut){
-					intPurchased++
 					bHasEverything = false
 					val quantity = sd.purchaseLimit - sd.purchasesCount
 					val price = quantity * sd.price.basePrice
@@ -291,6 +290,7 @@ private fun execBuyAllCampaignBulk(source: CommandSourceStack, users: Map<String
 						intNeededGold += price
 						continue
 					}
+					intPurchased++
 					intGold -= price
 					source.api.profileManager.dispatchClientCommandRequest(PurchaseCatalogEntry().apply {
 						offerId = catalogEntry.offerId
@@ -300,10 +300,11 @@ private fun execBuyAllCampaignBulk(source: CommandSourceStack, users: Map<String
 						expectedTotalPrice = price
 						gameContext = "Frontend.ItemShopScreen"
 					}).await()
+					totalSpent += price
 				} else intTotalOwned++
 			}
 		}
-		val intOffersLeft = intTotalItems-intTotalOwned
+		val intOffersLeft = intTotalItems - intTotalOwned - intPurchased
 		if (embed.fields.size == 25) {
 			source.complete(null, embed.build())
 			embed.clearFields()
