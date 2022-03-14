@@ -19,8 +19,8 @@ import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.TextChannel
-import net.dv8tion.jda.api.interactions.components.Button
-import net.dv8tion.jda.api.interactions.components.ButtonStyle
+import net.dv8tion.jda.api.interactions.components.buttons.Button
+import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
 
 class EmbedCommand : BrigadierCommand("embed", "Shiver me embeds!") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -37,7 +37,7 @@ class EmbedCommand : BrigadierCommand("embed", "Shiver me embeds!") {
 		)
 
 	fun execute(source: CommandSourceStack, channel: TextChannel, titleDescription: String): Int {
-		if (!source.member!!.hasPermission(channel, Permission.MESSAGE_WRITE)) {
+		if (!source.member!!.hasPermission(channel, Permission.MESSAGE_SEND)) {
 			throw SimpleCommandExceptionType(LiteralMessage("You don't have permissions to send messages in that channel.")).create()
 		}
 		val args = titleDescription.split('\n').toMutableList()

@@ -71,7 +71,7 @@ private fun createEmote(name: String, icon: BufferedImage): Emote? {
 		if (guild == null || guild.emotes.size >= 50) { // server boosts can expire, hardcode it to 50 which is the regular limit
 			continue
 		}
-		if (!guild.selfMember.hasPermission(Permission.MANAGE_EMOTES)) {
+		if (!guild.selfMember.hasPermission(Permission.MANAGE_EMOTES_AND_STICKERS)) {
 			DiscordBot.LOGGER.warn("Insufficient permissions to add emoji :{}: into {}", name, guild)
 			continue
 		}

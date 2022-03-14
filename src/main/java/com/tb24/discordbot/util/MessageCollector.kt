@@ -4,7 +4,7 @@ import com.tb24.discordbot.util.CollectorEndReason.*
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageChannel
 import net.dv8tion.jda.api.entities.User
-import net.dv8tion.jda.api.events.channel.text.TextChannelDeleteEvent
+import net.dv8tion.jda.api.events.channel.ChannelDeleteEvent
 import net.dv8tion.jda.api.events.message.MessageBulkDeleteEvent
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
@@ -41,7 +41,7 @@ class MessageCollector : Collector<Message, MessageCollectorOptions> {
 		}
 	}
 
-	override fun onTextChannelDelete(event: TextChannelDeleteEvent) {
+	override fun onChannelDelete(event: ChannelDeleteEvent) {
 		if (event.channel.idLong == channel.idLong) {
 			stop(CHANNEL_DELETE)
 		}

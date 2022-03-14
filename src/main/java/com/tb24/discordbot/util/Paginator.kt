@@ -4,8 +4,8 @@ import com.tb24.discordbot.commands.CommandSourceStack
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.interactions.components.ActionRow
-import net.dv8tion.jda.api.interactions.components.Button
 import net.dv8tion.jda.api.interactions.components.ComponentInteraction
+import net.dv8tion.jda.api.interactions.components.buttons.Button
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min

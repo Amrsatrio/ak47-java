@@ -4,8 +4,8 @@ import com.tb24.discordbot.util.CollectorEndReason.*
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageChannel
 import net.dv8tion.jda.api.entities.User
-import net.dv8tion.jda.api.events.channel.text.TextChannelDeleteEvent
-import net.dv8tion.jda.api.events.interaction.GenericInteractionCreateEvent
+import net.dv8tion.jda.api.events.channel.ChannelDeleteEvent
+import net.dv8tion.jda.api.events.interaction.component.GenericComponentInteractionCreateEvent
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent
 import net.dv8tion.jda.api.interactions.components.ComponentInteraction
 import java.util.concurrent.CompletableFuture
@@ -32,11 +32,8 @@ class MessageComponentInteractionCollector : Collector<ComponentInteraction, Mes
 	}
 
 	// region ListenerAdapter interface
-	override fun onGenericInteractionCreate(event: GenericInteractionCreateEvent) {
-		val interaction = event.interaction
-		if (interaction is ComponentInteraction) {
-			handleCollect(interaction, event.user)
-		}
+	override fun onGenericComponentInteractionCreate(event: GenericComponentInteractionCreateEvent) {
+		handleCollect(event.interaction, event.user)
 	}
 
 	override fun onMessageDelete(event: MessageDeleteEvent) {
@@ -46,7 +43,7 @@ class MessageComponentInteractionCollector : Collector<ComponentInteraction, Mes
 		}
 	}
 
-	override fun onTextChannelDelete(event: TextChannelDeleteEvent) {
+	override fun onChannelDelete(event: ChannelDeleteEvent) {
 		if (event.channel.idLong == channel.idLong) {
 			stop(CHANNEL_DELETE)
 		}

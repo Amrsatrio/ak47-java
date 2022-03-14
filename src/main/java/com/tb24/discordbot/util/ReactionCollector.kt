@@ -4,7 +4,7 @@ import com.tb24.discordbot.util.CollectorEndReason.*
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageReaction
 import net.dv8tion.jda.api.entities.User
-import net.dv8tion.jda.api.events.channel.text.TextChannelDeleteEvent
+import net.dv8tion.jda.api.events.channel.ChannelDeleteEvent
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent
 import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveAllEvent
@@ -46,7 +46,7 @@ class ReactionCollector : Collector<MessageReaction, ReactionCollectorOptions> {
 		}
 	}
 
-	override fun onTextChannelDelete(event: TextChannelDeleteEvent) {
+	override fun onChannelDelete(event: ChannelDeleteEvent) {
 		if (event.channel.idLong == message.channel.idLong) {
 			stop(CHANNEL_DELETE)
 		}

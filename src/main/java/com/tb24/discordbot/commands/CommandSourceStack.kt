@@ -14,11 +14,12 @@ import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.*
 import net.dv8tion.jda.api.interactions.Interaction
 import net.dv8tion.jda.api.interactions.InteractionHook
+import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import net.dv8tion.jda.api.interactions.commands.CommandInteraction
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.internal.interactions.InteractionHookImpl
 import net.dv8tion.jda.internal.requests.restaction.MessageActionImpl
-import net.dv8tion.jda.internal.requests.restaction.interactions.ReplyActionImpl
+import net.dv8tion.jda.internal.requests.restaction.interactions.ReplyCallbackActionImpl
 import java.net.URLEncoder
 import java.util.concurrent.CompletableFuture
 
@@ -29,7 +30,7 @@ open class CommandSourceStack {
 
 	val client: DiscordBot
 	var message: Message? = null
-	private var _interaction: Interaction? = null
+	private var _interaction: IReplyCallback? = null
 	val interaction get() = _interaction!!
 	val commandInteraction get() = _interaction as CommandInteraction
 	var hook: InteractionHook? = null
@@ -62,7 +63,7 @@ open class CommandSourceStack {
 
 	constructor(client: DiscordBot, interaction: Interaction, sessionId: String?, ignoreSessionLimit: Boolean = false) {
 		this.client = client
-		this._interaction = interaction
+		this._interaction = interaction as? IReplyCallback
 		jda = interaction.jda
 		guild = interaction.guild
 		member = interaction.member
@@ -137,7 +138,7 @@ open class CommandSourceStack {
 				action.complete()
 			} else {
 				val action = interaction.deferReply()
-				message?.let { (action as ReplyActionImpl).applyMessage(it) }
+				message?.let { (action as ReplyCallbackActionImpl).applyMessage(it) }
 				if (files.isNotEmpty()) {
 					//action.retainFiles(emptySet())
 					files.forEach { action.addFile(it.data, it.name, *it.options) }

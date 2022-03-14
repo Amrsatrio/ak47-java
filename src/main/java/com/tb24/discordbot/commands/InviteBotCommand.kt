@@ -5,9 +5,9 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.tb24.discordbot.BotConfig
 import net.dv8tion.jda.api.interactions.components.ActionRow
-import net.dv8tion.jda.api.interactions.components.Button
-import net.dv8tion.jda.api.interactions.components.ButtonStyle
-import net.dv8tion.jda.api.interactions.components.Component
+import net.dv8tion.jda.api.interactions.components.ItemComponent
+import net.dv8tion.jda.api.interactions.components.buttons.Button
+import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
 
 class InviteBotCommand : BrigadierCommand("invite", "Sends a link to invite this bot to your server(s).") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -17,7 +17,7 @@ class InviteBotCommand : BrigadierCommand("invite", "Sends a link to invite this
 
 	private fun execute(source: CommandSourceStack): Int {
 		val selfUser = source.jda.selfUser
-		val components = mutableListOf<Component>()
+		val components = mutableListOf<ItemComponent>()
 		components.add(Button.of(ButtonStyle.LINK, "https://discordapp.com/api/oauth2/authorize?client_id=${selfUser.id}&permissions=519232&scope=bot%20applications.commands", "Invite ${selfUser.name} to your server"))
 		BotConfig.get().homeGuildInviteLink?.let { inviteLink ->
 			components.add(Button.of(ButtonStyle.LINK, inviteLink, "Join our support server"))

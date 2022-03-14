@@ -1,10 +1,7 @@
 package com.tb24.discordbot.commands
 
 import net.dv8tion.jda.api.interactions.commands.OptionType
-import net.dv8tion.jda.api.interactions.commands.build.CommandData
-import net.dv8tion.jda.api.interactions.commands.build.OptionData
-import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
-import net.dv8tion.jda.api.interactions.commands.build.SubcommandGroupData
+import net.dv8tion.jda.api.interactions.commands.build.*
 
 abstract class CommandBuilder<SourceType, ResultType, ThisType : CommandBuilder<SourceType, ResultType, ThisType>> {
 	var name: String
@@ -47,7 +44,7 @@ class BaseCommandBuilder<SourceType>(name: String, description: String) : Comman
 	}
 
 	override fun build(): CommandData {
-		val data = CommandData(name, description)
+		val data = Commands.slash(name, description)
 		if (options.isNotEmpty()) data.addOptions(options)
 		subcommands.values.forEach { data.addSubcommands(it.build()) }
 		subcommandGroups.values.forEach { data.addSubcommandGroups(it.build()) }

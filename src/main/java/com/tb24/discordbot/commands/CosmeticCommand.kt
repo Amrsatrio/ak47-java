@@ -31,11 +31,11 @@ import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.interactions.components.ActionRow
-import net.dv8tion.jda.api.interactions.components.Button
-import net.dv8tion.jda.api.interactions.components.ButtonStyle
+import net.dv8tion.jda.api.interactions.components.buttons.Button
+import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
+import net.dv8tion.jda.api.interactions.components.selections.SelectMenu
+import net.dv8tion.jda.api.interactions.components.selections.SelectMenuInteraction
 import net.dv8tion.jda.api.interactions.components.selections.SelectOption
-import net.dv8tion.jda.api.interactions.components.selections.SelectionMenu
-import net.dv8tion.jda.api.interactions.components.selections.SelectionMenuInteraction
 import java.nio.ByteBuffer
 import java.util.concurrent.CompletableFuture
 import kotlin.jvm.internal.Ref
@@ -354,13 +354,13 @@ fun askChoice(source: CommandSourceStack, embed: EmbedBuilder, options: List<Sel
 		}
 		options[choice - 1]
 	} else {
-		val message = source.complete(null, embed.build(), ActionRow.of(SelectionMenu.create("choice").setPlaceholder(hint).addOptions(options).build()), ActionRow.of(Button.of(ButtonStyle.SECONDARY, "cancel", "Cancel", Emoji.fromUnicode("❌"))))
+		val message = source.complete(null, embed.build(), ActionRow.of(SelectMenu.create("choice").setPlaceholder(hint).addOptions(options).build()), ActionRow.of(Button.of(ButtonStyle.SECONDARY, "cancel", "Cancel", Emoji.fromUnicode("❌"))))
 		source.loadingMsg = message
 		val interaction = message.awaitOneInteraction(source.author, false)
 		if (interaction.componentId == "cancel") {
 			return null
 		}
-		(interaction as SelectionMenuInteraction).selectedOptions!!.first()
+		(interaction as SelectMenuInteraction).selectedOptions!!.first()
 	}
 	if (selected.emoji != null) {
 		return "__locked__"

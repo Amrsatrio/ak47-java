@@ -17,11 +17,18 @@ import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.TextChannel
 import net.dv8tion.jda.api.events.ReadyEvent
-import net.dv8tion.jda.api.events.interaction.SlashCommandEvent
+import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import net.dv8tion.jda.api.events.interaction.component.GenericComponentInteractionCreateEvent
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.exceptions.PermissionException
 import net.dv8tion.jda.api.hooks.ListenerAdapter
+import net.dv8tion.jda.api.interactions.Interaction
+import net.dv8tion.jda.api.interactions.ModalInteraction
 import net.dv8tion.jda.api.interactions.commands.CommandInteraction
+import net.dv8tion.jda.api.interactions.components.text.Modal
+import net.dv8tion.jda.api.interactions.components.text.TextInput
+import net.dv8tion.jda.api.interactions.components.text.TextInputStyle
 import net.dv8tion.jda.internal.utils.Helpers
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
@@ -152,6 +159,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(WorkersCommand())
 		register(WorthCommand())
 		register(FortniteAndroidApkCommand())
+		register(WakeCommand())
 	}
 
 	override fun onReady(event: ReadyEvent) {
@@ -210,7 +218,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		}
 	}
 
-	override fun onSlashCommand(event: SlashCommandEvent) {
+	override fun onSlashCommandInteraction(event: SlashCommandInteractionEvent) {
 		if (!hasUpdatedCommands) {
 			return
 		}
@@ -221,7 +229,16 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				event.reply("❌ " + e.message).queue()
 				return@submit
 			}
-			handleCommand(event.interaction as CommandInteraction, source)
+			val interaction = event.interaction as CommandInteraction
+			val baseCommand = slashCommands[interaction.name]!!
+			val command = when {
+				interaction.subcommandGroup != null -> baseCommand.subcommandGroups[interaction.subcommandGroup]!!.subcommands[interaction.subcommandName]!!
+				interaction.subcommandName != null -> baseCommand.subcommands[interaction.subcommandName]!!
+				else -> baseCommand
+			}
+			wrappedExecute(interaction, source) {
+				command.command?.invoke(source) ?: DiscordBot.LOGGER.warn("Command ${interaction.commandPath} has no implementation")
+			}
 		}
 	}
 
@@ -326,16 +343,10 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		}
 	}
 
-	private fun handleCommand(interaction: CommandInteraction, source: CommandSourceStack, canRetry: Boolean = true) {
-		val baseCommand = slashCommands[interaction.name]!!
-		val command = when {
-			interaction.subcommandGroup != null -> baseCommand.subcommandGroups[interaction.subcommandGroup]!!.subcommands[interaction.subcommandName]!!
-			interaction.subcommandName != null -> baseCommand.subcommands[interaction.subcommandName]!!
-			else -> baseCommand
-		}
+	private fun wrappedExecute(interaction: Interaction, source: CommandSourceStack, canRetry: Boolean = true, action: () -> Unit) {
 		try {
 			try {
-				command.command?.invoke(source) ?: DiscordBot.LOGGER.warn("Command ${interaction.commandPath} has no implementation")
+				action()
 			} catch (e: CommandSyntaxException) {
 				val embed = EmbedBuilder().setColor(0xF04947)
 				val lines = mutableListOf<String>()
@@ -353,7 +364,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		} catch (e: HttpException) {
 			if (httpError(source, e)) {
 				if (canRetry) {
-					handleCommand(interaction, source, canRetry)
+					wrappedExecute(interaction, source, canRetry, action)
 				} else {
 					client.dlog("__**Attempted to repeat a command more than once**__\nUser: ${source.author.asMention}\n```\n${e.getStackTraceAsString()}```", null)
 					DiscordBot.LOGGER.error("Attempted to repeat a command more than once", e)
@@ -364,7 +375,11 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		} catch (e: PermissionException) {
 			source.complete(null, EmbedBuilder().setColor(0xF04947).setDescription("❌ Cannot perform action due to a lack of Permission. Missing permission: " + e.permission.getName()).build())
 		} catch (e: Throwable) {
-			var additional = "\nCommand: ${interaction.commandPath}"
+			var additional = ""
+			when (interaction) {
+				is CommandInteraction -> additional += "\nCommand: ${interaction.commandPath}"
+				is ModalInteraction -> additional += "\nModal: ${interaction.modalId}"
+			}
 			source.session.api.okHttpClient.proxy()?.let {
 				additional += "\nProxy: $it"
 			}
@@ -452,4 +467,34 @@ User: ${source.author.asMention}$additional
 ${e.getStackTraceAsString()}```""", null)
 		}
 	}
+
+	// region TODO Move to appropriate class
+	override fun onGenericComponentInteractionCreate(event: GenericComponentInteractionCreateEvent) {
+		if (event.componentId == "submitAuthCode") {
+			val inputCode = TextInput.create("code", "Authorization code", TextInputStyle.SHORT)
+				.setMinLength(32)
+				.setMaxLength(200)
+				.setPlaceholder("aabbccddeeff11223344556677889900")
+				.setRequired(true)
+				.build()
+
+			event.replyModal(Modal.create("authCodeSubmission", "Epic Games log in")
+				.addActionRow(inputCode)
+				.build()).queue()
+		}
+	}
+
+	override fun onModalInteraction(event: ModalInteractionEvent) {
+		if (event.modalId == "authCodeSubmission") {
+			val code = event.getValue("code")!!.asString
+			val interaction = event.interaction
+			val source = CommandSourceStack(client, interaction, event.user.id)
+			threadPool.submit {
+				wrappedExecute(interaction, source) {
+					doLogin(source, EGrantType.authorization_code, code, EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
+				}
+			}
+		}
+	}
+	// endregion
 }

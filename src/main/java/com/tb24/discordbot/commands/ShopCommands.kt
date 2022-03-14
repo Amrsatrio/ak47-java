@@ -42,7 +42,7 @@ import me.fungames.jfortniteparse.util.toPngArray
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
-import net.dv8tion.jda.api.entities.TextChannel
+import net.dv8tion.jda.api.entities.NewsChannel
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.awt.image.BufferedImage
@@ -116,7 +116,7 @@ fun executeShopImage(source: CommandSourceStack): Int {
 	if (source.channel.idLong == BotConfig.get().itemShopChannelId) {
 		/*message.addReaction("👍").queue()
 		message.addReaction("👎").queue()*/
-		if ((source.channel as TextChannel).isNews) {
+		if (source.channel is NewsChannel) {
 			message.crosspost().queue()
 		}
 	}
@@ -190,7 +190,7 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 		}
 	}
 	val message = source.complete(null, embed.build())
-	if (!showAccInfo && (source.channel as TextChannel).isNews) {
+	if (!showAccInfo && source.channel is NewsChannel) {
 		message.crosspost().queue()
 	}
 	return Command.SINGLE_SUCCESS

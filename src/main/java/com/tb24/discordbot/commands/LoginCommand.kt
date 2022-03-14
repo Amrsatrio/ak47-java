@@ -24,7 +24,7 @@ import net.dv8tion.jda.api.entities.MessageReaction
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.components.ActionRow
-import net.dv8tion.jda.api.interactions.components.Button
+import net.dv8tion.jda.api.interactions.components.buttons.Button
 import net.jodah.expiringmap.ExpiringMap
 import java.time.Instant
 import java.util.*
@@ -337,7 +337,7 @@ fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): 
 	if (BotConfig.get().slashCommandsEnabled && source.message != null) {
 		embed.appendDescription("\nℹ Please start using the new `/login` slash command as the old `${source.prefix}login` will no longer work.")
 	}
-	existingAuthCodeHintMessages[source.channel.idLong] = source.complete(null, embed.build())
+	existingAuthCodeHintMessages[source.channel.idLong] = source.complete(null, embed.build()/*, ActionRow.of(Button.secondary("submitAuthCode", "Submit code and log in..."))*/)
 	return Command.SINGLE_SUCCESS
 }
 

@@ -24,8 +24,8 @@ import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText
 import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
 import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.interactions.components.ActionRow
-import net.dv8tion.jda.api.interactions.components.Button
-import net.dv8tion.jda.api.interactions.components.ButtonStyle
+import net.dv8tion.jda.api.interactions.components.buttons.Button
+import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
 import kotlin.math.max
 import kotlin.math.min
 
@@ -161,14 +161,14 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 		if (succeeded) {
 			embed.setDescription("**%s**\n%s".format(expedition.displayName, "SUCCESS!"))
 			embed.setColor(COLOR_SUCCESS)
-			message.editMessage(embed.build()).complete()
+			message.editMessageEmbeds(embed.build()).complete()
 			embed.addField("You received", "Fizz\nBuzz\nFoo\nBar", false)
 		} else {
 			embed.setDescription("**%s**".format(expedition.displayName))
 			embed.addField("Expedition Failed", "Sending powerful heroes increases your chances of a successful expedition", false)
 			embed.setColor(COLOR_ERROR)
 		}
-		message.editMessage(embed.build()).complete()
+		message.editMessageEmbeds(embed.build()).complete()
 		return Command.SINGLE_SUCCESS
 	}
 

@@ -21,9 +21,9 @@ import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.exports.AthenaRewardEventGraph
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.interactions.components.ActionRow
+import net.dv8tion.jda.api.interactions.components.selections.SelectMenu
+import net.dv8tion.jda.api.interactions.components.selections.SelectMenuInteraction
 import net.dv8tion.jda.api.interactions.components.selections.SelectOption
-import net.dv8tion.jda.api.interactions.components.selections.SelectionMenu
-import net.dv8tion.jda.api.interactions.components.selections.SelectionMenuInteraction
 
 class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest lodge.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -85,9 +85,9 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 		rewards.forEach { it.addTo(embed) }
 
 		// Prompt to open a present
-		var select: SelectionMenu.Builder? = null
+		var select: SelectMenu.Builder? = null
 		if (unusedKeys > 0) {
-			select = SelectionMenu.create("rewardNodeId").setPlaceholder("Open a present...")
+			select = SelectMenu.create("rewardNodeId").setPlaceholder("Open a present...")
 			for (reward in rewards) {
 				if (reward.isClaimable) {
 					select.addOption(reward.rewardNode.Rewards.joinToString { it.safeRender() }.take(SelectOption.LABEL_MAX_LENGTH).ifEmpty { reward.longDisplayName }, reward.rewardNode.NodeTag.toString())
@@ -106,7 +106,7 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 		// Open present selection
 		val message = source.complete(null, embed.build(), ActionRow.of(select.build()))
 		source.loadingMsg = message
-		val rewardNodeTagToOpen = (message.awaitOneInteraction(source.author, false, 120000L) as SelectionMenuInteraction).values.first() // 2 minutes is enough for people to glance at
+		val rewardNodeTagToOpen = (message.awaitOneInteraction(source.author, false, 120000L) as SelectMenuInteraction).values.first() // 2 minutes is enough for people to glance at
 		val response = source.api.profileManager.dispatchClientCommandRequest(UnlockRewardNode().apply {
 			nodeId = rewardNodeTagToOpen
 			rewardGraphId = state.rewardGraphItem.itemId

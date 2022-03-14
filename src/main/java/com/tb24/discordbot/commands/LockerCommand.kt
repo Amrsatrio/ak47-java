@@ -28,8 +28,8 @@ import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.components.ActionRow
-import net.dv8tion.jda.api.interactions.components.Button
-import net.dv8tion.jda.api.interactions.components.ButtonStyle
+import net.dv8tion.jda.api.interactions.components.buttons.Button
+import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
 import okhttp3.Request
 import java.awt.Image
 import java.io.ByteArrayOutputStream
@@ -372,7 +372,7 @@ class ExclusivesCommand : BrigadierCommand("exclusives", "Shows your exclusive c
 			itemIds = toFavorite.map { it.itemId }.toTypedArray()
 			itemFavStatus = BooleanArray(toFavorite.size) { favorite }.toTypedArray()
 		}, "athena").await()
-		confirmationMsg.editMessage(embed.setColor(COLOR_SUCCESS)
+		confirmationMsg.editMessageEmbeds(embed.setColor(COLOR_SUCCESS)
 			.setDescription("✅ " + (if (favorite) "Favorited %,d exclusives!" else "Unfavorited %,d exclusives!").format(toFavorite.size))
 			.build()).complete()
 		return Command.SINGLE_SUCCESS

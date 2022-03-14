@@ -42,10 +42,10 @@ import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.*
 import net.dv8tion.jda.api.interactions.components.ActionRow
-import net.dv8tion.jda.api.interactions.components.Button
-import net.dv8tion.jda.api.interactions.components.ButtonStyle
 import net.dv8tion.jda.api.interactions.components.ComponentInteraction
-import net.dv8tion.jda.api.interactions.components.selections.SelectionMenu
+import net.dv8tion.jda.api.interactions.components.buttons.Button
+import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
+import net.dv8tion.jda.api.interactions.components.selections.SelectMenu
 import net.dv8tion.jda.api.utils.TimeFormat
 import okhttp3.HttpUrl
 import okhttp3.Request
@@ -372,7 +372,7 @@ fun Message.finalizeComponents(selectedIds: Collection<String>) {
 		ActionRow.of(*row.components.map {
 			when (it) {
 				is Button -> it.withStyle(if (it.id in selectedIds) ButtonStyle.SUCCESS else ButtonStyle.SECONDARY).asDisabled()
-				is SelectionMenu -> it.asDisabled()
+				is SelectMenu -> it.asDisabled()
 				else -> throw AssertionError()
 			}
 		}.toTypedArray())

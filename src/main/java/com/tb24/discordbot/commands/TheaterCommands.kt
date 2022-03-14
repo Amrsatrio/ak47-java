@@ -28,7 +28,7 @@ import me.fungames.jfortniteparse.fort.objects.rows.GameDifficultyInfo
 import me.fungames.jfortniteparse.util.toPngArray
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
-import net.dv8tion.jda.api.entities.TextChannel
+import net.dv8tion.jda.api.entities.NewsChannel
 
 class MissionAlertsCommand : BrigadierCommand("alerts", "Shows today's mission alerts.", arrayOf("ma")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -186,7 +186,7 @@ fun executeMtxAlerts(source: CommandSourceStack, campaign: McpProfile? = null): 
 			?: source.guild.getRolesByName("V-Bucks Alerts Ping", true).firstOrNull()
 	} else null
 	val message = source.complete(if (role != null && embed.fields.isNotEmpty()) role.asMention else null, embed.build())
-	if ((source.channel as? TextChannel)?.isNews == true) {
+	if (source.channel is NewsChannel) {
 		message.crosspost().queue()
 	}
 	if (embed.fields.isEmpty()) message.addReaction("a:spoingbob:849313537142554684").complete()
