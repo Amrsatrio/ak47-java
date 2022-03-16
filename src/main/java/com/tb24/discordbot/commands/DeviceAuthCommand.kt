@@ -1,5 +1,8 @@
 package com.tb24.discordbot.commands
 
+import com.google.gson.JsonElement
+import com.google.gson.JsonParser
+import com.google.gson.JsonSyntaxException
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
@@ -12,11 +15,13 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.commands.arguments.StringArgument2
+import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.format
 import com.tb24.fn.model.account.DeviceAuth
 import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.exceptions.ErrorResponseException
 
 class DeviceAuthCommand : BrigadierCommand("devices", "Device auth operation commands.", arrayOf("device")) {
@@ -30,7 +35,11 @@ class DeviceAuthCommand : BrigadierCommand("devices", "Device auth operation com
 			)
 		)
 		.then(literal("import")
+			.executes {
+				importFromFile(it.source)
+			}
 			.then(argument("device auth", StringArgument2.string2())
+				.executes { import(it.source, getString(it, "device auth")) }
 				.then(argument("auth client", StringArgumentType.word())
 					.executes { import(it.source, getString(it, "device auth"), getString(it, "auth client")) }
 				)
@@ -199,10 +208,12 @@ private fun delete(source: CommandSourceStack, deviceId: String): Int {
 	return Command.SINGLE_SUCCESS
 }
 
-private fun import(source: CommandSourceStack, device: String, inAuthClient: String): Int {
-	source.message!!.delete().queue()
+private fun import(source: CommandSourceStack, device: String, inAuthClient: String = "FORTNITE_IOS_GAME_CLIENT"): Int {
+	if (source.message != null && source.guild?.selfMember?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
+		source.message!!.delete().queue()
+	}
 	source.loading("Saving device auth")
-	val authClient = inAuthClient.replace("_", "")?.run {
+	val authClient = inAuthClient.replace("_", "").run {
 		EAuthClient.values().firstOrNull { it.name.replace("_", "").equals(this, true) }?.clientId
 			?: throw SimpleCommandExceptionType(LiteralMessage("Invalid auth client `$inAuthClient`. Valid clients are:```\n${EAuthClient.values().joinToString()}```")).create()
 	}
@@ -245,4 +256,95 @@ private fun import(source: CommandSourceStack, device: String, inAuthClient: Str
 		.setColor(BrigadierCommand.COLOR_SUCCESS)
 	source.complete(null, embed.build())
 	return Command.SINGLE_SUCCESS
+}
+
+private fun importFromFile(source: CommandSourceStack): Int {
+	if (source.message != null && source.guild?.selfMember?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
+		source.message!!.delete().queue()
+	}
+	source.loading("Importing device auth")
+	if (!BotConfig.get().allowUsersToCreateDeviceAuth) {
+		throw SimpleCommandExceptionType(LiteralMessage("The current instance of the bot does not allow saving logins.")).create()
+	}
+	val bodyFile = source.message?.attachments?.firstOrNull()
+		?: throw SimpleCommandExceptionType(LiteralMessage("You must attach your devices file to use this command without arguments.")).create()
+	val body = bodyFile.retrieveInputStream().await().bufferedReader().use { it.readText() }
+	val parsedDevices = try {
+		JsonParser.parseString(body)
+	} catch (e: JsonSyntaxException) {
+		throw SimpleCommandExceptionType(LiteralMessage("Malformed JSON: " + e.message?.substringAfter("Use JsonReader.setLenient(true) to accept malformed JSON at "))).create()
+	}
+	val limit = source.getSavedAccountsLimit()
+	var success = 0
+	if (parsedDevices.isJsonArray) {
+		parsedDevices.asJsonArray.forEach {
+			val dbDevices = source.client.savedLoginsManager.getAll(source.session.id)
+			if (dbDevices.size >= limit) {
+				if (dbDevices.isEmpty() && limit == 0) {
+					val quotaSettings = BotConfig.get().deviceAuthQuota
+					source.ensurePremium("Your Discord account must be older than %,d days in order to have %,d complimentary saved logins.\nGet %,d saved logins regardless of account age".format(
+						quotaSettings.minAccountAgeInDaysForComplimentary,
+						quotaSettings.maxForComplimentary,
+						quotaSettings.maxForPremium
+					))
+				}
+				if (success > 0) {
+					throw SimpleCommandExceptionType(LiteralMessage("Maximum number of saved logins (%,d) has been reached, imported %,d device auths.".format(limit, success))).create()
+				}
+				throw SimpleCommandExceptionType(LiteralMessage("Maximum number of saved logins (%,d) has been reached.".format(limit))).create()
+			}
+			try {
+				importFromJson(source, it)
+				success++
+			} catch (e: Exception) {
+				e.message?.let { it1 -> source.channel.sendMessage(it1).queue() }
+			}
+		}
+	} else {
+		val dbDevices = source.client.savedLoginsManager.getAll(source.session.id)
+		if (dbDevices.size >= limit) {
+			if (dbDevices.isEmpty() && limit == 0) {
+				val quotaSettings = BotConfig.get().deviceAuthQuota
+				source.ensurePremium("Your Discord account must be older than %,d days in order to have %,d complimentary saved logins.\nGet %,d saved logins regardless of account age".format(
+					quotaSettings.minAccountAgeInDaysForComplimentary,
+					quotaSettings.maxForComplimentary,
+					quotaSettings.maxForPremium
+				))
+			}
+			throw SimpleCommandExceptionType(LiteralMessage("Maximum number of saved logins (%,d) has been reached.".format(limit))).create()
+		}
+		importFromJson(source, parsedDevices)
+		source.complete(null, EmbedBuilder().setColor(BrigadierCommand.COLOR_SUCCESS)
+			.setTitle("✅ Device auth saved to ${source.jda.selfUser.name}")
+			.setColor(BrigadierCommand.COLOR_SUCCESS)
+			.build())
+	}
+	source.complete(null,
+		EmbedBuilder()
+		.setColor(BrigadierCommand.COLOR_SUCCESS)
+		.setTitle("✅ Imported %,d device auths".format(success))
+		.build()
+	)
+	return Command.SINGLE_SUCCESS
+}
+
+private fun importFromJson(source: CommandSourceStack, accountJson: JsonElement) {
+	val device = accountJson.asJsonObject
+	val accountId = device.get("accountId").asString
+	val deviceId = device.get("deviceId").asString
+	val secret = device.get("secret").asString
+	val authClient = device.get("authClient")?.asString ?: "FORTNITE_IOS_GAME_CLIENT"
+	val clientId = authClient.replace("_", "").run {
+			EAuthClient.values().firstOrNull { it.name.replace("_", "").equals(this, true) }?.clientId } ?: throw SimpleCommandExceptionType(LiteralMessage("Invalid auth client for account $accountId")).create()
+	val dbDevices = source.client.savedLoginsManager.getAll(source.session.id)
+	val dbDevice = dbDevices.firstOrNull { it.accountId == accountId }
+	if (dbDevice != null) {
+		throw SimpleCommandExceptionType(LiteralMessage("You already have this account's device auth.")).create()
+	}
+	source.client.savedLoginsManager.put(source.session.id, DeviceAuth().apply {
+		this.accountId = accountId
+		this.deviceId = deviceId
+		this.secret = secret
+		this.clientId = clientId
+	})
 }
