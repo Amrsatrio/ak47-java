@@ -262,7 +262,7 @@ private fun importFromFile(source: CommandSourceStack): Int {
 	if (source.message != null && source.guild?.selfMember?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
 		source.message!!.delete().queue()
 	}
-	source.loading("Importing device auth")
+	source.loading("Importing device auths")
 	if (!BotConfig.get().allowUsersToCreateDeviceAuth) {
 		throw SimpleCommandExceptionType(LiteralMessage("The current instance of the bot does not allow saving logins.")).create()
 	}
@@ -318,6 +318,7 @@ private fun importFromFile(source: CommandSourceStack): Int {
 			.setTitle("✅ Device auth saved to ${source.jda.selfUser.name}")
 			.setColor(BrigadierCommand.COLOR_SUCCESS)
 			.build())
+		return Command.SINGLE_SUCCESS
 	}
 	source.complete(null,
 		EmbedBuilder()
