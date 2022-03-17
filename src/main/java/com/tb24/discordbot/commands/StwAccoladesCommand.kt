@@ -27,7 +27,7 @@ class StwAccoladesCommand : BrigadierCommand("stwaccolades", "Shows the amount o
 		.withPublicProfile(::display, "Getting STW profile data")
 		.then(literal("bulk")
 			.executes { executeBulk(it.source) }
-			.then(argument("users", UserArgument.users(15))
+			.then(argument("users", UserArgument.users(25))
 				.executes { executeBulk(it.source, lazy { UserArgument.getUsers(it, "users").values }) }
 			)
 		)

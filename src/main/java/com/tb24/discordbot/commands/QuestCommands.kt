@@ -9,11 +9,8 @@ import com.mojang.brigadier.arguments.IntegerArgumentType.integer
 import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.Rune
-import com.tb24.discordbot.commands.arguments.ItemArgument.Companion.getItem
-import com.tb24.discordbot.commands.arguments.ItemArgument.Companion.item
 import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
@@ -30,12 +27,14 @@ import me.fungames.jfortniteparse.fort.enums.EFortRarity
 import me.fungames.jfortniteparse.fort.exports.AthenaDailyQuestDefinition
 import me.fungames.jfortniteparse.fort.exports.FortChallengeBundleItemDefinition
 import me.fungames.jfortniteparse.fort.exports.FortQuestItemDefinition
-import me.fungames.jfortniteparse.fort.exports.FortQuestItemDefinition.EFortQuestType
 import me.fungames.jfortniteparse.fort.exports.FortTandemCharacterData
+import me.fungames.jfortniteparse.fort.objects.rows.FortCategoryTableRow
 import me.fungames.jfortniteparse.fort.objects.rows.FortQuestRewardTableRow
+import me.fungames.jfortniteparse.ue4.assets.exports.UDataTable
 import me.fungames.jfortniteparse.ue4.assets.exports.UObject
 import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
 import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
+import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.Message
@@ -48,15 +47,15 @@ class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manage
 			source.loading("Getting challenges")
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 			val athena = source.api.profileManager.getProfileData("athena")
-			val numRerolls = (athena.stats as IQuestManager).questManager?.dailyQuestRerolls ?: 0
+			val numRerolls = /*(athena.stats as IQuestManager).questManager?.dailyQuestRerolls ?:*/ 0
 			var description = getAthenaDailyQuests(athena)
-				.mapIndexed { i, it -> renderChallenge(it, "${i + 1}. ", "\u00a0\u00a0\u00a0", isAthenaDaily = true) }
+				.mapIndexed { i, it -> renderChallenge(it, "${i + 1}. ", "\u2800", isAthenaDaily = true) }
 				.joinToString("\n")
 			if (description.isEmpty()) {
 				description = "You have no daily challenges"
 			} else if (numRerolls > 0 && Rune.isBotDev(source)) {
-				description += "\n\n" + "You have %,d reroll(s) remaining today.\nUse `%s%s replace <%s>` to replace one."
-					.format(numRerolls, source.prefix, c.commandName, "daily challenge #")
+				description += "\n\n" + "Use `%s%s replace <%s>` to replace one."
+					.format(source.prefix, c.commandName, "daily challenge #")
 			}
 			source.complete(null, source.createEmbed()
 				.setTitle("Daily Challenges")
@@ -64,12 +63,12 @@ class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manage
 				.build())
 			Command.SINGLE_SUCCESS
 		}
-		.then(literal("replace")
+		/*.then(literal("replace")
 			.executes { replaceQuest(it.source, "athena", -1, ::getAthenaDailyQuests) }
 			.then(argument("daily challenge #", integer())
 				.executes { replaceQuest(it.source, "athena", getInteger(it, "daily challenge #"), ::getAthenaDailyQuests) }
 			)
-		)
+		)*/
 
 	private fun getAthenaDailyQuests(athena: McpProfile) =
 		athena.items.values
@@ -77,78 +76,82 @@ class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manage
 			.sortedBy { it.displayName }
 }
 
-class DailyQuestsCommand : BrigadierCommand("dailyquests", "Manages your active STW daily quests.", arrayOf("dailies", "stwdailies", "dq")) {
-	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.withPublicProfile(::displayDailyQuests, "Getting quests")
-		.then(literal("replace")
-			.then(argument("daily quest #", integer())
-				.executes { replaceQuest(it.source, "campaign", getInteger(it, "daily quest #"), ::getCampaignDailyQuests) }
+val questCategoryTable by lazy { loadObject<UDataTable>("/Game/Quests/QuestCategoryTable.QuestCategoryTable")!! }
+
+abstract class BaseQuestsCommand(name: String, description: String, private val categoryName: String, private val replaceable: Boolean, aliases: Array<String> = emptyArray()) : BrigadierCommand(name, description, aliases) {
+	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> {
+		val node = newRootNode().withPublicProfile({ c, campaign -> executeQuests(c.source, campaign, categoryName, replaceable, c.commandName) }, "Getting quests")
+		if (replaceable) {
+			node.then(literal("replace")
+				.then(argument("quest #", integer())
+					.executes { replaceQuest(it.source, "campaign", getInteger(it, "quest #")) { getQuestsOfCategory(it, categoryName) } }
+				)
+			)
+		}
+		node.then(literal("bulk")
+			.executes { executeQuestsBulk(it.source, categoryName) }
+			.then(argument("users", UserArgument.users(25))
+				.executes { executeQuestsBulk(it.source, categoryName, lazy { UserArgument.getUsers(it, "users").values }) }
 			)
 		)
-		.then(literal("bulk")
-			.executes { executeBulk(it.source) }
-			.then(argument("users", UserArgument.users(15))
-				.executes { executeBulk(it.source, lazy { UserArgument.getUsers(it, "users").values }) }
-			)
-		)
-
-	private fun displayDailyQuests(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
-		val source = c.source
-		source.ensureCompletedCampaignTutorial(campaign)
-		val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
-		val numRerolls = (campaign.stats as IQuestManager).questManager?.dailyQuestRerolls ?: 0
-		var description = getCampaignDailyQuests(campaign)
-			.mapIndexed { i, it -> renderChallenge(it, "${i + 1}. ", "\u00a0\u00a0\u00a0", conditionalCondition = canReceiveMtxCurrency) }
-			.joinToString("\n")
-		if (description.isEmpty()) {
-			description = "You have no active daily quests"
-		} else if (campaign.owner == source.api.currentLoggedIn && numRerolls > 0) {
-			description += "\n\n" + "You have %,d reroll(s) remaining today.\nUse `%s%s replace <%s>` to replace one."
-				.format(numRerolls, source.prefix, c.commandName, "daily quest #")
-		}
-		source.complete(null, source.createEmbed(campaign.owner)
-			.setTitle("Daily Quests")
-			.setDescription(description)
-			.build())
-		return Command.SINGLE_SUCCESS
-	}
-
-	private fun getCampaignDailyQuests(campaign: McpProfile) =
-		campaign.items.values
-			.filter { it.primaryAssetType == "Quest" && it.attributes["quest_state"]?.asString == "Active" && (it.defData as? FortQuestItemDefinition)?.QuestType == EFortQuestType.DailyQuest }
-			.sortedBy { it.displayName }
-
-	private fun executeBulk(source: CommandSourceStack, usersLazy: Lazy<Collection<GameProfile>>? = null): Int {
-		source.conditionalUseInternalSession()
-		val usersWith3dailies = ArrayList<String>()
-		val entries = stwBulk(source, usersLazy) { campaign ->
-			val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:outpostquest_t1_l3" }?.attributes?.get("completion_complete_outpost_1_3")?.asInt ?: 0) > 0
-			if (!completedTutorial) return@stwBulk null
-			val dailies = getCampaignDailyQuests(campaign)
-			val quests = dailies.joinToString("\n") { renderChallenge(it, "\u2800", null, allowBold = false) }
-			if (dailies.count() == 3) {
-				usersWith3dailies.add(campaign.owner.displayName)
-			}
-			campaign.owner.displayName to quests.ifEmpty { "\u2800✅ All dailies completed!" }
-		}
-		if (entries.isEmpty()) {
-			throw SimpleCommandExceptionType(LiteralMessage("All users we're trying to display aren't eligible to do daily quests.")).create()
-		}
-		val embed = EmbedBuilder().setColor(COLOR_INFO)
-		for (entry in entries) {
-			if (embed.fields.size == 25) {
-				source.complete(null, embed.build())
-				embed.clearFields()
-			}
-			embed.addField(entry.first, entry.second, false)
-		}
-		if (usersWith3dailies.isNotEmpty()) {
-			embed.setFooter("3 dailies (%d): %s".format(usersWith3dailies.size, usersWith3dailies.joinToString(", ")), null)
-		}
-		source.complete(null, embed.build())
-		return Command.SINGLE_SUCCESS
+		return node
 	}
 }
+
+private fun executeQuests(source: CommandSourceStack, campaign: McpProfile, categoryName: String, replaceable: Boolean, commandName: String): Int {
+	source.ensureCompletedCampaignTutorial(campaign)
+	val category = questCategoryTable.findRowMapped<FortCategoryTableRow>(FName(categoryName))!!
+	val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
+	val numRerolls = (campaign.stats as IQuestManager).questManager?.dailyQuestRerolls ?: 0
+	var description = getQuestsOfCategory(campaign, categoryName)
+		.mapIndexed { i, it -> renderChallenge(it, "${i + 1}. ", "\u2800", conditionalCondition = canReceiveMtxCurrency) }
+		.joinToString("\n")
+	if (description.isEmpty()) {
+		description = "You have no active %s".format(category.Name.format())
+	} else if (replaceable && campaign.owner == source.api.currentLoggedIn && numRerolls > 0) {
+		description += "\n\n" + "Use `%s%s replace <%s>` to replace one."
+			.format(source.prefix, commandName, "quest #")
+	}
+	source.complete(null, source.createEmbed(campaign.owner)
+		.setTitle(category.Name.format())
+		.setDescription(description)
+		.build())
+	return Command.SINGLE_SUCCESS
+}
+
+private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, usersLazy: Lazy<Collection<GameProfile>>? = null): Int {
+	source.conditionalUseInternalSession()
+	val usersWith3dailies = ArrayList<String>()
+	val entries = stwBulk(source, usersLazy) { campaign ->
+		val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:outpostquest_t1_l3" }?.attributes?.get("completion_complete_outpost_1_3")?.asInt ?: 0) > 0
+		if (!completedTutorial) return@stwBulk null
+		val quests = getQuestsOfCategory(campaign, categoryName)
+		val rendered = quests.joinToString("\n") { renderChallenge(it, "\u2800", null, allowBold = false) }
+		if (categoryName == "DailyQuest" && quests.size == 3) {
+			usersWith3dailies.add(campaign.owner.displayName)
+		}
+		campaign.owner.displayName to rendered.ifEmpty { "\u2800✅ All completed!" }
+	}
+	if (entries.isEmpty()) {
+		throw SimpleCommandExceptionType(LiteralMessage("All users we're trying to display aren't eligible to do daily quests.")).create()
+	}
+	val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
+	for (entry in entries) {
+		if (embed.fields.size == 25) {
+			source.complete(null, embed.build())
+			embed.clearFields()
+		}
+		embed.addField(entry.first, entry.second, false)
+	}
+	if (usersWith3dailies.isNotEmpty()) {
+		embed.setFooter("3 dailies (%d): %s".format(usersWith3dailies.size, usersWith3dailies.joinToString(", ")), null)
+	}
+	source.complete(null, embed.build())
+	return Command.SINGLE_SUCCESS
+}
+
+class DailyQuestsCommand : BaseQuestsCommand("dailyquests", "Manages your active STW daily quests.", "DailyQuests", true, arrayOf("dailies", "stwdailies", "dq"))
+class WeeklyQuestsCommand : BaseQuestsCommand("weeklychallenges", "Shows your active STW weekly challenges.", "WeeklyQuests", false, arrayOf("weeklies", "stwweeklies", "wq"))
 
 class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR quests.", arrayOf("challenges", "chals")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -212,7 +215,7 @@ class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR q
 				val entriesStart = page * 15 + 1
 				val entriesEnd = entriesStart + content.size
 				val value = content.joinToString("\n") {
-					renderChallenge(it, "• ", "\u00a0\u00a0\u00a0", showRarity = true)
+					renderChallenge(it, "• ", "\u2800", showRarity = true)
 				}
 				val embed = source.createEmbed()
 					.setTitle("Battle Royale Quests" + if (tab != null) " / " + tab.DisplayName.format() else "")
@@ -237,45 +240,12 @@ class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR q
 	}
 }
 
-class QuestCommand : BrigadierCommand("quest", "Shows the details of a quest by description.") {
-	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.then(argument("item", item(true))
-			.executes {
-				val source = it.source
-				source.ensureSession()
-				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
-				val campaign = source.api.profileManager.getProfileData("campaign")
-				questDetails(source, getItem(it, "item", campaign, "Quest"))
-			}
-		)
-
-	private fun questDetails(source: CommandSourceStack, item: FortItemStack): Int {
-		val conditionalCondition = false
-		val quest = item.defData as? FortQuestItemDefinition
-			?: throw SimpleCommandExceptionType(LiteralMessage("Not a quest item. It is ${item.defData?.clazz?.name}.")).create()
-		val embed = EmbedBuilder()
-			.setColor(COLOR_INFO)
-			.setAuthor(quest.DisplayName?.format(), null, Utils.benBotExportAsset(quest.LargePreviewImage?.toString()))
-			.setDescription(quest.Description?.format())
-		val objectives = renderQuestObjectives(item)
-		if (objectives.isNotEmpty()) {
-			embed.addField("Objectives", objectives, false)
-		}
-		val rewardLines = renderQuestRewards(item, conditionalCondition)
-		if (rewardLines.isNotEmpty()) {
-			embed.addField("Rewards", rewardLines, false)
-		}
-		source.complete(null, embed.build())
-		return Command.SINGLE_SUCCESS
-	}
-}
-
 fun renderQuestObjectives(item: FortItemStack, short: Boolean = false): String {
 	val objectives = (item.defData as FortQuestItemDefinition).Objectives.filter { !it.bHidden }
 	return objectives.joinToString("\n") {
 		val completion = Utils.getCompletion(it, item)
 		val objectiveCompleted = completion >= it.Count
-		val sb = StringBuilder(if (objectiveCompleted) "`☑` ~~" else "`☐` ")
+		val sb = StringBuilder(if (objectiveCompleted) "✅ ~~" else "❌ ")
 		sb.append(if (short) it.HudShortDescription else it.Description)
 		if (it.Count > 1) {
 			sb.append(" [%,d/%,d]".format(completion, it.Count))
@@ -353,7 +323,7 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 	embed.setColor(BrigadierCommand.COLOR_SUCCESS)
 		.setTitle("✅ Replaced")
 		.addField("Here are your daily quests now:", questsGetter(profile)
-			.mapIndexed { i, it -> renderChallenge(it, "${i + 1}. ", "\u00a0\u00a0\u00a0", conditionalCondition = canReceiveMtxCurrency) }
+			.mapIndexed { i, it -> renderChallenge(it, "${i + 1}. ", "\u2800", conditionalCondition = canReceiveMtxCurrency) }
 			.joinToString("\n")
 			.takeIf { it.isNotEmpty() } ?: "You have no active daily quests", false)
 	confirmationMessage?.editMessageEmbeds(embed.build())?.complete() ?: source.complete(null, embed.build())
@@ -419,3 +389,8 @@ fun getQuestCompletion(item: FortItemStack, allowCompletionCountOverride: Boolea
 	}
 	return completion to max
 }
+
+fun getQuestsOfCategory(campaign: McpProfile, categoryName: String) =
+	campaign.items.values
+		.filter { it.primaryAssetType == "Quest" && it.attributes["quest_state"]?.asString == "Active" && (it.defData as? FortQuestItemDefinition)?.Category?.rowName?.toString() == categoryName }
+		.sortedByDescending { (it.defData as FortQuestItemDefinition).SortPriority ?: 0 }

@@ -297,11 +297,11 @@ fun Map<FName, FortQuestRewardTableRow>.render(prefix: String, orPrefix: String,
 		val priority2 = o2.text.substringAfterLast('_', "0").toInt()
 		priority1 - priority2
 	}.forEach {
-		lines.add("$prefix$fmt${it.value.asItemStack().apply { setConditionForConditionalItem(conditionalCondition) }.renderWithIcon((it.value.Quantity * fac).toInt())}$fmt")
 		if (lastIsSelectable && it.value.Selectable) {
 			lines.add("$orPrefix- OR -")
 		}
 		lastIsSelectable = it.value.Selectable
+		lines.add("$prefix$fmt${it.value.asItemStack().apply { setConditionForConditionalItem(conditionalCondition) }.renderWithIcon((it.value.Quantity * fac).toInt())}$fmt")
 	}
 	return lines
 }

@@ -210,9 +210,9 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 			}
 			sb.append(if (collectedProps != null && tag in collectedProps.contextTags) {
 				++visited
-				"`☑` ~~$poiName~~"
+				"✅ ~~$poiName~~"
 			} else {
-				"`☐` $poiName"
+				"❌ $poiName"
 			})
 			if (iterator.hasNext()) {
 				sb.append('\n')

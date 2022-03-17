@@ -246,7 +246,7 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 		.setTitle("✏ Editing: " + variant.channelName)
 		.setDescription("**Current:** " + variant.activeVariantDisplayName)
 	val selected = if (cosmeticVariant is FortCosmeticItemTexture) {
-		embed.appendDescription("Emoticon or spray?")
+		embed.appendDescription("\nEmoticon or spray?")
 		val message = source.complete(null, embed.build(), ActionRow.of(
 			Button.of(ButtonStyle.PRIMARY, "AthenaEmojiItemDefinition", "Emoticon"),
 			Button.of(ButtonStyle.PRIMARY, "AthenaSprayItemDefinition", "Spray"),
@@ -317,11 +317,11 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 			if (variantDisplayName.isNullOrEmpty()) {
 				variantDisplayName = backendName!!
 			}
-			if (lockReason == null) {
-				options.add(SelectOption.of(variantDisplayName, backendName))
-			} else {
-				options.add(SelectOption.of(variantDisplayName + if (lockReason.isNotEmpty()) " (" + lockReason.format() + ")" else "", backendName).withEmoji(Emoji.fromEmote(lockEmote!!)))
+			var option = SelectOption.of(variantDisplayName, backendName)
+			if (lockReason != null) {
+				option = option.withDescription(lockReason.format().ifEmpty { null }).withEmoji(Emoji.fromEmote(lockEmote!!))
 			}
+			options.add(option)
 		}
 		when (val selectedVariantName = askChoice(source, embed, options, "Pick a new style to apply")) {
 			null -> return execute(source, item, source.api.profileManager.getProfileData("athena"))
