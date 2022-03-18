@@ -94,7 +94,7 @@ class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Su
 			i++
 		}
 		embed.setColor(COLOR_SUCCESS)
-		embed.setDescription("✅ Applied **$newCode** on **$i/${devices.count()}** accounts.")
+		embed.setDescription("✅ Applied **$newCode** on **$i/${devices.size}** accounts.")
 		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS
 	}

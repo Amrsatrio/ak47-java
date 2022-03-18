@@ -1,6 +1,6 @@
 package com.tb24.discordbot.commands
 
-import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.JsonSyntaxException
 import com.mojang.brigadier.Command
@@ -35,19 +35,17 @@ class DeviceAuthCommand : BrigadierCommand("devices", "Device auth operation com
 			)
 		)
 		.then(literal("import")
-			.executes {
-				importFromFile(it.source)
-			}
+			.executes { importFromFile(it.source) }
 			.then(argument("device auth", StringArgument2.string2())
-				.executes { import(it.source, getString(it, "device auth")) }
+				.executes { importFromText(it.source, getString(it, "device auth")) }
 				.then(argument("auth client", StringArgumentType.word())
-					.executes { import(it.source, getString(it, "device auth"), getString(it, "auth client")) }
+					.executes { importFromText(it.source, getString(it, "device auth"), getString(it, "auth client")) }
 				)
 			)
 		)
 
 	override fun getSlashCommand(): BaseCommandBuilder<CommandSourceStack>? {
-		return super.getSlashCommand()
+		return super.getSlashCommand() // TODO
 	}
 }
 
@@ -128,26 +126,10 @@ private fun create(source: CommandSourceStack): Int {
 	val sessionId = source.session.id
 	val user = source.api.currentLoggedIn
 	val dbDevices = source.client.savedLoginsManager.getAll(sessionId)
-	val dbDevice = dbDevices.firstOrNull { it.accountId == user.id }
-	if (dbDevice != null) {
+	if (dbDevices.any { it.accountId == user.id }) {
 		throw SimpleCommandExceptionType(LiteralMessage("You already registered a device auth of this account.")).create()
 	}
-	val limit = source.getSavedAccountsLimit()
-	if (dbDevices.size >= limit) {
-		if (dbDevices.isEmpty() && limit == 0) {
-			val quotaSettings = BotConfig.get().deviceAuthQuota
-			source.ensurePremium("Your Discord account must be older than %,d days in order to have %,d complimentary saved logins.\nGet %,d saved logins regardless of account age".format(
-				quotaSettings.minAccountAgeInDaysForComplimentary,
-				quotaSettings.maxForComplimentary,
-				quotaSettings.maxForPremium
-			))
-			check(false) // We should never reach this point
-		}
-		throw SimpleCommandExceptionType(LiteralMessage("Maximum number of saved logins (%,d) has been reached.".format(limit))).create()
-	}
-	if (!BotConfig.get().allowUsersToCreateDeviceAuth) {
-		throw SimpleCommandExceptionType(LiteralMessage("The current instance of the bot does not allow saving logins.")).create()
-	}
+	checkCanAddDevice(source, dbDevices)
 	source.loading("Creating device auth")
 	val response = source.api.accountService.createDeviceAuth(user.id, null).exec().body()!!
 	source.client.savedLoginsManager.put(sessionId, DeviceAuth().apply {
@@ -208,7 +190,7 @@ private fun delete(source: CommandSourceStack, deviceId: String): Int {
 	return Command.SINGLE_SUCCESS
 }
 
-private fun import(source: CommandSourceStack, device: String, inAuthClient: String = "FORTNITE_IOS_GAME_CLIENT"): Int {
+private fun importFromText(source: CommandSourceStack, device: String, inAuthClient: String = "FORTNITE_IOS_GAME_CLIENT"): Int {
 	if (source.message != null && source.guild?.selfMember?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
 		source.message!!.delete().queue()
 	}
@@ -225,26 +207,10 @@ private fun import(source: CommandSourceStack, device: String, inAuthClient: Str
 		throw SimpleCommandExceptionType(LiteralMessage("All device auth params must be 32 characters long")).create()
 	}
 	val dbDevices = source.client.savedLoginsManager.getAll(source.session.id)
-	val dbDevice = dbDevices.firstOrNull { it.accountId == split[0] }
-	if (dbDevice != null) {
-		throw SimpleCommandExceptionType(LiteralMessage("You already have this account's device auth.")).create()
+	if (dbDevices.any { it.accountId == split[0] }) {
+		throw SimpleCommandExceptionType(LiteralMessage("You already registered a device auth of this account.")).create()
 	}
-	val limit = source.getSavedAccountsLimit()
-	if (dbDevices.size >= limit) {
-		if (dbDevices.isEmpty() && limit == 0) {
-			val quotaSettings = BotConfig.get().deviceAuthQuota
-			source.ensurePremium("Your Discord account must be older than %,d days in order to have %,d complimentary saved logins.\nGet %,d saved logins regardless of account age".format(
-				quotaSettings.minAccountAgeInDaysForComplimentary,
-				quotaSettings.maxForComplimentary,
-				quotaSettings.maxForPremium
-			))
-			check(false) // We should never reach this point
-		}
-		throw SimpleCommandExceptionType(LiteralMessage("Maximum number of saved logins (%,d) has been reached.".format(limit))).create()
-	}
-	if (!BotConfig.get().allowUsersToCreateDeviceAuth) {
-		throw SimpleCommandExceptionType(LiteralMessage("The current instance of the bot does not allow saving logins.")).create()
-	}
+	checkCanAddDevice(source, dbDevices)
 	source.client.savedLoginsManager.put(source.session.id, DeviceAuth().apply {
 		accountId = split[0]
 		deviceId = split[1]
@@ -267,70 +233,51 @@ private fun importFromFile(source: CommandSourceStack): Int {
 		throw SimpleCommandExceptionType(LiteralMessage("The current instance of the bot does not allow saving logins.")).create()
 	}
 	val bodyFile = source.message?.attachments?.firstOrNull()
-		?: throw SimpleCommandExceptionType(LiteralMessage("You must attach your devices file to use this command without arguments.")).create()
-	val body = bodyFile.retrieveInputStream().await().bufferedReader().use { it.readText() }
+		?: throw SimpleCommandExceptionType(LiteralMessage("You must attach a JSON file containing device auth(s) in { accountId, deviceId, secret, clientId } format to use this command without arguments.")).create()
 	val parsedDevices = try {
-		JsonParser.parseString(body)
+		bodyFile.retrieveInputStream().await().bufferedReader().use { JsonParser.parseReader(it) }
 	} catch (e: JsonSyntaxException) {
 		throw SimpleCommandExceptionType(LiteralMessage("Malformed JSON: " + e.message?.substringAfter("Use JsonReader.setLenient(true) to accept malformed JSON at "))).create()
 	}
 	val limit = source.getSavedAccountsLimit()
 	var success = 0
+	val dbDevices = source.client.savedLoginsManager.getAll(source.session.id)
 	if (parsedDevices.isJsonArray) {
-		parsedDevices.asJsonArray.forEach {
-			val dbDevices = source.client.savedLoginsManager.getAll(source.session.id)
+		for (device in parsedDevices.asJsonArray) {
 			if (dbDevices.size >= limit) {
-				if (dbDevices.isEmpty() && limit == 0) {
-					val quotaSettings = BotConfig.get().deviceAuthQuota
-					source.ensurePremium("Your Discord account must be older than %,d days in order to have %,d complimentary saved logins.\nGet %,d saved logins regardless of account age".format(
-						quotaSettings.minAccountAgeInDaysForComplimentary,
-						quotaSettings.maxForComplimentary,
-						quotaSettings.maxForPremium
-					))
-				}
+				checkComplimentary(source, dbDevices, limit)
 				if (success > 0) {
 					throw SimpleCommandExceptionType(LiteralMessage("Maximum number of saved logins (%,d) has been reached, imported %,d device auths.".format(limit, success))).create()
 				}
 				throw SimpleCommandExceptionType(LiteralMessage("Maximum number of saved logins (%,d) has been reached.".format(limit))).create()
 			}
 			try {
-				importFromJson(source, it)
+				importFromJson(source, device.asJsonObject)
 				success++
 			} catch (e: Exception) {
 				e.message?.let { it1 -> source.channel.sendMessage(it1).queue() }
 			}
 		}
-	} else {
-		val dbDevices = source.client.savedLoginsManager.getAll(source.session.id)
+		source.complete(null, EmbedBuilder().setColor(BrigadierCommand.COLOR_SUCCESS)
+			.setTitle("✅ Imported %,d device auths".format(success))
+			.build())
+		return Command.SINGLE_SUCCESS
+	} else if (parsedDevices.isJsonObject) {
 		if (dbDevices.size >= limit) {
-			if (dbDevices.isEmpty() && limit == 0) {
-				val quotaSettings = BotConfig.get().deviceAuthQuota
-				source.ensurePremium("Your Discord account must be older than %,d days in order to have %,d complimentary saved logins.\nGet %,d saved logins regardless of account age".format(
-					quotaSettings.minAccountAgeInDaysForComplimentary,
-					quotaSettings.maxForComplimentary,
-					quotaSettings.maxForPremium
-				))
-			}
+			checkComplimentary(source, dbDevices, limit)
 			throw SimpleCommandExceptionType(LiteralMessage("Maximum number of saved logins (%,d) has been reached.".format(limit))).create()
 		}
-		importFromJson(source, parsedDevices)
+		importFromJson(source, parsedDevices.asJsonObject)
 		source.complete(null, EmbedBuilder().setColor(BrigadierCommand.COLOR_SUCCESS)
 			.setTitle("✅ Device auth saved to ${source.jda.selfUser.name}")
 			.setColor(BrigadierCommand.COLOR_SUCCESS)
 			.build())
 		return Command.SINGLE_SUCCESS
 	}
-	source.complete(null,
-		EmbedBuilder()
-		.setColor(BrigadierCommand.COLOR_SUCCESS)
-		.setTitle("✅ Imported %,d device auths".format(success))
-		.build()
-	)
-	return Command.SINGLE_SUCCESS
+	throw SimpleCommandExceptionType(LiteralMessage("Malformed JSON: Expected array or object.")).create()
 }
 
-private fun importFromJson(source: CommandSourceStack, accountJson: JsonElement) {
-	val device = accountJson.asJsonObject
+private fun importFromJson(source: CommandSourceStack, device: JsonObject) {
 	val accountId = device.get("accountId").asString
 	val deviceId = device.get("deviceId").asString
 	val secret = device.get("secret").asString
@@ -348,4 +295,27 @@ private fun importFromJson(source: CommandSourceStack, accountJson: JsonElement)
 		this.secret = secret
 		this.clientId = clientId
 	})
+}
+
+private fun checkCanAddDevice(source: CommandSourceStack, dbDevices: List<DeviceAuth>) {
+	val limit = source.getSavedAccountsLimit()
+	if (dbDevices.size >= limit) {
+		checkComplimentary(source, dbDevices, limit)
+		throw SimpleCommandExceptionType(LiteralMessage("Maximum number of saved logins (%,d) has been reached.".format(limit))).create()
+	}
+	if (!BotConfig.get().allowUsersToCreateDeviceAuth) {
+		throw SimpleCommandExceptionType(LiteralMessage("The current instance of the bot does not allow saving logins.")).create()
+	}
+}
+
+private fun checkComplimentary(source: CommandSourceStack, dbDevices: List<DeviceAuth>, limit: Int) {
+	if (dbDevices.isEmpty() && limit == 0) {
+		val quotaSettings = BotConfig.get().deviceAuthQuota
+		source.ensurePremium("Your Discord account must be older than %,d days in order to have %,d complimentary saved logins.\nGet %,d saved logins regardless of account age".format(
+			quotaSettings.minAccountAgeInDaysForComplimentary,
+			quotaSettings.maxForComplimentary,
+			quotaSettings.maxForPremium
+		))
+		check(false) // We should never reach this point
+	}
 }
