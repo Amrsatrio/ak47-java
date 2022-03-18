@@ -313,7 +313,7 @@ fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 	return Command.SINGLE_SUCCESS
 }
 
-private val existingAuthCodeHintMessages = ExpiringMap.builder()
+val existingAuthCodeHintMessages = ExpiringMap.builder()
 	.expiration(3, TimeUnit.MINUTES)
 	.build<String, Message>()
 

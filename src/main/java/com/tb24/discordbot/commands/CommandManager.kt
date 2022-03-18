@@ -494,6 +494,7 @@ ${e.getStackTraceAsString()}```""", null)
 			threadPool.submit {
 				wrappedExecute(interaction, source) {
 					doLogin(source, EGrantType.authorization_code, code, EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
+					existingAuthCodeHintMessages.remove(source.author.id + ':' + source.channel.id)
 				}
 			}
 		}
