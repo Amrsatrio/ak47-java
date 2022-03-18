@@ -8,7 +8,9 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.BotConfig
+import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.L10N
+import com.tb24.discordbot.Session
 import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.images.FMergedMaterialParams
 import com.tb24.discordbot.images.generateShopImage
@@ -196,124 +198,109 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 	return Command.SINGLE_SUCCESS
 }
 
-private fun execBuyAllCampaign(source: CommandSourceStack): Int {
-	source.ensureSession()
-	source.loading("Getting offers")
-	val catalogManager = source.client.catalogManager
-	val profileManager = source.api.profileManager
-	catalogManager.ensureCatalogData(source.client.internalSession.api)
+private class BuyAllResult(val totalItems: Int, val purchasedItems: List<String>, val notEnoughBalanceItems: List<String>, val neededGold: Int, val finalBalance: Int, val totalSpent: Int, val ownedAll: Boolean)
+
+private fun buyAll(session: Session): BuyAllResult {
+	val profileManager = session.api.profileManager
 	CompletableFuture.allOf(
 		profileManager.dispatchClientCommandRequest(QueryProfile()),
 		profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign")
 	).await()
-	val sections = catalogManager.campaignSections.values.withIndex()
 	val campaign = profileManager.getProfileData("campaign")
-	var intGold = campaign.items.values.firstOrNull { it.templateId == "AccountResource:eventcurrency_scaling" }?.quantity
-		?: throw SimpleCommandExceptionType(LiteralMessage("Could not find the gold balance.")).create()
-	source.loading("Purchasing offers")
-	val finalPurchasedItems = mutableListOf<String>()
-	var totalSpent = 0
-	var intTotalItems = 0
-	var intTotalOwned = 0
-	for ((_, section) in sections) {
+	val initialBalance = campaign.items.values.firstOrNull { it.templateId == "AccountResource:eventcurrency_scaling" }?.quantity
+		?: throw SimpleCommandExceptionType(LiteralMessage("No gold.")).create()
+	var balance = initialBalance
+	var totalItems = 0
+	val purchasedItems = mutableListOf<String>()
+	val notEnoughBalanceItems = mutableListOf<String>()
+	var neededGold = 0
+	var ownedAll = true
+	for (section in DiscordBot.instance.catalogManager.campaignSections.values) {
 		for (catalogEntry in section.items) {
-			if (catalogEntry.offerType == ECatalogOfferType.StaticPrice && (catalogEntry.prices.isEmpty() || catalogEntry.prices.first().currencyType == EStoreCurrencyType.RealMoney)) continue
+			// Skip items not priced with gold
+			if (catalogEntry.prices.firstOrNull()?.currencySubType != "AccountResource:eventcurrency_scaling") {
+				continue
+			}
 			val sd = catalogEntry.holder().apply { resolve(profileManager) }
-			if (sd.price.currencySubType != "AccountResource:eventcurrency_scaling" || sd.purchaseLimit == -1) continue
+			// Skip items with unlimited purchases
+			if (sd.purchaseLimit == -1) {
+				continue
+			}
+			totalItems++
+			// Skip sold out items
 			val ownedOrSoldOut = sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit
-			intTotalItems++
-			if (!ownedOrSoldOut){
-				val quantity = sd.purchaseLimit - sd.purchasesCount
-				val price = quantity * sd.price.basePrice
-				if (intGold < price) {
-					continue
-				}
-				intGold -= price
-				source.api.profileManager.dispatchClientCommandRequest(PurchaseCatalogEntry().apply {
-					offerId = catalogEntry.offerId
-					purchaseQuantity = quantity
-					currency = sd.price.currencyType
-					currencySubType = "AccountResource:eventcurrency_scaling"
-					expectedTotalPrice = price
-					gameContext = "Frontend.ItemShopScreen"
-				}).await()
-				totalSpent += price
-				finalPurchasedItems.add("%dx %s".format(quantity, sd.friendlyName))
-			} else intTotalOwned++
+			if (ownedOrSoldOut) {
+				continue
+			}
+			ownedAll = false
+			val quantity = sd.purchaseLimit - sd.purchasesCount
+			val price = quantity * sd.price.basePrice
+			if (balance < price) {
+				neededGold += price
+				notEnoughBalanceItems.add("%dx %s".format(quantity, sd.friendlyName))
+				continue
+			}
+			session.api.profileManager.dispatchClientCommandRequest(PurchaseCatalogEntry().apply {
+				offerId = catalogEntry.offerId
+				purchaseQuantity = quantity
+				currency = sd.price.currencyType
+				currencySubType = "AccountResource:eventcurrency_scaling" // Hardcode to make sure we're buying with gold
+				expectedTotalPrice = price
+				gameContext = "Frontend.ItemShopScreen"
+			}).await()
+			balance -= price
+			purchasedItems.add("%dx %s".format(quantity, sd.friendlyName))
 		}
 	}
-	if (finalPurchasedItems.isEmpty()) {
-		source.complete(null, source.createEmbed().setColor(BrigadierCommand.COLOR_ERROR).setDescription(if (intTotalItems == intTotalOwned) "❌ You already own everything." else "❌ Not enough gold to purchase the remaining offers.").build())
+	val totalSpent = initialBalance - balance
+	return BuyAllResult(totalItems, purchasedItems, notEnoughBalanceItems, neededGold, balance, totalSpent, ownedAll)
+}
+
+private fun execBuyAllCampaign(source: CommandSourceStack): Int {
+	source.ensureSession()
+	source.loading("Getting offers")
+	val catalogManager = source.client.catalogManager
+	catalogManager.ensureCatalogData(source.client.internalSession.api)
+	val result = buyAll(source.session)
+	if (result.purchasedItems.isEmpty()) {
+		source.complete(null, source.createEmbed().setColor(BrigadierCommand.COLOR_ERROR).setDescription(if (result.ownedAll) "❌ You already own everything." else "❌ Not enough gold to purchase the remaining offers.").build())
 	} else {
-		source.complete(null, source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS).setTitle("✅ Purchased:").setDescription(finalPurchasedItems.joinToString("\n")).setFooter("Total spent: %,d".format(totalSpent)).build())
+		source.complete(null, source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS).setTitle("✅ Purchased:").setDescription(result.purchasedItems.joinToString("\n")).setFooter("Total spent: %,d".format(result.totalSpent)).build())
 	}
 	return Command.SINGLE_SUCCESS
 }
 
 private fun execBuyAllCampaignBulk(source: CommandSourceStack, users: Map<String, GameProfile>?): Int {
-	source.loading("Getting offers")
-	val catalogManager = source.client.catalogManager
-	val sections = catalogManager.campaignSections.values.withIndex()
-	catalogManager.ensureCatalogData(source.client.internalSession.api)
 	val devices = source.client.savedLoginsManager.getAll(source.author.id)
 	if (devices.isEmpty()) {
 		throw SimpleCommandExceptionType(LiteralMessage("You don't have saved logins. Please perform `.savelogin` before continuing.")).create()
 	}
+	source.loading("Getting & purchasing offers")
+	val catalogManager = source.client.catalogManager
+	catalogManager.ensureCatalogData(source.client.internalSession.api)
 	val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
 	forEachSavedAccounts(source, if (users != null) devices.filter { it.accountId in users } else devices) {
-		val profileManager = source.api.profileManager
-		CompletableFuture.allOf(
-			profileManager.dispatchClientCommandRequest(QueryProfile()),
-			profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign")
-		).await()
-		val campaign = profileManager.getProfileData("campaign")
-		var intGold = campaign.items.values.firstOrNull { it.templateId == "AccountResource:eventcurrency_scaling" }?.quantity
-			?: return@forEachSavedAccounts embed.addField(source.api.currentLoggedIn.displayName, "❌ Could not find the gold balance.", false)
-		var bHasEverything = true
-		var totalSpent = 0
-		var intTotalItems = 0
-		var intTotalOwned = 0
-		var intPurchased = 0
-		var intNeededGold = 0
-		for ((_, section) in sections) {
-			for (catalogEntry in section.items) {
-				if (catalogEntry.offerType == ECatalogOfferType.StaticPrice && (catalogEntry.prices.isEmpty() || catalogEntry.prices.first().currencyType == EStoreCurrencyType.RealMoney)) continue
-				val sd = catalogEntry.holder().apply { resolve(profileManager) }
-				if (sd.price.currencySubType != "AccountResource:eventcurrency_scaling" || sd.purchaseLimit == -1) continue
-				val ownedOrSoldOut = sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit
-				intTotalItems++
-				if (!ownedOrSoldOut){
-					bHasEverything = false
-					val quantity = sd.purchaseLimit - sd.purchasesCount
-					val price = quantity * sd.price.basePrice
-					if (intGold < price) {
-						intNeededGold += price
-						continue
-					}
-					intPurchased++
-					intGold -= price
-					source.api.profileManager.dispatchClientCommandRequest(PurchaseCatalogEntry().apply {
-						offerId = catalogEntry.offerId
-						purchaseQuantity = quantity
-						currency = sd.price.currencyType
-						currencySubType = "AccountResource:eventcurrency_scaling"
-						expectedTotalPrice = price
-						gameContext = "Frontend.ItemShopScreen"
-					}).await()
-					totalSpent += price
-				} else intTotalOwned++
-			}
-		}
-		val intOffersLeft = intTotalItems - intTotalOwned - intPurchased
+		val result = buyAll(it)
 		if (embed.fields.size == 25) {
 			source.complete(null, embed.build())
 			embed.clearFields()
-			source.loading("Getting offers")
+			source.loading("Purchasing offers")
 		}
-		embed.addField(source.api.currentLoggedIn.displayName, when {
-			bHasEverything -> "✅ You already own everything."
-			!bHasEverything && totalSpent != 0 -> "✅ Purchased %,d items, %,d items remain. Balance: %,d gold.".format(intPurchased, intOffersLeft, intGold)
-			else -> "❌ %,d gold needed to purchase the remaining %,d offer%s.".format(intNeededGold - intGold, intOffersLeft, if (intOffersLeft == 1) "" else "s")
+		embed.addField(it.api.currentLoggedIn.displayName, when {
+			result.ownedAll -> "✅ You already own everything."
+			result.totalSpent != 0 -> when {
+				result.notEnoughBalanceItems.isNotEmpty() -> "⚠ Purchased %,d/%,d items. %,d gold needed to purchase the remaining %,d offer%s.".format(
+					result.purchasedItems.size, result.totalItems,
+					result.neededGold, result.notEnoughBalanceItems.size, if (result.notEnoughBalanceItems.size == 1) "" else "s"
+				)
+				else -> "✅ Purchased %s %,d items. %,d gold remaining.".format(
+					if (result.purchasedItems.size == result.totalItems) "all" else "remaining", result.purchasedItems.size,
+					result.finalBalance
+				)
+			}
+			else -> "❌ %,d gold needed to purchase the remaining %,d offer%s.".format(
+				result.neededGold, result.notEnoughBalanceItems.size, if (result.notEnoughBalanceItems.size == 1) "" else "s"
+			)
 		}, false)
 	}
 	source.complete(null, embed.build())

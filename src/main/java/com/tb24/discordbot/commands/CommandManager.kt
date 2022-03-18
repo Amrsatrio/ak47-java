@@ -365,7 +365,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		} catch (e: HttpException) {
 			if (httpError(source, e)) {
 				if (canRetry) {
-					wrappedExecute(interaction, source, canRetry, action)
+					wrappedExecute(interaction, source, false, action)
 				} else {
 					client.dlog("__**Attempted to repeat a command more than once**__\nUser: ${source.author.asMention}\n```\n${e.getStackTraceAsString()}```", null)
 					DiscordBot.LOGGER.error("Attempted to repeat a command more than once", e)
