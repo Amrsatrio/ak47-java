@@ -34,6 +34,7 @@ open class CommandSourceStack {
 	val interaction get() = _interaction!!
 	val commandInteraction get() = _interaction as CommandInteraction
 	var hook: InteractionHook? = null
+	private var interactionCompleted = false
 
 	val jda: JDA
 	val guild: Guild?
@@ -124,8 +125,8 @@ open class CommandSourceStack {
 
 	fun complete(message: Message?, vararg files: AttachmentUpload): Message {
 		val interaction = _interaction
-		if (interaction != null) {
-			_interaction = null
+		if (interaction != null && !interactionCompleted) {
+			interactionCompleted = true
 			val localHook = hook
 			return if (localHook != null) {
 				hook = null
