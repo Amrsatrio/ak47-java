@@ -315,11 +315,10 @@ fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 
 val existingAuthCodeHintMessages = ExpiringMap.builder()
 	.expiration(3, TimeUnit.MINUTES)
-	.build<String, Message>()
+	.build<Long, Message>()
 
 fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): Int {
-	val trackingKey = source.author.id + ':' + source.channel.id
-	existingAuthCodeHintMessages[trackingKey]?.let {
+	existingAuthCodeHintMessages[source.channel.idLong]?.let {
 		source.complete(null, EmbedBuilder().setColor(0x8AB4F8)
 			.setDescription("Please check [the message above](${it.jumpUrl}) for instructions.")
 			.build())
@@ -336,7 +335,7 @@ fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): 
 4. Paste the whole text into the "Code" text field, and click Submit.""")
 		.addField("Need to switch accounts?", "[Open this link instead]($link&prompt=login)", false)
 		.setColor(0x8AB4F8)
-	existingAuthCodeHintMessages[trackingKey] = source.complete(null, embed.build(), ActionRow.of(Button.secondary("submitAuthCode", "Submit code and log in...")))
+	existingAuthCodeHintMessages[source.channel.idLong] = source.complete(null, embed.build(), ActionRow.of(Button.secondary("submitAuthCode", "Submit code and log in...")))
 	return Command.SINGLE_SUCCESS
 }
 

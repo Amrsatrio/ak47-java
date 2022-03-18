@@ -20,6 +20,7 @@ import com.tb24.fn.util.EAuthClient
 import com.tb24.fn.util.getPreviewImagePath
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
+import net.dv8tion.jda.api.interactions.ModalInteraction
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import org.slf4j.Logger
@@ -159,7 +160,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		if (accountIndex != -1 && !usedAccountNumber) {
 			embed.setFooter("Tip: use %si %d to quickly switch accounts".format(source.prefix, accountIndex + 1))
 		}
-		source.complete(null, embed.build())
+		source.complete(if (source.interaction is ModalInteraction) source.author.asMention else null, embed.build())
 	}
 
 	fun handleAccountMutation(response: AccountMutationResponse) {

@@ -490,11 +490,10 @@ ${e.getStackTraceAsString()}```""", null)
 			val code = event.getValue("code")!!.asString
 			val interaction = event.interaction
 			val source = CommandSourceStack(client, interaction, event.user.id)
-			source.hook = interaction.deferEdit().complete()
+			//source.hook = interaction.deferEdit().complete()
 			threadPool.submit {
 				wrappedExecute(interaction, source) {
 					doLogin(source, EGrantType.authorization_code, code, EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
-					existingAuthCodeHintMessages.remove(source.author.id + ':' + source.channel.id)
 				}
 			}
 		}
