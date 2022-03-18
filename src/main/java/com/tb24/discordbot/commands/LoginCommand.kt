@@ -112,7 +112,7 @@ fun doLogin(source: CommandSourceStack, grantType: EGrantType, params: String, a
 		EGrantType.authorization_code -> {
 			params = extractCode(params)
 			if (params.length != 32) {
-				throw SimpleCommandExceptionType(LiteralMessage("That is not an authorization code.\nHere's how to use the command correctly: When you open ${Utils.login(Utils.redirect(authClient))} you will see this text:\n```json\n{\"redirectUrl\":\"https://accounts.epicgames.com/fnauth?code=*aabbccddeeff11223344556677889900*\",\"sid\":null}```You only need to input exactly the text surrounded between *'s into the command, so it becomes:\n`${source.prefix}login aabbccddeeff11223344556677889900`")).create()
+				throw SimpleCommandExceptionType(LiteralMessage("We did not find a 32 character hexadecimal code to log you in. Please follow the instructions again carefully.")).create()
 			}
 			source.session.login(source, authorizationCode(params), authClient ?: EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
 		}
@@ -314,11 +314,12 @@ fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 }
 
 private val existingAuthCodeHintMessages = ExpiringMap.builder()
-	.expiration(5, TimeUnit.MINUTES)
-	.build<Long, Message>()
+	.expiration(3, TimeUnit.MINUTES)
+	.build<String, Message>()
 
 fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): Int {
-	existingAuthCodeHintMessages[source.channel.idLong]?.let {
+	val trackingKey = source.author.id + ':' + source.channel.id
+	existingAuthCodeHintMessages[trackingKey]?.let {
 		source.complete(null, EmbedBuilder().setColor(0x8AB4F8)
 			.setDescription("Please check [the message above](${it.jumpUrl}) for instructions.")
 			.build())
@@ -328,16 +329,14 @@ fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): 
 	val embed = EmbedBuilder()
 		.setTitle("📲 Log in to your Epic Games account", link)
 		.setDescription("""
-⚠ **We recommend that you only log into accounts that you have email access to!**
+⚠ **We recommend to only log into accounts that you have email access to!**
 1. Visit the link above to get your login code.
-2. Copy the 32 character code that looks like `aabbccddeeff11223344556677889900`, located after `?code=`.
-3. Send `/login <32 character code>` within 30 seconds of opening the page to complete your login. Reload the page to get a new code.""")
+2. Copy the the entire text. Will be valid for 30 seconds, reload to get a new code.
+3. Return to Discord and click on the button below.
+4. Paste the whole text into the "Code" text field, and click Submit.""")
 		.addField("Need to switch accounts?", "[Open this link instead]($link&prompt=login)", false)
 		.setColor(0x8AB4F8)
-	if (BotConfig.get().slashCommandsEnabled && source.message != null) {
-		embed.appendDescription("\nℹ Please start using the new `/login` slash command as the old `${source.prefix}login` will no longer work.")
-	}
-	existingAuthCodeHintMessages[source.channel.idLong] = source.complete(null, embed.build()/*, ActionRow.of(Button.secondary("submitAuthCode", "Submit code and log in..."))*/)
+	existingAuthCodeHintMessages[trackingKey] = source.complete(null, embed.build(), ActionRow.of(Button.secondary("submitAuthCode", "Submit code and log in...")))
 	return Command.SINGLE_SUCCESS
 }
 

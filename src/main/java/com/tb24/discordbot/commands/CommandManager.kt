@@ -472,14 +472,14 @@ ${e.getStackTraceAsString()}```""", null)
 	// region TODO Move to appropriate class
 	override fun onGenericComponentInteractionCreate(event: GenericComponentInteractionCreateEvent) {
 		if (event.componentId == "submitAuthCode") {
-			val inputCode = TextInput.create("code", "Authorization code", TextInputStyle.SHORT)
+			val inputCode = TextInput.create("code", "Code", TextInputStyle.SHORT)
 				.setMinLength(32)
 				.setMaxLength(200)
 				.setPlaceholder("aabbccddeeff11223344556677889900")
 				.setRequired(true)
 				.build()
 
-			event.replyModal(Modal.create("authCodeSubmission", "Epic Games log in")
+			event.replyModal(Modal.create("authCodeSubmission", "Log in to your Epic Games account")
 				.addActionRow(inputCode)
 				.build()).queue()
 		}
@@ -490,6 +490,7 @@ ${e.getStackTraceAsString()}```""", null)
 			val code = event.getValue("code")!!.asString
 			val interaction = event.interaction
 			val source = CommandSourceStack(client, interaction, event.user.id)
+			source.hook = interaction.deferEdit().complete()
 			threadPool.submit {
 				wrappedExecute(interaction, source) {
 					doLogin(source, EGrantType.authorization_code, code, EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)

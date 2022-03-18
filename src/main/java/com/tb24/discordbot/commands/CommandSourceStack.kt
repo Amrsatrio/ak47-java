@@ -79,7 +79,7 @@ open class CommandSourceStack {
 		jda = channel.jda
 		guild = (channel as? TextChannel)?.guild
 		member = null
-		_user = (channel as? PrivateChannel)?.user
+		_user = (channel as? PrivateChannel)?.retrieveUser()?.complete()
 		this.channel = channel
 		initialSession = client.internalSession
 		session = initialSession
