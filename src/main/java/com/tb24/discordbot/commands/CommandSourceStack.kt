@@ -32,7 +32,6 @@ open class CommandSourceStack {
 	var message: Message? = null
 	var interaction: IReplyCallback? = null
 		private set
-	val commandInteraction get() = interaction as CommandInteraction
 	var hook: InteractionHook? = null
 	private var interactionCompleted = false
 
@@ -97,9 +96,10 @@ open class CommandSourceStack {
 	var loadingMsg: Message? = null
 
 	fun loading(text: String?): Message? {
-		interaction?.let {
+		val interaction = interaction
+		if (interaction != null && !interactionCompleted) {
 			if (hook == null) {
-				hook = it.deferReply().complete()
+				hook = interaction.deferReply().complete()
 			}
 			return null // FYI we cannot show the custom loading message, it's always "<Name> is thinking..."
 		}
@@ -159,7 +159,7 @@ open class CommandSourceStack {
 	}
 	// endregion
 
-	inline fun getOption(name: String) = commandInteraction.getOption(name)
+	inline fun getOption(name: String) = (interaction as? CommandInteraction)?.getOption(name)
 
 	@Throws(CommandSyntaxException::class)
 	fun ensureSession() {
