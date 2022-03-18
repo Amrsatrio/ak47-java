@@ -52,7 +52,7 @@ class MemoryCommand : BrigadierCommand("memory", "Displays the JVM's current mem
 		}
 
 	override fun getSlashCommand() = newCommandBuilder().executes {
-		it.interaction.reply(getMemoryInfo()).complete()
+		it.interaction!!.reply(getMemoryInfo()).complete()
 		Command.SINGLE_SUCCESS
 	}
 }

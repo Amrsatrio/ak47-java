@@ -30,9 +30,9 @@ open class CommandSourceStack {
 
 	val client: DiscordBot
 	var message: Message? = null
-	private var _interaction: IReplyCallback? = null
-	val interaction get() = _interaction!!
-	val commandInteraction get() = _interaction as CommandInteraction
+	var interaction: IReplyCallback? = null
+		private set
+	val commandInteraction get() = interaction as CommandInteraction
 	var hook: InteractionHook? = null
 	private var interactionCompleted = false
 
@@ -64,7 +64,7 @@ open class CommandSourceStack {
 
 	constructor(client: DiscordBot, interaction: Interaction, sessionId: String?, ignoreSessionLimit: Boolean = false) {
 		this.client = client
-		this._interaction = interaction as? IReplyCallback
+		this.interaction = interaction as? IReplyCallback
 		jda = interaction.jda
 		guild = interaction.guild
 		member = interaction.member
@@ -97,7 +97,7 @@ open class CommandSourceStack {
 	var loadingMsg: Message? = null
 
 	fun loading(text: String?): Message? {
-		_interaction?.let {
+		interaction?.let {
 			if (hook == null) {
 				hook = it.deferReply().complete()
 			}
@@ -124,7 +124,7 @@ open class CommandSourceStack {
 	inline fun complete(vararg files: AttachmentUpload) = complete(null, *files)
 
 	fun complete(message: Message?, vararg files: AttachmentUpload): Message {
-		val interaction = _interaction
+		val interaction = interaction
 		if (interaction != null && !interactionCompleted) {
 			interactionCompleted = true
 			val localHook = hook
