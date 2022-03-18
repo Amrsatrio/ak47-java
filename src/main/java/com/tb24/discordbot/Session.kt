@@ -64,7 +64,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 
 	@Synchronized
 	@Throws(HttpException::class, IOException::class)
-	fun login(source: CommandSourceStack?, fields: Map<String, String>, auth: EAuthClient = EAuthClient.FORTNITE_ANDROID_GAME_CLIENT, sendMessages: Boolean = true): Int {
+	fun login(source: CommandSourceStack?, fields: Map<String, String>, auth: EAuthClient = EAuthClient.FORTNITE_ANDROID_GAME_CLIENT, sendMessages: Boolean = true, usedAccountNumber: Boolean = false): Int {
 		if (source != null) {
 			val grantType = fields["grant_type"]
 			if (grantType != "device_auth" && grantType != "device_code" && source.message != null && source.guild?.selfMember?.hasPermission(Permission.MESSAGE_MANAGE) == true && sendMessages) {
@@ -87,7 +87,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		api.currentLoggedIn = accountData
 		save()
 		if (source != null && sendMessages) {
-			sendLoginMessage(source)
+			sendLoginMessage(source, usedAccountNumber = usedAccountNumber)
 		}
 		return Command.SINGLE_SUCCESS
 	}
@@ -132,7 +132,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		newApi
 	}
 
-	fun sendLoginMessage(source: CommandSourceStack, user: GameProfile? = api.currentLoggedIn) {
+	fun sendLoginMessage(source: CommandSourceStack, user: GameProfile? = api.currentLoggedIn, usedAccountNumber: Boolean = false) {
 		if (user == null) {
 			return
 		}
@@ -152,8 +152,12 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		}
 		embed.setDescription(user.renderPublicExternalAuths().joinToString(" "))
 		val dbDevices = client.savedLoginsManager.getAll(id)
-		if (BotConfig.get().allowUsersToCreateDeviceAuth && dbDevices.none { it.accountId == user.id } && dbDevices.size < source.getSavedAccountsLimit()) {
+		val accountIndex = dbDevices.indexOfFirst { it.accountId == user.id }
+		if (BotConfig.get().allowUsersToCreateDeviceAuth && accountIndex == -1 && dbDevices.size < source.getSavedAccountsLimit()) {
 			embed.setFooter("Tip: do %ssavelogin to stay logged in".format(source.prefix))
+		}
+		if (accountIndex != -1 && !usedAccountNumber) {
+			embed.setFooter("Tip: use %si %d to quickly switch accounts".format(source.prefix, accountIndex + 1))
 		}
 		source.complete(null, embed.build())
 	}

@@ -62,7 +62,7 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 		return if (accountIndex != null) {
 			val devices = source.client.savedLoginsManager.getAll(source.author.id)
 			val deviceData = devices.safeGetOneIndexed(accountIndex)
-			doDeviceAuthLogin(source, deviceData)
+			doDeviceAuthLogin(source, deviceData, usedAccountNumber = true)
 		} else {
 			//checkRestriction(source)
 			doLogin(source, EGrantType.authorization_code, param, EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
@@ -217,9 +217,9 @@ private inline fun accountPicker_prompt(source: CommandSourceStack, devices: Lis
 fun doDeviceAuthLogin(source: CommandSourceStack, deviceData: DeviceAuth, users: Lazy<List<GameProfile>> = lazy {
 	source.session = source.client.internalSession
 	source.queryUsers(Collections.singleton(deviceData.accountId))
-}, sendMessages: Boolean = true): Int {
+}, sendMessages: Boolean = true, usedAccountNumber: Boolean = false): Int {
 	try {
-		return source.session.login(source, deviceData.generateAuthFields(), deviceData.authClient, sendMessages)
+		return source.session.login(source, deviceData.generateAuthFields(), deviceData.authClient, sendMessages, usedAccountNumber)
 	} catch (e: HttpException) {
 		if (e.epicError.errorCode == "errors.com.epicgames.account.invalid_account_credentials" || e.epicError.errorCode == "errors.com.epicgames.account.account_not_active") {
 			val accountId = deviceData.accountId
