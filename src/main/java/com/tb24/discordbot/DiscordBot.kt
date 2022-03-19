@@ -24,6 +24,7 @@ import me.fungames.jfortniteparse.ue4.io.TOC_READ_OPTION_READ_DIRECTORY_INDEX
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.Activity
 import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.MessageChannel
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.requests.GatewayIntent
 import net.dv8tion.jda.api.sharding.DefaultShardManagerBuilder
@@ -241,7 +242,7 @@ class DiscordBot(token: String) {
 	/** Decoupled and public, so you can manually invoke this through eval */
 	@Suppress("MemberVisibilityCanBePrivate")
 	fun postItemShop() {
-		val itemShopChannel = discord.getTextChannelById(BotConfig.get().itemShopChannelId)
+		val itemShopChannel = discord.getChannelById(MessageChannel::class.java, BotConfig.get().itemShopChannelId)
 		if (itemShopChannel != null) {
 			ensureInternalSession()
 			val source = CommandSourceStack(this, itemShopChannel)
@@ -252,7 +253,7 @@ class DiscordBot(token: String) {
 
 	@Suppress("MemberVisibilityCanBePrivate")
 	fun postMtxAlerts() {
-		val mtxAlertsChannel = discord.getTextChannelById(BotConfig.get().mtxAlertsChannelId)
+		val mtxAlertsChannel = discord.getChannelById(MessageChannel::class.java, BotConfig.get().mtxAlertsChannelId)
 		if (mtxAlertsChannel != null) {
 			val source = CommandSourceStack(this, mtxAlertsChannel)
 			executeMtxAlerts(source)
@@ -331,7 +332,7 @@ class DiscordBot(token: String) {
 	// endregion
 
 	fun dlog(content: String?, embed: MessageEmbed?) {
-		val logsChannel = discord.getTextChannelById(BotConfig.get().logsChannelId)
+		val logsChannel = discord.getChannelById(MessageChannel::class.java, BotConfig.get().logsChannelId)
 		if (logsChannel != null) {
 			val builder = MessageBuilder(content)
 			if (embed != null) {

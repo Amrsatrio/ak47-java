@@ -1,6 +1,5 @@
 package com.tb24.discordbot.managers
 
-import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.getStackTraceAsString
@@ -128,7 +127,7 @@ class CatalogManager {
 	private fun onCampaignCatalogUpdated() {
 		freeLlamas = llamas.items.filter { it.devName == "RandomFree.FreePack.01" || it.title == "Upgrade Llama (Seasonal Sale Freebie!)" }
 		val client = client ?: return
-		client.discord.getTextChannelById(BotConfig.get().itemShopChannelId)?.sendMessage("Free llamas: " + freeLlamas.joinToString { "#%,d".format(it.__ak47_index + 1) }.ifEmpty { "🚫 None" })?.queue()
+		//client.discord.getChannelById(MessageChannel::class.java, BotConfig.get().itemShopChannelId)?.sendMessage("Free llamas: " + freeLlamas.joinToString { "#%,d".format(it.__ak47_index + 1) }.ifEmpty { "🚫 None" })?.queue()
 		if (freeLlamas.isNotEmpty()) {
 			try {
 				client.autoFreeLlamaTask.run()

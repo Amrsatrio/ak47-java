@@ -31,7 +31,7 @@ class MentionArgument private constructor(private val mentionType: MentionType) 
 				return when (mentionType) {
 					MentionType.USER -> setOf(source.jda.retrieveUserById(id).complete())
 					MentionType.ROLE -> (source.guild?.getRoleById(id) ?: source.jda.getRoleById(id))?.let(Collections::singleton)
-					MentionType.CHANNEL -> source.jda.getTextChannelById(id)?.let(Collections::singleton)
+					MentionType.CHANNEL -> source.jda.getChannelById(MessageChannel::class.java, id)?.let(Collections::singleton)
 					MentionType.EMOTE -> source.jda.getEmoteById(id)?.let(Collections::singleton)
 					else -> null
 				} ?: emptySet()
@@ -70,9 +70,9 @@ class MentionArgument private constructor(private val mentionType: MentionType) 
 			return source.guild?.getRoleById(roleId) ?: source.jda.getRoleById(roleId)
 		}
 
-		private fun matchTextChannel(matcher: Matcher): TextChannel? {
+		private fun matchTextChannel(matcher: Matcher): MessageChannel? {
 			val channelId = parseSnowflake(matcher.group(1))
-			return source.jda.getTextChannelById(channelId)
+			return source.jda.getChannelById(MessageChannel::class.java, channelId)
 		}
 
 		private fun matchEmote(m: Matcher): Emote? {
