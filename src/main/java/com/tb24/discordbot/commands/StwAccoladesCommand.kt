@@ -102,7 +102,7 @@ class StwAccoladesCommand : BrigadierCommand("stwaccolades", "Shows the amount o
 		}
 
 		val current = if (outdated) 0 else tracker.attributes.getInt("daily_xp")
-		val max = 1056000 //tracker.defData.get<Int>("MaxDailyXP")
+		val max = tracker.defData.get<Int>("MaxDailyXP")
 
 		operator fun component1() = current
 		operator fun component2() = max
