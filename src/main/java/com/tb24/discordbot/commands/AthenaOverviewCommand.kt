@@ -4,7 +4,6 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.tb24.discordbot.SEASON_STYLE_CURRENCY_ICON
-import com.tb24.discordbot.SEASON_STYLE_CURRENCY_NAME
 import com.tb24.discordbot.util.*
 import com.tb24.discordbot.util.Utils
 import com.tb24.fn.model.FortItemStack
@@ -14,6 +13,7 @@ import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
 import com.tb24.fn.util.*
 import me.fungames.jfortniteparse.fort.exports.FortItemDefinition
+import me.fungames.jfortniteparse.fort.exports.FortPersistentResourceItemDefinition
 import me.fungames.jfortniteparse.fort.objects.rows.AthenaExtendedXPCurveEntry
 import me.fungames.jfortniteparse.fort.objects.rows.AthenaSeasonalXPCurveEntry
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
@@ -68,13 +68,14 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 			}
 			embed.addField("Supercharged XP", restedXpText, false)
 		}
-		val currentBattleStars = stats.battlestars ?: 0
-		val currentStylePoints = stats.style_points ?: 0
-		embed.addField("Season Resources", "%s %s **%,d**\n%s %s **%,d**\n%s %s **%,d**".format(
-			"Battle Stars", battleStarEmote?.asMention, currentBattleStars,
-			SEASON_STYLE_CURRENCY_NAME, styleCurrencyEmote?.asMention, currentStylePoints,
-			"Bars", barsEmote?.asMention, inventory.stash["globalcash"] ?: 0
-		), false)
+		val seasonResources = mutableListOf<String>()
+		seasonData?.SeasonCurrencyMcpDataList?.forEach {
+			val currencyDef = it.CurrencyDefinition.load<FortPersistentResourceItemDefinition>() ?: return@forEach
+			val balance = AthenaProfileStats::class.java.getField(currencyDef.StatName).get(stats) as Int? ?: 0
+			seasonResources.add("%s %s **%,d**".format(currencyDef.DisplayName.format(), textureEmote(currencyDef.LargePreviewImage.toString())?.asMention, balance))
+		}
+		seasonResources.add("%s %s **%,d**".format("Bars", barsEmote?.asMention, inventory.stash["globalcash"] ?: 0))
+		embed.addField("Season Resources", seasonResources.joinToString("\n"), false)
 		val victoryCrown = athena.items.values.firstOrNull { it.templateId == "VictoryCrown:defaultvictorycrown" }
 		if (victoryCrown != null) {
 			val victoryCrownAccountData = victoryCrown.attributes.getAsJsonObject("victory_crown_account_data")
