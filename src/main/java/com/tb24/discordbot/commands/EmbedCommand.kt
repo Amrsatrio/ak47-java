@@ -17,6 +17,7 @@ import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Emoji
+import net.dv8tion.jda.api.entities.GuildChannel
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.TextChannel
 import net.dv8tion.jda.api.interactions.components.buttons.Button
@@ -24,7 +25,7 @@ import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
 
 class EmbedCommand : BrigadierCommand("embed", "Shiver me embeds!") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.requires { it.member?.hasPermission(it.channel as TextChannel, Permission.MESSAGE_MANAGE) == true }
+		.requires { it.member?.hasPermission(it.channel as GuildChannel, Permission.MESSAGE_MANAGE) == true }
 		.then(argument("channel", mention(Message.MentionType.CHANNEL))
 			.then(argument("title and description separated by new line", greedyString())
 				.executes {

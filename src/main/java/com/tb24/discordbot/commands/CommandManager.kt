@@ -14,8 +14,8 @@ import com.tb24.discordbot.util.getStackTraceAsString
 import com.tb24.fn.network.AccountService.GrantType
 import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.entities.GuildChannel
 import net.dv8tion.jda.api.entities.MessageEmbed
-import net.dv8tion.jda.api.entities.TextChannel
 import net.dv8tion.jda.api.events.ReadyEvent
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -259,7 +259,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				return
 			}
 			try {
-				if (source.channel is TextChannel) {
+				if (source.channel is GuildChannel) {
 					byGuild[source.guild!!.idLong] = byGuild.getOrDefault(source.guild.idLong, 0) + 1
 				}
 				dispatcher.execute(parseResults)

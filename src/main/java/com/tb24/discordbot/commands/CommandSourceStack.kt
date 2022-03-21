@@ -77,7 +77,7 @@ open class CommandSourceStack {
 	constructor(client: DiscordBot, channel: MessageChannel) {
 		this.client = client
 		jda = channel.jda
-		guild = (channel as? TextChannel)?.guild
+		guild = (channel as? GuildChannel)?.guild
 		member = null
 		_user = (channel as? PrivateChannel)?.retrieveUser()?.complete()
 		this.channel = channel
