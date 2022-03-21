@@ -3,7 +3,6 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.tb24.discordbot.SEASON_STYLE_CURRENCY_ICON
 import com.tb24.discordbot.util.*
 import com.tb24.discordbot.util.Utils
 import com.tb24.fn.model.FortItemStack
@@ -20,7 +19,6 @@ import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import net.dv8tion.jda.api.utils.TimeFormat
 
 val battleStarEmote = textureEmote("/Game/Athena/UI/Frontend/Art/T_UI_BP_BattleStar_L.T_UI_BP_BattleStar_L")
-val styleCurrencyEmote = textureEmote(SEASON_STYLE_CURRENCY_ICON)
 val battlePassEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass-L.T-FNBR-BattlePass-L")
 val freePassEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass-Default-L.T-FNBR-BattlePass-Default-L")
 val xpEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T_UI_FNBR_XPeverywhere_L.T_UI_FNBR_XPeverywhere_L")
