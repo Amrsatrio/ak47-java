@@ -29,9 +29,9 @@ class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Su
 	}
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { execute(it.source, it.commandName, null) }
+		.executes { execute(it.source, null) }
 		.then(argument("new code", greedyString())
-			.executes { execute(it.source, it.commandName, getString(it, "new code")) }
+			.executes { execute(it.source, getString(it, "new code")) }
 		)
 		.then(literal("earnings").executes { earnings(it.source) })
 		.then(literal("bulk").then(argument("code", greedyString())
@@ -40,9 +40,9 @@ class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Su
 
 	override fun getSlashCommand() = newCommandBuilder()
 		.option(OptionType.STRING, "new-code", "The new Support-a-Creator code to apply.")
-		.executes { execute(it, "sac", it.getOption("new-code")?.asString) }
+		.executes { execute(it, it.getOption("new-code")?.asString) }
 
-	private fun execute(source: CommandSourceStack, commandName: String, newCode: String?): Int {
+	private fun execute(source: CommandSourceStack, newCode: String?): Int {
 		source.ensureSession()
 		if (newCode == null) {
 			source.loading("Getting current Support-a-Creator code")
@@ -52,7 +52,7 @@ class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Su
 				.setTitle("Support-a-Creator")
 				.addField("Creator Code", stats.mtx_affiliate ?: L10N.format("common.none"), false)
 				.addField("Set on", stats.mtx_affiliate_set_time?.format() ?: "Never set", false)
-				.setFooter("Use '" + source.prefix + commandName + " <new code>' to change it.")
+				.setFooter("Use '" + source.prefix + source.commandName + " <new code>' to change it.")
 			if (!stats.mtx_affiliate.isNullOrEmpty() && stats.mtx_affiliate_set_time != null) {
 				val expiry = stats.mtx_affiliate_set_time.time + 14L * 24L * 60L * 60L * 1000L
 				val expired = System.currentTimeMillis() > expiry

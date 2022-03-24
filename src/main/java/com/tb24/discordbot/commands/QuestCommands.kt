@@ -38,6 +38,7 @@ import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.interactions.commands.OptionType
 
 class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manages your active BR daily challenges.", arrayOf("dailychals", "brdailies", "bd")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -80,7 +81,7 @@ val questCategoryTable by lazy { loadObject<UDataTable>("/Game/Quests/QuestCateg
 
 abstract class BaseQuestsCommand(name: String, description: String, private val categoryName: String, private val replaceable: Boolean, aliases: Array<String> = emptyArray()) : BrigadierCommand(name, description, aliases) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> {
-		val node = newRootNode().withPublicProfile({ c, campaign -> executeQuests(c.source, campaign, categoryName, replaceable, c.commandName) }, "Getting quests")
+		val node = newRootNode().withPublicProfile({ source, campaign -> executeQuests(source, campaign, categoryName, replaceable) }, "Getting quests")
 		if (replaceable) {
 			node.then(literal("replace")
 				.then(argument("quest #", integer())
@@ -96,9 +97,31 @@ abstract class BaseQuestsCommand(name: String, description: String, private val 
 		)
 		return node
 	}
+
+	override fun getSlashCommand(): BaseCommandBuilder<CommandSourceStack> {
+		val node = newCommandBuilder().then(subcommand("view", description)
+			.withPublicProfile({ source, campaign -> executeQuests(source, campaign, categoryName, replaceable) }, "Getting quests")
+		)
+		if (replaceable) {
+			node.then(subcommand("replace", "Replace a quest displayed in /%s view.".format(name))
+				.option(OptionType.INTEGER, "quest-number", "Number of the quest to replace", true)
+				.executes { source ->
+					replaceQuest(source, "campaign", source.getOption("quest-number")!!.asInt) { getQuestsOfCategory(it, categoryName) }
+				}
+			)
+		}
+		node.then(subcommand("bulk", "Multiple users version of /%s view.".format(name))
+			.option(OptionType.STRING, "users", "Users to display or leave blank to display your saved accounts", argument = UserArgument.users(25))
+			.executes { source ->
+				val usersResult = source.getArgument<UserArgument.Result>("users")
+				executeQuestsBulk(source, categoryName, usersResult?.let { lazy { it.getUsers(source).values } })
+			}
+		)
+		return node
+	}
 }
 
-private fun executeQuests(source: CommandSourceStack, campaign: McpProfile, categoryName: String, replaceable: Boolean, commandName: String): Int {
+private fun executeQuests(source: CommandSourceStack, campaign: McpProfile, categoryName: String, replaceable: Boolean): Int {
 	source.ensureCompletedCampaignTutorial(campaign)
 	val category = questCategoryTable.findRowMapped<FortCategoryTableRow>(FName(categoryName))!!
 	val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
@@ -110,7 +133,7 @@ private fun executeQuests(source: CommandSourceStack, campaign: McpProfile, cate
 		description = "You have no active %s".format(category.Name.format())
 	} else if (replaceable && campaign.owner == source.api.currentLoggedIn && numRerolls > 0) {
 		description += "\n\n" + "Use `%s%s replace <%s>` to replace one."
-			.format(source.prefix, commandName, "quest #")
+			.format(source.prefix, source.commandName, "quest #")
 	}
 	source.complete(null, source.createEmbed(campaign.owner)
 		.setTitle(category.Name.format())

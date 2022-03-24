@@ -3,7 +3,6 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.context.CommandContext
 import com.tb24.discordbot.item.ItemTypeResolver
 import com.tb24.discordbot.managers.HomebaseManager
 import com.tb24.discordbot.managers.managerData
@@ -25,8 +24,7 @@ class WorkersCommand : BrigadierCommand("survivors", "Shows your or a given play
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.withPublicProfile(::execute, "Getting survivors")
 
-	private fun execute(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
-		val source = c.source
+	private fun execute(source: CommandSourceStack, campaign: McpProfile): Int {
 		source.ensureCompletedCampaignTutorial(campaign)
 		val survivors = campaign.items.values.filter { it.primaryAssetType == "Worker" }.sortedWith { a, b ->
 			val rating1 = a.powerLevel
@@ -65,8 +63,7 @@ class WorkerSquadsCommand : BrigadierCommand("survivorsquads", "Shows your or a 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.withPublicProfile(::execute, "Getting survivor squads")
 
-	private fun execute(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
-		val source = c.source
+	private fun execute(source: CommandSourceStack, campaign: McpProfile): Int {
 		source.ensureCompletedCampaignTutorial(campaign)
 		val homebase = source.session.getHomebase(campaign.owner.id)
 		val squads = mutableListOf<HomebaseManager.Squad>()

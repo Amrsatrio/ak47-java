@@ -92,6 +92,7 @@ private fun execute(source: CommandSourceStack, item: FortItemStack, profile: Mc
 		.setTitle((if (item.isItemSeen) "" else bangEmote?.asMention + ' ') + (if (owned) "" else "Preview: ") + item.displayName.ifEmpty { defData.name })
 		.setDescription(item.description)
 		.setThumbnail(Utils.benBotExportAsset(item.getPreviewImagePath(true)?.toString()))
+		.setFooter(defData.name)
 	val buttons = mutableListOf<Button>()
 
 	if (!owned) {

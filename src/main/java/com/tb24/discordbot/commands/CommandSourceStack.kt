@@ -1,6 +1,8 @@
 package com.tb24.discordbot.commands
 
 import com.mojang.brigadier.LiteralMessage
+import com.mojang.brigadier.StringReader
+import com.mojang.brigadier.arguments.ArgumentType
 import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
@@ -47,6 +49,8 @@ open class CommandSourceStack {
 	inline val api get() = session.api
 
 	val prefix: String
+	var interactionCommand: CommandBuilder<CommandSourceStack, *, *>? = null
+	var commandName: String? = null
 
 	constructor(client: DiscordBot, message: Message, sessionId: String?, ignoreSessionLimit: Boolean = false) {
 		this.client = client
@@ -161,6 +165,12 @@ open class CommandSourceStack {
 
 	inline fun getOption(name: String) = (interaction as? CommandInteraction)?.getOption(name)
 
+	inline fun <reified T> getArgument(name: String): T? {
+		val argumentType = interactionCommand!!.optionArguments[name]!! as ArgumentType<T>
+		val option = getOption(name) ?: return null
+		return argumentType.parse(StringReader(option.asString))
+	}
+
 	@Throws(CommandSyntaxException::class)
 	fun ensureSession() {
 		if (api.userToken == null) {
@@ -168,10 +178,12 @@ open class CommandSourceStack {
 		}
 	}
 
-	fun conditionalUseInternalSession() {
+	fun conditionalUseInternalSession(): Boolean {
 		if (api.userToken == null) {
 			session = client.internalSession
+			return true
 		}
+		return false
 	}
 
 	@Throws(HttpException::class)

@@ -3,7 +3,6 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.context.CommandContext
 import com.tb24.discordbot.util.getItemIconEmoji
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
@@ -14,8 +13,7 @@ class ResourcesCommand : BrigadierCommand("resources", "Displays a given user's 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.withPublicProfile(::execute, "Getting resources data")
 
-	private fun execute(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
-		val source = c.source
+	private fun execute(source: CommandSourceStack, campaign: McpProfile): Int {
 		source.ensureCompletedCampaignTutorial(campaign)
 		val embed = source.createEmbed(campaign.owner).setFooter("Design by a.bakedpotato")
 		for ((categoryName, categoryItemTypes) in mapOf(

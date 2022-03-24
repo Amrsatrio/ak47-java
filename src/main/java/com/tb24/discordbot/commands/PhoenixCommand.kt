@@ -4,7 +4,6 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
@@ -48,8 +47,7 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 			}
 		)
 
-	private fun display(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
-		val source = c.source
+	private fun display(source: CommandSourceStack, campaign: McpProfile): Int {
 		source.ensureCompletedCampaignTutorial(campaign)
 		val xpItem = campaign.items.values.firstOrNull { it.templateId == "AccountResource:phoenixxp" } ?: FortItemStack("AccountResource:phoenixxp", 0)
 		val xpQuantity = xpItem.quantity

@@ -237,6 +237,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				interaction.subcommandName != null -> baseCommand.subcommands[interaction.subcommandName]!!
 				else -> baseCommand
 			}
+			source.interactionCommand = command
 			wrappedExecute(interaction, source) {
 				command.command?.invoke(source) ?: DiscordBot.LOGGER.warn("Command ${interaction.commandPath} has no implementation")
 			}
@@ -258,6 +259,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 			if (nodes.isEmpty()) { // Unknown command
 				return
 			}
+			source.commandName = nodes.first().node.name
 			try {
 				if (source.channel is GuildChannel) {
 					byGuild[source.guild!!.idLong] = byGuild.getOrDefault(source.guild.idLong, 0) + 1

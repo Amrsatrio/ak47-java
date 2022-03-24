@@ -3,7 +3,6 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.context.CommandContext
 import com.tb24.discordbot.util.replyPaginated
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
@@ -14,8 +13,7 @@ class SchematicsCommand : BrigadierCommand("schematics", "Lists your or a given 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.withPublicProfile(::display, "Getting schematics")
 
-	private fun display(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
-		val source = c.source
+	private fun display(source: CommandSourceStack, campaign: McpProfile): Int {
 		source.ensureCompletedCampaignTutorial(campaign)
 		val schems = campaign.items.values.filter { it.primaryAssetType == "Schematic" }.sortedWith { a, b ->
 			val rating1 = a.powerLevel

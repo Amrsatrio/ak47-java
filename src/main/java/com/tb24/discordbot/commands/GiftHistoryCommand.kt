@@ -14,16 +14,16 @@ import java.util.*
 
 class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gifting slots you have left along with a partial history of sent/received gifts.", arrayOf("gh")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { summary(it.source, it.commandName) }
+		.executes { summary(it.source) }
 		.then(literal("sent").executes { detail(it.source, false) })
 		.then(literal("received").executes { detail(it.source, true) })
 
 	override fun getSlashCommand() = newCommandBuilder()
-		.then(subcommand("summary", description).executes { summary(it, "gifthistory") })
+		.then(subcommand("summary", description).executes { summary(it) })
 		.then(subcommand("sent", "Lists partial recipients and dates of sent gifts").executes { detail(it, false) })
 		.then(subcommand("received", "Lists partial senders and dates of received gifts").executes { detail(it, true) })
 
-	private fun summary(source: CommandSourceStack, commandName: String): Int {
+	private fun summary(source: CommandSourceStack): Int {
 		source.ensureSession()
 		source.loading("Getting gift history")
 		source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
@@ -52,8 +52,8 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 		source.complete(null, source.createEmbed()
 			.setTitle("Gift History")
 			.setDescription(sb.toString())
-			.addField("Sent (${Formatters.num.format(sentTo.size)})", preview(sentTo, source.userCache, source.prefix + commandName + " sent"), false)
-			.addField("Received (${Formatters.num.format(receivedFrom.size)})", preview(receivedFrom, source.userCache, source.prefix + commandName + " received"), false)
+			.addField("Sent (${Formatters.num.format(sentTo.size)})", preview(sentTo, source.userCache, source.prefix + source.commandName + " sent"), false)
+			.addField("Received (${Formatters.num.format(receivedFrom.size)})", preview(receivedFrom, source.userCache, source.prefix + source.commandName + " received"), false)
 			.addFieldSeparate("Recent gifts (${Formatters.num.format(gifts.size)})", gifts.sortedByDescending { it.date }) { e ->
 				val catalogEntry = source.client.catalogManager.purchasableCatalogEntries.firstOrNull { it.offerId == e.offerId }
 				"${catalogEntry?.holder()?.friendlyName ?: "<Item outside of current shop>"} to ${source.userCache[e.toAccountId]?.displayName ?: e.toAccountId} on ${e.date.format()}"

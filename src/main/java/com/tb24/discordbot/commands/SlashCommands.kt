@@ -1,5 +1,6 @@
 package com.tb24.discordbot.commands
 
+import com.mojang.brigadier.arguments.ArgumentType
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.*
 
@@ -7,6 +8,7 @@ abstract class CommandBuilder<SourceType, ResultType, ThisType : CommandBuilder<
 	var name: String
 	var description: String
 	val options = mutableListOf<OptionData>()
+	val optionArguments = hashMapOf<String, ArgumentType<*>>()
 	var command: ((SourceType) -> Int)? = null
 
 	constructor(name: String, description: String) {
@@ -16,8 +18,11 @@ abstract class CommandBuilder<SourceType, ResultType, ThisType : CommandBuilder<
 
 	abstract fun then(subcommand: CommandBuilder<SourceType, *, *>): ThisType
 
-	fun option(type: OptionType, name: String, description: String, isRequired: Boolean = false): ThisType {
+	fun option(type: OptionType, name: String, description: String, isRequired: Boolean = false, argument: ArgumentType<*>? = null): ThisType {
 		options.add(OptionData(type, name, description, isRequired))
+		if (argument != null) {
+			optionArguments[name] = argument
+		}
 		return getThis()
 	}
 

@@ -3,7 +3,6 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.context.CommandContext
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
@@ -29,8 +28,7 @@ class HeroLoadoutCommand : BrigadierCommand("heroloadout", "Manages your STW her
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.withPublicProfile(::execute, "Getting hero loadouts")
 
-	private fun execute(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
-		val source = c.source
+	private fun execute(source: CommandSourceStack, campaign: McpProfile): Int {
 		source.ensureCompletedCampaignTutorial(campaign)
 		val stats = campaign.stats as CampaignProfileStats
 		val loadoutsMap = sortedMapOf<Int, FortItemStack>()

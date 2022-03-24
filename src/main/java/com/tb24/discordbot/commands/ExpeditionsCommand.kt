@@ -3,7 +3,6 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.context.CommandContext
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.Rune
 import com.tb24.discordbot.commands.arguments.ItemArgument.Companion.getItem
@@ -65,8 +64,7 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 			}
 		)
 
-	private inline fun overview(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
-		val source = c.source
+	private inline fun overview(source: CommandSourceStack, campaign: McpProfile): Int {
 		val embed = source.createEmbed(campaign.owner).setTitle("Expeditions")
 		val landAvailable = 2
 		val seaAvailable = 2

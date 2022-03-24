@@ -4,7 +4,6 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.commands.arguments.UserArgument
@@ -29,6 +28,7 @@ import me.fungames.jfortniteparse.util.toPngArray
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.NewsChannel
+import net.dv8tion.jda.api.interactions.commands.OptionType
 
 class MissionAlertsCommand : BrigadierCommand("alerts", "Shows today's mission alerts.", arrayOf("ma")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -49,8 +49,7 @@ class MissionAlertsCommand : BrigadierCommand("alerts", "Shows today's mission a
 		return Command.SINGLE_SUCCESS
 	}
 
-	private fun execute(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
-		val source = c.source
+	private fun execute(source: CommandSourceStack, campaign: McpProfile): Int {
 		source.ensureCompletedCampaignTutorial(campaign)
 		val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
 		val stats = campaign.stats as CampaignProfileStats
@@ -91,12 +90,24 @@ class MissionAlertsCommand : BrigadierCommand("alerts", "Shows today's mission a
 
 class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks mission alerts.", arrayOf("va", "mtxalerts")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.withPublicProfile({ c, campaign -> executeMtxAlerts(c.source, campaign) }, "Getting mission alerts info")
+		.withPublicProfile(::executeMtxAlerts, "Getting mission alerts info")
 		.then(literal("bulk")
 			.executes { executeBulk(it.source) }
 			.then(argument("users", UserArgument.users(25))
 				.executes { executeBulk(it.source, lazy { UserArgument.getUsers(it, "users").values }) }
 			)
+		)
+
+	override fun getSlashCommand() = newCommandBuilder()
+		.then(subcommand("view", description)
+			.withPublicProfile(::executeMtxAlerts, "Getting mission alerts info")
+		)
+		.then(subcommand("bulk", "Shows the completion of V-Bucks mission alerts of multiple users.")
+			.option(OptionType.STRING, "users", "Users to display or leave blank to display your saved accounts", argument = UserArgument.users(25))
+			.executes { source ->
+				val usersResult = source.getArgument<UserArgument.Result>("users")
+				executeBulk(source, usersResult?.let { lazy { it.getUsers(source).values } })
+			}
 		)
 
 	private fun executeBulk(source: CommandSourceStack, usersLazy: Lazy<Collection<GameProfile>>? = null): Int {

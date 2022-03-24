@@ -4,7 +4,6 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.managers.HomebaseManager
 import com.tb24.discordbot.ui.ResearchViewController
@@ -27,8 +26,7 @@ class ResearchCommand : BrigadierCommand("research", "Collect your research poin
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.withPublicProfile(::execute, "Getting research data")
 
-	private fun execute(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
-		val source = c.source
+	private fun execute(source: CommandSourceStack, campaign: McpProfile): Int {
 		source.ensureCompletedCampaignTutorial(campaign)
 		val homebase = source.session.getHomebase(campaign.owner.id)
 		val ctx = createResearchViewController(campaign, homebase)

@@ -4,7 +4,6 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.util.Utils
@@ -21,6 +20,7 @@ import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.exports.FortAccoladeItemDefinition
 import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.interactions.commands.OptionType
 
 class StwAccoladesCommand : BrigadierCommand("stwaccolades", "Shows the amount of Battle Royale XP earned from STW.", arrayOf("sbx")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -32,8 +32,19 @@ class StwAccoladesCommand : BrigadierCommand("stwaccolades", "Shows the amount o
 			)
 		)
 
-	private fun display(c: CommandContext<CommandSourceStack>, campaign: McpProfile): Int {
-		val source = c.source
+	override fun getSlashCommand() = newCommandBuilder()
+		.then(subcommand("view", description)
+			.withPublicProfile(::display, "Getting STW profile data")
+		)
+		.then(subcommand("bulk", "Shows the amount of Battle Royale XP earned from STW of multiple users.")
+			.option(OptionType.STRING, "users", "Users to display or leave blank to display your saved accounts", argument = UserArgument.users(25))
+			.executes { source ->
+				val usersResult = source.getArgument<UserArgument.Result>("users")
+				executeBulk(source, usersResult?.let { lazy { it.getUsers(source).values } })
+			}
+		)
+
+	private fun display(source: CommandSourceStack, campaign: McpProfile): Int {
 		source.ensureCompletedCampaignTutorial(campaign)
 		val result = get(campaign)
 		val (current, max) = result
