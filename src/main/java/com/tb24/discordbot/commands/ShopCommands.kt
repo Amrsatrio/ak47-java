@@ -207,8 +207,10 @@ private fun buyAll(session: Session): BuyAllResult {
 		profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign")
 	).await()
 	val campaign = profileManager.getProfileData("campaign")
-	val initialBalance = campaign.items.values.firstOrNull { it.templateId == "AccountResource:eventcurrency_scaling" }?.quantity
-		?: throw SimpleCommandExceptionType(LiteralMessage("No gold.")).create()
+	val initialBalance = campaign.items.values.firstOrNull { it.templateId == "AccountResource:eventcurrency_scaling" }?.quantity ?: 0
+	if (initialBalance == 0) {
+		throw SimpleCommandExceptionType(LiteralMessage("No gold.")).create()
+	}
 	var balance = initialBalance
 	var totalItems = 0
 	val purchasedItems = mutableListOf<String>()
@@ -280,11 +282,16 @@ private fun execBuyAllCampaignBulk(source: CommandSourceStack, users: Map<String
 	catalogManager.ensureCatalogData(source.client.internalSession.api)
 	val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
 	forEachSavedAccounts(source, if (users != null) devices.filter { it.accountId in users } else devices) {
-		val result = buyAll(it)
 		if (embed.fields.size == 25) {
 			source.complete(null, embed.build())
 			embed.clearFields()
 			source.loading("Purchasing offers")
+		}
+		val result = try {
+			buyAll(it)
+		} catch (e: Exception) {
+			embed.addField(it.api.currentLoggedIn.displayName, "❌ ${e.message}", false)
+			return@forEachSavedAccounts null
 		}
 		embed.addField(it.api.currentLoggedIn.displayName, when {
 			result.ownedAll -> "✅ You already own everything."
