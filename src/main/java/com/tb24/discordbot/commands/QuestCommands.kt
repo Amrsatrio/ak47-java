@@ -174,7 +174,7 @@ private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, 
 	if (count == 0) {
 		embed.setTitle("🎉 All completed!")
 		if (entries.size > 10) {
-			embed.setDescription("That must've took a while 😩")
+			embed.setDescription("That must've taken a while 😩")
 		}
 	}
 	if (usersWith3dailies.isNotEmpty()) {
