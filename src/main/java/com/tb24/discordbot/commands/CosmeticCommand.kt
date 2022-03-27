@@ -361,7 +361,7 @@ fun askChoice(source: CommandSourceStack, embed: EmbedBuilder, options: List<Sel
 		if (interaction.componentId == "cancel") {
 			return null
 		}
-		(interaction as SelectMenuInteraction).selectedOptions!!.first()
+		(interaction as SelectMenuInteraction).selectedOptions.first()
 	}
 	if (selected.emoji != null) {
 		return "__locked__"

@@ -153,18 +153,29 @@ private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, 
 		if (categoryName == "DailyQuest" && quests.size == 3) {
 			usersWith3dailies.add(campaign.owner.displayName)
 		}
-		campaign.owner.displayName to rendered.ifEmpty { "\u2800✅ All completed!" }
+		campaign.owner.displayName to rendered
 	}
 	if (entries.isEmpty()) {
 		throw SimpleCommandExceptionType(LiteralMessage("All users we're trying to display aren't eligible to do daily quests.")).create()
 	}
 	val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
+	var count = 0
 	for (entry in entries) {
+		if (entry.second.isEmpty()) {
+			continue
+		}
 		if (embed.fields.size == 25) {
 			source.complete(null, embed.build())
 			embed.clearFields()
 		}
 		embed.addField(entry.first, entry.second, false)
+		++count
+	}
+	if (count == 0) {
+		embed.setTitle("🎉 All completed!")
+		if (entries.size > 10) {
+			embed.setDescription("That must've took a while 😩")
+		}
 	}
 	if (usersWith3dailies.isNotEmpty()) {
 		embed.setFooter("3 dailies (%d): %s".format(usersWith3dailies.size, usersWith3dailies.joinToString(", ")), null)
