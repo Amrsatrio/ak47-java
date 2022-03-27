@@ -10,9 +10,10 @@ import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
-import com.tb24.discordbot.HttpException
-import com.tb24.discordbot.Session
-import com.tb24.discordbot.util.*
+import com.tb24.discordbot.util.AttachmentUpload
+import com.tb24.discordbot.util.exec
+import com.tb24.discordbot.util.forEachSavedAccounts
+import com.tb24.discordbot.util.to
 import com.tb24.fn.model.account.DeviceAuth
 import com.tb24.fn.util.EAuthClient
 import mslinks.ShellLink
@@ -37,13 +38,7 @@ class LaunchWindowsCommand : BrigadierCommand("launch", "Launches you into Fortn
 			if (deviceData != null && source.guild != null) {
 				throw SimpleCommandExceptionType(LiteralMessage("Please invoke the command again [in DMs](${source.getPrivateChannelLink()}), as we have to send you info that carries over your current session.")).create()
 			}
-			if (source.guild != null && !source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
-					.setTitle("✋ Hold up!")
-					.setDescription("We're about to send a code that carries your current session which will be valid for some time or until you log out. Make sure you trust the people here, or you may do the command again [in DMs](${source.getPrivateChannelLink()}).\n\nContinue?")
-					.build(), confirmationButtons()).awaitConfirmation(source.author).await()) {
-				source.complete("👌 Alright.")
-				return@executes 0
-			}
+			source.warnCodeToken()
 			val launcherPath = "C:\\Program Files\\Epic Games\\Fortnite\\FortniteGame\\Binaries\\Win64\\FortniteLauncher.exe"
 			val commandLine = "start /d \"%s\" %s %s".format(launcherPath.substringBeforeLast('\\'), launcherPath.substringAfterLast('\\'), generateLaunchArgs(source, deviceData))
 			val validityMessage = if (deviceData != null) "Valid until you delete the saved login for that account.\n⚠ **Don't share the text below, anyone can login to your account easily with it!**" else "Valid for 5 minutes, until it's used, or until you log out."

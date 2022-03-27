@@ -64,15 +64,10 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 			val deviceData = devices.safeGetOneIndexed(accountIndex)
 			doDeviceAuthLogin(source, deviceData, usedAccountNumber = true)
 		} else {
-			//checkRestriction(source)
+			if (BotConfig.get().homeGuildInviteLink != null) {
+				source.complete("⚠ %s, kindly use the button in `%slogin` to log in. Using the old method you put the code in the chat box could let anyone else **compromise your account** if the bot fails to handle it properly.".format(source.prefix, source.author.asMention))
+			}
 			doLogin(source, EGrantType.authorization_code, param, EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
-		}
-	}
-
-	private fun checkRestriction(source: CommandSourceStack) {
-		val message = source.message
-		if (BotConfig.get().slashCommandsEnabled && message != null && source.guild != null) {
-			message.reply("⚠ Please start using the new `/login` slash command to log in. Using the legacy command could let someone else access your account if the bot fails to handle your code in time.").queue()
 		}
 	}
 }
@@ -318,10 +313,11 @@ val existingAuthCodeHintMessages = ExpiringMap.builder()
 	.build<Long, Message>()
 
 fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): Int {
+	val submitRow = ActionRow.of(Button.secondary("submitAuthCode", "Submit code and log in..."))
 	existingAuthCodeHintMessages[source.channel.idLong]?.let {
 		source.complete(null, EmbedBuilder().setColor(0x8AB4F8)
-			.setDescription("Please check [the message above](${it.jumpUrl}) for instructions.")
-			.build())
+			.setDescription("Check [the message above](${it.jumpUrl}) for instructions.")
+			.build(), submitRow)
 		return 0
 	}
 	val link = Utils.login(Utils.redirect(authClient))
@@ -335,7 +331,7 @@ fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): 
 4. Paste the whole text into the "Code" text field, and click Submit.""")
 		.addField("Need to switch accounts?", "[Open this link instead]($link&prompt=login)", false)
 		.setColor(0x8AB4F8)
-	existingAuthCodeHintMessages[source.channel.idLong] = source.complete(null, embed.build(), ActionRow.of(Button.secondary("submitAuthCode", "Submit code and log in...")))
+	existingAuthCodeHintMessages[source.channel.idLong] = source.complete(null, embed.build(), submitRow)
 	return Command.SINGLE_SUCCESS
 }
 

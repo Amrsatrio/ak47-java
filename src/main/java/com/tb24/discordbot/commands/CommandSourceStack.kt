@@ -214,13 +214,17 @@ open class CommandSourceStack {
 
 	@Throws(HttpException::class)
 	fun generateUrl(url: String): String {
-		if (guild != null && !complete(null, createEmbed().setColor(BrigadierCommand.COLOR_WARNING)
+		warnCodeToken()
+		return "https://www.epicgames.com/id/exchange?exchangeCode=${api.accountService.exchangeCode.exec().body()!!.code}&redirectUrl=${URLEncoder.encode(url, "UTF-8")}"
+	}
+
+	fun warnCodeToken() {
+		if (guild != null && BotConfig.get().homeGuildInviteLink != null && !complete(null, createEmbed().setColor(BrigadierCommand.COLOR_WARNING)
 				.setTitle("✋ Hold up!")
-				.setDescription("We're about to send a link that carries your current session which will be valid for some time or until you log out. Make sure you trust the people here, or you may do the command again [in DMs](${getPrivateChannelLink()}).\n\nContinue?")
+				.setDescription("We're about to send something that carries your current Epic account session which will be valid for some time or until you log out. Make sure you trust the people here, or you may do the command again [in DMs](${getPrivateChannelLink()}).\n\nContinue?")
 				.build(), confirmationButtons()).awaitConfirmation(author).await()) {
 			throw SimpleCommandExceptionType(LiteralMessage("Alright.")).create()
 		}
-		return "https://www.epicgames.com/id/exchange?exchangeCode=${api.accountService.exchangeCode.exec().body()!!.code}&redirectUrl=${URLEncoder.encode(url, "UTF-8")}"
 	}
 
 	@Throws(CommandSyntaxException::class)
