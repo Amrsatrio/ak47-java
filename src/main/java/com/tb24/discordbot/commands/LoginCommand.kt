@@ -65,7 +65,7 @@ class LoginCommand : BrigadierCommand("login", "Logs in to an Epic account.", ar
 			doDeviceAuthLogin(source, deviceData, usedAccountNumber = true)
 		} else {
 			if (BotConfig.get().homeGuildInviteLink != null) {
-				source.complete("⚠ %s, kindly use the button in `%slogin` to log in. Using the old method you put the code in the chat box could let anyone else **compromise your account** if the bot fails to handle it properly.".format(source.prefix, source.author.asMention))
+				source.complete("⚠ %s, kindly use the button in `%slogin` to log in. Using the old method where you put the code in the chat box could let anyone else **compromise your account** if the bot fails to handle it properly.".format(source.author.asMention, source.prefix))
 			}
 			doLogin(source, EGrantType.authorization_code, param, EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
 		}
