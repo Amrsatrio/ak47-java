@@ -434,15 +434,18 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 
 				// No more ways to renew token, clear session and inform user
 				session.clear()
-				source.complete(null, EmbedBuilder().setColor(BrigadierCommand.COLOR_ERROR)
+				val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_ERROR)
 					.setTitle("🚫 Logged out")
-					.setDescription("You have been logged out due to one of the following reasons:\n\u2022 Account logged in elsewhere.\n\u2022 Been more than 24 hours since login.\n\u2022 Logged in using exchange code or authorization code but the originating session has been logged out.\n\u2022 Logged in using a saved login but got it removed.\n\u2022 Account's password changed.\n\u2022 Password reset initiated by Epic Games.\n\nYou don't have a saved login for this account, so we cannot log you back in automatically.")
-					.build())
+					.setDescription("You have been logged out due to one of the following reasons:\n\u2022 Account logged in to the game.\n\u2022 Been more than 24 hours since login.\n\u2022 Logged in using a code but the originating session has been logged out.\n\u2022 Logged in using a saved login which was then removed.\n\u2022 Account's password changed.\n\u2022 Password reset initiated by Epic Games.")
+				if (savedDevice == null && BotConfig.get().allowUsersToCreateDeviceAuth && client.savedLoginsManager.getAll(session.id).size < source.getSavedAccountsLimit()) {
+					embed.appendDescription("\n\nTo keep this from happening again, do ${source.prefix}savelogin after you log into ${invalidToken.displayName}.")
+				}
+				source.complete(null, embed.build())
 				return false
 			}
 			val error = e.epicError
 			description = error.displayText
-			footer = (if (error.numericErrorCode != null) "/" + error.numericErrorCode else "") + (if (error.errorCode != null) "/" + error.errorCode else "")
+			footer = (error.numericErrorCode?.let { "/$it" } ?: "") + (error.errorCode?.let { "/$it"} ?: "")
 		} else {
 			description = e.responseStr
 		}
@@ -488,6 +491,10 @@ ${e.getStackTraceAsString()}```""", null)
 	}
 
 	override fun onModalInteraction(event: ModalInteractionEvent) {
+		val member = event.member
+		if (member != null && !member.hasPermission(event.channel as GuildChannel, Permission.MESSAGE_SEND)) {
+			return
+		}
 		if (event.modalId == "authCodeSubmission") {
 			val code = event.getValue("code")!!.asString
 			val interaction = event.interaction

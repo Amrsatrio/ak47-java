@@ -18,8 +18,10 @@ import com.tb24.discordbot.commands.arguments.StringArgument2
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.format
+import com.tb24.discordbot.util.jwtPayload
 import com.tb24.fn.model.account.DeviceAuth
 import com.tb24.fn.util.EAuthClient
+import com.tb24.fn.util.getString
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.exceptions.ErrorResponseException
@@ -31,7 +33,7 @@ class DeviceAuthCommand : BrigadierCommand("devices", "Device auth operation com
 		.then(literal("create").executes { create(it.source) })
 		.then(literal("remove")
 			.then(argument("device ID", greedyString())
-				.executes { delete(it.source, getString(it, "device ID")) }
+				.executes { devicesDelete(it.source, getString(it, "device ID")) }
 			)
 		)
 		.then(literal("import")
@@ -67,7 +69,7 @@ class DeleteSavedLoginCommand : BrigadierCommand("deletesavedlogin", "Removes th
 		val user = source.api.currentLoggedIn
 		val dbDevice = source.client.savedLoginsManager.get(source.session.id, user.id)
 			?: throw SimpleCommandExceptionType(LiteralMessage("You don't have a saved login for this account (${user.displayName}).")).create()
-		return delete(source, dbDevice.deviceId)
+		return devicesDelete(source, dbDevice.deviceId)
 	}
 }
 
@@ -161,7 +163,7 @@ private fun EmbedBuilder.populateDeviceAuthDetails(deviceAuth: DeviceAuth) =
 		.addField("Device ID", deviceAuth.deviceId, false)
 		.addField("Secret (Do not share!)", "||" + deviceAuth.secret + "||", false)
 
-private fun delete(source: CommandSourceStack, deviceId: String): Int {
+fun devicesDelete(source: CommandSourceStack, deviceId: String): Int {
 	if (deviceId.length != 32) {
 		throw SimpleCommandExceptionType(LiteralMessage("The device ID should be a 32 character hexadecimal string")).create()
 	}
@@ -171,14 +173,19 @@ private fun delete(source: CommandSourceStack, deviceId: String): Int {
 	val dbDevice = source.client.savedLoginsManager.get(sessionId, user.id)
 	source.loading("Deleting device auth")
 	try {
-		source.api.accountService.deleteDeviceAuth(user.id, deviceId).exec()
+		val embed = source.createEmbed()
 		val msgs = mutableListOf<String>()
+		source.api.accountService.deleteDeviceAuth(user.id, deviceId).exec()
+		msgs.add("Deleted device auth from the account.")
 		if (dbDevice != null && dbDevice.deviceId == deviceId) {
 			source.client.savedLoginsManager.remove(sessionId, user.id)
-			msgs.add("Unregistered device auth.")
+			msgs.add("Unregistered device auth from ${source.jda.selfUser.name}.")
+			if (source.api.userToken.jwtPayload?.getString("am") == "device_auth") {
+				source.session.clear()
+				msgs.add("✅ Logged out successfully.")
+			}
 		}
-		msgs.add("Deleted device auth from the account successfully.")
-		source.complete(null, source.createEmbed().setDescription(msgs.joinToString("\n")).build())
+		source.complete(null, embed.setDescription(msgs.joinToString("\n")).build())
 	} catch (e: HttpException) {
 		if (dbDevice?.deviceId == deviceId && e.epicError.errorCode == "errors.com.epicgames.account.device_auth.not_found") {
 			source.client.savedLoginsManager.remove(sessionId, user.id)

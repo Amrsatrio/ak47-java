@@ -2,6 +2,7 @@ package com.tb24.discordbot.util
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import com.mojang.brigadier.StringReader
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.CommandSyntaxException
@@ -16,6 +17,7 @@ import com.tb24.fn.EpicApi
 import com.tb24.fn.ProfileManager
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.account.GameProfile
+import com.tb24.fn.model.account.Token
 import com.tb24.fn.model.assetdata.AthenaSeasonItemData
 import com.tb24.fn.model.assetdata.AthenaSeasonItemDefinition
 import com.tb24.fn.model.friends.FriendV2
@@ -462,6 +464,15 @@ fun GameProfile.renderPublicExternalAuths() = PUBLIC_EXTERNAL_AUTH_TYPES.mapNotN
 	val type = it.type
 	val externalDisplayName = it.externalDisplayName
 	(externalAuthEmote(type)?.asMention ?: type) + ' ' + (if (externalDisplayName.isNullOrEmpty()) "<linked>" else externalDisplayName)
+}
+
+val Token.jwtPayload: JsonObject? get() {
+	if (!access_token.startsWith("eg1~")) {
+		return null
+	}
+	val (_, payload) = access_token.split('.')
+	val payloadJson = String(Base64.getUrlDecoder().decode(payload))
+	return JsonParser.parseString(payloadJson).asJsonObject
 }
 
 // region Copy of Throwable.printStackTrace but with frame limit

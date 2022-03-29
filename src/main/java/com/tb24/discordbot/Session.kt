@@ -95,21 +95,19 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 
 	@Synchronized
 	fun logout(source: CommandSourceStack? = null) {
-		val logoutMsg = source?.run {
-			channel.sendMessage(Utils.loadingText("Logging out")).complete()
-		}
+		source?.loading("Logging out")
 		var logoutSuccess = false
 		try {
 			api.userToken?.let {
 				api.accountService.killSession(it.access_token).exec()
 				logoutSuccess = true
 			}
-		} catch (e: HttpException) {
+		} catch (ignored: HttpException) {
 		}
 		if (logoutSuccess) {
-			logoutMsg?.editMessage("✅ Logged out successfully.")?.queue()
+			source?.complete("✅ Logged out successfully.")
 		} else {
-			logoutMsg?.editMessage("✅ Already logged out.")?.queue()
+			source?.complete("✅ Already logged out.")
 		}
 		clear()
 	}
