@@ -18,11 +18,11 @@ import me.fungames.jfortniteparse.fort.objects.rows.AthenaSeasonalXPCurveEntry
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import net.dv8tion.jda.api.utils.TimeFormat
 
-val battleStarEmote = textureEmote("/Game/Athena/UI/Frontend/Art/T_UI_BP_BattleStar_L.T_UI_BP_BattleStar_L")
-val battlePassEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass-L.T-FNBR-BattlePass-L")
-val freePassEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass-Default-L.T-FNBR-BattlePass-Default-L")
-val xpEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T_UI_FNBR_XPeverywhere_L.T_UI_FNBR_XPeverywhere_L")
-val victoryCrownEmote = textureEmote("/VictoryCrownsGameplay/Icons/T-T-Icon-BR-VictoryCrownItem-L.T-T-Icon-BR-VictoryCrownItem-L")
+val battleStarEmote by lazy { textureEmote("/Game/Athena/UI/Frontend/Art/T_UI_BP_BattleStar_L.T_UI_BP_BattleStar_L") }
+val battlePassEmote by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass-L.T-FNBR-BattlePass-L") }
+val freePassEmote by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass-Default-L.T-FNBR-BattlePass-Default-L") }
+val xpEmote by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T_UI_FNBR_XPeverywhere_L.T_UI_FNBR_XPeverywhere_L") }
+val victoryCrownEmote by lazy { textureEmote("/VictoryCrownsGameplay/Icons/T-T-Icon-BR-VictoryCrownItem-L.T-T-Icon-BR-VictoryCrownItem-L") }
 
 class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your Battle Royale data, such as current level and supercharged XP.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()

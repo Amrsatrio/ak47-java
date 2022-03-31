@@ -55,7 +55,8 @@ fun getEmoteByName(name: String): Emote? {
 	val client = DiscordBot.instance.discord
 	var existing: Emote? = null
 	for (guildId in EMOJI_GUILDS) {
-		val guild = client.getGuildById(guildId) ?: continue
+		val guild = client.getGuildById(guildId)
+			?: throw SimpleCommandExceptionType(LiteralMessage("Emote servers are not fully loaded yet. Please try again in a few minutes.")).create()
 		existing = guild.getEmotesByName(name, true).firstOrNull()
 		if (existing != null) {
 			break

@@ -9,7 +9,7 @@ import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.textureEmote
 import com.tb24.fn.model.account.GameProfile
 
-val barsEmote = textureEmote("/Game/UI/Foundation/Textures/Icons/Athena/T-T-Icon-BR-GoldBars-UI-Icon-L.T-T-Icon-BR-GoldBars-UI-Icon-L")
+val barsEmote by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/Athena/T-T-Icon-BR-GoldBars-UI-Icon-L.T-T-Icon-BR-GoldBars-UI-Icon-L") }
 
 class AthenaInventoryCommand : BrigadierCommand("brinventory", "Shows your or other players' amount of bars.", arrayOf("bars")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
