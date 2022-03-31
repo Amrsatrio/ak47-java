@@ -156,7 +156,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 			embed.setFooter("Tip: do %ssavelogin to stay logged in".format(source.prefix))
 		}
 		if (accountIndex != -1 && !usedAccountNumber) {
-			embed.setFooter("Tip: use %si %d to quickly switch accounts".format(source.prefix, accountIndex + 1))
+			embed.setFooter("Tip: use %si %d to quickly switch to this account".format(source.prefix, accountIndex + 1))
 		}
 		source.complete(if (source.interaction is ModalInteraction) source.author.asMention else null, embed.build())
 	}

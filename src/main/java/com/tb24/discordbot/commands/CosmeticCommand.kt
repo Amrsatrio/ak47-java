@@ -247,39 +247,51 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 		.setTitle("✏ Editing: " + variant.channelName)
 		.setDescription("**Current:** " + variant.activeVariantDisplayName)
 	val selected = if (cosmeticVariant is FortCosmeticItemTexture) {
-		embed.appendDescription("\nEmoticon or spray?")
-		val message = source.complete(null, embed.build(), ActionRow.of(
-			Button.of(ButtonStyle.PRIMARY, "AthenaEmojiItemDefinition", "Emoticon"),
-			Button.of(ButtonStyle.PRIMARY, "AthenaSprayItemDefinition", "Spray"),
-			Button.of(ButtonStyle.SECONDARY, "cancel", "Cancel", Emoji.fromUnicode("❌"))
-		))
+		val allowClear = cosmeticVariant.ItemTextureVar.bAllowClear
+		if (allowClear) {
+			embed.appendDescription("\nPick type or clear:")
+		} else {
+			embed.appendDescription("\nPick type:")
+		}
+		val buttons = mutableListOf<Button>()
+		buttons.add(Button.of(ButtonStyle.PRIMARY, "AthenaEmojiItemDefinition", "Emoticon"))
+		buttons.add(Button.of(ButtonStyle.PRIMARY, "AthenaSprayItemDefinition", "Spray"))
+		if (allowClear) {
+			buttons.add(Button.of(ButtonStyle.PRIMARY, "clear", "Clear"))
+		}
+		buttons.add(Button.of(ButtonStyle.SECONDARY, "cancel", "Cancel", Emoji.fromUnicode("❌")))
+		val message = source.complete(null, embed.build(), ActionRow.of(buttons))
 		source.loadingMsg = message
 		val interaction = message.awaitOneInteraction(source.author, false)
 		val choice = interaction.componentId
 		if (choice == "cancel") {
 			return execute(source, item, source.api.profileManager.getProfileData("athena"))
 		}
-		if (choice == "AthenaSprayItemDefinition") {
-			source.ensurePremium("Use sprays in emoticon slots")
+		if (choice == "clear") {
+			"ItemTexture.None"
+		} else {
+			if (choice == "AthenaSprayItemDefinition") {
+				source.ensurePremium("Use sprays in emoticon slots")
+			}
+			val typeName = (interaction.component as Button).label
+			source.loadingMsg = source.complete("Type in the exact name of the %s that you want to pick, or `cancel` to cancel:".format(typeName))
+			val response = source.channel.awaitMessages({ collected, _, _ -> collected.author == source.author }, AwaitMessagesOptions().apply {
+				max = 1
+				time = 60000L
+				errors = arrayOf(CollectorEndReason.TIME)
+			}).await().first()
+			val search = response.contentRaw
+			if (source.guild?.selfMember?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
+				response.delete().queue()
+			}
+			if (search == "cancel") {
+				return execute(source, item, source.api.profileManager.getProfileData("athena"))
+			}
+			source.loading("Searching for `$search`")
+			val (_, itemDef) = searchItemDefinition(search, "AthenaDance", choice)
+				?: return execute(source, item, source.api.profileManager.getProfileData("athena"), "⚠ No %s found for `%s`".format(typeName, search))
+			"ItemTexture.AthenaDance:${itemDef.name.toLowerCase()}"
 		}
-		val typeName = (interaction.component as Button).label
-		source.loadingMsg = source.complete("Type in the exact name of the %s that you want to pick, or `cancel` to cancel:".format(typeName))
-		val response = source.channel.awaitMessages({ collected, _, _ -> collected.author == source.author }, AwaitMessagesOptions().apply {
-			max = 1
-			time = 60000L
-			errors = arrayOf(CollectorEndReason.TIME)
-		}).await().first()
-		val search = response.contentRaw
-		if (source.guild?.selfMember?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
-			response.delete().queue()
-		}
-		if (search == "cancel") {
-			return execute(source, item, source.api.profileManager.getProfileData("athena"))
-		}
-		source.loading("Searching for `$search`")
-		val (_, itemDef) = searchItemDefinition(search, "AthenaDance", choice)
-			?: return execute(source, item, source.api.profileManager.getProfileData("athena"), "⚠ No %s found for `%s`".format(typeName, search))
-		"ItemTexture.AthenaDance:${itemDef.name.toLowerCase()}"
 	} else if (cosmeticVariant is FortCosmeticRichColorVariant) {
 		val colors = cosmeticVariant.InlineVariant.RichColorVar.ColorSwatchForChoices?.load<CustomDynamicColorSwatch>()?.ColorPairs
 			?: throw SimpleCommandExceptionType(LiteralMessage("No color swatch for %s. Custom colors are not yet supported.".format(variant.channelName))).create()
