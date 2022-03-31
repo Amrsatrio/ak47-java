@@ -54,6 +54,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 				.executes { updateAcceptInvites(it.source, getBool(it, "can receive requests?")) }
 			)
 		)
+		.then(literal("cleanup").executes { cleanup(it.source) })
 		.then(argument("user", users())
 			.executes { c ->
 				val source = c.source
@@ -349,13 +350,15 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 	private fun bulk(source: CommandSourceStack, type: String, suppliedQueue: List<GameProfile>?, query: ((FriendsService, String, Boolean?) -> Call<Array<FriendV2>>)?, op: FriendsService.(String, String) -> Call<Void>): Int {
 		source.ensurePremium("Do bulk friend operations")
 		source.ensureSession()
-		if (!source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
-				.setTitle("Confirmation")
-				.setDescription(L10N.format("friends.$type.bulk.warning"))
-				.build(), confirmationButtons()).awaitConfirmation(source.author).await()) {
+		val confirmationMessage = source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
+			.setTitle("Confirmation")
+			.setDescription(L10N.format("friends.$type.bulk.warning"))
+			.build(), confirmationButtons())
+		if (!confirmationMessage.awaitConfirmation(source.author).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS
 		}
+		source.loadingMsg = confirmationMessage
 		val accountId = source.api.currentLoggedIn.id
 		val usingSuppliedQueue = suppliedQueue != null
 		var sub: Array<FriendV2>? = null
@@ -418,6 +421,60 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			else
 				"Configured your account to **disallow** friend requests.")
 			.build())
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun cleanup(source: CommandSourceStack): Int {
+		source.ensureSession()
+		source.loading("Gathering deleted accounts in your friend list")
+		val summary = source.api.friendsService.queryFriendsSummary(source.api.currentLoggedIn.id, null).exec().body()!!
+
+		// Check for account IDs that are still valid
+		val ids = hashSetOf<String>()
+		summary.friends.mapTo(ids) { it.accountId }
+		summary.incoming.mapTo(ids) { it.accountId }
+		summary.outgoing.mapTo(ids) { it.accountId }
+		summary.blocklist.mapTo(ids) { it.accountId }
+		source.queryUsers_map(ids)
+
+		// Build list of calls
+		val queue = mutableListOf<Pair<String, Call<Void>>>()
+		summary.friends.filter { it.accountId !in source.userCache.keys }.mapTo(queue) { it.accountId to source.api.friendsService.deleteFriendOrRejectInvite(source.api.currentLoggedIn.id, it.accountId) }
+		summary.incoming.filter { it.accountId !in source.userCache.keys }.mapTo(queue) { it.accountId to source.api.friendsService.deleteFriendOrRejectInvite(source.api.currentLoggedIn.id, it.accountId) }
+		summary.outgoing.filter { it.accountId !in source.userCache.keys }.mapTo(queue) { it.accountId to source.api.friendsService.deleteFriendOrRejectInvite(source.api.currentLoggedIn.id, it.accountId) }
+		summary.blocklist.filter { it.accountId !in source.userCache.keys }.mapTo(queue) { it.accountId to source.api.friendsService.sendUnblock(source.api.currentLoggedIn.id, it.accountId) }
+		if (queue.isEmpty()) {
+			source.complete(null, source.createEmbed()
+				.setDescription("ℹ No deleted accounts in your friend list.")
+				.build())
+			return Command.SINGLE_SUCCESS
+		}
+
+		// Do them!
+		var i = 0
+		var success = 0
+		while (i < queue.size) {
+			source.loading("Cleaning up friend %,d of %,d...\n%s complete".format(i + 1, queue.size, Formatters.percentZeroFraction.format(i.toDouble() / queue.size)))
+			val (accountId, call) = queue[i]
+			try {
+				call.exec()
+				++i // do the next one if successful
+				++success
+			} catch (e: HttpException) {
+				when {
+					e.code() == 429 -> Thread.sleep((e.response.header("Retry-After")?.toIntOrNull() ?: throw e) * 1000L)
+					e.code() == HttpURLConnection.HTTP_UNAUTHORIZED || e.epicError.errorCode == "errors.com.epicgames.friends.invitee_friendships_limit_exceeded" -> throw e
+					else -> {
+						source.channel.sendMessage("%s failed: %s".format(accountId, e.epicError.displayText)).queue()
+						++i
+					}
+				}
+			}
+		}
+		source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
+			.setDescription(TextFormatter.format("✅ Cleaned {0} deleted {0}|plural(one=account,other=accounts) from your friend list!", mapOf("0" to success)))
+			.build())
+
 		return Command.SINGLE_SUCCESS
 	}
 
