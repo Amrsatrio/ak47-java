@@ -326,7 +326,7 @@ fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): 
 		.setDescription("""
 ⚠ **We recommend to only log into accounts that you have email access to!**
 1. Visit the link above to get your login code.
-2. Copy the the entire text. Will be valid for 30 seconds, reload to get a new code.
+2. Copy the entire text. Will be valid for 30 seconds, reload to get a new code.
 3. Return to Discord and click on the button below.
 4. Paste the whole text into the "Code" text field, and click Submit.""")
 		.addField("Need to switch accounts?", "[Open this link instead]($link&prompt=login)", false)
