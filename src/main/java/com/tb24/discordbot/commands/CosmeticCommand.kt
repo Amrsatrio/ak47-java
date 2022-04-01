@@ -247,7 +247,7 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 		.setTitle("✏ Editing: " + variant.channelName)
 		.setDescription("**Current:** " + variant.activeVariantDisplayName)
 	val selected = if (cosmeticVariant is FortCosmeticItemTexture) {
-		val allowClear = cosmeticVariant.ItemTextureVar.bAllowClear
+		val allowClear = cosmeticVariant.ItemTextureVar.bAllowClear ?: true
 		if (allowClear) {
 			embed.appendDescription("\nPick type or clear:")
 		} else {
