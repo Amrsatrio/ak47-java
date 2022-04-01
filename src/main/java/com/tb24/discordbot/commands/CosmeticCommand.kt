@@ -40,11 +40,11 @@ import java.nio.ByteBuffer
 import java.util.concurrent.CompletableFuture
 import kotlin.jvm.internal.Ref
 
-val equipEmote = getEmoteByName("akl_equip")
-val editStylesEmote = getEmoteByName("akl_editStyles")
-val favoritedEmote = getEmoteByName("akl_favorited")
-val favoriteEmote = getEmoteByName("akl_favorite")
-val bangEmote = getEmoteByName("akl_new")
+val equipEmote by lazy { getEmoteByName("akl_equip") }
+val editStylesEmote by lazy { getEmoteByName("akl_editStyles") }
+val favoritedEmote by lazy { getEmoteByName("akl_favorited") }
+val favoriteEmote by lazy { getEmoteByName("akl_favorite") }
+val bangEmote by lazy { getEmoteByName("akl_new") }
 
 class CosmeticCommand : BrigadierCommand("cosmetic", "Shows info and options about a BR cosmetic you own.", arrayOf("c")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
