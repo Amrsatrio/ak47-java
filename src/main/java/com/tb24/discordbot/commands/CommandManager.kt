@@ -10,6 +10,7 @@ import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.util.CollectorException
 import com.tb24.discordbot.util.EmbedMessage
+import com.tb24.discordbot.util.escapeMarkdown
 import com.tb24.discordbot.util.getStackTraceAsString
 import com.tb24.fn.network.AccountService.GrantType
 import com.tb24.fn.util.EAuthClient
@@ -439,7 +440,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 					.setTitle("🚫 Logged out")
 					.setDescription("You have been logged out due to one of the following reasons:\n\u2022 Account logged in to the game.\n\u2022 Been more than 24 hours since login.\n\u2022 Logged in using a code but the originating session has been logged out.\n\u2022 Logged in using a saved login which was then removed.\n\u2022 Account's password changed.\n\u2022 Password reset initiated by Epic Games.")
 				if (savedDevice == null && BotConfig.get().allowUsersToCreateDeviceAuth && client.savedLoginsManager.getAll(session.id).size < source.getSavedAccountsLimit()) {
-					embed.appendDescription("\n\nTo keep this from happening again, do ${source.prefix}savelogin after you log into ${invalidToken.displayName}.")
+					embed.appendDescription("\n\nTo keep this from happening again, do ${source.prefix}savelogin after you log into ${invalidToken.displayName?.escapeMarkdown()}.")
 				}
 				source.complete(null, embed.build())
 				return false

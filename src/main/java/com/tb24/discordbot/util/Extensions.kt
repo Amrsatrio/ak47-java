@@ -463,7 +463,7 @@ val PUBLIC_EXTERNAL_AUTH_TYPES = arrayOf("psn", "xbl", "nintendo")
 fun GameProfile.renderPublicExternalAuths() = PUBLIC_EXTERNAL_AUTH_TYPES.mapNotNull { externalAuths[it] }.map {
 	val type = it.type
 	val externalDisplayName = it.externalDisplayName
-	(externalAuthEmote(type)?.asMention ?: type) + ' ' + (if (externalDisplayName.isNullOrEmpty()) "<linked>" else externalDisplayName)
+	(externalAuthEmote(type)?.asMention ?: type) + ' ' + (if (externalDisplayName.isNullOrEmpty()) "<linked>" else externalDisplayName.escapeMarkdown())
 }
 
 val Token.jwtPayload: JsonObject? get() {

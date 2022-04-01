@@ -137,7 +137,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		}
 		val (avatar, avatarBackground) = getAvatar(user.id)
 		val embed = EmbedBuilder().setColor(if (avatarBackground != -1) avatarBackground else BrigadierCommand.COLOR_INFO)
-			.setTitle("👋 Welcome, %s".format(user.displayName ?: "Unknown"))
+			.setTitle("👋 Welcome, %s".format(user.displayName?.escapeMarkdown() ?: "Unknown"))
 			.addField("Account ID", user.id, false)
 		if (avatar.isNotEmpty()) {
 			embed.setThumbnail(avatar)

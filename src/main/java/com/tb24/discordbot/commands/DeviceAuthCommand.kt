@@ -1,28 +1,25 @@
 package com.tb24.discordbot.commands
 
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.JsonSyntaxException
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
-import com.mojang.brigadier.arguments.StringArgumentType
-import com.mojang.brigadier.arguments.StringArgumentType.getString
-import com.mojang.brigadier.arguments.StringArgumentType.greedyString
+import com.mojang.brigadier.arguments.StringArgumentType.*
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.commands.arguments.StringArgument2
-import com.tb24.discordbot.util.await
-import com.tb24.discordbot.util.exec
-import com.tb24.discordbot.util.format
-import com.tb24.discordbot.util.jwtPayload
+import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.DeviceAuth
 import com.tb24.fn.util.EAuthClient
 import com.tb24.fn.util.getString
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.exceptions.ErrorResponseException
 
@@ -40,11 +37,12 @@ class DeviceAuthCommand : BrigadierCommand("devices", "Device auth operation com
 			.executes { importFromFile(it.source) }
 			.then(argument("device auth", StringArgument2.string2())
 				.executes { importFromText(it.source, getString(it, "device auth")) }
-				.then(argument("auth client", StringArgumentType.word())
+				.then(argument("auth client", word())
 					.executes { importFromText(it.source, getString(it, "device auth"), getString(it, "auth client")) }
 				)
 			)
 		)
+		.then(literal("export").executes { devicesExport(it.source) })
 
 	override fun getSlashCommand(): BaseCommandBuilder<CommandSourceStack>? {
 		return super.getSlashCommand() // TODO
@@ -325,4 +323,28 @@ private fun checkComplimentary(source: CommandSourceStack, dbDevices: List<Devic
 		))
 		check(false) // We should never reach this point
 	}
+}
+
+private fun devicesExport(source: CommandSourceStack): Int {
+	if (source.guild != null) {
+		throw SimpleCommandExceptionType(LiteralMessage("Please invoke the command again [in DMs](${source.getPrivateChannelLink()}), as we have to send you info that contains your saved logins.")).create()
+	}
+	val dbDevices = source.client.savedLoginsManager.getAll(source.session.id)
+	if (dbDevices.isEmpty()) {
+		throw SimpleCommandExceptionType(LiteralMessage("You don't have saved logins.")).create()
+	}
+	val json = JsonArray()
+	for (device in dbDevices) {
+		json.add(JsonObject().apply {
+			addProperty("accountId", device.accountId)
+			addProperty("deviceId", device.deviceId)
+			addProperty("secret", device.secret)
+			addProperty("clientId", device.clientId)
+		})
+	}
+	source.complete(MessageBuilder(EmbedBuilder().setColor(BrigadierCommand.COLOR_SUCCESS)
+		.setTitle("✅ Exported %,d device auths".format(dbDevices.size))
+		.setDescription("⚠ **DO NOT share the file above with anyone!** It can be used to log in to your accounts immediately!")
+		.build()).build(), AttachmentUpload(json.toString().toByteArray(), "devices.json"))
+	return Command.SINGLE_SUCCESS
 }
