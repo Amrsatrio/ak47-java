@@ -142,6 +142,10 @@ class DiscordBot(token: String) {
 		if (internalSession.api.userToken != null) {
 			checkBuildMeta()
 		}
+		if (BotConfig.get().loadGameFiles != BotConfig.EGameFileLoadOption.NoLoad) {
+			AssetManager.INSTANCE.loadPaks(false, if (ENV == "prod") TOC_READ_OPTION_READ_DIRECTORY_INDEX else 0)
+			keychainTask.run() // Load encrypted PAKs
+		}
 		catalogManager = CatalogManager()
 
 		// Setup JDA
@@ -195,10 +199,6 @@ class DiscordBot(token: String) {
 			System.setProperty("manifestFile", manifestFile.path)
 		} else if (loadGameFiles == BotConfig.EGameFileLoadOption.Local) {
 			LOGGER.info("Using local game installation")
-		}
-		if (loadGameFiles != BotConfig.EGameFileLoadOption.NoLoad) {
-			AssetManager.INSTANCE.loadPaks(false, if (ENV == "prod") TOC_READ_OPTION_READ_DIRECTORY_INDEX else 0)
-			keychainTask.run() // Load encrypted PAKs
 		}
 	}
 

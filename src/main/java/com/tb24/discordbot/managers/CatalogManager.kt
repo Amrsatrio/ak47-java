@@ -147,6 +147,10 @@ class CatalogManager {
 	class UpdateCatalogJob : Job {
 		override fun execute(context: JobExecutionContext) {
 			val client = context.mergedJobDataMap["client"] as DiscordBot
+			if (client.internalSession.api.userToken == null) {
+				LOGGER.warn("Internal session not logged in, skipping catalog refresh")
+				return
+			}
 			client.ensureInternalSession()
 			client.catalogManager.ensureCatalogData(client.internalSession.api)
 			// Note: Don't reschedule the job using catalogData.expiration since it can prevent subsequent scheduled jobs

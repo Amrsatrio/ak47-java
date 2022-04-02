@@ -9,6 +9,10 @@ import java.util.*
 class KeychainTask(val client: DiscordBot) : Runnable {
 	override fun run() {
 		DiscordBot.LOGGER.info("[FMcpKeychainHelper] Refresh")
+		if (client.internalSession.api.userToken == null) {
+			DiscordBot.LOGGER.warn("[FMcpKeychainHelper] Internal session not logged in, skipping refresh")
+			return
+		}
 		client.ensureInternalSession()
 		val response = client.internalSession.api.fortniteService.storefrontKeychain(0).execute()
 		if (response.isSuccessful) {
