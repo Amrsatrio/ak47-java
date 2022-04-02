@@ -281,7 +281,11 @@ class DiscordBot(token: String) {
 		if (!::internalSession.isInitialized) {
 			internalSession = getSession("__internal__") { true }
 		}
-		val internalDeviceData = savedLoginsManager.getAll("__internal__")[0]
+		val internalDeviceData = savedLoginsManager.getAll("__internal__").firstOrNull()
+		if (internalDeviceData == null) {
+			LOGGER.warn("Internal account not set")
+			return
+		}
 		try {
 			internalSession.login(null, internalDeviceData.generateAuthFields(), internalDeviceData.authClient, false)
 			LOGGER.info("Logged in to internal account: {} {}", internalSession.api.currentLoggedIn.displayName, internalSession.api.currentLoggedIn.id)
