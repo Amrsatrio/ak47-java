@@ -95,6 +95,11 @@ abstract class BaseQuestsCommand(name: String, description: String, private val 
 				.executes { executeQuestsBulk(it.source, categoryName, lazy { UserArgument.getUsers(it, "users").values }) }
 			)
 		)
+		node.then(literal("bulkf")
+			.then(argument("filter", greedyString())
+				.executes { bulkFilter(it.source, getString(it, "filter"))}
+			)
+		)
 		return node
 	}
 
@@ -150,7 +155,7 @@ private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, 
 		if (!completedTutorial) return@stwBulk null
 		val quests = getQuestsOfCategory(campaign, categoryName)
 		val rendered = quests.joinToString("\n") { renderChallenge(it, "\u2800", null, allowBold = false) }
-		if (categoryName == "DailyQuest" && quests.size == 3) {
+		if (categoryName == "DailyQuests" && quests.size == 3) {
 			usersWith3dailies.add(campaign.owner.displayName)
 		}
 		campaign.owner.displayName to rendered
@@ -179,6 +184,35 @@ private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, 
 	}
 	if (usersWith3dailies.isNotEmpty()) {
 		embed.setFooter("3 dailies (%d): %s".format(usersWith3dailies.size, usersWith3dailies.joinToString(", ")), null)
+	}
+	source.complete(null, embed.build())
+	return Command.SINGLE_SUCCESS
+}
+
+private fun bulkFilter(source: CommandSourceStack, filter: String): Int {
+	source.conditionalUseInternalSession()
+	var count = 0
+	val entries = stwBulk(source, null) {campaign ->
+		val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:outpostquest_t1_l3" }?.attributes?.get("completion_complete_outpost_1_3")?.asInt ?: 0) > 0
+		if (!completedTutorial) return@stwBulk null
+		val quests = getQuestsOfCategory(campaign, "DailyQuests")
+		val filtered = quests.filter { it.displayName.contains(filter, true) }.also { if (it.isNotEmpty()) getQuestCompletion(it.first()) else return@stwBulk null }
+		count++
+		campaign.owner.displayName to filtered
+	}
+	if (entries.isEmpty()) {
+		throw SimpleCommandExceptionType(LiteralMessage("Couldn't find an account with that quest.")).create()
+	}
+	val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
+	for (entry in entries) {
+		if (embed.fields.size == 25) {
+			source.complete(null, embed.build())
+			embed.clearFields()
+		}
+		embed.addField(entry.first, entry.second.joinToString("\n") {"%s **[%,d/%,d]**".format(it.displayName, getQuestCompletion(it).first, getQuestCompletion(it).second)}, false)
+	}
+	if (count > 4) {
+		embed.setFooter("%,d accounts".format(count), null)
 	}
 	source.complete(null, embed.build())
 	return Command.SINGLE_SUCCESS
