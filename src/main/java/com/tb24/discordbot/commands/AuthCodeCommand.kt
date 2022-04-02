@@ -6,6 +6,7 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.performWebApiRequest
 import com.tb24.fn.util.EAuthClient
 import com.tb24.fn.util.getString
@@ -19,6 +20,7 @@ class AuthCodeCommand : BrigadierCommand("authcode", "Generates a link to the au
 
 	private fun execute(source: CommandSourceStack, clientId: String? = null): Int {
 		source.ensureSession()
+		source.api.accountService.verify(false).exec()
 		source.warnCodeToken()
 		val clientId = if (clientId != null) {
 			EAuthClient.values().firstOrNull { it.name.replace("_", "").equals(clientId, true) }?.clientId ?: clientId
