@@ -8,6 +8,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.HttpException
+import com.tb24.discordbot.Rune
 import com.tb24.discordbot.commands.arguments.StringArgument2.Companion.string2
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.DeviceAuth
@@ -346,4 +347,21 @@ enum class EGrantType {
 	//password,
 	refresh_token,
 	token_to_token
+}
+
+class LoginInternalAccountCommand : BrigadierCommand("logininternal", "Internal use only.") {
+	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.requires(Rune::isBotDev)
+		.then(argument("code", greedyString())
+			.executes {
+				val source = it.source
+				source.session = source.client.internalSession
+				val devices = source.client.savedLoginsManager.getAll(source.client.internalSession.id)
+				if (devices.isNotEmpty()) {
+					source.client.savedLoginsManager.removeAll(source.client.internalSession.id)
+				}
+				doLogin(source, EGrantType.authorization_code, getString(it, "code"), EAuthClient.FORTNITE_ANDROID_GAME_CLIENT)
+				devicesCreate(source)
+			}
+		)
 }

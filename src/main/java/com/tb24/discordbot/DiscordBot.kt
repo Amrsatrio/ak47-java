@@ -36,7 +36,6 @@ import org.quartz.impl.StdSchedulerFactory
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
-import java.io.IOException
 import java.time.Duration
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
@@ -140,7 +139,27 @@ class DiscordBot(token: String) {
 		proxyManager = ProxyManager()
 		SessionPersister.client = this
 		setupInternalSession()
+		if (internalSession.api.userToken != null) {
+			checkBuildMeta()
+		}
+		catalogManager = CatalogManager()
 
+		// Setup JDA
+		LOGGER.info("Connecting to Discord...")
+		val builder = DefaultShardManagerBuilder.createDefault(token).setHttpClient(okHttpClient)
+		if (ENV == "prod" || ENV == "stage") {
+			builder.enableIntents(GatewayIntent.GUILD_MEMBERS)
+		}
+		commandManager = CommandManager(this)
+		builder.addEventListeners(commandManager, GuildListeners(this))
+		discord = builder.build()
+		Runtime.getRuntime().addShutdownHook(Thread {
+			internalSession.logout()
+		})
+		discord.setActivityProvider { Activity.playing(".help \u00b7 $it") }
+	}
+
+	private fun checkBuildMeta() {
 		// Check for latest build
 		LOGGER.info("Checking latest Fortnite build...")
 		val launcherAppApi = internalSession.getApiForOtherClient(EAuthClient.LAUNCHER_APP_CLIENT_2)
@@ -177,26 +196,10 @@ class DiscordBot(token: String) {
 		} else if (loadGameFiles == BotConfig.EGameFileLoadOption.Local) {
 			LOGGER.info("Using local game installation")
 		}
-
 		if (loadGameFiles != BotConfig.EGameFileLoadOption.NoLoad) {
 			AssetManager.INSTANCE.loadPaks(false, if (ENV == "prod") TOC_READ_OPTION_READ_DIRECTORY_INDEX else 0)
 			keychainTask.run() // Load encrypted PAKs
 		}
-		catalogManager = CatalogManager()
-
-		// Setup JDA
-		LOGGER.info("Connecting to Discord...")
-		val builder = DefaultShardManagerBuilder.createDefault(token).setHttpClient(okHttpClient)
-		if (ENV == "prod" || ENV == "stage") {
-			builder.enableIntents(GatewayIntent.GUILD_MEMBERS)
-		}
-		commandManager = CommandManager(this)
-		builder.addEventListeners(commandManager, GuildListeners(this))
-		discord = builder.build()
-		Runtime.getRuntime().addShutdownHook(Thread {
-			internalSession.logout()
-		})
-		discord.setActivityProvider { Activity.playing(".help \u00b7 $it") }
 	}
 
 	// region Scheduled tasks
@@ -282,8 +285,8 @@ class DiscordBot(token: String) {
 		try {
 			internalSession.login(null, internalDeviceData.generateAuthFields(), internalDeviceData.authClient, false)
 			LOGGER.info("Logged in to internal account: {} {}", internalSession.api.currentLoggedIn.displayName, internalSession.api.currentLoggedIn.id)
-		} catch (e: IOException) {
-			e.printStackTrace()
+		} catch (e: Exception) {
+			LOGGER.error("Failed to setup internal session", e)
 		}
 	}
 

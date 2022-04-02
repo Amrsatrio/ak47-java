@@ -27,7 +27,7 @@ class DeviceAuthCommand : BrigadierCommand("devices", "Device auth operation com
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes(::list)
 		.then(literal("list").executes(::list))
-		.then(literal("create").executes { create(it.source) })
+		.then(literal("create").executes { devicesCreate(it.source) })
 		.then(literal("remove")
 			.then(argument("device ID", greedyString())
 				.executes { devicesDelete(it.source, getString(it, "device ID")) }
@@ -51,9 +51,9 @@ class DeviceAuthCommand : BrigadierCommand("devices", "Device auth operation com
 
 class SaveLoginCommand : BrigadierCommand("savelogin", "Saves the current account to the bot, for easy login.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { create(it.source) }
+		.executes { devicesCreate(it.source) }
 
-	override fun getSlashCommand() = newCommandBuilder().executes(::create)
+	override fun getSlashCommand() = newCommandBuilder().executes(::devicesCreate)
 }
 
 class DeleteSavedLoginCommand : BrigadierCommand("deletesavedlogin", "Removes the current account from the bot.", arrayOf("removesavedlogin")) {
@@ -120,7 +120,7 @@ private fun list(c: CommandContext<CommandSourceStack>): Int {
 
 private fun DeviceAuth.LocationIpDate.render() = "%s, %s (%s)".format(dateTime.format(), ipAddress, location)
 
-private fun create(source: CommandSourceStack): Int {
+fun devicesCreate(source: CommandSourceStack): Int {
 	val inDMs = source.guild == null
 	source.ensureSession()
 	val sessionId = source.session.id

@@ -87,8 +87,24 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		val accountData = api.accountService.findAccountsByIds(Collections.singletonList(token.account_id)).exec().body()?.firstOrNull()
 		api.currentLoggedIn = accountData
 		save()
-		if (source != null && sendMessages) {
-			sendLoginMessage(source, usedAccountNumber = usedAccountNumber)
+		if (source != null && sendMessages && accountData != null) {
+			val embed = createLoginMessageEmbed(accountData)
+			val inviteLink = BotConfig.get().homeGuildInviteLink
+			if (inviteLink != null) {
+				val homeGuild = client.discord.getGuildById(BotConfig.get().homeGuildId)
+				if (homeGuild != null && runCatching { homeGuild.retrieveMemberById(source.author.idLong).complete() }.isFailure) {
+					embed.setDescription("Have questions, issues, or suggestions? Want to stay updated with the bot's development or vibe with us? [Join our support server!](%s)".format(inviteLink))
+				}
+			}
+			val dbDevices = client.savedLoginsManager.getAll(id)
+			val accountIndex = dbDevices.indexOfFirst { it.accountId == accountData.id }
+			if (BotConfig.get().allowUsersToCreateDeviceAuth && accountIndex == -1 && dbDevices.size < source.getSavedAccountsLimit()) {
+				embed.setFooter("Tip: do %ssavelogin to stay logged in".format(source.prefix))
+			}
+			if (accountIndex != -1 && !usedAccountNumber) {
+				embed.setFooter("Tip: use %si %d to quickly switch to this account".format(source.prefix, accountIndex + 1))
+			}
+			source.complete(if (source.interaction is ModalInteraction) source.author.asMention else null, embed.build())
 		}
 		return Command.SINGLE_SUCCESS
 	}
@@ -131,10 +147,7 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		newApi
 	}
 
-	fun sendLoginMessage(source: CommandSourceStack, user: GameProfile? = api.currentLoggedIn, usedAccountNumber: Boolean = false) {
-		if (user == null) {
-			return
-		}
+	fun createLoginMessageEmbed(user: GameProfile): EmbedBuilder {
 		val (avatar, avatarBackground) = getAvatar(user.id)
 		val embed = EmbedBuilder().setColor(if (avatarBackground != -1) avatarBackground else BrigadierCommand.COLOR_INFO)
 			.setTitle("👋 Welcome, %s".format(user.displayName?.escapeMarkdown() ?: "Unknown"))
@@ -142,23 +155,8 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 		if (avatar.isNotEmpty()) {
 			embed.setThumbnail(avatar)
 		}
-		val inviteLink = BotConfig.get().homeGuildInviteLink
-		if (inviteLink != null) {
-			val homeGuild = client.discord.getGuildById(BotConfig.get().homeGuildId)
-			if (homeGuild != null && runCatching { homeGuild.retrieveMemberById(source.author.idLong).complete() }.isFailure) {
-				embed.setDescription("Have questions, issues, or suggestions? Want to stay updated with the bot's development or vibe with us? [Join our support server!](%s)".format(inviteLink))
-			}
-		}
 		embed.setDescription(user.renderPublicExternalAuths().joinToString(" "))
-		val dbDevices = client.savedLoginsManager.getAll(id)
-		val accountIndex = dbDevices.indexOfFirst { it.accountId == user.id }
-		if (BotConfig.get().allowUsersToCreateDeviceAuth && accountIndex == -1 && dbDevices.size < source.getSavedAccountsLimit()) {
-			embed.setFooter("Tip: do %ssavelogin to stay logged in".format(source.prefix))
-		}
-		if (accountIndex != -1 && !usedAccountNumber) {
-			embed.setFooter("Tip: use %si %d to quickly switch to this account".format(source.prefix, accountIndex + 1))
-		}
-		source.complete(if (source.interaction is ModalInteraction) source.author.asMention else null, embed.build())
+		return embed
 	}
 
 	fun handleAccountMutation(response: AccountMutationResponse) {
