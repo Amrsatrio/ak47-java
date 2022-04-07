@@ -61,7 +61,7 @@ class PurchasesCommand : BrigadierCommand("purchases", "Shows your purchase hist
 			sb.append("\nRefunded: " + it.format())
 		}
 		metadata?.get("mtx_affiliate")?.let {
-			sb.append("\nCreator supported: " + it.asString)
+			sb.append("\nCreator supported: " + it.asString.escapeMarkdown())
 		}
 		return sb.toString()
 	}

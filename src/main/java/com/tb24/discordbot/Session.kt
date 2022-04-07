@@ -98,8 +98,12 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 			}
 			val dbDevices = client.savedLoginsManager.getAll(id)
 			val accountIndex = dbDevices.indexOfFirst { it.accountId == accountData.id }
-			if (BotConfig.get().allowUsersToCreateDeviceAuth && accountIndex == -1 && dbDevices.size < source.getSavedAccountsLimit()) {
-				embed.setFooter("Tip: do %ssavelogin to stay logged in".format(source.prefix))
+			if (accountIndex == -1) {
+				if (BotConfig.get().allowUsersToCreateDeviceAuth && dbDevices.size < source.getSavedAccountsLimit()) {
+					embed.setFooter("Tip: do %ssavelogin to stay logged in".format(source.prefix))
+				}
+			} else {
+				embed.setTitle("🔁 Switched to %s".format(accountData.displayName?.escapeMarkdown() ?: "Unknown"))
 			}
 			if (accountIndex != -1 && !usedAccountNumber) {
 				embed.setFooter("Tip: use %si %d to quickly switch to this account".format(source.prefix, accountIndex + 1))
