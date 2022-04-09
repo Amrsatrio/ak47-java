@@ -82,7 +82,7 @@ class AffiliateNameCommand : BrigadierCommand("sac", "Displays or changes the Su
 		}
 		val api = EpicApi(OkHttpClient())
 		val token = api.accountService.getAccessToken(EAuthClient.FORTNITE_PC_GAME_CLIENT.asBasicAuthString(), AccountService.GrantType.clientCredentials(), null, null).exec().body()
-		api.userToken = token
+		api.setToken(token)
 		api.affiliateService.checkAffiliateSlug(newCode).exec().body()!!
 		api.accountService.killSession(api.userToken.access_token).exec()
 		var i = 0

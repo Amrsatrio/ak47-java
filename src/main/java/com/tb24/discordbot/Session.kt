@@ -1,5 +1,6 @@
 package com.tb24.discordbot
 
+import com.google.gson.JsonObject
 import com.mojang.brigadier.Command
 import com.tb24.discordbot.commands.BrigadierCommand
 import com.tb24.discordbot.commands.CommandSourceStack
@@ -18,6 +19,7 @@ import com.tb24.fn.model.mcpprofile.item.FortGiftBoxItem
 import com.tb24.fn.network.AccountService.GrantType.exchangeCode
 import com.tb24.fn.util.EAuthClient
 import com.tb24.fn.util.getPreviewImagePath
+import com.tb24.fn.util.getString
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.interactions.ModalInteraction
@@ -32,7 +34,7 @@ import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 
-class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, private var persistent: Boolean = true) {
+class Session(val client: DiscordBot, val id: String, private var persistent: Boolean = true) {
 	companion object {
 		val LOGGER: Logger = LoggerFactory.getLogger("Session")
 	}
@@ -202,13 +204,19 @@ class Session @JvmOverloads constructor(val client: DiscordBot, val id: String, 
 
 	fun getPartyManager(accountId: String) = partyManagers.getOrPut(accountId) { PartyManager(api) }
 
-	fun getWebCampaignManager(id: String): WebCampaign {
-		return webCampaignManagers.getOrPut(id) {
-			val newManager = WebCampaign(api.okHttpClient)
-			newManager.connect()
-			newManager
+	fun getWebCampaignManager(id: String) = webCampaignManagers.getOrPut(id) {
+		WebCampaign(api.okHttpClient, id).apply {
+			/*onUpdateProperties = { properties ->
+				source.session.config.webCampaigns[domainName] = properties
+			}*/
+			onRequestAuth = { payload ->
+				val clientId = environment.getAsJsonObject("settings").getAsJsonObject("epic").getString("clientId")
+				val redirectResponse = api.performWebApiRequest<JsonObject>("https://www.epicgames.com/id/api/redirect?clientId=$clientId&responseType=code")
+				payload.addProperty("authenticationToken", redirectResponse.getString("authorizationCode"))
+				payload.addProperty("redirectUri", redirectResponse.getString("redirectUrl"))
+			}
 		}
-	}
+	}.apply { connect() }
 
 	fun getAvatar(accountId: String) = avatarCache.getOrPut(accountId) {
 		val response = api.avatarService.queryAvatars("fortnite", accountId).execute()

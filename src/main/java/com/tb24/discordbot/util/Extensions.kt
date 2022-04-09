@@ -460,7 +460,7 @@ fun externalAuthEmote(externalAuthType: String) = when (externalAuthType) {
 
 val PUBLIC_EXTERNAL_AUTH_TYPES = arrayOf("psn", "xbl", "nintendo")
 
-fun GameProfile.renderPublicExternalAuths() = PUBLIC_EXTERNAL_AUTH_TYPES.mapNotNull { externalAuths[it] }.map {
+fun GameProfile.renderPublicExternalAuths() = if (externalAuths == null) emptyList() else PUBLIC_EXTERNAL_AUTH_TYPES.mapNotNull { externalAuths[it] }.map {
 	val type = it.type
 	val externalDisplayName = it.externalDisplayName
 	(externalAuthEmote(type)?.asMention ?: type) + ' ' + (if (externalDisplayName.isNullOrEmpty()) "<linked>" else externalDisplayName.escapeMarkdown())
@@ -647,8 +647,8 @@ fun BuildResponse.ManifestDownloadInfo.createRequest(): Request {
 
 fun Number.awtColor(hasAlpha: Boolean = toInt() ushr 24 != 0) = Color(toInt(), hasAlpha)
 
-inline fun createAndDrawCanvas(w: Int, h: Int, draw: (ctx: Graphics2D) -> Unit): BufferedImage {
-	val canvas = BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB)
+inline fun createAndDrawCanvas(w: Int, h: Int, withAlpha: Boolean = true, draw: (ctx: Graphics2D) -> Unit): BufferedImage {
+	val canvas = BufferedImage(w, h, if (withAlpha) BufferedImage.TYPE_INT_ARGB else BufferedImage.TYPE_INT_RGB)
 	val ctx = canvas.createGraphics()
 	ctx.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
 	ctx.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON)
@@ -664,7 +664,7 @@ object ResourcesContext {
 	val burbankBigRegularBold by lazy { fromPaks("FortniteGame/Content/UI/Foundation/Fonts/BurbankBigRegular-Bold.ufont") }
 	val burbankBigRegularBlack by lazy { fromPaks("FortniteGame/Content/UI/Foundation/Fonts/BurbankBigRegular-Black.ufont") }
 	val burbankBigCondensedBlack by lazy { fromPaks("FortniteGame/Content/UI/Foundation/Fonts/BurbankBigCondensed-Black.ufont") }
-	val primaryColor = 0xB3B3B3 //0x33EEFF
+	val primaryColor = 0x33EEFF
 
 	private fun fromPaks(path: String) = Font.createFont(Font.TRUETYPE_FONT, ByteArrayInputStream(AssetManager.INSTANCE.provider.saveGameFile(path)))
 }

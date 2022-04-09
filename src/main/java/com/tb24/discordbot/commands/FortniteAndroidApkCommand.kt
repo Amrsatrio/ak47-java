@@ -17,7 +17,7 @@ class FortniteAndroidApkCommand : BrigadierCommand("apk", "Get an APK download l
 			val api = EpicApi(source.client.okHttpClient) // create a new EpicApi instance to prevent race conditions with existing running commands
 			source.loading("Getting the APK download link")
 			val token = api.accountService.getAccessToken(EAuthClient.LAUNCHER_APP_CLIENT_2.asBasicAuthString(), clientCredentials(), "eg1", null).exec().body()!!
-			api.userToken = token
+			api.setToken(token)
 			val assetResponse = api.launcherService.querySignedDownload("Android", "4fe75bbc5a674f4f9b356b5c90567da5", "Fortnite", "Live", ClientDetails().apply {
 				abis = arrayOf("arm64-v8a")
 			}).exec().body()!!
