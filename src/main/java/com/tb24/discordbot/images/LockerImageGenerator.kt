@@ -23,6 +23,7 @@ import java.awt.geom.Path2D
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.FileReader
+import java.util.concurrent.CompletableFuture
 import kotlin.math.ceil
 import kotlin.math.sqrt
 import kotlin.system.exitProcess
@@ -49,6 +50,15 @@ fun main() {
 
 fun generateLockerImage(items: List<FortItemStack>, name: String?, icon: String?, epicUser: GameProfile? = null, discordUser: User? = null): BufferedImage {
 	val items = items.sortedWith(SimpleAthenaLockerItemComparator().apply { bPrioritizeFavorites = false })
+
+	// Preload icons
+	val icons = hashMapOf<String, BufferedImage?>()
+	CompletableFuture.allOf(*items.map {
+		CompletableFuture.supplyAsync {
+			icons[it.templateId] = it.getPreviewImagePath()?.load<UTexture2D>()?.toBufferedImage()
+		}
+	}.toTypedArray()).get()
+
 	val columns = ceil(sqrt(items.size.toDouble())).toInt()
 	val padding = 6
 	val doublePadding = 2 * padding
@@ -58,7 +68,7 @@ fun generateLockerImage(items: List<FortItemStack>, name: String?, icon: String?
 	val topContentHeight = (headerScale * 128).toInt()
 	val top = doublePadding + topContentHeight
 	val imageH = top + ceil(items.size.toDouble() / columns.toDouble()).toInt() * tileSize + doublePadding
-	val image = createAndDrawCanvas(imageW, imageH) { ctx ->
+	val image = createAndDrawCanvas(imageW, imageH, false) { ctx ->
 		// Background
 		ctx.color = 0x161616.awtColor()
 		ctx.fillRect(0, 0, imageW, imageH)
@@ -72,7 +82,7 @@ fun generateLockerImage(items: List<FortItemStack>, name: String?, icon: String?
 			ctx.font = ResourcesContext.burbankSmallBlack.deriveFont(48f * headerScale)
 			val ownerEpicText = epicUser.displayName
 			val ownerEpicTextWidth = ctx.fontMetrics.stringWidth(ownerEpicText)
-			ctx.color = ResourcesContext.primaryColor.awtColor()
+			ctx.color = 0xB3B3B3.awtColor() //ResourcesContext.primaryColor.awtColor()
 			ctx.drawString(ownerEpicText, imageW - doublePadding - ownerEpicTextWidth, doublePadding + ctx.fontMetrics.ascent + ctx.fontMetrics.height / 2)
 			val epicGamesLogo = loadObject<UTexture2D>("/Game/UI/Foundation/Textures/Icons/Social/T-Icon-EpicGamesLogo-64.T-Icon-EpicGamesLogo-64")?.toBufferedImage()
 			val logoSize = (64 * headerScale).toInt()
@@ -98,7 +108,7 @@ fun generateLockerImage(items: List<FortItemStack>, name: String?, icon: String?
 			ctx.drawStretchedRadialGradient(palette.Color2.toFColor(true).toPackedARGB(), palette.Color3.toFColor(true).toPackedARGB(), x, y, w, h)
 
 			// Icon
-			item.getPreviewImagePath()?.load<UTexture2D>()?.toBufferedImage()?.let {
+			icons[item.templateId]?.let {
 				ctx.drawImage(it, x, y, w, h, null)
 			}
 

@@ -8,6 +8,7 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.StringArgumentType.*
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.images.generateLockerImage
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
@@ -32,11 +33,16 @@ import net.dv8tion.jda.api.interactions.components.buttons.Button
 import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
 import okhttp3.Request
 import java.awt.Image
+import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.zip.Deflater
 import java.util.zip.DeflaterOutputStream
+import javax.imageio.IIOImage
+import javax.imageio.ImageIO
+import javax.imageio.ImageWriteParam
+import javax.imageio.stream.MemoryCacheImageOutputStream
 
 class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form of an image.") {
 	// PrimaryAssetType[:ClassName]
@@ -394,15 +400,32 @@ private fun perform(source: CommandSourceStack, name: String?, icon: String?, id
 		return@supplyAsync null
 	}
 	val items = ids.sortedWith(SimpleAthenaLockerItemComparator().apply { bPrioritizeFavorites = false })
+	val start = System.currentTimeMillis()
 	val image = generateLockerImage(items, name, icon, source.api.currentLoggedIn, source.author)
-	var png = image.toPngArray()
+	val elapsed = System.currentTimeMillis() - start
+	var output = image.toPngArray()
 	var scale = 1f
-	while (png.size > Message.MAX_FILE_SIZE && scale > 0.2f) {
-		png = image.scale((image.width * scale).toInt(), (image.height * scale).toInt(), Image.SCALE_SMOOTH).toPngArray()
+	while (output.size > Message.MAX_FILE_SIZE && scale > 0.2f) {
+		output = image.scale((image.width * scale).toInt(), (image.height * scale).toInt(), Image.SCALE_SMOOTH).toJpgArray()
 		//println("png size ${png.size} scale $scale")
 		scale -= 0.2f
 	}
-	source.complete(MessageBuilder("**$name** (${Formatters.num.format(ids.size)})").build(), AttachmentUpload(png, "$name-${source.api.currentLoggedIn.id}.png"))
+	val message = MessageBuilder("**$name** (${Formatters.num.format(ids.size)})")
+	if (DiscordBot.ENV == "dev") {
+		message.append("\nRendered: ${elapsed}ms")
+	}
+	source.complete(message.build(), AttachmentUpload(output, "$name-${source.api.currentLoggedIn.id}.jpg"))
+}
+
+fun BufferedImage.toJpgArray(): ByteArray {
+	val jpgWriter = ImageIO.getImageWritersByFormatName("jpg").next()
+	val jpgWriterParam = jpgWriter.defaultWriteParam
+	jpgWriterParam.compressionMode = ImageWriteParam.MODE_EXPLICIT
+	jpgWriterParam.compressionQuality = 0.7f
+	val out = ByteArrayOutputStream()
+	jpgWriter.output = MemoryCacheImageOutputStream(out)
+	jpgWriter.write(null, IIOImage(this, null, null), jpgWriterParam)
+	return out.toByteArray()
 }
 
 class LockerEntry(val cosmetic: FortItemStack, queryAccountIds: MutableCollection<String>) {
