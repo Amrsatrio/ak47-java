@@ -294,9 +294,9 @@ private fun execBuyAllCampaignBulk(source: CommandSourceStack, users: Map<String
 			return@forEachSavedAccounts null
 		}
 		embed.addField(it.api.currentLoggedIn.displayName, when {
-			result.ownedAll -> "✅ You already own everything."
+			result.ownedAll -> "✅ You already own everything. Balance: %,d gold.".format(result.finalBalance)
 			result.totalSpent != 0 -> when {
-				result.notEnoughBalanceItems.isNotEmpty() -> "⚠ Purchased %,d/%,d items. %,d gold needed to purchase the remaining %,d offer%s.".format(
+				result.notEnoughBalanceItems.isNotEmpty() -> "⚠ Purchased %,d/%,d items. %,d gold needed to purchase the remaining %,d item%s.".format(
 					result.purchasedItems.size, result.totalItems,
 					result.neededGold, result.notEnoughBalanceItems.size, if (result.notEnoughBalanceItems.size == 1) "" else "s"
 				)
@@ -305,7 +305,7 @@ private fun execBuyAllCampaignBulk(source: CommandSourceStack, users: Map<String
 					result.finalBalance
 				)
 			}
-			else -> "❌ %,d gold needed to purchase the remaining %,d offer%s.".format(
+			else -> "❌ %,d gold needed to purchase the remaining %,d item%s.".format(
 				result.neededGold, result.notEnoughBalanceItems.size, if (result.notEnoughBalanceItems.size == 1) "" else "s"
 			)
 		}, false)
