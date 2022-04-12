@@ -406,7 +406,7 @@ private fun perform(source: CommandSourceStack, name: String?, icon: String?, id
 	var output = image.toPngArray()
 	var scale = 1f
 	while (output.size > Message.MAX_FILE_SIZE && scale > 0.2f) {
-		output = image.scale((image.width * scale).toInt(), (image.height * scale).toInt(), Image.SCALE_SMOOTH).toJpgArray()
+		output = image.scale((image.width * scale).toInt(), (image.height * scale).toInt(), Image.SCALE_SMOOTH).toPngArray()
 		//println("png size ${png.size} scale $scale")
 		scale -= 0.2f
 	}
