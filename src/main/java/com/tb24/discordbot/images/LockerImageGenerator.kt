@@ -48,7 +48,7 @@ fun main() {
 	exitProcess(0)
 }
 
-fun generateLockerImage(items: List<FortItemStack>, name: String?, icon: String?, epicUser: GameProfile? = null, discordUser: User? = null): BufferedImage {
+fun generateLockerImage(items: List<FortItemStack>, name: String?, icon: String?, epicUser: GameProfile? = null, discordUser: User? = null, withAlpha: Boolean = true): BufferedImage {
 	val items = items.sortedWith(SimpleAthenaLockerItemComparator().apply { bPrioritizeFavorites = false })
 
 	// Preload icons
@@ -68,7 +68,7 @@ fun generateLockerImage(items: List<FortItemStack>, name: String?, icon: String?
 	val topContentHeight = (headerScale * 128).toInt()
 	val top = doublePadding + topContentHeight
 	val imageH = top + ceil(items.size.toDouble() / columns.toDouble()).toInt() * tileSize + doublePadding
-	val image = createAndDrawCanvas(imageW, imageH, false) { ctx ->
+	val image = createAndDrawCanvas(imageW, imageH, withAlpha) { ctx ->
 		// Background
 		ctx.color = 0x161616.awtColor()
 		ctx.fillRect(0, 0, imageW, imageH)
