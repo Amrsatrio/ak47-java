@@ -271,14 +271,6 @@ class FShopSectionContainer(val section: CatalogManager.ShopSection) {
 val mtxIcon by lazy { loadObject<UTexture2D>("/Game/UI/Foundation/Textures/Icons/Items/T-Items-MTX.T-Items-MTX")!! }
 
 class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.ShopSection) {
-	companion object {
-		val violatorPalettes = mapOf(
-			EViolatorIntensity.Low to FViolatorColorPalette(0xFF2C78, 0xCF0067, 0xFFFFFF),
-			EViolatorIntensity.Medium to FViolatorColorPalette(0xFF2C78, 0xCF0067, 0xFFFFFF), // TODO test medium
-			EViolatorIntensity.High to FViolatorColorPalette(0xFFFFFF, 0xFFFF00, 0x00062B),
-		)
-	}
-
 	var x = 0f
 	var y = 0f
 	var w = 0f
@@ -381,7 +373,7 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 		drawRarityBorder(ctx, offer, path)
 		drawTitleAndSubtitle(ctx, path)
 		drawPrice(ctx, offer, path)
-		drawViolator(ctx, offer, path)
+		drawOfferViolator(ctx, offer, path)
 		drawItemNumber(ctx)
 	}
 
@@ -498,7 +490,7 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 		}
 	}
 
-	private inline fun drawViolator(ctx: Graphics2D, offer: CatalogEntryHolder, path: Path2D.Float) {
+	private inline fun drawOfferViolator(ctx: Graphics2D, offer: CatalogEntryHolder, path: Path2D.Float) {
 		val violatorIntensity = runCatching { EViolatorIntensity.valueOf(offer.getMeta("ViolatorIntensity")!!) }.getOrNull()
 			?: EViolatorIntensity.Low
 		var violatorText: String? = null
@@ -510,37 +502,8 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 		if (violatorTag != null) {
 			violatorText = catalogMessages.Banners[violatorTag]?.format() ?: violatorTag
 		}
-		violatorText = (violatorText ?: return).toUpperCase()
 
-		val palette = violatorPalettes[violatorIntensity]!!
-		ctx.font = ResourcesContext.burbankBigRegularBlack.deriveFont(Font.ITALIC, 19f)
-		val fm = ctx.fontMetrics
-		val textWidth = fm.stringWidth(violatorText)
-
-		//outline
-		ctx.color = palette.outline.awtColor()
-		path.reset()
-		path.moveTo(x - 12, y - 9)
-		path.lineTo(x + 22 + textWidth, y - 12)
-		path.lineTo(x + 14 + textWidth, y + 27)
-		path.lineTo(x - 8, y + 26)
-		path.closePath()
-		ctx.fill(path)
-		val bounds = path.bounds
-
-		//inside
-		ctx.color = palette.inside.awtColor()
-		path.reset()
-		path.moveTo(x - 6, y - 4)
-		path.lineTo(x + 15 + textWidth, y - 6)
-		path.lineTo(x + 9 + textWidth, y + 22)
-		path.lineTo(x - 3, y + 21)
-		path.closePath()
-		ctx.fill(path)
-
-		//text
-		ctx.color = palette.text.awtColor()
-		ctx.drawString(violatorText, bounds.x + (bounds.width - textWidth) / 2 - 2, bounds.y + ((bounds.height - fm.height) / 2) + fm.ascent)
+		drawViolator(ctx, x, y, violatorIntensity, violatorText ?: return, path)
 	}
 
 	private inline fun drawItemNumber(ctx: Graphics2D) {
@@ -551,12 +514,6 @@ class FShopEntryContainer(val offer: CatalogOffer, val section: CatalogManager.S
 			ctx.drawString((itemNumber + 1).toString(), x + 4, y + h - 6)
 		}
 	}
-}
-
-enum class EViolatorIntensity {
-	Low,
-	Medium,
-	High
 }
 
 class FOffsets(val emoteX: Int, val gliderX: Int)

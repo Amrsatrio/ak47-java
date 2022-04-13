@@ -3,6 +3,9 @@ package com.tb24.discordbot.images
 import com.google.gson.JsonParser
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.commands.CommandSourceStack
+import com.tb24.discordbot.commands.ExclusivesType
+import com.tb24.discordbot.commands.exclusives
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
@@ -44,12 +47,36 @@ fun main() {
 	if (items.isEmpty()) {
 		throw SimpleCommandExceptionType(LiteralMessage("Nothing here")).create()
 	}
-	File("locker.png").writeBytes(generateLockerImage(items, "Outfits", "/Game/UI/Foundation/Textures/Icons/Locker/T_Ui_Outfit_256.T_Ui_Outfit_256", athena.owner).toPngArray())
+	File("locker.png").writeBytes(generateLockerImage(items, GenerateLockerImageParams("Outfits", "/Game/UI/Foundation/Textures/Icons/Locker/T_Ui_Outfit_256.T_Ui_Outfit_256").apply { epicUser = athena.owner }).toPngArray())
 	exitProcess(0)
 }
 
-fun generateLockerImage(items: List<FortItemStack>, name: String?, icon: String?, epicUser: GameProfile? = null, discordUser: User? = null, withAlpha: Boolean = true): BufferedImage {
+class GenerateLockerImageParams(
+	val name: String? = null,
+	val icon: String? = null,
+	val withAlpha: Boolean = true,
+	val distinguishExclusives: Boolean = false,
+	val showExclusivesInfo: Boolean = false
+) {
+	var epicUser: GameProfile? = null
+	var discordUser: User? = null
+
+	fun withSource(source: CommandSourceStack): GenerateLockerImageParams {
+		epicUser = source.api.currentLoggedIn
+		discordUser = source.author
+		return this
+	}
+}
+
+fun generateLockerImage(items: List<FortItemStack>, params: GenerateLockerImageParams): BufferedImage {
 	val items = items.sortedWith(SimpleAthenaLockerItemComparator().apply { bPrioritizeFavorites = false })
+	val name = params.name
+	val icon = params.icon
+	val epicUser = params.epicUser
+	val discordUser = params.discordUser
+	val withAlpha = params.withAlpha
+	val distinguishExclusives = params.distinguishExclusives
+	val showExclusivesInfo = params.showExclusivesInfo
 
 	// Preload icons
 	val icons = hashMapOf<String, BufferedImage?>()
@@ -92,8 +119,7 @@ fun generateLockerImage(items: List<FortItemStack>, name: String?, icon: String?
 		// TODO Show Discord user
 
 		// Contents
-		val rarityPathBg = Path2D.Float()
-		val rarityPathFg = Path2D.Float()
+		val path = Path2D.Float()
 
 		for (i in items.indices) {
 			val item = items[i]
@@ -114,29 +140,34 @@ fun generateLockerImage(items: List<FortItemStack>, name: String?, icon: String?
 
 			// Rarity overlay
 			val rarityGrad = LinearGradientPaint(0f, 0f, w.toFloat(), 0f, floatArrayOf(0f, 1f), arrayOf(palette.Color1.toColor(), palette.Color2.toColor()))
-			val lo = h / 12f
-			val ro = h / 7f
-			rarityPathBg.reset()
-			rarityPathBg.moveTo(0f, h - lo)
-			rarityPathBg.lineTo(w.toFloat(), h - ro)
-			rarityPathBg.lineTo(w.toFloat(), h.toFloat())
-			rarityPathBg.lineTo(0f, h.toFloat())
-			rarityPathBg.closePath()
-			val thicknessLeft = h / 25f //20f
-			val thicknessRight = h / 25f //20f
-			rarityPathFg.reset()
-			rarityPathFg.moveTo(0f, h - lo)
-			rarityPathFg.lineTo(w.toFloat(), h - ro)
-			rarityPathFg.lineTo(w.toFloat(), h - ro + thicknessRight)
-			rarityPathFg.lineTo(0f, h - lo + thicknessLeft)
-			rarityPathFg.closePath()
 			ctx.translate(x, y)
+
+			// - Background
 			ctx.paint = rarityGrad
 			val oldComposite = ctx.composite
 			ctx.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.7f)
-			ctx.fill(rarityPathBg)
+			val lo = h / 12f
+			val ro = h / 7f
+			path.reset()
+			path.moveTo(0f, h - lo)
+			path.lineTo(w.toFloat(), h - ro)
+			path.lineTo(w.toFloat(), h.toFloat())
+			path.lineTo(0f, h.toFloat())
+			path.closePath()
+			ctx.fill(path)
 			ctx.composite = oldComposite
-			ctx.fill(rarityPathFg)
+
+			// - Foreground
+			val thicknessLeft = h / 25f //20f
+			val thicknessRight = h / 25f //20f
+			path.reset()
+			path.moveTo(0f, h - lo)
+			path.lineTo(w.toFloat(), h - ro)
+			path.lineTo(w.toFloat(), h - ro + thicknessRight)
+			path.lineTo(0f, h - lo + thicknessLeft)
+			path.closePath()
+			ctx.fill(path)
+
 			ctx.translate(-x, -y)
 
 			// Item display name
@@ -163,6 +194,17 @@ fun generateLockerImage(items: List<FortItemStack>, name: String?, icon: String?
 				ctx.color = Color.WHITE
 				ctx.fill(shape)
 				ctx.translate(-tx, -ty)
+			}
+
+			if (showExclusivesInfo) {
+				val exclusiveInfo = exclusives[item.primaryAssetName]
+				if (exclusiveInfo != null) {
+					val oldTransform = ctx.transform
+					ctx.translate(x, y)
+					ctx.scale(0.75, 0.75)
+					drawViolator(ctx, 0f, 0f, if (exclusiveInfo.type == ExclusivesType.UNIQUE) EViolatorIntensity.Low else EViolatorIntensity.High, exclusiveInfo.reason, path)
+					ctx.transform = oldTransform
+				}
 			}
 		}
 	}

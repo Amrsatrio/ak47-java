@@ -30,6 +30,7 @@ public class BotConfig {
 	public long sessionLifetimeMinutes = 40;
 	public int maxSessions = 3000;
 	public String devAffiliateName;
+	public String exclusivesCsvUrl;
 
 	public boolean slashCommandsEnabled = false;
 	public long homeGuildId;

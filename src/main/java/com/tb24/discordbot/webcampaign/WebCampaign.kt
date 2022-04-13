@@ -2,6 +2,7 @@ package com.tb24.discordbot.webcampaign
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.to
@@ -29,7 +30,7 @@ class WebCampaign(val okHttpClient: OkHttpClient, val domainName: String) {
 		private val LOGGER = LoggerFactory.getLogger(WebCampaign::class.java)
 		private val environments = ConcurrentHashMap<String, JsonObject>()
 		private val localizations = ConcurrentHashMap<String, JsonObject>()
-		private val DEBUG = true
+		private val DEBUG = DiscordBot.ENV == "dev"
 	}
 
 	private var ws: WebSocket? = null
