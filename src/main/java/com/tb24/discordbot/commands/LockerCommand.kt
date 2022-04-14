@@ -9,8 +9,10 @@ import com.mojang.brigadier.arguments.StringArgumentType.*
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.DiscordBot
+import com.tb24.discordbot.Rune
 import com.tb24.discordbot.images.GenerateLockerImageParams
 import com.tb24.discordbot.images.generateLockerImage
+import com.tb24.discordbot.item.*
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
@@ -18,6 +20,7 @@ import com.tb24.fn.model.McpVariantReader
 import com.tb24.fn.model.assetdata.CustomDynamicColorSwatch
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.commands.subgame.SetItemFavoriteStatusBatch
 import com.tb24.fn.util.*
 import me.fungames.jfortniteparse.fort.exports.AthenaCosmeticItemDefinition
 import me.fungames.jfortniteparse.fort.exports.AthenaItemWrapDefinition
@@ -80,6 +83,18 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		.then(argument("type", word())
 			.executes { type(it.source, parseCosmeticType(getString(it, "type"))) }
 		)
+		.then(literal("exclusives")
+			.executes { exclusives(it.source, EnumSet.of(ExclusivesType.EXCLUSIVE)) }
+			.then(literal("favoriteall").executes { exclusivesUpdateFavorite(it.source, true) })
+			.then(literal("unfavoriteall").executes { exclusivesUpdateFavorite(it.source, false) })
+			.then(literal("test").requires(Rune::isBotDev).executes { exclusivesTest(it.source) })
+		)
+		.then(literal("uniques")
+			.executes { exclusives(it.source, EnumSet.of(ExclusivesType.UNIQUE)) }
+		)
+		.then(literal("exclusivesanduniques")
+			.executes { exclusives(it.source, EnumSet.allOf(ExclusivesType::class.java)) }
+		)
 		.then(literal("fortnitegg")
 			.executes { fortniteGG(it.source) }
 		)
@@ -112,6 +127,17 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 					executeText(it)
 				}
 			}
+		)
+		.then(group("exclusives", "Shows your exclusive cosmetics in an image.")
+			.then(subcommand("view", "Shows your exclusive cosmetics in an image.").executes { exclusives(it, EnumSet.of(ExclusivesType.EXCLUSIVE)) })
+			.then(subcommand("favoriteall", "Favorites all of your exclusives.").executes { exclusivesUpdateFavorite(it, true) })
+			.then(subcommand("unfavoriteall", "Unfavorites all of your exclusives.").executes { exclusivesUpdateFavorite(it, false) })
+		)
+		.then(subcommand("uniques", "Shows your \"unique\" cosmetics in an image.")
+			.executes { exclusives(it, EnumSet.of(ExclusivesType.UNIQUE)) }
+		)
+		.then(subcommand("exclusives-and-uniques", "Shows your exclusive and \"unique\" cosmetics in an image.")
+			.executes { exclusives(it, EnumSet.allOf(ExclusivesType::class.java)) }
 		)
 		.then(subcommand("fortnitegg", "Shows your BR locker in Fortnite.GG website.")
 			.executes(::fortniteGG)
@@ -157,6 +183,57 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		val items = getLockerItems(source.api.profileManager.getProfileData("athena"), filterType)
 		source.loading("Generating and uploading image")
 		generateAndSendLockerImage(source, items, GenerateLockerImageParams(names[filterType], icons[filterType])).await()
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun exclusives(source: CommandSourceStack, types: EnumSet<ExclusivesType>): Int {
+		source.ensureSession()
+		source.loading("Getting cosmetics")
+		CompletableFuture.allOf(
+			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "common_core"),
+			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena")
+		).await()
+		val commonCore = source.api.profileManager.getProfileData("common_core")
+		val athena = source.api.profileManager.getProfileData("athena")
+		val items = getExclusiveItems(setOf(commonCore, athena), types, false)
+		source.loading("Generating and uploading image")
+		generateAndSendLockerImage(source, items, GenerateLockerImageParams("Exclusives", "/Game/Athena/UI/Frontend/Art/T_UI_BP_BattleStar_L.T_UI_BP_BattleStar_L", showExclusivesInfo = true)).await()
+			?: throw SimpleCommandExceptionType(LiteralMessage("No Exclusives.")).create()
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun exclusivesTest(source: CommandSourceStack): Int {
+		val items = exclusives.values.map { FortItemStack(it.templateId, 1) }
+		source.loading("Generating and uploading image")
+		generateAndSendLockerImage(source, items, GenerateLockerImageParams("Exclusives", "/Game/Athena/UI/Frontend/Art/T_UI_BP_BattleStar_L.T_UI_BP_BattleStar_L", showExclusivesInfo = true)).await()
+			?: throw SimpleCommandExceptionType(LiteralMessage("No Exclusives.")).create()
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun exclusivesUpdateFavorite(source: CommandSourceStack, favorite: Boolean): Int {
+		source.ensureSession()
+		source.loading("Getting cosmetics")
+		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+		val athena = source.api.profileManager.getProfileData("athena")
+		val items = getExclusiveItems(setOf(athena), EnumSet.of(ExclusivesType.EXCLUSIVE), true)
+		val toFavorite = items.filter { it.attributes.getBoolean("favorite") != favorite }
+		if (toFavorite.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage(if (favorite) "Nothing to favorite." else "Nothing to unfavorite.")).create()
+		}
+		val embed = source.createEmbed().setColor(COLOR_WARNING)
+			.setDescription((if (favorite) "Favorite **%,d** of **%,d** exclusive items?" else "Unfavorite **%,d** of **%,d** exclusive items?").format(toFavorite.size, items.size))
+		val confirmationMsg = source.complete(null, embed.build(), confirmationButtons())
+		if (!confirmationMsg.awaitConfirmation(source.author).await()) {
+			source.complete("👌 Alright.")
+			return Command.SINGLE_SUCCESS
+		}
+		source.api.profileManager.dispatchClientCommandRequest(SetItemFavoriteStatusBatch().apply {
+			itemIds = toFavorite.map { it.itemId }.toTypedArray()
+			itemFavStatus = BooleanArray(toFavorite.size) { favorite }.toTypedArray()
+		}, "athena").await()
+		confirmationMsg.editMessageEmbeds(embed.setColor(COLOR_SUCCESS)
+			.setDescription("✅ " + (if (favorite) "Favorited %,d exclusives!" else "Unfavorited %,d exclusives!").format(toFavorite.size))
+			.build()).complete()
 		return Command.SINGLE_SUCCESS
 	}
 

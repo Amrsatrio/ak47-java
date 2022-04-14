@@ -8,10 +8,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.commands.CommandSourceStack
-import com.tb24.discordbot.util.Utils
-import com.tb24.discordbot.util.exec
-import com.tb24.discordbot.util.safeGetOneIndexed
-import com.tb24.discordbot.util.sortedFriends
+import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.EExternalAuthType
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.friends.FriendV2
@@ -34,28 +31,9 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 
 	val separator = ';'
 
-	private fun StringReader.checkConsumed() {
-		if (canRead() && peek() != separator && peek() != ' ') {
-			throw SimpleCommandExceptionType(LiteralMessage("Unrecognized argument")).createWithContext(this)
-		}
-	}
-
-	private fun StringReader.readString0(): String {
-		if (!canRead()) {
-			return ""
-		}
-		if (StringReader.isQuotedStringStart(peek())) {
-			return readQuotedString()
-		}
-		val start = cursor
-		while (canRead() && peek() != separator && (greedy || peek() != ' ')) {
-			skip()
-		}
-		return string.substring(start, cursor)
-	}
-
 	override fun parse(reader: StringReader): Result {
 		val ids = mutableListOf<Any>()
+		val terminators = if (greedy) hashSetOf(' ', separator) else hashSetOf(separator)
 		var hasNext = reader.canRead() && reader.peek() != ' '
 		while (hasNext) {
 			val isHashtag = reader.peek() == '#'
@@ -63,9 +41,9 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 				reader.skip()
 				ids.add(FriendEntryQuery(reader.readInt(), reader))
 			} else { // display name, email, or account id
-				ids.add(reader.readString0())
+				ids.add(reader.readString0(terminators))
 			}
-			reader.checkConsumed()
+			reader.checkConsumed(terminators)
 			hasNext = if (reader.canRead() && reader.peek() == separator) {
 				reader.skip()
 				true

@@ -3,9 +3,11 @@ package com.tb24.discordbot.util
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.StringReader
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.CommandSyntaxException
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
@@ -339,6 +341,26 @@ fun <T> Array<T>.safeGetOneIndexed(index: Int, reader: StringReader? = null, sta
 		throw if (reader != null) type.createWithContext(reader.apply { cursor = start }, index, size) else type.create(index, size)
 	}
 	return get(index - 1)
+}
+
+fun StringReader.checkConsumed(constraint: Set<Char>) {
+	if (canRead() && peek() !in constraint) {
+		throw SimpleCommandExceptionType(LiteralMessage("Unrecognized argument")).createWithContext(this)
+	}
+}
+
+fun StringReader.readString0(terminators: Set<Char>): String {
+	if (!canRead()) {
+		return ""
+	}
+	if (StringReader.isQuotedStringStart(peek())) {
+		return readQuotedString()
+	}
+	val start = cursor
+	while (canRead() && peek() !in terminators) {
+		skip()
+	}
+	return string.substring(start, cursor)
 }
 
 fun confirmationButtons() = ActionRow.of(

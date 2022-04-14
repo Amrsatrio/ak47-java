@@ -4,8 +4,8 @@ import com.google.gson.JsonParser
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.commands.CommandSourceStack
-import com.tb24.discordbot.commands.ExclusivesType
-import com.tb24.discordbot.commands.exclusives
+import com.tb24.discordbot.item.ExclusivesType
+import com.tb24.discordbot.item.exclusives
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
@@ -197,7 +197,7 @@ fun generateLockerImage(items: List<FortItemStack>, params: GenerateLockerImageP
 			}
 
 			if (showExclusivesInfo) {
-				val exclusiveInfo = exclusives[item.primaryAssetName]
+				val exclusiveInfo = exclusives[item.templateId.toLowerCase()]
 				if (exclusiveInfo != null) {
 					val oldTransform = ctx.transform
 					ctx.translate(x, y)

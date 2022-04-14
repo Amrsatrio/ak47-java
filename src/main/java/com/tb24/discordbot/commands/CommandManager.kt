@@ -108,7 +108,6 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(DumpSaveGameCommand())
 		register(EmbedCommand())
 		register(ExchangeCommand())
-		register(ExclusivesCommand())
 		register(ExpeditionsCommand())
 		register(ExportObjectCommand())
 		register(FishCollectionCommand())
