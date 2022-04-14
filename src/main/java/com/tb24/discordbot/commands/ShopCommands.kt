@@ -265,7 +265,7 @@ private fun execBuyAllCampaign(source: CommandSourceStack): Int {
 	catalogManager.ensureCatalogData(source.client.internalSession.api)
 	val result = buyAll(source.session)
 	if (result.purchasedItems.isEmpty()) {
-		source.complete(null, source.createEmbed().setColor(BrigadierCommand.COLOR_ERROR).setDescription(if (result.ownedAll) "❌ You already own everything." else "❌ Not enough gold to purchase the remaining offers.").build())
+		source.complete(null, source.createEmbed().setColor(BrigadierCommand.COLOR_ERROR).setDescription(if (result.ownedAll) "✅ You already own everything. Balance: %,d gold.".format(result.finalBalance) else "❌ Not enough gold to purchase the remaining offers.").build())
 	} else {
 		source.complete(null, source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS).setTitle("✅ Purchased:").setDescription(result.purchasedItems.joinToString("\n")).setFooter("Total spent: %,d".format(result.totalSpent)).build())
 	}

@@ -200,7 +200,6 @@ fun executeMtxAlerts(source: CommandSourceStack, campaign: McpProfile? = null): 
 	if (source.channel is NewsChannel) {
 		message.crosspost().queue()
 	}
-	if (embed.fields.isEmpty()) message.addReaction("a:spoingbob:849313537142554684").complete()
 	return Command.SINGLE_SUCCESS
 }
 
