@@ -33,7 +33,7 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 
 	override fun parse(reader: StringReader): Result {
 		val ids = mutableListOf<Any>()
-		val terminators = if (greedy) hashSetOf(' ', separator) else hashSetOf(separator)
+		val terminators = if (greedy) hashSetOf(separator) else hashSetOf(' ', separator)
 		var hasNext = reader.canRead() && reader.peek() != ' '
 		while (hasNext) {
 			val isHashtag = reader.peek() == '#'
