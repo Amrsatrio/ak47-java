@@ -5,6 +5,7 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.item.ItemComparator
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
@@ -48,21 +49,7 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 			}
 			val items = EpicApi.GSON.fromJson(prerolledOffer.attributes.getAsJsonArray("items"), Array<McpLootEntry>::class.java)
 				.map { it.asItemStack() }
-				.sortedWith { a, b ->
-					val aRarity = a.rarity
-					val bRarity = b.rarity
-					if (aRarity != bRarity) {
-						bRarity.compareTo(aRarity)
-					} else {
-						val aRating = a.powerLevel
-						val bRating = b.powerLevel
-						if (aRating != bRating) {
-							bRating.compareTo(aRating)
-						} else {
-							a.templateId.compareTo(b.templateId)
-						}
-					}
-				}
+				.sortedWith(ItemComparator)
 			llamas.add(sd.friendlyName to items)
 		}
 		source.replyPaginated(llamas, 1) { content, page, pageCount ->

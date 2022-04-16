@@ -50,6 +50,7 @@ public class BotConfig {
 	public String proxyUsername;
 	public String proxyPassword;
 	public String proxyDomainFormat;
+	public int proxyPort;
 
 	public EGameFileLoadOption loadGameFiles = EGameFileLoadOption.Local;
 	public String gamePath = "C:\\Program Files\\Epic Games\\Fortnite\\FortniteGame\\Content\\Paks";

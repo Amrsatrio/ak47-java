@@ -49,9 +49,10 @@ class Session(val client: DiscordBot, val id: String, private var persistent: Bo
 	init {
 		var client = client.okHttpClient
 		val proxyHost = pickProxyHost()
+		val proxyPort = BotConfig.get().proxyPort
 		if (proxyHost != null) {
 			client = client.newBuilder()
-				.proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxyHost, 3128)))
+				.proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress(proxyHost, proxyPort)))
 				.proxyAuthenticator(ProxyManager.PROXY_AUTHENTICATOR)
 				.build()
 		}

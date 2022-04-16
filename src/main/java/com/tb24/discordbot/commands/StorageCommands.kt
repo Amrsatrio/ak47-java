@@ -29,12 +29,12 @@ class OutpostCommand : BrigadierCommand("storage", "Shows your STW storage inven
 
 private fun execute(source: CommandSourceStack, profileId: String, name: String): Int {
 	source.ensureSession()
-	source.loading("Loading storage data")
+	source.loading("Loading inventory")
 	source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), profileId).await()
 	val outpost = source.api.profileManager.getProfileData(profileId)
 	val entries = outpost.items.values.map { FortItemStack(it) }
 		.filter { it.defData !is FortBuildingItemDefinition }
-		.sortedWith(ItemComparator())
+		.sortedWith(ItemComparator)
 	source.replyPaginated(entries, 30) { content, page, pageCount ->
 		val embed = source.createEmbed()
 			.setTitle(name)

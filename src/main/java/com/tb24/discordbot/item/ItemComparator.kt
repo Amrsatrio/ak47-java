@@ -2,7 +2,7 @@ package com.tb24.discordbot.item
 
 import com.tb24.fn.model.FortItemStack
 
-class ItemComparator : Comparator<FortItemStack> {
+object ItemComparator : Comparator<FortItemStack> {
 	override fun compare(a: FortItemStack, b: FortItemStack): Int {
 		val aRating = a.powerLevel
 		val bRating = b.powerLevel

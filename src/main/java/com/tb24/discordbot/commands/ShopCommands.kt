@@ -265,9 +265,9 @@ private fun execBuyAllCampaign(source: CommandSourceStack): Int {
 	catalogManager.ensureCatalogData(source.client.internalSession.api)
 	val result = buyAll(source.session)
 	if (result.purchasedItems.isEmpty()) {
-		source.complete(null, source.createEmbed().setColor(BrigadierCommand.COLOR_ERROR).setDescription(if (result.ownedAll) "✅ You already own everything. Balance: %,d gold.".format(result.finalBalance) else "❌ Not enough gold to purchase the remaining offers.").build())
+		source.complete(null, source.createEmbed().setColor(BrigadierCommand.COLOR_ERROR).setDescription(if (result.ownedAll) "✅ You already own everything. Balance: %,d gold.".format(result.finalBalance) else "❌ %,d gold needed to purchase the remaining %,d item%s. Balance: %,d gold.".format(result.neededGold, result.notEnoughBalanceItems.size, if (result.notEnoughBalanceItems.size == 1) "" else "s", result.finalBalance)).build())
 	} else {
-		source.complete(null, source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS).setTitle("✅ Purchased:").setDescription(result.purchasedItems.joinToString("\n")).setFooter("Total spent: %,d".format(result.totalSpent)).build())
+		source.complete(null, source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS).setTitle("✅ Purchased:").setDescription(result.purchasedItems.joinToString("\n")).setFooter("Total spent: %,d. Balance: %,d gold.".format(result.totalSpent, result.finalBalance)).build())
 	}
 	return Command.SINGLE_SUCCESS
 }
@@ -294,21 +294,20 @@ private fun execBuyAllCampaignBulk(source: CommandSourceStack, users: Map<String
 			return@forEachSavedAccounts null
 		}
 		embed.addField(it.api.currentLoggedIn.displayName, when {
-			result.ownedAll -> "✅ You already own everything. Balance: %,d gold.".format(result.finalBalance)
+			result.ownedAll -> "✅ You already own everything."
 			result.totalSpent != 0 -> when {
 				result.notEnoughBalanceItems.isNotEmpty() -> "⚠ Purchased %,d/%,d items. %,d gold needed to purchase the remaining %,d item%s.".format(
 					result.purchasedItems.size, result.totalItems,
 					result.neededGold, result.notEnoughBalanceItems.size, if (result.notEnoughBalanceItems.size == 1) "" else "s"
 				)
-				else -> "✅ Purchased %s %,d items. %,d gold remaining.".format(
-					if (result.purchasedItems.size == result.totalItems) "all" else "remaining", result.purchasedItems.size,
-					result.finalBalance
+				else -> "✅ Purchased %s %,d items.".format(
+					if (result.purchasedItems.size == result.totalItems) "all" else "remaining", result.purchasedItems.size
 				)
 			}
 			else -> "❌ %,d gold needed to purchase the remaining %,d item%s.".format(
 				result.neededGold, result.notEnoughBalanceItems.size, if (result.notEnoughBalanceItems.size == 1) "" else "s"
 			)
-		}, false)
+		} + " Balance: %,d gold.".format(result.finalBalance), false)
 	}
 	source.complete(null, embed.build())
 	return Command.SINGLE_SUCCESS
