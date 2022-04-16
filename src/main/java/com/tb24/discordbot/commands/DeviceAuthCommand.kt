@@ -14,14 +14,19 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.commands.arguments.StringArgument2
+import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
+import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.DeviceAuth
+import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.util.EAuthClient
 import com.tb24.fn.util.getString
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.exceptions.ErrorResponseException
+import net.dv8tion.jda.api.interactions.components.ActionRow
+import net.dv8tion.jda.api.interactions.components.buttons.Button
 
 class DeviceAuthCommand : BrigadierCommand("devices", "Device auth operation commands.", arrayOf("device")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -43,9 +48,63 @@ class DeviceAuthCommand : BrigadierCommand("devices", "Device auth operation com
 			)
 		)
 		.then(literal("export").executes { devicesExport(it.source) })
+		.then(literal("reorder")
+			.then(argument("savedAccount", users(1))
+				.executes { reorder(it.source, getUsers(it, "savedAccount").values.first()) }
+			)
+		)
 
 	override fun getSlashCommand(): BaseCommandBuilder<CommandSourceStack>? {
 		return super.getSlashCommand() // TODO
+	}
+
+	private fun reorder(source: CommandSourceStack, toReorder: GameProfile): Int {
+		source.conditionalUseInternalSession()
+		val devices = source.client.savedLoginsManager.getAll(source.author.id).toMutableList()
+		if (devices.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("You don't have saved logins. Please perform `.savelogin` before continuing.")).create()
+		}
+		source.queryUsers_map(devices.map { it.accountId })
+		val index = devices.indexOfFirst { it.accountId == toReorder.id }
+		if (index == -1) {
+			throw SimpleCommandExceptionType(LiteralMessage("You don't have that account saved.")).create()
+		}
+		var currentIndex = index
+
+		fun swap(to: Int) {
+			val temp = devices[to]
+			devices[to] = devices[currentIndex]
+			devices[currentIndex] = temp
+			currentIndex = to
+		}
+
+		while (true) {
+			val description = devices.mapIndexed { i, device ->
+				val accountId = device.accountId
+				val s = "`%,d` %s".format(i + 1, source.userCache[accountId]?.displayName?.escapeMarkdown() ?: accountId)
+				if (i == currentIndex) "**$s <<<**" else s
+			}
+			val buttons = ActionRow.of(
+				Button.secondary("first", "⏮").withDisabled(currentIndex == 0),
+				Button.secondary("prev", "◀").withDisabled(currentIndex == 0),
+				Button.secondary("next", "▶").withDisabled(currentIndex == devices.size - 1),
+				Button.secondary("last", "⏭").withDisabled(currentIndex == devices.size - 1),
+			)
+			val message = source.complete(null, EmbedBuilder().setColor(0x8AB4F8)
+				.setTitle("Reorder accounts")
+				.setDescription(description.joinToString("\n"))
+				.setFooter("Changes are saved automatically")
+				.build(), buttons)
+			source.loadingMsg = message
+			when (message.awaitOneInteraction(source.author, false, 30000L).componentId) {
+				"first" -> swap(0)
+				"prev" -> swap(currentIndex - 1)
+				"next" -> swap(currentIndex + 1)
+				"last" -> swap(devices.size - 1)
+				else -> return 0
+			}
+			source.client.savedLoginsManager.putAll(source.author.id, devices)
+		}
 	}
 }
 

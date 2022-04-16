@@ -29,6 +29,19 @@ class SavedLoginsManager(private val conn: Connection) {
 		return true
 	}
 
+	fun putAll(sessionId: String, devices: MutableList<DeviceAuth>): Boolean {
+		val dbEntry = r.table("devices").get(sessionId).run(conn, Entry::class.java).first()
+		val newContents = Entry()
+		newContents.id = sessionId
+		newContents.devices = devices
+		if (dbEntry != null) {
+			r.table("devices").update(newContents)
+		} else {
+			r.table("devices").insert(newContents)
+		}.run(conn)
+		return true
+	}
+
 	fun removeAll(sessionId: String) {
 		r.table("devices").get(sessionId).delete().run(conn)
 	}

@@ -191,7 +191,7 @@ private inline fun accountPicker_buttons(source: CommandSourceStack, devices: Li
 private inline fun accountPicker_prompt(source: CommandSourceStack, devices: List<DeviceAuth>, users: List<GameProfile>): Int {
 	val description = devices.mapIndexed { i, device ->
 		val accountId = device.accountId
-		"`${Formatters.num.format(i + 1)}` ${users.firstOrNull { it.id == accountId }?.displayName ?: accountId}"
+		"`${Formatters.num.format(i + 1)}` ${users.firstOrNull { it.id == accountId }?.displayName?.escapeMarkdown() ?: accountId}"
 	}
 	source.complete(null, EmbedBuilder().setColor(0x8AB4F8)
 		.setTitle("Pick an account")
