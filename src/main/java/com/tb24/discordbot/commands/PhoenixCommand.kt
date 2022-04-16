@@ -46,6 +46,7 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 				Command.SINGLE_SUCCESS
 			}
 		)
+		.then(literal("backpack").executes { executeInventory(it.source, "theater2", "Ventures Backpack") })
 
 	private fun display(source: CommandSourceStack, campaign: McpProfile): Int {
 		source.ensureCompletedCampaignTutorial(campaign)

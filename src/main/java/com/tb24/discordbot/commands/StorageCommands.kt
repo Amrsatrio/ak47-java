@@ -15,19 +15,19 @@ import net.dv8tion.jda.api.MessageBuilder
 
 class BackpackCommand : BrigadierCommand("backpack", "Shows your STW backpack inventory.", arrayOf("inventory", "inv", "theater0")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { execute(it.source, "theater0", "Backpack") }
+		.executes { executeInventory(it.source, "theater0", "Backpack") }
 
-	override fun getSlashCommand() = newCommandBuilder().executes { execute(it, "theater0", "Backpack") }
+	override fun getSlashCommand() = newCommandBuilder().executes { executeInventory(it, "theater0", "Backpack") }
 }
 
-class OutpostCommand : BrigadierCommand("storage", "Shows your STW storage inventory.", arrayOf("outpost")) {
+class StorageCommand : BrigadierCommand("storage", "Shows your STW storage inventory.", arrayOf("outpost")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { execute(it.source, "outpost0", "Storage") }
+		.executes { executeInventory(it.source, "outpost0", "Storage") }
 
-	override fun getSlashCommand() = newCommandBuilder().executes { execute(it, "outpost", "Storage") }
+	override fun getSlashCommand() = newCommandBuilder().executes { executeInventory(it, "outpost0", "Storage") }
 }
 
-private fun execute(source: CommandSourceStack, profileId: String, name: String): Int {
+fun executeInventory(source: CommandSourceStack, profileId: String, name: String): Int {
 	source.ensureSession()
 	source.loading("Loading inventory")
 	source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), profileId).await()
@@ -39,7 +39,7 @@ private fun execute(source: CommandSourceStack, profileId: String, name: String)
 		val embed = source.createEmbed()
 			.setTitle(name)
 			.setFooter("Page %d/%d".format(page + 1, pageCount))
-		embed.setDescription(content.joinToString { it.render() })
+		embed.setDescription(content.joinToString("\n") { it.render() })
 		MessageBuilder(embed)
 	}
 	return Command.SINGLE_SUCCESS
