@@ -14,6 +14,8 @@ import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.commands.CommandSourceStack
 import com.tb24.discordbot.commands.rarityData
+import com.tb24.discordbot.item.ItemTypeResolver
+import com.tb24.discordbot.item.ItemUtils
 import com.tb24.discordbot.managers.managerData
 import com.tb24.fn.EpicApi
 import com.tb24.fn.ProfileManager
@@ -217,16 +219,71 @@ fun FortItemStack.getShortDescription(bPickFromDefData: Boolean = true): FText {
 	}
 }
 
-fun FortItemStack.render(displayQty: Int = quantity, showType: Boolean = false): String {
+fun FortItemStack.render(displayQty: Int = quantity, showType: Boolean = false, useDefaultRarityEmote: Boolean = false): String {
+	var showType = showType
+	var itemTypeResolver: ItemTypeResolver? = null
+	val sb = StringBuilder()
+
+	// Rarity
+	if (useDefaultRarityEmote) {
+		val defaultRarityEmotes = listOf( "⬜", "🟩", "🟦", "🟪", "🟧", "🟨")
+		sb.append(defaultRarityEmotes[rarity.ordinal])
+	} else {
+		sb.append(getEmoteByName(rarity.name.toLowerCase() + '2')?.asMention ?: rarity.rarityName.format())
+	}
+	sb.append(' ')
+
+	// Quantity
+	if (displayQty > 1) {
+		sb.append(Formatters.num.format(displayQty) + " \u00d7 ")
+	}
+
+	// Icons
+	if (defData is FortAccountItemDefinition) {
+		if (itemTypeResolver == null) {
+			itemTypeResolver = ItemTypeResolver.resolveItemType(this)
+		}
+		textureEmote(itemTypeResolver.middleImg)?.let { sb.append(it.asMention) }
+		textureEmote(itemTypeResolver.rightImg)?.let { sb.append(it.asMention) }
+		textureEmote(itemTypeResolver.leftImg)?.let { sb.append(it.asMention) }
+		sb.append(' ')
+	}
+
+	// Level
+	val level = level
+	if (level > 0) {
+		sb.append("Lv%,d ".format(level))
+	}
+
+	// Tier name
+	(transformedDefData as? FortWeaponItemDefinition)?.DisplayTier?.let {
+		sb.append(ItemUtils.getDisplayTierFmtString(it).format() + ' ')
+	}
+
+	// Display name
 	var dn = displayName
 	if (dn.isEmpty() && defData is FortWorkerType) {
 		val asWorker = defData as FortWorkerType
-		dn = defData.Rarity.rarityName.format() + ' ' + if (asWorker.bIsManager) "Lead Survivor" else "Survivor"
+		dn = if (asWorker.bIsManager) "Lead Survivor" else "Survivor"
+		showType = false
+	}
+	if (dn.isEmpty() && defData is FortDefenderItemDefinition) {
+		if (itemTypeResolver == null) {
+			itemTypeResolver = ItemTypeResolver.resolveItemType(this)
+		}
+		dn = itemTypeResolver.tertiaryCategory?.CategoryName?.format() ?: "Defender"
 	}
 	if (dn.isEmpty()) {
 		dn = primaryAssetName
 	}
-	return (if (displayQty > 1) Formatters.num.format(displayQty) + " \u00d7 " else "") + dn + (if (showType) " ($shortDescription)" else "")
+	sb.append(dn)
+
+	// Type
+	if (showType) {
+		sb.append(" ($shortDescription)")
+	}
+
+	return sb.toString()
 }
 
 fun FortItemStack.renderWithIcon(displayQty: Int = quantity, bypassWhitelist: Boolean = false, showType: Boolean = false): String {

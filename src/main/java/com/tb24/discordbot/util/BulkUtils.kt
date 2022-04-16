@@ -22,9 +22,15 @@ fun <T> stwBulk(source: CommandSourceStack, usersLazy: Lazy<Collection<GameProfi
 		throw SimpleCommandExceptionType(LiteralMessage("No users that we can display.")).create()
 	}
 	source.loading("Querying STW data for %,d user(s)".format(users.size))
-	CompletableFuture.allOf(*users.map {
-		source.api.profileManager.dispatchPublicCommandRequest(it, QueryPublicProfile(), "campaign")
-	}.toTypedArray()).await()
+	try {
+		CompletableFuture.allOf(*users.map {
+			source.api.profileManager.dispatchPublicCommandRequest(it, QueryPublicProfile(), "campaign")
+		}.toTypedArray()).await()
+	} catch (e: HttpException) {
+		val id = e.epicError.errorMessage.substringAfter("to account ").substringBefore(" profile")
+		val account = source.userCache[id]
+		source.channel.sendMessage("Failed to query STW data for %s".format(if (account == null) id else account.displayName)).queue()
+	}
 	val results = mutableListOf<T>()
 	for (user in users) {
 		val campaign = source.api.profileManager.getProfileData(user.id, "campaign") ?: continue

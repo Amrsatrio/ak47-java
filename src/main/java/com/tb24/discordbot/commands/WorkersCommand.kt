@@ -154,12 +154,12 @@ class WorkerSquadsCommand : BrigadierCommand("survivorsquads", "Shows your or a 
 private fun renderWorker(item: FortItemStack, nothing: String = getEmoteByName("nothing")?.asMention ?: ""): String {
 	val itemTypeResolver = ItemTypeResolver.resolveItemType(item)
 	val dn = item.displayName
-	return "%s%s%s%s %,d%s".format(
+	return "%s%s%s%s Lv%,d%s".format(
 		getEmoteByName(item.rarity.name.toLowerCase() + '2')?.asMention ?: nothing,
 		textureEmote(itemTypeResolver.leftImg)?.asMention ?: nothing,
 		textureEmote(itemTypeResolver.middleImg)?.asMention ?: nothing,
 		textureEmote(itemTypeResolver.rightImg)?.asMention ?: nothing,
 		item.attributes["level"]?.asInt ?: 0,
-		if (dn.isNotEmpty()) " \u2014 $dn" else ""
+		if (dn.isNotEmpty()) " $dn" else ""
 	)
 }

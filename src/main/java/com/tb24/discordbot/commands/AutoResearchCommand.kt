@@ -47,16 +47,22 @@ class AutoResearchCommand : BrigadierCommand("autoresearch", "Enroll/unenroll yo
 		}
 		if (user == null) {
 			val users = source.queryUsers(devices.map { it.accountId })
-			source.complete(null, EmbedBuilder()
+			val embed = EmbedBuilder()
 				.setTitle("Auto research")
 				.setDescription("Enroll/unenroll an account by typing the account number. ⏱ 30s")
-				.addField("Your saved accounts", List(devices.size) { i ->
-					val id = devices[i].accountId
-					val enrollment = autoClaimEntries.firstOrNull { it.id == id && it.registrantId == discordId }
-					"${Formatters.num.format(i + 1)}. ${users.firstOrNull { it.id == id }?.displayName ?: id}${if (enrollment != null) " ✅ " + enrollment.nextRun.relativeFromNow() else ""}"
-				}.joinToString("\n"), false)
 				.setColor(0x8AB4F8)
-				.build())
+			var first = 1
+			var i = 0
+			devices.chunked(30) {
+				val text = StringBuilder()
+				it.forEach { device ->
+					val enrollment = autoClaimEntries.firstOrNull { it.id == device.accountId && it.registrantId == discordId }
+					text.append("${Formatters.num.format(++i)}. ${users.firstOrNull { it.id == device.accountId }?.displayName ?: device.accountId}${if (enrollment != null) " ✅ " + enrollment.nextRun.relativeFromNow() else ""}\n")
+				}
+				embed.addField("$first - $i", text.toString(), true)
+				first = i + 1
+			}
+			source.complete(null, embed.build())
 			val choice = source.channel.awaitMessages({ _, user, _ -> user == source.author }, AwaitMessagesOptions().apply {
 				max = 1
 				time = 30000

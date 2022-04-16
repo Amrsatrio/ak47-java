@@ -39,7 +39,9 @@ class EvalCommand : BrigadierCommand("eval", "Evaluate an expression for debuggi
 			synchronized(engine) {
 				engine.getBindings("js").apply {
 					putMember("client", source.client)
+					putMember("M", source.client)
 					putMember("source", source)
+					putMember("S", source)
 					putMember("config", BotConfig.get())
 					putMember("db", source.client.dbConn)
 				}

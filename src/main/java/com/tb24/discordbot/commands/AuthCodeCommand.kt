@@ -20,7 +20,7 @@ class AuthCodeCommand : BrigadierCommand("authcode", "Generates a link to the au
 
 	private fun execute(source: CommandSourceStack, clientId: String? = null): Int {
 		source.ensureSession()
-		source.api.accountService.verify(false).exec()
+		source.api.accountService.verify(null).exec()
 		source.warnCodeToken()
 		val clientId = if (clientId != null) {
 			EAuthClient.values().firstOrNull { it.name.replace("_", "").equals(clientId, true) }?.clientId ?: clientId

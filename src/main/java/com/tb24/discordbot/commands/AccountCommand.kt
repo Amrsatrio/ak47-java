@@ -42,6 +42,7 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		val source = c.source
 		source.ensurePremium("View more account info")
 		source.ensureSession()
+		source.api.accountService.verify(null).exec()
 		if (!source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
 				.setTitle("✋ Hold up!")
 				.setDescription("You're about to view the account details of ${source.api.currentLoggedIn.displayName}. Some of the data that we will send here might be sensitive, such as real name or Facebook name. We don't recommend to proceed if this account isn't yours.\n\nContinue?")

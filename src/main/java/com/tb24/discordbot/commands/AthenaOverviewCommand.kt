@@ -2,10 +2,14 @@ package com.tb24.discordbot.commands
 
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.util.*
 import com.tb24.discordbot.util.Utils
 import com.tb24.fn.model.FortItemStack
+import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.assetdata.AthenaSeasonItemData_Level
 import com.tb24.fn.model.assetdata.AthenaSeasonItemDefinition
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
@@ -16,6 +20,7 @@ import me.fungames.jfortniteparse.fort.exports.FortPersistentResourceItemDefinit
 import me.fungames.jfortniteparse.fort.objects.rows.AthenaExtendedXPCurveEntry
 import me.fungames.jfortniteparse.fort.objects.rows.AthenaSeasonalXPCurveEntry
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
+import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.utils.TimeFormat
 
 val battleStarEmote by lazy { textureEmote("/Game/Athena/UI/Frontend/Art/T_UI_BP_BattleStar_L.T_UI_BP_BattleStar_L") }
@@ -30,6 +35,7 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 		.then(literal("info")
 			.executes { info(it.source) }
 		)
+		.then(literal("bulk").executes { bulk(it.source, null) }.then(argument("bulk users", UserArgument.users(-1)).executes { bulk(it.source, UserArgument.getUsers(it, "bulk users", loadingText = null)) }))
 
 	override fun getSlashCommand() = newCommandBuilder()
 		.then(subcommand("summary", description).executes(::summary))
@@ -167,5 +173,32 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 			return null // free pass, already queried from BookXpScheduleFree
 		} // else battle pass, previously it was queried from BookXpSchedulePaid, now query from BookXpScheduleFree
 		return seasonDef.BookXpScheduleFree.Levels.getOrNull(lookupLevel)?.Rewards?.firstOrNull()?.asItemStack()
+	}
+
+	private fun bulk(source: CommandSourceStack, users: Map<String, GameProfile>?): Int {
+		source.loading("Getting BR data")
+		source.conditionalUseInternalSession()
+		val embed = EmbedBuilder().setColor(COLOR_INFO)
+		val devices = source.client.savedLoginsManager.getAll(source.author.id)
+		if (devices.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("You don't have saved logins. Please perform `.savelogin` before continuing.")).create()
+		}
+		if (users != null && devices.none { it.accountId in users }) {
+			throw SimpleCommandExceptionType(LiteralMessage("You don't have saved accounts that are matching the name(s).")).create()
+		}
+		forEachSavedAccounts(source, if (users != null) devices.filter { it.accountId in users } else devices) {
+			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+			val athena = source.api.profileManager.getProfileData("athena")
+			val stats = athena.stats as AthenaProfileStats
+			val ed = "%s %,d".format((if (stats.book_purchased) battlePassEmote else freePassEmote)?.asMention, stats.level)
+			if (embed.fields.size == 25) {
+				source.complete(null, embed.build())
+				embed.clearFields()
+				source.loading("Getting BR data")
+			}
+			embed.addField(source.api.currentLoggedIn.displayName, ed, true)
+		}
+		source.complete(null, embed.build())
+		return Command.SINGLE_SUCCESS
 	}
 }

@@ -2,13 +2,17 @@ package com.tb24.discordbot.commands
 
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.getSentGiftsWithin24H
+import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import java.util.*
 
@@ -17,6 +21,7 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 		.executes { summary(it.source) }
 		.then(literal("sent").executes { detail(it.source, false) })
 		.then(literal("received").executes { detail(it.source, true) })
+		.then(literal("bulk").executes { bulk(it.source, null) }.then(argument("bulk users", UserArgument.users(-1)).executes { bulk(it.source, UserArgument.getUsers(it, "bulk users", loadingText = null)) }))
 
 	override fun getSlashCommand() = newCommandBuilder()
 		.then(subcommand("summary", description).executes { summary(it) })
@@ -94,6 +99,40 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 				.setFooter("Page %,d of %,d".format(page + 1, pageCount))
 			)
 		}
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun bulk(source: CommandSourceStack, users: Map<String, GameProfile>?): Int {
+		source.ensurePremium("View all the balance of all your accounts at once")
+		source.loading("Getting history")
+		val embed = EmbedBuilder().setColor(COLOR_INFO)
+		val devices = source.client.savedLoginsManager.getAll(source.author.id)
+		if (devices.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("You don't have saved logins. Please perform `.savelogin` before continuing.")).create()
+		}
+		if (users != null && devices.none { it.accountId in users }) {
+			throw SimpleCommandExceptionType(LiteralMessage("You don't have saved accounts that are matching the name(s).")).create()
+		}
+		forEachSavedAccounts(source, if (users != null) devices.filter { it.accountId in users } else devices) {
+			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
+			val commonCore = source.api.profileManager.getProfileData("common_core")
+			val giftHistory = (commonCore.stats as CommonCoreProfileStats).gift_history
+			val within24h = getSentGiftsWithin24H(giftHistory)
+			val nit = StringBuilder()
+			val gt = if (within24h.isEmpty()) {
+				"5 remaining"
+			} else {
+				within24h.joinTo(nit, "\n") { Date(it.date.time + 24L * 60L * 60L * 1000L).relativeFromNow() }
+				"%,d remaining, next%s%s".format(5 - within24h.size, if (within24h.size > 1) ":\n" else " " , nit)
+			}
+			if (embed.fields.size == 25) {
+				source.complete(null, embed.build())
+				embed.clearFields()
+				source.loading("Getting balances")
+			}
+			embed.addField(source.api.currentLoggedIn.displayName, gt, true)
+		}
+		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS
 	}
 

@@ -16,6 +16,7 @@ class ExchangeCommand : BrigadierCommand("exchange", "Generates an exchange code
 
 	private fun execute(source: CommandSourceStack): Int {
 		source.ensureSession()
+		source.api.accountService.verify(null).exec()
 		source.warnCodeToken()
 		source.loading("Generating exchange code")
 		source.api.accountService.exchangeCode.exec().body()!!.apply {
