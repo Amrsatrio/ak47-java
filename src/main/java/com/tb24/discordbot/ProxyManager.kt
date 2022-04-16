@@ -39,12 +39,11 @@ class ProxyManager {
 		} else {
 			val hostsData: Map<String, List<String>> = EpicApi.GSON.fromJson(FileReader(file), object : TypeToken<Map<String, List<String>>>() {}.type)
 			val regionHosts = hostsData.flatMap { it.value }
-
 			LOGGER.info("Found ${regionHosts.size} hosts in $file, testing them")
 			for ((index, host) in regionHosts.withIndex()) {
 				LOGGER.info("Testing $host (${index + 1} of ${regionHosts.size})")
 				val client = OkHttpClient.Builder()
-					.proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress(normalizeDomain(host), 8080)))
+					.proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress(normalizeDomain(host), BotConfig.get().proxyPort)))
 					.proxyAuthenticator(PROXY_AUTHENTICATOR)
 					.connectTimeout(3L, TimeUnit.SECONDS)
 					.build()

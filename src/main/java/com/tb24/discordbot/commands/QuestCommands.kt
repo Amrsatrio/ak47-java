@@ -201,7 +201,7 @@ private fun bulkFilter(source: CommandSourceStack, filter: String): Int {
 		campaign.owner.displayName to filtered
 	}
 	if (entries.isEmpty()) {
-		throw SimpleCommandExceptionType(LiteralMessage("Couldn't find an account with that quest.")).create()
+		throw SimpleCommandExceptionType(LiteralMessage("Couldn't find any accounts with that quest.")).create()
 	}
 	val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
 	for (entry in entries) {
