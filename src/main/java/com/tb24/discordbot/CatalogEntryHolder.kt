@@ -110,7 +110,7 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 			purchasesCount += stats.weekly_purchases.getPurchasesCount(7L)
 		} else if (ce.monthlyLimit >= 0) {
 			purchaseLimit = ce.monthlyLimit
-			purchasesCount += stats.weekly_purchases.getPurchasesCount(30L)
+			purchasesCount += stats.monthly_purchases.getPurchasesCount(30L)
 		}
 	}
 

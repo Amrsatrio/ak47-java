@@ -42,7 +42,7 @@ class HeroLoadoutCommand : BrigadierCommand("heroloadout", "Manages your STW her
 		val isMine = source.api.currentLoggedIn.id == campaign.owner.id
 		val event = CompletableFuture<FortItemStack?>()
 		val available = loadoutsMap.values.toList()
-		source.replyPaginated(available, 1, max(available.indexOfFirst { it.itemId == stats.selected_hero_loadout }, 0), if (isMine) HeroLoadoutReactions(available, event) else null) { content, page, pageCount ->
+		source.replyPaginated(available, 1, max(available.indexOfFirst { it.itemId == stats.selected_hero_loadout }, 0), if (isMine) HeroLoadoutComponents(available, event) else null) { content, page, pageCount ->
 			val loadoutItem = content[0]
 			val loadoutAttrs = loadoutItem.getAttributes(FortCampaignHeroLoadoutItem::class.java)
 			val embed = source.createEmbed(campaign.owner)
@@ -86,10 +86,10 @@ class HeroLoadoutCommand : BrigadierCommand("heroloadout", "Manages your STW her
 		return Command.SINGLE_SUCCESS
 	}
 
-	private class HeroLoadoutReactions(val list: List<FortItemStack>, val event: CompletableFuture<FortItemStack?>) : PaginatorCustomComponents<FortItemStack> {
-		var confirmed = false
+	private class HeroLoadoutComponents(val list: List<FortItemStack>, val event: CompletableFuture<FortItemStack?>) : PaginatorCustomComponents {
+		private var confirmed = false
 
-		override fun modifyComponents(rows: MutableList<ActionRow>) {
+		override fun modifyComponents(rows: MutableList<ActionRow>, page: Int) {
 			rows.add(ActionRow.of(Button.of(ButtonStyle.PRIMARY, "setActive", "Set active", Emoji.fromUnicode("✅"))))
 		}
 

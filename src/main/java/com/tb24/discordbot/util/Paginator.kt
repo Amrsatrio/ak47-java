@@ -13,16 +13,17 @@ import kotlin.math.min
 fun <T> CommandSourceStack.replyPaginated(all: List<T>,
 										  pageSize: Int,
 										  initialPage: Int = 0,
-										  customReactions: PaginatorCustomComponents<T>? = null,
+										  customReactions: PaginatorCustomComponents? = null,
 										  render: (content: List<T>, page: Int, pageCount: Int) -> MessageBuilder) {
 	val pageCount = ceil(all.size / pageSize.toFloat()).toInt()
 	var page = initialPage
 	val builder = render(all.subList(page * pageSize, min(all.size, (page * pageSize) + pageSize)), page, pageCount)
+	val rows = mutableListOf<ActionRow>()
 	if (pageCount <= 1) {
+		customReactions?.modifyComponents(rows, 0)
 		complete(builder.build())
 		return
 	}
-	val rows = mutableListOf<ActionRow>()
 	val pageControlButtons = ActionRow.of(
 		Button.secondary("first", "⏮"),
 		Button.secondary("prev", "◀"),
@@ -30,7 +31,7 @@ fun <T> CommandSourceStack.replyPaginated(all: List<T>,
 		Button.secondary("last", "⏭")
 	)
 	rows.add(pageControlButtons)
-	customReactions?.modifyComponents(rows)
+	customReactions?.modifyComponents(rows, 0)
 	builder.setActionRows(rows)
 	val msg = complete(builder.build())
 	val collector = msg.createMessageComponentInteractionCollector({ _, user, _ -> user?.idLong == author.idLong }, MessageComponentInteractionCollectorOptions().apply {
@@ -72,8 +73,8 @@ fun <T> CommandSourceStack.replyPaginated(all: List<T>,
 	}
 }
 
-interface PaginatorCustomComponents<T> {
-	fun modifyComponents(rows: MutableList<ActionRow>)
+interface PaginatorCustomComponents {
+	fun modifyComponents(rows: MutableList<ActionRow>, page: Int)
 	fun handleComponent(collector: MessageComponentInteractionCollector, item: ComponentInteraction, user: User?, page: Int, pageCount: Int)
 	fun onEnd(collected: Map<Any, ComponentInteraction>, reason: CollectorEndReason)
 }

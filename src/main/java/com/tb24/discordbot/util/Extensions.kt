@@ -334,6 +334,7 @@ fun CatalogItemPrice.emote(): Emote? = when (currencyType) {
 }
 
 fun CatalogItemPrice.render(quantity: Int = 1) = icon() + ' ' + (if (basePrice != -1) Formatters.num.format(quantity * basePrice) else "<unresolved>") + if (regularPrice != basePrice) " ~~${Formatters.num.format(quantity * regularPrice)}~~" else ""
+fun CatalogItemPrice.renderText(quantity: Int = 1) = (if (basePrice != -1) Formatters.num.format(quantity * basePrice) else "<unresolved>") + if (regularPrice != basePrice) " (was: ${Formatters.num.format(quantity * regularPrice)})" else ""
 
 fun CatalogItemPrice.getAccountBalance(profileManager: ProfileManager): Int {
 	if (currencyType == EStoreCurrencyType.MtxCurrency) {
