@@ -57,7 +57,7 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 			val embed = source.createEmbed()
 				.setTitle(name)
 				//.setDescription("Balance: TODO")
-				.addFieldSeparate("Contents", items, 0, true) { it.render(useDefaultRarityEmote = items.size > 10) }
+				.addFieldSeparate("Contents", items, 0, true) { it.render(showRarity = if (items.size > 10) ShowRarityOption.SHOW_DEFAULT_EMOTE else ShowRarityOption.SHOW) }
 				.setFooter("%,d of %,d".format(page + 1, pageCount))
 			MessageBuilder(embed.build())
 		}

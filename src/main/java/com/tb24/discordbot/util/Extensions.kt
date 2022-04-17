@@ -219,19 +219,25 @@ fun FortItemStack.getShortDescription(bPickFromDefData: Boolean = true): FText {
 	}
 }
 
-fun FortItemStack.render(displayQty: Int = quantity, showType: Boolean = false, useDefaultRarityEmote: Boolean = false): String {
+enum class ShowRarityOption {
+	SHOW, SHOW_DEFAULT_EMOTE, HIDE
+}
+
+fun FortItemStack.render(displayQty: Int = quantity, showType: Boolean = false, showRarity: ShowRarityOption = ShowRarityOption.SHOW): String {
 	var showType = showType
 	var itemTypeResolver: ItemTypeResolver? = null
 	val sb = StringBuilder()
 
 	// Rarity
-	if (useDefaultRarityEmote) {
-		val defaultRarityEmotes = listOf( "⬜", "🟩", "🟦", "🟪", "🟧", "🟨")
-		sb.append(defaultRarityEmotes[rarity.ordinal])
-	} else {
-		sb.append(getEmoteByName(rarity.name.toLowerCase() + '2')?.asMention ?: rarity.rarityName.format())
+	if (showRarity != ShowRarityOption.HIDE) {
+		if (showRarity == ShowRarityOption.SHOW_DEFAULT_EMOTE) {
+			val defaultRarityEmotes = listOf("⬜", "🟩", "🟦", "🟪", "🟧", "🟨")
+			sb.append(defaultRarityEmotes[rarity.ordinal])
+		} else {
+			sb.append(getEmoteByName(rarity.name.toLowerCase() + '2')?.asMention ?: rarity.rarityName.format())
+		}
+		sb.append(' ')
 	}
-	sb.append(' ')
 
 	// Quantity
 	if (displayQty > 1) {
@@ -288,7 +294,7 @@ fun FortItemStack.render(displayQty: Int = quantity, showType: Boolean = false, 
 
 fun FortItemStack.renderWithIcon(displayQty: Int = quantity, bypassWhitelist: Boolean = false, showType: Boolean = false): String {
 	transformedDefData // resolves this item if it is FortConditionalResourceItemDefinition
-	return (getItemIconEmoji(this, bypassWhitelist)?.run { "$asMention " } ?: "") + render(displayQty, showType)
+	return (getItemIconEmoji(this, bypassWhitelist)?.run { "$asMention " } ?: "") + render(displayQty, showType = showType, showRarity = ShowRarityOption.HIDE)
 }
 
 fun getSurvivorPersonalityText(personalityTag: String): FText? {
