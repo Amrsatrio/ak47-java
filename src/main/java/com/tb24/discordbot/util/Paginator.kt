@@ -21,7 +21,7 @@ fun <T> CommandSourceStack.replyPaginated(all: List<T>,
 	val rows = mutableListOf<ActionRow>()
 	if (pageCount <= 1) {
 		customReactions?.modifyComponents(rows, 0)
-		complete(builder.build())
+		complete(builder.setActionRows(rows).build())
 		return
 	}
 	val pageControlButtons = ActionRow.of(
@@ -33,7 +33,7 @@ fun <T> CommandSourceStack.replyPaginated(all: List<T>,
 	rows.add(pageControlButtons)
 	customReactions?.modifyComponents(rows, 0)
 	builder.setActionRows(rows)
-	val msg = complete(builder.build())
+	val msg = complete(builder.setActionRows(rows).build())
 	val collector = msg.createMessageComponentInteractionCollector({ _, user, _ -> user?.idLong == author.idLong }, MessageComponentInteractionCollectorOptions().apply {
 		idle = 90000L
 		//dispose = true

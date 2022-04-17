@@ -116,7 +116,7 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 				val offerId = item.componentId.substringAfter(":")
 				event.complete(list[page].offers.first { it.offerId == offerId })
 				collector.stop()
-				collector.message?.finalizeComponents(emptySet())
+				collector.message?.finalizeComponents(setOf(item.componentId))
 			}
 		}
 
