@@ -43,7 +43,7 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 		for (offer in section.catalogEntries) {
 			val prerolledOffer = prerolls.firstOrNull { it.attributes.getString("offerId") == offer.offerId } ?: continue
 			val sd = offer.holder().apply { resolve(profileManager) }
-			val canNotPurchase = (sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit || offer.prices.all { it.finalPrice > it.getAccountBalance(profileManager)})
+			val canNotPurchase = (sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit)
 			if (canNotPurchase) {
 				continue
 			}
@@ -52,12 +52,15 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 				.sortedWith(ItemComparator)
 			llamas.add(sd.friendlyName to items)
 		}
+		if (llamas.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("You have no llamas.")).create()
+		}
 		source.replyPaginated(llamas, 1) { content, page, pageCount ->
 			val (name, items) = content.first()
 			val embed = source.createEmbed()
 				.setTitle(name)
 				//.setDescription("Balance: TODO")
-				.addFieldSeparate("Contents", items, 0, true) { it.render(showRarity = if (items.size > 10) ShowRarityOption.SHOW_DEFAULT_EMOTE else ShowRarityOption.SHOW) }
+				.addFieldSeparate("Contents", items, 0, true) { it.render(showRarity = if (items.size > 25) ShowRarityOption.SHOW_DEFAULT_EMOTE else ShowRarityOption.SHOW) }
 				.setFooter("%,d of %,d".format(page + 1, pageCount))
 			MessageBuilder(embed.build())
 		}
