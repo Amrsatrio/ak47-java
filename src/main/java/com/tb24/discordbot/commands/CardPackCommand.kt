@@ -5,7 +5,8 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.item.ItemComparator
+import com.tb24.discordbot.CatalogEntryHolder
+import com.tb24.discordbot.item.ItemUtils
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.ProfileManager
@@ -56,28 +57,50 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 			if (canNotPurchase) {
 				continue
 			}
-			val linkedPrerollOffer = offer.getMeta("LinkedPrerollOffer")
+			val linkedPrerollOffer = offer.getMeta("LinkedPrerollOffer")?.substringAfter("OfferId:")
 			if (linkedPrerollOffer != null) {
-				llamas.firstOrNull { llama -> llama.offers.any { it.offerId == linkedPrerollOffer } }?.offers?.add(offer)
-				continue
+				val existing = llamas.firstOrNull { llama -> llama.offers.any { it.ce.offerId == linkedPrerollOffer } }
+				if (existing != null) {
+					existing.addOffer(sd)
+					continue
+				}
 			}
 			val items = EpicApi.GSON.fromJson(prerollData.attributes.getAsJsonArray("items"), Array<McpLootEntry>::class.java)
 				.map { it.asItemStack() }
-				.sortedWith(ItemComparator)
-			llamas.add(Entry(offer.title, items).apply { addOffer(offer) })
+				.sortedWith { a, b ->
+					val aRarity = a.rarity
+					val bRarity = b.rarity
+					if (aRarity != bRarity) {
+						return@sortedWith bRarity.compareTo(aRarity)
+					}
+					val aRating = a.powerLevel
+					val bRating = b.powerLevel
+					if (aRating != bRating) {
+						return@sortedWith bRating.compareTo(aRating)
+					}
+					val aTier = ItemUtils.getTier(a.defData)
+					val bTier = ItemUtils.getTier(b.defData)
+					if (aTier != bTier) {
+						return@sortedWith aTier - bTier
+					}
+					val aDisplayName = a.displayName
+					val bDisplayName = b.displayName
+					aDisplayName.compareTo(bDisplayName)
+				}
+			llamas.add(Entry(sd.compiledNames.joinToString(", "), items).apply { addOffer(sd) })
 		}
 		if (llamas.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("You have no llamas.")).create()
 		}
 		val event = CompletableFuture<CatalogOffer?>()
-		source.replyPaginated(llamas, 1, customReactions = CardPackComponents(llamas, event)) { content, page, pageCount ->
+		source.replyPaginated(llamas, 1, customReactions = PaginatorComponents(llamas, event)) { content, page, pageCount ->
 			val llama = content.first()
 			val items = llama.items
 			val balances = llama.getBalancesText(profileManager)
 			val embed = source.createEmbed()
 				.setTitle(llama.name)
-				.addField(balances.first, balances.second, false)
 				.addFieldSeparate("Contents", items, 0, true) { it.render(showRarity = if (items.size > 25) ShowRarityOption.SHOW_DEFAULT_EMOTE else ShowRarityOption.SHOW) }
+				.addField(balances.first, balances.second, false)
 				.setFooter("%,d of %,d".format(page + 1, pageCount))
 			MessageBuilder(embed.build())
 		}
@@ -86,12 +109,12 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 	}
 
 	private class Entry(val name: String, val items: List<FortItemStack>) {
-		val offers = mutableListOf<CatalogOffer>()
+		val offers = mutableListOf<CatalogEntryHolder>()
 		private val prices = mutableMapOf<String, CatalogItemPrice>()
 
-		fun addOffer(offer: CatalogOffer) {
+		fun addOffer(offer: CatalogEntryHolder) {
 			offers.add(offer)
-			offer.prices.forEach { prices.putIfAbsent(it.currencyType.name + ' ' + it.currencySubType, it) }
+			offer.ce.prices.forEach { prices.putIfAbsent(it.currencyType.name + ' ' + it.currencySubType, it) }
 		}
 
 		val sortedOffers get() = offers.sortedByDescending { it.getMeta("SharedDisplayPriority")?.toIntOrNull() ?: 0 }
@@ -99,24 +122,27 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 		fun getBalancesText(profileManager: ProfileManager) = (if (prices.size == 1) "Balance" else "Balances") to prices.values.joinToString(" \u00b7 ") { it.getAccountBalanceText(profileManager) }
 	}
 
-	private class CardPackComponents(val list: MutableList<Entry>, val event: CompletableFuture<CatalogOffer?>) : PaginatorCustomComponents {
+	private class PaginatorComponents(val list: MutableList<Entry>, val event: CompletableFuture<CatalogOffer?>) : PaginatorCustomComponents<Entry> {
 		private var confirmed = false
 
 		override fun modifyComponents(rows: MutableList<ActionRow>, page: Int) {
 			val row = ActionRow.of(list[page].sortedOffers.map {
-				val price = it.prices.first()
-				Button.of(ButtonStyle.PRIMARY, "purchase:" + it.offerId, price.renderText(), price.emote()?.let(Emoji::fromEmote))
+				val price = it.ce.prices.first()
+				var s = price.renderText()
+				if (it.purchaseLimit >= 0) {
+					s += " (%,d left)".format(it.purchaseLimit - it.purchasesCount)
+				}
+				Button.of(ButtonStyle.PRIMARY, "purchase:" + it.ce.offerId, s, price.emote()?.let(Emoji::fromEmote))
 			})
 			rows.add(row)
 		}
 
-		override fun handleComponent(collector: MessageComponentInteractionCollector, item: ComponentInteraction, user: User?, page: Int, pageCount: Int) {
+		override fun handleComponent(paginator: Paginator<Entry>, item: ComponentInteraction, user: User?) {
 			if (!confirmed && item.componentId.startsWith("purchase:")) {
 				confirmed = true
 				val offerId = item.componentId.substringAfter(":")
-				event.complete(list[page].offers.first { it.offerId == offerId })
-				collector.stop()
-				collector.message?.finalizeComponents(setOf(item.componentId))
+				event.complete(list[paginator.page].offers.first { it.ce.offerId == offerId }.ce)
+				paginator.stopAndFinalizeComponents(setOf(item.componentId))
 			}
 		}
 
