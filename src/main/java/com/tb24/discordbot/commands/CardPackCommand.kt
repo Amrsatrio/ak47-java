@@ -9,10 +9,8 @@ import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.item.ItemUtils
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
-import com.tb24.fn.ProfileManager
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
-import com.tb24.fn.model.gamesubcatalog.CatalogOffer.CatalogItemPrice
 import com.tb24.fn.model.mcpprofile.McpLootEntry
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.campaign.PopulatePrerolledOffers
@@ -53,7 +51,7 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 		for (offer in section.catalogEntries) {
 			val prerollData = prerolls.firstOrNull { it.attributes.getString("offerId") == offer.offerId } ?: continue
 			val sd = offer.holder().apply { resolve(profileManager) }
-			val canNotPurchase = (sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit)
+			val canNotPurchase = sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit
 			if (canNotPurchase) {
 				continue
 			}
@@ -96,11 +94,9 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 		source.replyPaginated(llamas, 1, customReactions = PaginatorComponents(llamas, event)) { content, page, pageCount ->
 			val llama = content.first()
 			val items = llama.items
-			val balances = llama.getBalancesText(profileManager)
 			val embed = source.createEmbed()
 				.setTitle(llama.name)
 				.addFieldSeparate("Contents", items, 0, true) { it.render(showRarity = if (items.size > 25) ShowRarityOption.SHOW_DEFAULT_EMOTE else ShowRarityOption.SHOW) }
-				.addField(balances.first, balances.second, false)
 				.setFooter("%,d of %,d".format(page + 1, pageCount))
 			MessageBuilder(embed.build())
 		}
@@ -110,29 +106,27 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 
 	private class Entry(val name: String, val items: List<FortItemStack>) {
 		val offers = mutableListOf<CatalogEntryHolder>()
-		private val prices = mutableMapOf<String, CatalogItemPrice>()
 
 		fun addOffer(offer: CatalogEntryHolder) {
 			offers.add(offer)
-			offer.ce.prices.forEach { prices.putIfAbsent(it.currencyType.name + ' ' + it.currencySubType, it) }
 		}
 
 		val sortedOffers get() = offers.sortedByDescending { it.getMeta("SharedDisplayPriority")?.toIntOrNull() ?: 0 }
-
-		fun getBalancesText(profileManager: ProfileManager) = (if (prices.size == 1) "Balance" else "Balances") to prices.values.joinToString(" \u00b7 ") { it.getAccountBalanceText(profileManager) }
 	}
 
 	private class PaginatorComponents(val list: MutableList<Entry>, val event: CompletableFuture<CatalogOffer?>) : PaginatorCustomComponents<Entry> {
 		private var confirmed = false
 
-		override fun modifyComponents(rows: MutableList<ActionRow>, page: Int) {
-			val row = ActionRow.of(list[page].sortedOffers.map {
-				val price = it.ce.prices.first()
-				var s = price.renderText()
-				if (it.purchaseLimit >= 0) {
-					s += " (%,d left)".format(it.purchaseLimit - it.purchasesCount)
+		override fun modifyComponents(paginator: Paginator<Entry>, rows: MutableList<ActionRow>) {
+			val row = ActionRow.of(list[paginator.page].sortedOffers.map { sd ->
+				val price = sd.ce.prices.first()
+				val accountBalance = price.getAccountBalance(paginator.source.api.profileManager)
+				var s = "%,d/%s".format(accountBalance, price.renderText())
+				if (sd.purchaseLimit >= 0) {
+					s += " (%,d left)".format(sd.purchaseLimit - sd.purchasesCount)
 				}
-				Button.of(ButtonStyle.PRIMARY, "purchase:" + it.ce.offerId, s, price.emote()?.let(Emoji::fromEmote))
+				Button.of(ButtonStyle.PRIMARY, "purchase:" + sd.ce.offerId, s, price.emote()?.let(Emoji::fromEmote))
+					.withDisabled(sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit || accountBalance < price.basePrice)
 			})
 			rows.add(row)
 		}

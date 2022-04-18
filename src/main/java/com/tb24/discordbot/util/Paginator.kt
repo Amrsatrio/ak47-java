@@ -13,7 +13,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 class Paginator<T>(
-	private val source: CommandSourceStack,
+	val source: CommandSourceStack,
 	private val all: List<T>,
 	private val pageSize: Int,
 	initialPage: Int = 0,
@@ -50,7 +50,7 @@ class Paginator<T>(
 				)
 			)
 		}
-		customComponents?.modifyComponents(rows, page)
+		customComponents?.modifyComponents(this, rows)
 		actionRows = rows
 		return rows
 	}
@@ -112,7 +112,7 @@ fun <T> CommandSourceStack.replyPaginated(
 ) = Paginator(this, all, pageSize, initialPage, customReactions, render)
 
 interface PaginatorCustomComponents<T> {
-	fun modifyComponents(rows: MutableList<ActionRow>, page: Int)
+	fun modifyComponents(paginator: Paginator<T>, rows: MutableList<ActionRow>)
 	fun handleComponent(paginator: Paginator<T>, item: ComponentInteraction, user: User?)
 	fun onEnd(collected: Map<Any, ComponentInteraction>, reason: CollectorEndReason)
 }

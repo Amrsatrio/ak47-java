@@ -89,7 +89,7 @@ class HeroLoadoutCommand : BrigadierCommand("heroloadout", "Manages your STW her
 	private class PaginatorComponents(val list: List<FortItemStack>, val event: CompletableFuture<FortItemStack?>) : PaginatorCustomComponents<FortItemStack> {
 		private var confirmed = false
 
-		override fun modifyComponents(rows: MutableList<ActionRow>, page: Int) {
+		override fun modifyComponents(paginator: Paginator<FortItemStack>, rows: MutableList<ActionRow>) {
 			rows.add(ActionRow.of(Button.of(ButtonStyle.PRIMARY, "setActive", "Set active", Emoji.fromUnicode("✅"))))
 		}
 
