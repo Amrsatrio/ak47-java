@@ -299,7 +299,7 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 			var option = SelectOption.of(it.ColorDisplayName.format() ?: colorName, colorName).withDefault(it == currentInSwatch)
 
 			// Check conflicts
-			if (cosmeticVariant.AntiConflictChannel != 0 && (colorName == "BLACK" || colorName == "WHITE")) {
+			if (cosmeticVariant.AntiConflictChannel != -1 && (colorName == "BLACK" || colorName == "WHITE")) {
 				for (otherVariant in variants) {
 					if (otherVariant == variant) {
 						continue
