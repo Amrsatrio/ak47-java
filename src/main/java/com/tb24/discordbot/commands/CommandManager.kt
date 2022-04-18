@@ -248,6 +248,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				else -> baseCommand
 			}
 			source.interactionCommand = command
+			source.commandName = interaction.name
 			wrappedExecute(interaction, source) {
 				command.command?.invoke(source) ?: DiscordBot.LOGGER.warn("Command ${interaction.commandPath} has no implementation")
 			}
@@ -256,7 +257,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 
 	val byGuild = hashMapOf<Long, Int>()
 
-	private fun handleCommand(command: String, source: CommandSourceStack, prefix: String = "", canRetry: Boolean = true) {
+	fun handleCommand(command: String, source: CommandSourceStack, prefix: String = "", canRetry: Boolean = true) {
 		val reader = StringReader(command)
 		reader.cursor += prefix.length
 		while (reader.peek().isWhitespace()) {

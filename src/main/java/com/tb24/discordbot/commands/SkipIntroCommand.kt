@@ -2,7 +2,10 @@ package com.tb24.discordbot.commands
 
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.INTRO_NAME
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.mcpprofile.commands.commoncore.SetForcedIntroPlayed
@@ -11,9 +14,12 @@ class SkipIntroCommand : BrigadierCommand("skipintro", "Skips the forced Chapter
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
 			val source = it.source
+			if (INTRO_NAME == null) {
+				throw SimpleCommandExceptionType(LiteralMessage("There are no intros this season.")).create()
+			}
 			source.ensureSession()
 			source.loading("Skipping intro")
-			val response = source.api.profileManager.dispatchClientCommandRequest(SetForcedIntroPlayed().apply { forcedIntroName = "Coconut" }).await()
+			val response = source.api.profileManager.dispatchClientCommandRequest(SetForcedIntroPlayed().apply { forcedIntroName = INTRO_NAME }).await()
 			if (response.profileRevision > response.profileChangesBaseRevision) {
 				source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)
 					.setTitle("✅ Skipped intro")

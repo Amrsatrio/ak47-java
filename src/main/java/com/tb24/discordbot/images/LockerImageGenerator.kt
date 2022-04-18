@@ -4,6 +4,7 @@ import com.google.gson.JsonParser
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.commands.CommandSourceStack
+import com.tb24.discordbot.commands.rarityData
 import com.tb24.discordbot.item.ExclusivesType
 import com.tb24.discordbot.item.exclusives
 import com.tb24.discordbot.util.*
@@ -15,6 +16,7 @@ import com.tb24.fn.util.getPreviewImagePath
 import com.tb24.fn.util.getString
 import com.tb24.uasset.AssetManager
 import com.tb24.uasset.loadObject
+import me.fungames.jfortniteparse.fort.enums.EFortRarity
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
 import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.util.toPngArray
@@ -51,32 +53,37 @@ fun main() {
 	exitProcess(0)
 }
 
+const val EXCLUSIVES_NONE = 0
+const val EXCLUSIVES_INFO = 1
+const val EXCLUSIVES_DISTINGUISH = 2
+
 class GenerateLockerImageParams(
 	val name: String? = null,
 	val icon: String? = null,
 	val withAlpha: Boolean = true,
-	val distinguishExclusives: Boolean = false,
-	val showExclusivesInfo: Boolean = false
+	val showUser: Boolean = true,
+	val exclusives: Int = EXCLUSIVES_NONE,
 ) {
 	var epicUser: GameProfile? = null
 	var discordUser: User? = null
 
 	fun withSource(source: CommandSourceStack): GenerateLockerImageParams {
-		epicUser = source.api.currentLoggedIn
-		discordUser = source.author
+		if (showUser) {
+			epicUser = source.api.currentLoggedIn
+			discordUser = source.author
+		}
 		return this
 	}
 }
 
 fun generateLockerImage(items: List<FortItemStack>, params: GenerateLockerImageParams): BufferedImage {
-	val items = items.sortedWith(SimpleAthenaLockerItemComparator().apply { bPrioritizeFavorites = false })
+	val items = items.sortedWith(SimpleAthenaLockerItemComparator().apply { prioritizeFavorites = false })
 	val name = params.name
 	val icon = params.icon
 	val epicUser = params.epicUser
 	val discordUser = params.discordUser
 	val withAlpha = params.withAlpha
-	val distinguishExclusives = params.distinguishExclusives
-	val showExclusivesInfo = params.showExclusivesInfo
+	val exclusivesOption = params.exclusives
 
 	// Preload icons
 	val icons = hashMapOf<String, BufferedImage?>()
@@ -123,6 +130,9 @@ fun generateLockerImage(items: List<FortItemStack>, params: GenerateLockerImageP
 
 		for (i in items.indices) {
 			val item = items[i]
+			val exclusiveInfo = if (exclusivesOption != EXCLUSIVES_NONE) {
+				exclusives[item.templateId.toLowerCase()]
+			} else null
 
 			val x = doublePadding + (i % columns * tileSize)
 			val y = top + doublePadding + (i / columns * tileSize)
@@ -130,7 +140,7 @@ fun generateLockerImage(items: List<FortItemStack>, params: GenerateLockerImageP
 			val h = tileSize - padding * 2
 
 			// Background
-			val palette = item.palette
+			val palette = if (exclusivesOption == EXCLUSIVES_DISTINGUISH && exclusiveInfo?.type == ExclusivesType.EXCLUSIVE) rarityData.forRarity(EFortRarity.Mythic) else item.palette
 			ctx.drawStretchedRadialGradient(palette.Color2.toFColor(true).toPackedARGB(), palette.Color3.toFColor(true).toPackedARGB(), x, y, w, h)
 
 			// Icon
@@ -196,15 +206,12 @@ fun generateLockerImage(items: List<FortItemStack>, params: GenerateLockerImageP
 				ctx.translate(-tx, -ty)
 			}
 
-			if (showExclusivesInfo) {
-				val exclusiveInfo = exclusives[item.templateId.toLowerCase()]
-				if (exclusiveInfo != null) {
-					val oldTransform = ctx.transform
-					ctx.translate(x, y)
-					ctx.scale(0.75, 0.75)
-					drawViolator(ctx, 0f, 0f, if (exclusiveInfo.type == ExclusivesType.UNIQUE) EViolatorIntensity.Low else EViolatorIntensity.High, exclusiveInfo.reason, path)
-					ctx.transform = oldTransform
-				}
+			if (exclusiveInfo != null) {
+				val oldTransform = ctx.transform
+				ctx.translate(x, y)
+				ctx.scale(0.75, 0.75)
+				drawViolator(ctx, 0f, 0f, if (exclusiveInfo.type == ExclusivesType.UNIQUE) EViolatorIntensity.Low else EViolatorIntensity.High, exclusiveInfo.reason, path)
+				ctx.transform = oldTransform
 			}
 		}
 	}

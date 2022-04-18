@@ -13,7 +13,6 @@ import com.tb24.fn.model.account.AccountMutationPayload
 import com.tb24.fn.model.account.BackupCodesResponse
 import com.tb24.fn.util.EAuthClient
 import com.tb24.fn.util.Formatters
-import net.dv8tion.jda.api.EmbedBuilder
 
 class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf("a")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -43,17 +42,19 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 		source.ensurePremium("View more account info")
 		source.ensureSession()
 		source.api.accountService.verify(null).exec()
-		if (!source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
+		if (!source.unattended && !source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
 				.setTitle("✋ Hold up!")
 				.setDescription("You're about to view the account details of ${source.api.currentLoggedIn.displayName}. Some of the data that we will send here might be sensitive, such as real name or Facebook name. We don't recommend to proceed if this account isn't yours.\n\nContinue?")
 				.build(), confirmationButtons()).awaitConfirmation(source.author).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS
 		}
-		source.loading("Getting account data")
+		if (!source.unattended) {
+			source.loading("Getting account data")
+		}
 		//val avatarKeys = source.session.channelsManager.getUserSettings(source.api.currentLoggedIn.id, ChannelsManager.KEY_AVATAR, ChannelsManager.KEY_AVATAR_BACKGROUND)
 		val data = source.api.accountService.getById(source.api.currentLoggedIn.id).exec().body()!!
-		val message = source.complete(null, EmbedBuilder().setColor(COLOR_INFO)
+		val embed = source.createEmbed()
 			.setTitle("Epic Account Summary")
 			.addField("Account ID", data.id, false)
 			.addField("Name", "||${data.name} ${data.lastName}||", true)
@@ -69,10 +70,11 @@ class AccountCommand : BrigadierCommand("account", "Account commands.", arrayOf(
 			.addField("Linked Accounts", source.api.accountService.getExternalAuths(source.api.currentLoggedIn.id).exec().body()!!.takeIf { it.isNotEmpty() }?.joinToString("\n\n") {
 				"__${it.type}: ||**${it.externalDisplayName.orDash()}**||__\nAdded: ${it.dateAdded?.run { renderWithRelative() } ?: "\u2014"}"
 			} ?: "No linked accounts", false)
-			.setFooter("React with anything within 2 minutes to remove this embed")
-			//.setThumbnail("https://cdn2.unrealengine.com/Kairos/portraits/${avatarKeys[0]}.png?preview=1")
-			//.setColor(AvatarColor(avatarKeys[1]!!).dark)
-			.build())
+		if (source.unattended) {
+			source.complete(null, embed.build())
+			return Command.SINGLE_SUCCESS
+		}
+		val message = source.complete(null, embed.setFooter("React with anything within 2 minutes to remove this embed").build())
 		if (message.awaitReactions({ _, _, _ -> true }, AwaitReactionsOptions().apply {
 				max = 1
 				time = 120000L

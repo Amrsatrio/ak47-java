@@ -18,8 +18,10 @@ class ReceiptsCommand : BrigadierCommand("receipts", "You asked for it") {
 			val source = it.source
 			source.ensurePremium("View receipts")
 			source.ensureSession()
-			source.loading("Getting receipts")
-			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
+			if (!source.unattended) {
+				source.loading("Getting receipts")
+				source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
+			}
 			val commonCore = source.api.profileManager.getProfileData("common_core")
 			val receipts = (commonCore.stats as CommonCoreProfileStats).in_app_purchases?.receipts
 			if (receipts.isNullOrEmpty()) {

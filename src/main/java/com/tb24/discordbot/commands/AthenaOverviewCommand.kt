@@ -5,6 +5,7 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.INTRO_NAME
 import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.util.*
 import com.tb24.discordbot.util.Utils
@@ -14,6 +15,7 @@ import com.tb24.fn.model.assetdata.AthenaSeasonItemData_Level
 import com.tb24.fn.model.assetdata.AthenaSeasonItemDefinition
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
+import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.util.*
 import me.fungames.jfortniteparse.fort.exports.FortItemDefinition
 import me.fungames.jfortniteparse.fort.exports.FortPersistentResourceItemDefinition
@@ -22,6 +24,7 @@ import me.fungames.jfortniteparse.fort.objects.rows.AthenaSeasonalXPCurveEntry
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.utils.TimeFormat
+import java.util.concurrent.CompletableFuture
 
 val battleStarEmote by lazy { textureEmote("/Game/Athena/UI/Frontend/Art/T_UI_BP_BattleStar_L.T_UI_BP_BattleStar_L") }
 val battlePassEmote by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass-L.T-FNBR-BattlePass-L") }
@@ -43,8 +46,10 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 
 	private fun summary(source: CommandSourceStack): Int {
 		source.ensureSession()
-		source.loading("Getting BR data")
-		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+		if (!source.unattended) {
+			source.loading("Getting BR data")
+			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+		}
 		val athena = source.api.profileManager.getProfileData("athena")
 		val stats = athena.stats as AthenaProfileStats
 		val seasonData = FortItemStack("AthenaSeason:athenaseason${stats.season_num}", 1).defData as? AthenaSeasonItemDefinition
@@ -96,12 +101,18 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 
 	private fun info(source: CommandSourceStack): Int {
 		source.ensureSession()
-		source.loading("Getting BR data")
-		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
-		val athena = source.api.profileManager.getProfileData("athena")
+		val profileManager = source.api.profileManager
+		if (!source.unattended) {
+			source.loading("Getting BR data")
+			CompletableFuture.allOf(
+				profileManager.dispatchClientCommandRequest(QueryProfile(), "common_core"),
+				profileManager.dispatchClientCommandRequest(QueryProfile(), "athena")
+			).await()
+		}
+		val athena = profileManager.getProfileData("athena")
 		val stats = athena.stats as AthenaProfileStats
 		val embed = source.createEmbed()
-		embed.addField("Dates", "**Creation Date:** %s\n**Last Updated:** %s".format(
+		embed.addField("Dates", "**First Played BR:** %s\n**Last Updated:** %s".format(
 			TimeFormat.DATE_LONG.format(athena.created.time),
 			TimeFormat.DATE_LONG.format(athena.updated.time)
 		), true)
@@ -116,6 +127,9 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 		val totalStylePoints = currentStylePoints + spentStylePoints
 		embed.addField("%s Battle Stars".format(battleStarEmote?.asMention), "%,d spent, %,d total".format(spentBattleStars, totalBattleStars), true)
 		embed.addField("Style Points", "%,d spent, %,d total".format(spentStylePoints, totalStylePoints), true)
+		INTRO_NAME?.let {
+			embed.addField("Intro Played", if ((profileManager.getProfileData("common_core").stats as CommonCoreProfileStats).forced_intro_played == it) "✅" else "❌", true)
+		}
 		embed.addFieldSeparate("Past seasons", stats.past_seasons.toList(), 0) {
 			if (it.seasonNumber >= 11) {
 				"%s `%2d` Level %,d, %,d wins".format((if (it.purchasedVIP) battlePassEmote else freePassEmote)?.asMention, it.seasonNumber, it.seasonLevel, it.numWins)

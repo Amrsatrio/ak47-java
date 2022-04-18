@@ -35,8 +35,10 @@ class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the
 
 	private fun totalPurchased(source: CommandSourceStack): Int {
 		source.ensureSession()
-		source.loading("Getting fulfillments")
-		source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
+		if (!source.unattended) {
+			source.loading("Getting fulfillments")
+			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
+		}
 		val commonCore = source.api.profileManager.getProfileData("common_core")
 		val fulfillments = (commonCore.stats as CommonCoreProfileStats).in_app_purchases?.fulfillmentCounts
 		var total = 0
@@ -58,8 +60,10 @@ class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the
 
 	private fun balance(source: CommandSourceStack): Int {
 		source.ensureSession()
-		source.loading("Getting balance")
-		source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
+		if (!source.unattended) {
+			source.loading("Getting balance")
+			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
+		}
 		val commonCore = source.api.profileManager.getProfileData("common_core")
 		val current = (commonCore.stats as CommonCoreProfileStats).current_mtx_platform
 		val breakdown = mutableListOf<String>()

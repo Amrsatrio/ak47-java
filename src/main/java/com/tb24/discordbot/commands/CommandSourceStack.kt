@@ -51,6 +51,7 @@ open class CommandSourceStack {
 	val prefix: String
 	var interactionCommand: CommandBuilder<CommandSourceStack, *, *>? = null
 	var commandName: String? = null
+	var unattended = false
 
 	constructor(client: DiscordBot, message: Message, sessionId: String?, ignoreSessionLimit: Boolean = false) {
 		this.client = client

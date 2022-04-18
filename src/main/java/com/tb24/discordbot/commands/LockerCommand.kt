@@ -10,6 +10,8 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.Rune
+import com.tb24.discordbot.images.EXCLUSIVES_DISTINGUISH
+import com.tb24.discordbot.images.EXCLUSIVES_INFO
 import com.tb24.discordbot.images.GenerateLockerImageParams
 import com.tb24.discordbot.images.generateLockerImage
 import com.tb24.discordbot.item.*
@@ -48,35 +50,51 @@ import javax.imageio.ImageWriteParam
 import javax.imageio.stream.MemoryCacheImageOutputStream
 
 class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form of an image.") {
-	// PrimaryAssetType[:ClassName]
-	val names = mapOf(
-		"AthenaCharacter" to "Outfits",
-		"AthenaBackpack" to "Back Blings",
-		"AthenaPickaxe" to "Harvesting Tools",
-		"AthenaGlider" to "Gliders",
-		"AthenaSkyDiveContrail" to "Contrails",
-		"AthenaDance:AthenaDanceItemDefinition" to "Dances",
-		"AthenaDance:AthenaEmojiItemDefinition" to "Emoticons",
-		"AthenaDance:AthenaSprayItemDefinition" to "Sprays",
-		"AthenaDance:AthenaToyItemDefinition" to "Toys",
-		"AthenaItemWrap" to "Wraps",
-		"AthenaMusicPack" to "Musics",
-		"AthenaLoadingScreen" to "Loading Screens"
-	)
-	val icons = mapOf(
-		"AthenaCharacter" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Ui_Outfit_256.T_Ui_Outfit_256",
-		"AthenaBackpack" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Ui_BackBling_256.T_Ui_BackBling_256",
-		"AthenaPickaxe" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Ui_Pick_256.T_Ui_Pick_256",
-		"AthenaGlider" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Ui_Glider_256.T_Ui_Glider_256",
-		"AthenaSkyDiveContrail" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Ui_Trail_256.T_Ui_Trail_256",
-		"AthenaDance:AthenaDanceItemDefinition" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Ui_Dance_256.T_Ui_Dance_256",
-		"AthenaDance:AthenaEmojiItemDefinition" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Icon_Emoticon_128.T_Icon_Emoticon_128",
-		"AthenaDance:AthenaSprayItemDefinition" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Icon_Spray_128.T_Icon_Spray_128",
-		"AthenaDance:AthenaToyItemDefinition" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Icon_Toy_128.T_Icon_Toy_128",
-		"AthenaItemWrap" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Icon_Wrap_128.T_Icon_Wrap_128", // TODO properly colored icon
-		"AthenaMusicPack" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Ui_Music_256.T_Ui_Music_256",
-		"AthenaLoadingScreen" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Ui_LoadingScreen_256.T_Ui_LoadingScreen_256"
-	)
+	companion object {
+		// PrimaryAssetType[:ClassName]
+		val names = mapOf(
+			"AthenaCharacter" to "Outfits",
+			"AthenaBackpack" to "Back Blings",
+			"AthenaPickaxe" to "Harvesting Tools",
+			"AthenaGlider" to "Gliders",
+			"AthenaSkyDiveContrail" to "Contrails",
+			"AthenaDance:AthenaDanceItemDefinition" to "Dances",
+			"AthenaDance:AthenaEmojiItemDefinition" to "Emoticons",
+			"AthenaDance:AthenaSprayItemDefinition" to "Sprays",
+			"AthenaDance:AthenaToyItemDefinition" to "Toys",
+			"AthenaItemWrap" to "Wraps",
+			"AthenaMusicPack" to "Musics",
+			"AthenaLoadingScreen" to "Loading Screens"
+		)
+		val icons = mapOf(
+			"AthenaCharacter" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Ui_Outfit_256.T_Ui_Outfit_256",
+			"AthenaBackpack" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Ui_BackBling_256.T_Ui_BackBling_256",
+			"AthenaPickaxe" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Ui_Pick_256.T_Ui_Pick_256",
+			"AthenaGlider" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Ui_Glider_256.T_Ui_Glider_256",
+			"AthenaSkyDiveContrail" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Ui_Trail_256.T_Ui_Trail_256",
+			"AthenaDance:AthenaDanceItemDefinition" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Ui_Dance_256.T_Ui_Dance_256",
+			"AthenaDance:AthenaEmojiItemDefinition" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Icon_Emoticon_128.T_Icon_Emoticon_128",
+			"AthenaDance:AthenaSprayItemDefinition" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Icon_Spray_128.T_Icon_Spray_128",
+			"AthenaDance:AthenaToyItemDefinition" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Icon_Toy_128.T_Icon_Toy_128",
+			"AthenaItemWrap" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Icon_Wrap_128.T_Icon_Wrap_128", // TODO properly colored icon
+			"AthenaMusicPack" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Ui_Music_256.T_Ui_Music_256",
+			"AthenaLoadingScreen" to "/Game/UI/Foundation/Textures/Icons/Locker/T_Ui_LoadingScreen_256.T_Ui_LoadingScreen_256"
+		)
+
+		fun getLockerItems(athena: McpProfile, filterType: String): Collection<FortItemStack> {
+			val items = if (filterType.contains(':')) {
+				val primaryAssetType = filterType.substringBefore(':')
+				val className = filterType.substringAfter(':')
+				athena.items.values.filter { it.primaryAssetType == primaryAssetType && it.defData?.exportType == className }
+			} else {
+				athena.items.values.filter { it.primaryAssetType == filterType }
+			}
+			if (items.isEmpty()) {
+				throw SimpleCommandExceptionType(LiteralMessage("You have no ${names[filterType]}.")).create()
+			}
+			return items
+		}
+	}
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it.source) }
@@ -197,7 +215,7 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		val athena = source.api.profileManager.getProfileData("athena")
 		val items = getExclusiveItems(setOf(commonCore, athena), types, false)
 		source.loading("Generating and uploading image")
-		generateAndSendLockerImage(source, items, GenerateLockerImageParams("Exclusives", "/Game/Athena/UI/Frontend/Art/T_UI_BP_BattleStar_L.T_UI_BP_BattleStar_L", showExclusivesInfo = true)).await()
+		generateAndSendLockerImage(source, items, GenerateLockerImageParams("Exclusives", "/Game/Athena/UI/Frontend/Art/T_UI_BP_BattleStar_L.T_UI_BP_BattleStar_L", exclusives = EXCLUSIVES_INFO)).await()
 			?: throw SimpleCommandExceptionType(LiteralMessage("No Exclusives.")).create()
 		return Command.SINGLE_SUCCESS
 	}
@@ -205,7 +223,7 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 	private fun exclusivesTest(source: CommandSourceStack): Int {
 		val items = exclusives.values.map { FortItemStack(it.templateId, 1) }
 		source.loading("Generating and uploading image")
-		generateAndSendLockerImage(source, items, GenerateLockerImageParams("Exclusives", "/Game/Athena/UI/Frontend/Art/T_UI_BP_BattleStar_L.T_UI_BP_BattleStar_L", showExclusivesInfo = true)).await()
+		generateAndSendLockerImage(source, items, GenerateLockerImageParams("Exclusives", "/Game/Athena/UI/Frontend/Art/T_UI_BP_BattleStar_L.T_UI_BP_BattleStar_L", exclusives = EXCLUSIVES_INFO)).await()
 			?: throw SimpleCommandExceptionType(LiteralMessage("No Exclusives.")).create()
 		return Command.SINGLE_SUCCESS
 	}
@@ -282,7 +300,7 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 		val items = getLockerItems(source.api.profileManager.getProfileData("athena"), filterType)
 		val queryAccountIds = mutableSetOf<String>()
-		val entries = items.sortedWith(SimpleAthenaLockerItemComparator().apply { bPrioritizeFavorites = false })
+		val entries = items.sortedWith(SimpleAthenaLockerItemComparator().apply { prioritizeFavorites = false })
 			.map { LockerEntry(it, queryAccountIds) }
 		source.queryUsers_map(queryAccountIds)
 		source.replyPaginated(entries, 12) { content, page, pageCount ->
@@ -297,27 +315,13 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		}
 		return Command.SINGLE_SUCCESS
 	}
-
-	private fun getLockerItems(athena: McpProfile, filterType: String): Collection<FortItemStack> {
-		val items = if (filterType.contains(':')) {
-			val primaryAssetType = filterType.substringBefore(':')
-			val className = filterType.substringAfter(':')
-			athena.items.values.filter { it.primaryAssetType == primaryAssetType && it.defData?.exportType == className }
-		} else {
-			athena.items.values.filter { it.primaryAssetType == filterType }
-		}
-		if (items.isEmpty()) {
-			throw SimpleCommandExceptionType(LiteralMessage("You have no ${names[filterType]}.")).create()
-		}
-		return items
-	}
 }
 
 fun generateAndSendLockerImage(source: CommandSourceStack, ids: Collection<FortItemStack>?, params: GenerateLockerImageParams) = CompletableFuture.supplyAsync {
 	if (ids.isNullOrEmpty()) {
 		return@supplyAsync null
 	}
-	val items = ids.sortedWith(SimpleAthenaLockerItemComparator().apply { bPrioritizeFavorites = false })
+	val items = ids.sortedWith(SimpleAthenaLockerItemComparator().apply { prioritizeFavorites = false; prioritizeExclusives = params.exclusives == EXCLUSIVES_DISTINGUISH })
 	val start = System.currentTimeMillis()
 	val image = generateLockerImage(items, params.withSource(source))
 	val elapsed = System.currentTimeMillis() - start

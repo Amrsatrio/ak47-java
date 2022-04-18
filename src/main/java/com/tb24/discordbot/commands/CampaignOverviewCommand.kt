@@ -14,19 +14,22 @@ import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
 import me.fungames.jfortniteparse.fort.enums.EFortStatType.*
 import net.dv8tion.jda.api.utils.TimeFormat
+import java.util.*
 
 class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statistics of an account.", arrayOf("profile")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.withPublicProfile(::execute, "Loading profile")
 
 	private fun execute(source: CommandSourceStack, campaign: McpProfile): Int {
-		source.ensureCompletedCampaignTutorial(campaign)
-		val stats = campaign.stats as CampaignProfileStats
-		if (source.api.currentLoggedIn.id == campaign.owner.id) {
-			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "common_public").await()
-		} else {
-			source.api.profileManager.dispatchPublicCommandRequest(campaign.owner, QueryPublicProfile(), "common_public").await()
+		if (!source.unattended) {
+			source.ensureCompletedCampaignTutorial(campaign)
+			if (source.api.currentLoggedIn.id == campaign.owner.id) {
+				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "common_public").await()
+			} else {
+				source.api.profileManager.dispatchPublicCommandRequest(campaign.owner, QueryPublicProfile(), "common_public").await()
+			}
 		}
+		val stats = campaign.stats as CampaignProfileStats
 		val homebaseName = (source.api.profileManager.getProfileData(campaign.owner.id, "common_public").stats as CommonPublicProfileStats).homebase_name
 		val quests = arrayOf(
 			"Quest:achievement_destroygnomes",
@@ -40,12 +43,16 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 		val questItems = hashMapOf<String, FortItemStack>()
 		var researchPoints = 0
 		val mythicSchematics = mutableListOf<FortItemStack>()
-		var canReceiveMtxCurrency = false
+		val foundersTiers = TreeSet<FoundersEdition>()
 		for (item in campaign.items.values) {
 			when {
 				item.templateId == "Token:collectionresource_nodegatetoken01" -> researchPoints += item.quantity
 				item.templateId.contains("stormking_sr") -> mythicSchematics.add(item)
-				item.templateId == "Token:receivemtxcurrency" -> canReceiveMtxCurrency = true
+				item.templateId == "Quest:foundersquest_getrewards_0_1" -> foundersTiers.add(FoundersEdition.STANDARD)
+				item.templateId == "Quest:foundersquest_getrewards_1_2" -> foundersTiers.add(FoundersEdition.DELUXE)
+				item.templateId == "Quest:foundersquest_getrewards_2_3" -> foundersTiers.add(FoundersEdition.SUPER_DELUXE)
+				item.templateId == "Quest:foundersquest_getrewards_3_4" -> foundersTiers.add(FoundersEdition.LIMITED)
+				item.templateId == "Quest:foundersquest_getrewards_4_5" -> foundersTiers.add(FoundersEdition.ULTIMATE)
 				item.templateId in quests -> questItems[item.templateId] = item
 			}
 		}
@@ -53,8 +60,8 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 		val fort = arrayOf(Fortitude, Offense, Resistance, Technology)
 		val fortStr = fort.joinToString(" ") { "%s %,d".format(textureEmote(it.icon), hb.getStatBonus(it)) }
 		val embed = source.createEmbed(campaign.owner)
-			.setDescription("%s\n**Commander Level:** %,d\n**Days Logged in:** %,d\n**Inventory Size:** %,d\n**Backpack Size:** %,d\n**Storage Size:** %,d\n**Homebase Name:** %s"
-				.format(fortStr, stats.level, stats.daily_rewards?.totalDaysLoggedIn ?: 0, hb.getAccountInventorySize(), hb.getWorldInventorySize(), hb.getStorageInventorySize(), homebaseName))
+			.setDescription("%s\n**Commander Level:** %,d\n**Days Logged in:** %,d\n**Homebase Name:** %s"
+				.format(fortStr, stats.level, stats.daily_rewards?.totalDaysLoggedIn ?: 0, homebaseName))
 		embed.addField("Achievements", quests.joinToString("\n") { questTemplateId ->
 			val questItem = campaign.items.values.firstOrNull { it.templateId == questTemplateId }
 				?: FortItemStack(questTemplateId, 1)
@@ -72,12 +79,17 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 		}
 		sb.append("%s **Stored Research:** %,d".format(textureEmote("/Game/UI/Foundation/Textures/Icons/Currency/T-Icon-ResearchPoint-128.T-Icon-ResearchPoint-128")?.asMention, researchPoints))
 		embed.addField("Research", sb.toString(), true)
-		embed.addField("Collection Book", "**Level:** %,d\n**Unslot Cost:** %s %,d".format(
+		embed.addField("Collection Book", "**Level:** %,d\n**Spent for Unslotting:** %s %,d".format(
 			stats.collection_book.maxBookXpLevelAchieved ?: 0,
 			Utils.MTX_EMOJI,
 			stats.unslot_mtx_spend
 		), true)
-		embed.addField("Dates", "**Creation Date:** %s\n**Last Updated:** %s".format(
+		embed.addField("Inventory Size", "**Personnel & Schematics:** %,d\n**Backpack:** %,d\n**Storage:** %,d".format(
+			hb.getAccountInventorySize(),
+			hb.getWorldInventorySize(),
+			hb.getStorageInventorySize()
+		), true)
+		embed.addField("Dates", "**First Played STW:** %s\n**Last Updated:** %s".format(
 			TimeFormat.DATE_LONG.format(campaign.created.time),
 			TimeFormat.DATE_LONG.format(campaign.updated.time)
 		), true)
@@ -86,12 +98,21 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 			campaign.rvn,
 			stats.gameplay_stats?.firstOrNull { it.statName == "zonescompleted" }?.statValue?.toIntOrNull() ?: 0
 		), true)
-		if (canReceiveMtxCurrency) {
-			embed.setFooter("Founders Account", Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Items/T-Items-MTX.T-Items-MTX"))
+		val foundersEdition = if (foundersTiers.isNotEmpty()) foundersTiers.last() else null
+		if (foundersEdition != null) {
+			embed.setFooter(foundersEdition.displayName + " Founders Account", Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Items/T-Items-MTX.T-Items-MTX"))
 		} else {
 			embed.setFooter("Non-Founders Account", Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Items/T-Items-Currency-X-RayLlama.T-Items-Currency-X-RayLlama"))
 		}
 		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS
+	}
+
+	enum class FoundersEdition(val displayName: String) {
+		STANDARD("Standard"),
+		DELUXE("Deluxe"),
+		SUPER_DELUXE("Super Deluxe"),
+		LIMITED("Limited"),
+		ULTIMATE("Ultimate")
 	}
 }

@@ -1,19 +1,27 @@
 package com.tb24.discordbot.util
 
 import com.google.common.collect.ComparisonChain
+import com.tb24.discordbot.item.ExclusivesType
+import com.tb24.discordbot.item.exclusives
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.util.format
 import me.fungames.jfortniteparse.fort.enums.EFortRarity
 
 class SimpleAthenaLockerItemComparator : Comparator<FortItemStack> {
-	@JvmField var bPrioritizeFavorites = true
+	@JvmField var prioritizeFavorites = true
+	@JvmField var prioritizeExclusives = false
 
 	override fun compare(o1: FortItemStack, o2: FortItemStack): Int {
 		val series1 = o1.defData?.Series?.value
 		val series2 = o2.defData?.Series?.value
 		var chain = ComparisonChain.start()
-		if (bPrioritizeFavorites) {
+		if (prioritizeFavorites) {
 			chain = chain.compareTrueFirst(o1.isFavorite, o2.isFavorite)
+		}
+		if (prioritizeExclusives) {
+			val isExclusive1 = exclusives[o1.templateId.toLowerCase()]?.type == ExclusivesType.EXCLUSIVE
+			val isExclusive2 = exclusives[o2.templateId.toLowerCase()]?.type == ExclusivesType.EXCLUSIVE
+			chain = chain.compareTrueFirst(isExclusive1, isExclusive2)
 		}
 		chain = chain.compareTrueFirst(series1 != null, series2 != null)
 		chain = chain.compare(
