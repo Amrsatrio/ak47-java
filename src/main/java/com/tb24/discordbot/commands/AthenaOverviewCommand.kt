@@ -112,7 +112,7 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 		val athena = profileManager.getProfileData("athena")
 		val stats = athena.stats as AthenaProfileStats
 		val embed = source.createEmbed()
-		embed.addField("Dates", "**First Played BR:** %s\n**Last Updated:** %s".format(
+		embed.addField("Dates", "**First Played:** %s\n**Last Updated:** %s".format(
 			TimeFormat.DATE_LONG.format(athena.created.time),
 			TimeFormat.DATE_LONG.format(athena.updated.time)
 		), true)

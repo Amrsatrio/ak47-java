@@ -224,7 +224,7 @@ private fun equipTo(source: CommandSourceStack, profileId: String, currentLoadou
 
 private fun editVariants(source: CommandSourceStack, profileId: String, lockerItem: String, category: EAthenaCustomizationCategory, item: FortItemStack, variants: List<VariantContainer>): Int {
 	if (variants.size == 1) {
-		return editVariant(source, profileId, lockerItem, category, item, variants.first())
+		return editVariant(source, profileId, lockerItem, category, item, variants, variants.first())
 	}
 	val buttons = mutableListOf<Button>()
 	for (variant in variants) {
@@ -238,21 +238,17 @@ private fun editVariants(source: CommandSourceStack, profileId: String, lockerIt
 		return execute(source, item, source.api.profileManager.getProfileData("athena"))
 	}
 	val variant = variants.firstOrNull { it.cosmeticVariant.backendChannelName == choice } ?: return Command.SINGLE_SUCCESS
-	return editVariant(source, profileId, lockerItem, category, item, variant)
+	return editVariant(source, profileId, lockerItem, category, item, variants, variant)
 }
 
-private fun editVariant(source: CommandSourceStack, profileId: String, lockerItem: String, category: EAthenaCustomizationCategory, item: FortItemStack, variant: VariantContainer): Int {
+private fun editVariant(source: CommandSourceStack, profileId: String, lockerItem: String, category: EAthenaCustomizationCategory, item: FortItemStack, variants: List<VariantContainer>, variant: VariantContainer): Int {
 	val (cosmeticVariant, backendVariant) = variant
 	val embed = EmbedBuilder().setColor(item.palette.Color2.toColor())
 		.setTitle("✏ Editing: " + variant.channelName)
 		.setDescription("**Current:** " + variant.activeVariantDisplayName)
 	val selected = if (cosmeticVariant is FortCosmeticItemTexture) {
 		val allowClear = cosmeticVariant.ItemTextureVar.bAllowClear ?: true
-		if (allowClear) {
-			embed.appendDescription("\nPick type or clear:")
-		} else {
-			embed.appendDescription("\nPick type:")
-		}
+		embed.appendDescription(if (allowClear) "\nPick type or clear:" else "\nPick type:")
 		val buttons = mutableListOf<Button>()
 		buttons.add(Button.of(ButtonStyle.PRIMARY, "AthenaEmojiItemDefinition", "Emoticon"))
 		buttons.add(Button.of(ButtonStyle.PRIMARY, "AthenaSprayItemDefinition", "Spray"))
@@ -295,13 +291,38 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 	} else if (cosmeticVariant is FortCosmeticRichColorVariant) {
 		val colors = cosmeticVariant.InlineVariant.RichColorVar.ColorSwatchForChoices?.load<CustomDynamicColorSwatch>()?.ColorPairs
 			?: throw SimpleCommandExceptionType(LiteralMessage("No color swatch for %s. Custom colors are not yet supported.".format(variant.channelName))).create()
+		val activeColor = cosmeticVariant.getActive(backendVariant)
+		embed.setThumbnail("https://singlecolorimage.com/get/%06x/%dx%d".format(activeColor.toFColor(true).toPackedARGB() and 0xFFFFFF, 128, 128))
+		val currentInSwatch = colors.findPair(activeColor)
 		val options = colors.map {
 			val colorName = it.ColorName.toString()
-			SelectOption.of(it.ColorDisplayName.format() ?: colorName, colorName)
+			var option = SelectOption.of(it.ColorDisplayName.format() ?: colorName, colorName).withDefault(it == currentInSwatch)
+
+			// Check conflicts
+			if (cosmeticVariant.AntiConflictChannel != 0 && (colorName == "BLACK" || colorName == "WHITE")) {
+				for (otherVariant in variants) {
+					if (otherVariant == variant) {
+						continue
+					}
+					val otherRichColorVariant = otherVariant.cosmeticVariant as? FortCosmeticRichColorVariant ?: continue
+					if (otherRichColorVariant.AntiConflictChannel != cosmeticVariant.AntiConflictChannel) {
+						continue
+					}
+					val otherColors = otherRichColorVariant.InlineVariant.RichColorVar.ColorSwatchForChoices?.load<CustomDynamicColorSwatch>()?.ColorPairs
+						?: continue
+					val otherCurrentInSwatch = otherColors.findPair(otherRichColorVariant.getActive(otherVariant.backendVariant)) ?: continue
+					if (otherCurrentInSwatch.ColorName == it.ColorName) {
+						option = option.withDescription("This color is already in use by %s".format(otherVariant.channelName)).withEmoji(Emoji.fromUnicode("🚫"))
+						break
+					}
+				}
+			}
+			option
 		}
-		val selectedColor = when (val selectedColorName = askChoice(source, embed, options, "Pick a new color to apply")) {
+		val (selectedColorName, lockReason) = askChoice(source, embed, options, "Pick a new color to apply")
+		val selectedColor = when (selectedColorName) {
 			null -> return execute(source, item, source.api.profileManager.getProfileData("athena"))
-			"__locked__" -> throw SimpleCommandExceptionType(LiteralMessage("That color is locked.")).create()
+			"__locked__" -> return execute(source, item, source.api.profileManager.getProfileData("athena"), "🚫 $lockReason")
 			else -> colors.first { it.ColorName.toString() == selectedColorName }
 		}
 		val colorValue = selectedColor.ColorValue
@@ -336,9 +357,10 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 			}
 			options.add(option)
 		}
-		when (val selectedVariantName = askChoice(source, embed, options, "Pick a new style to apply")) {
+		val (selectedVariantName, lockReason) = askChoice(source, embed, options, "Pick a new style to apply")
+		when (selectedVariantName) {
 			null -> return execute(source, item, source.api.profileManager.getProfileData("athena"))
-			"__locked__" -> throw SimpleCommandExceptionType(LiteralMessage("That style is locked.")).create()
+			"__locked__" -> return execute(source, item, source.api.profileManager.getProfileData("athena"), "🚫 $lockReason")
 			else -> variantDefs.firstOrNull { it.backendVariantName == selectedVariantName }?.backendVariantName ?: return Command.SINGLE_SUCCESS
 		}
 	} else {
@@ -347,7 +369,7 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 	return equip(source, profileId, lockerItem, category, item, 0, arrayOf(McpVariantReader(cosmeticVariant.backendChannelName, selected, emptyArray())))
 }
 
-fun askChoice(source: CommandSourceStack, embed: EmbedBuilder, options: List<SelectOption>, hint: String): String? {
+fun askChoice(source: CommandSourceStack, embed: EmbedBuilder, options: List<SelectOption>, hint: String): Pair<String?, String?> {
 	val selected = if (options.size > 25) {
 		embed.addFieldSeparate(hint, options, inline = true) { (it.emoji?.asMention?.let { "$it " } ?: "") + it.label }
 		embed.setFooter("Type the number of the option you want to select, or 'cancel' to return.")
@@ -363,7 +385,7 @@ fun askChoice(source: CommandSourceStack, embed: EmbedBuilder, options: List<Sel
 			response.delete().queue()
 		}
 		if (choice == null) {
-			return null
+			return null to null
 		}
 		options[choice - 1]
 	} else {
@@ -371,14 +393,14 @@ fun askChoice(source: CommandSourceStack, embed: EmbedBuilder, options: List<Sel
 		source.loadingMsg = message
 		val interaction = message.awaitOneInteraction(source.author, false)
 		if (interaction.componentId == "cancel") {
-			return null
+			return null to null
 		}
 		(interaction as SelectMenuInteraction).selectedOptions.first()
 	}
 	if (selected.emoji != null) {
-		return "__locked__"
+		return "__locked__" to selected.description
 	}
-	return selected.value
+	return selected.value to null
 }
 
 private fun equip(source: CommandSourceStack, profileId: String, inLockerItem: String, inCategory: EAthenaCustomizationCategory, item: FortItemStack, inSlotIndex: Int, inVariantUpdates: Array<McpVariantReader>? = emptyArray()): Int {

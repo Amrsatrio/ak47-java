@@ -11,7 +11,6 @@ import com.tb24.fn.model.mcpprofile.commands.QueryPublicProfile
 import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
 import com.tb24.fn.model.mcpprofile.stats.CommonPublicProfileStats
 import com.tb24.fn.util.Formatters
-import com.tb24.fn.util.format
 import me.fungames.jfortniteparse.fort.enums.EFortStatType.*
 import net.dv8tion.jda.api.utils.TimeFormat
 import java.util.*
@@ -61,8 +60,8 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 		val fortStr = fort.joinToString(" ") { "%s %,d".format(textureEmote(it.icon), hb.getStatBonus(it)) }
 		val embed = source.createEmbed(campaign.owner)
 			.setDescription("%s\n**Commander Level:** %,d\n**Days Logged in:** %,d\n**Homebase Name:** %s"
-				.format(fortStr, stats.level, stats.daily_rewards?.totalDaysLoggedIn ?: 0, homebaseName))
-		embed.addField("Achievements", quests.joinToString("\n") { questTemplateId ->
+				.format(fortStr, stats.level + stats.rewards_claimed_post_max_level, stats.daily_rewards?.totalDaysLoggedIn ?: 0, homebaseName))
+		embed.addField("Banner Challenges", quests.joinToString("\n") { questTemplateId ->
 			val questItem = campaign.items.values.firstOrNull { it.templateId == questTemplateId }
 				?: FortItemStack(questTemplateId, 1)
 			val (completion, max) = getQuestCompletion(questItem)
@@ -73,11 +72,15 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 				Formatters.percentZeroFraction.format(completion.toDouble() / max.toDouble())
 			)
 		}, true)
+		embed.addField("Dates", "**First Played:** %s\n**Last Updated:** %s".format(
+			TimeFormat.DATE_LONG.format(campaign.created.time),
+			TimeFormat.DATE_LONG.format(campaign.updated.time)
+		), true)
 		val sb = StringBuilder()
 		for (statType in arrayOf(Fortitude, Offense, Resistance, Technology)) {
-			sb.append("%s **%s:** Lv %,d\n".format(textureEmote(statType.icon)?.asMention, statType.displayName.format(), stats.research_levels[statType]))
+			sb.append("%s %,d\n".format(textureEmote(statType.icon)?.asMention, stats.research_levels[statType]))
 		}
-		sb.append("%s **Stored Research:** %,d".format(textureEmote("/Game/UI/Foundation/Textures/Icons/Currency/T-Icon-ResearchPoint-128.T-Icon-ResearchPoint-128")?.asMention, researchPoints))
+		sb.append("%s %,d".format(textureEmote("/Game/UI/Foundation/Textures/Icons/Currency/T-Icon-ResearchPoint-128.T-Icon-ResearchPoint-128")?.asMention, researchPoints))
 		embed.addField("Research", sb.toString(), true)
 		embed.addField("Collection Book", "**Level:** %,d\n**Spent for Unslotting:** %,d".format(
 			stats.collection_book.maxBookXpLevelAchieved ?: 0,
@@ -88,10 +91,6 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 			hb.getWorldInventorySize(),
 			hb.getStorageInventorySize()
 		), true)
-		embed.addField("Dates", "**First Played STW:** %s\n**Last Updated:** %s".format(
-			TimeFormat.DATE_LONG.format(campaign.created.time),
-			TimeFormat.DATE_LONG.format(campaign.updated.time)
-		), true)
 		embed.addField("Miscellaneous", "**Mythic Schematics:** %,d\n**Revisions:** %,d\n**Zones Completed:** %,d".format(
 			mythicSchematics.size,
 			campaign.rvn,
@@ -99,7 +98,7 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 		), true)
 		val foundersEdition = if (foundersTiers.isNotEmpty()) foundersTiers.last() else null
 		if (foundersEdition != null) {
-			embed.setFooter(foundersEdition.displayName + " Founders Account", Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Items/T-Items-MTX.T-Items-MTX"))
+			embed.setFooter(foundersEdition.displayName + " Founders Account", Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Boost/T-Icon-FoundersBadge-128.T-Icon-FoundersBadge-128"))
 		} else {
 			embed.setFooter("Non-Founders Account", Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Items/T-Items-Currency-X-RayLlama.T-Items-Currency-X-RayLlama"))
 		}

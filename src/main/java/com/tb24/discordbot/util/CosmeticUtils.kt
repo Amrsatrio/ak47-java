@@ -5,6 +5,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.DiscordBot
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.McpVariantReader
+import com.tb24.fn.model.assetdata.CustomDynamicColorSwatch.ColorSwatchPair
 import me.fungames.jfortniteparse.fort.exports.variants.*
 import me.fungames.jfortniteparse.fort.objects.variants.BaseVariantDef
 import me.fungames.jfortniteparse.ue4.objects.core.math.FLinearColor
@@ -105,3 +106,6 @@ fun FortCosmeticRichColorVariant.getActive(backendVariant: McpVariantReader?): F
 	}
 	return color
 }
+
+fun List<ColorSwatchPair>.findPair(color: FLinearColor) =
+	firstOrNull { it.ColorValue.run { r == color.r && g == color.g && b == color.b && a == color.a } }
