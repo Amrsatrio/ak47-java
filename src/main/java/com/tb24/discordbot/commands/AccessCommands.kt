@@ -123,9 +123,9 @@ fun premium(source: CommandSourceStack, target: User, remove: Boolean/*, secret:
 		val role = homebaseGuild.getRolesByName("premium", true).firstOrNull()
 		if (role != null) {
 			if (remove) {
-				homebaseGuild.removeRoleFromMember(target.idLong, role).reason("Premium revoke")
+				homebaseGuild.removeRoleFromMember(User.fromId(target.idLong), role).reason("Premium revoke")
 			} else {
-				homebaseGuild.addRoleToMember(target.idLong, role).reason("Premium grant")
+				homebaseGuild.addRoleToMember(User.fromId(target.idLong), role).reason("Premium grant")
 			}.onErrorMap { null }.complete()
 		}
 	}
