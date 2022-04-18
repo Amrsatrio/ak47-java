@@ -190,8 +190,8 @@ class DiscordBot(token: String) {
 			val manifestFile = File(manifestsDir, manifestFileName)
 			if (!manifestFile.exists()) {
 				val manifestRequest = downloadInfo.createRequest()
-				LOGGER.info("Downloading manifest: " + manifestRequest.url())
-				val manifestResponse = okHttpClient.newCall(manifestRequest).exec().body()!!
+				LOGGER.info("Downloading manifest: " + manifestRequest.url)
+				val manifestResponse = okHttpClient.newCall(manifestRequest).exec().body!!
 				manifestFile.writeBytes(manifestResponse.bytes())
 			} else {
 				LOGGER.info("Using existing manifest")

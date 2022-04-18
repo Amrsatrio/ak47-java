@@ -348,7 +348,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 			source.complete(null, EmbedBuilder().setColor(0xF04947).setDescription("❌ Cannot perform action due to a lack of Permission. Missing permission: " + e.permission.getName()).build())
 		} catch (e: Throwable) {
 			var additional = "\nCommand: ${reader.string}"
-			source.session.api.okHttpClient.proxy()?.let {
+			source.session.api.okHttpClient.proxy?.let {
 				additional += "\nProxy: $it"
 			}
 			System.err.println("Unhandled exception while executing command$additional")
@@ -394,7 +394,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 				is CommandInteraction -> additional += "\nCommand: ${interaction.commandPath}"
 				is ModalInteraction -> additional += "\nModal: ${interaction.modalId}"
 			}
-			source.session.api.okHttpClient.proxy()?.let {
+			source.session.api.okHttpClient.proxy?.let {
 				additional += "\nProxy: $it"
 			}
 			System.err.println("Unhandled exception while executing command$additional")
@@ -409,11 +409,11 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 	fun httpError(source: CommandSourceStack, e: HttpException, errorTitle: String = source.errorTitle!!): Boolean {
 		val description: String?
 		var footer = ""
-		val host: String = e.response.request().url().host()
+		val host = e.response.request.url.host
 		val isEpicGames = host.endsWith("epicgames.com") || host.endsWith("fortnite.qq.com")
 		if (isEpicGames) {
 			val session = source.session
-			if ((e.code() == HttpURLConnection.HTTP_UNAUTHORIZED || (e.code() == HttpURLConnection.HTTP_FORBIDDEN && e.epicError.errorCode == "com.epicgames.common.token_verify_failed") /*special case for events service*/ || e.response.request().url().toString().contains("epicgames.com/id/logout")) && session.api.userToken?.account_id != null) {
+			if ((e.code() == HttpURLConnection.HTTP_UNAUTHORIZED || (e.code() == HttpURLConnection.HTTP_FORBIDDEN && e.epicError.errorCode == "com.epicgames.common.token_verify_failed") /*special case for events service*/ || e.response.request.url.toString().contains("epicgames.com/id/logout")) && session.api.userToken?.account_id != null) {
 				val invalidToken = session.api.userToken
 				session.api.setToken(null)
 				session.otherClientApis.clear()
@@ -456,7 +456,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 			}
 			val error = e.epicError
 			description = error.displayText
-			footer = (error.numericErrorCode?.let { "/$it" } ?: "") + (error.errorCode?.let { "/$it"} ?: "")
+			footer = (error.numericErrorCode?.let { "/$it" } ?: "") + (error.errorCode?.let { "/$it" } ?: "")
 		} else {
 			description = e.responseStr
 		}

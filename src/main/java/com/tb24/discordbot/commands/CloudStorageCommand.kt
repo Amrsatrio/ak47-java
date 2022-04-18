@@ -12,8 +12,8 @@ import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.exec
 import com.tb24.fn.util.Utils
 import com.tb24.fn.util.Utils.FLAG_SHORTER
-import okhttp3.MediaType
-import okhttp3.RequestBody
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.text.SimpleDateFormat
 
 class CloudStorageCommand : BrigadierCommand("cloudstorage", "List, download, or upload your cloud saved game settings.", arrayOf("cs")) {
@@ -46,7 +46,7 @@ class CloudStorageCommand : BrigadierCommand("cloudstorage", "List, download, or
 				if (fileToUpload != null) {
 					source.loading("Uploading $fileName")
 					fileToUpload.retrieveInputStream().await().use {
-						val body = RequestBody.create(MediaType.get("application/octet-stream"), it.readBytes())
+						val body = it.readBytes().toRequestBody("application/octet-stream".toMediaType())
 						source.api.fortniteService.writeUserFile(source.api.currentLoggedIn.id, fileName, body).exec()
 					}
 					source.complete(null, source.createEmbed().setColor(COLOR_SUCCESS)

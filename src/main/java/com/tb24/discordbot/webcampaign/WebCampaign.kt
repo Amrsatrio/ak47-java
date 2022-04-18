@@ -49,7 +49,7 @@ class WebCampaign(val okHttpClient: OkHttpClient, val domainName: String) {
 		val request = Request.Builder()
 			.url("https://$domainName.fortnite.com/environment.js")
 			.build()
-		val response = okHttpClient.newCall(request).exec().body()!!.string()
+		val response = okHttpClient.newCall(request).exec().body!!.string()
 		JsonParser.parseString(response.substringAfter("window.emconfig = ")).asJsonObject
 	}
 

@@ -20,7 +20,7 @@ class ProxyManager {
 	companion object {
 		val LOGGER: Logger = LoggerFactory.getLogger("ProxyManager")
 		val PROXY_AUTHENTICATOR = Authenticator { route, response ->
-			val builder = response.request().newBuilder()
+			val builder = response.request.newBuilder()
 			val proxyUsername = BotConfig.get().proxyUsername
 			val proxyPassword = BotConfig.get().proxyPassword
 			if (proxyUsername != null && proxyPassword != null) {

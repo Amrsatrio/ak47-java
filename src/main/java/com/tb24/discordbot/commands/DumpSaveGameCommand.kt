@@ -24,7 +24,7 @@ class DumpSaveGameCommand : BrigadierCommand("dumpsav", "Prints out the data ins
 				source.loading("Downloading $fileName")
 				val call = source.api.fortniteService.readUserFile(source.api.currentLoggedIn.id, fileName)
 				val response = call.exec().body()!!
-				display(source, FFortSaveGame(response.bytes(), call.request().url().toString()))
+				display(source, FFortSaveGame(response.bytes(), call.request().url.toString()))
 			}
 		)
 		.executes { c ->

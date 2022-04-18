@@ -53,7 +53,7 @@ import net.dv8tion.jda.api.interactions.components.buttons.Button
 import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
 import net.dv8tion.jda.api.interactions.components.selections.SelectMenu
 import net.dv8tion.jda.api.utils.TimeFormat
-import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import retrofit2.Call
 import retrofit2.Response
@@ -106,14 +106,14 @@ fun okhttp3.Call.exec(): okhttp3.Response = execute().apply {
 		throw HttpException(this)
 }
 
-inline fun <reified T> okhttp3.Response.to(): T = body()!!.charStream().use { EpicApi.GSON.fromJson(it, T::class.java) }
+inline fun <reified T> okhttp3.Response.to(): T = body!!.charStream().use { EpicApi.GSON.fromJson(it, T::class.java) }
 
 inline fun <reified T> EpicApi.performWebApiRequest(url: String): T {
 	val request = Request.Builder().url(url)
 		.header("Cookie", "EPIC_BEARER_TOKEN=" + userToken.access_token)
 		.build()
 	val response = okHttpClient.newCall(request).exec()
-	if (response.request().url().toString().contains("epicgames.com/id/logout")) {
+	if (response.request.url.toString().contains("epicgames.com/id/logout")) {
 		throw HttpException(response)
 	}
 	return response.to()
@@ -648,7 +648,7 @@ inline fun Long.relativeFromNow(withSeconds: Boolean = false) = TimeFormat.RELAT
 
 fun String.shortenUrl(source: CommandSourceStack): String {
 	val cuttlyApiKey = "2f305deea48f34be34018ab54b7b7dd2b72e4"
-	val shortenerUrl = HttpUrl.get("https://cutt.ly/api/api.php").newBuilder().addQueryParameter("key", cuttlyApiKey).addQueryParameter("short", this).build()
+	val shortenerUrl = "https://cutt.ly/api/api.php".toHttpUrl().newBuilder().addQueryParameter("key", cuttlyApiKey).addQueryParameter("short", this).build()
 	val shortenerResponse = source.api.okHttpClient.newCall(Request.Builder().url(shortenerUrl).build()).exec().to<JsonObject>().getAsJsonObject("url")
 	return shortenerResponse.getString("shortLink")!!
 }

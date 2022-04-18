@@ -85,7 +85,7 @@ class ShopDumpCommand : BrigadierCommand("shopdump", "Sends the current item sho
 			val source = c.source
 			source.conditionalUseInternalSession()
 			val lang = "en"
-			val data = source.api.okHttpClient.newCall(source.api.fortniteService.storefrontCatalog(lang).request()).exec().body()!!.charStream().use(JsonParser::parseReader)
+			val data = source.api.okHttpClient.newCall(source.api.fortniteService.storefrontCatalog(lang).request()).exec().body!!.charStream().use(JsonParser::parseReader)
 			val df = SimpleDateFormat("dd-MM-yyyy").apply { timeZone = TimeZone.getTimeZone("UTC") }
 			source.channel.sendFile(GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(data).toByteArray(), "shop-%s-%s.json".format(df.format(Date()), lang)).complete()
 			Command.SINGLE_SUCCESS

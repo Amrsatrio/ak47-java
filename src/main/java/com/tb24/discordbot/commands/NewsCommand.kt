@@ -15,9 +15,9 @@ import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import net.dv8tion.jda.api.EmbedBuilder
-import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
-import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.CompletableFuture
 
 class NewsCommand : BrigadierCommand("news", "Shows the in-game news.") {
@@ -63,7 +63,7 @@ class NewsCommand : BrigadierCommand("news", "Shows the in-game news.") {
 		}
 		val prmResponse = source.api.okHttpClient.newCall(Request.Builder()
 			.url("https://prm-dialogue-public-api-prod.edea.live.use1a.on.epicgames.com/api/v1/fortnite-br/surfaces/motd/target")
-			.post(RequestBody.create(MediaType.get("application/json"), EpicApi.GSON.toJson(p)))
+			.post(EpicApi.GSON.toJson(p).toRequestBody("application/json".toMediaType()))
 			.build()).exec().to<JsonObject>()
 		val motds = prmResponse.getAsJsonArray("contentItems").map { EpicApi.GSON.fromJson(it.asJsonObject.getAsJsonObject("contentFields"), CommonUISimpleMessageMOTD::class.java) }
 		displayNews(motds, source)

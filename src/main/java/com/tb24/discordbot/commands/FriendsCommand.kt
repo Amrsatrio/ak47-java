@@ -28,8 +28,8 @@ import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.buttons.Button
 import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
-import okhttp3.MediaType
-import okhttp3.RequestBody
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.Call
 import java.net.HttpURLConnection
 
@@ -202,7 +202,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 				friend!!.alias = new
 			}
 		} else {
-			val body = RequestBody.create(MediaType.get("text/plain"), new)
+			val body = new.toRequestBody("text/plain".toMediaType())
 			if (note) {
 				friendsService.setFriendNote(accountId, friendId, body).exec()
 				friend!!.note = new

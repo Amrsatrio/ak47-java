@@ -23,7 +23,7 @@ class BlurlCommand : BrigadierCommand("blurl", "Fetches and decompresses a strea
 
 	private fun execute(source: CommandSourceStack, videoId: String, beautify: Boolean = false): Int {
 		val blurl = source.api.okHttpClient.newCall(Request.Builder().url("http://fortnite-vod.akamaized.net/${videoId}/master.blurl").build())
-			.exec().body()!!.bytes()
+			.exec().body!!.bytes()
 		val builder = EpicApi.GSON.newBuilder()
 		if (beautify) {
 			builder.setPrettyPrinting()

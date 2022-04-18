@@ -24,9 +24,9 @@ val exclusives by lazy {
 	}
 	val response = DiscordBot.instance.okHttpClient.newCall(Request.Builder().url(exclusivesCsvUrl).build()).execute()
 	if (!response.isSuccessful) {
-		throw SimpleCommandExceptionType(LiteralMessage("Request failed with status code " + response.code())).create()
+		throw SimpleCommandExceptionType(LiteralMessage("Request failed with status code " + response.code)).create()
 	}
-	val lines = response.body()!!.charStream().use { it.readLines() }
+	val lines = response.body!!.charStream().use { it.readLines() }
 	val result = hashMapOf<String, ExclusivesEntry>()
 	val terminator = hashSetOf(',')
 	lines.forEachIndexed { index, line ->

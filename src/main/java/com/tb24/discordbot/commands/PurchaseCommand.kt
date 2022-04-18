@@ -37,7 +37,11 @@ import net.dv8tion.jda.api.entities.Role
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.buttons.Button
 import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
-import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import java.text.NumberFormat
 import java.time.Instant
 import java.util.*
@@ -284,7 +288,7 @@ private fun realMoneyPurchase(source: CommandSourceStack, offer: CatalogOffer, s
 		}
 		val orderPreviewResponse = okHttpClient.newCall(Request.Builder()
 			.url("https://payment-website-pci.ol.epicgames.com/purchase/order-preview")
-			.post(RequestBody.create(MediaType.get("application/json"), orderPreviewPayload.toString()))
+			.post(orderPreviewPayload.toString().toRequestBody("application/json".toMediaType()))
 			.addHeader("User-Agent", userAgent)
 			.addHeader("x-requested-with", purchaseToken)
 			.build()).execute().handleResponse()
@@ -310,7 +314,7 @@ private fun realMoneyPurchase(source: CommandSourceStack, offer: CatalogOffer, s
 		}
 		val confirmOrderResponse = okHttpClient.newCall(Request.Builder()
 			.url("https://payment-website-pci.ol.epicgames.com/purchase/confirm-order")
-			.post(RequestBody.create(MediaType.get("application/json"), confirmOrderPayload.toString()))
+			.post(confirmOrderPayload.toString().toRequestBody("application/json".toMediaType()))
 			.addHeader("User-Agent", userAgent)
 			.addHeader("x-requested-with", purchaseToken)
 			.build()).execute().handleResponse()
@@ -333,7 +337,7 @@ private fun generatePurchaseToken(source: CommandSourceStack, offerId: String): 
 	}
 	val response = source.api.okHttpClient.newCall(Request.Builder()
 		.url("https://payment-website-pci.ol.epicgames.com/payment/v1/purchaseToken")
-		.post(RequestBody.create(MediaType.get("application/json"), purchaseTokenPayload.toString()))
+		.post(purchaseTokenPayload.toString().toRequestBody("application/json".toMediaType()))
 		.build()).exec().to<JsonObject>()
 	return response.getString("purchaseToken", "")
 }
