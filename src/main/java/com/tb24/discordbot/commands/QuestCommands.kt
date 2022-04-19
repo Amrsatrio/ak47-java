@@ -20,6 +20,7 @@ import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.subgame.FortRerollDailyQuest
 import com.tb24.fn.model.mcpprofile.stats.IQuestManager
+import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
 import com.tb24.uasset.getProp
 import com.tb24.uasset.loadObject
@@ -309,12 +310,19 @@ class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR q
 }
 
 fun renderQuestObjectives(item: FortItemStack, short: Boolean = false): String {
-	val objectives = (item.defData as FortQuestItemDefinition).Objectives.filter { !it.bHidden }
+	val quest = item.defData as FortQuestItemDefinition
+	val objectives = quest.Objectives.filter { !it.bHidden }
 	return objectives.joinToString("\n") {
 		val completion = Utils.getCompletion(it, item)
 		val objectiveCompleted = completion >= it.Count
 		val sb = StringBuilder(if (objectiveCompleted) "✅ ~~" else "❌ ")
-		sb.append(if (short) it.HudShortDescription else it.Description)
+		val description = (if (short) it.HudShortDescription else it.Description)?.format()
+		if (!description.isNullOrEmpty()) {
+			val minRating = it.minRating
+			sb.append(if (minRating != 0) description.replace("[UIRating]", Formatters.num.format(minRating)) else description)
+		} else {
+			sb.append("No description")
+		}
 		if (it.Count > 1) {
 			sb.append(" [%,d/%,d]".format(completion, it.Count))
 		}
@@ -399,6 +407,7 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 }
 
 fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: String? = "", isAthenaDaily: Boolean = false, showRarity: Boolean = isAthenaDaily, conditionalCondition: Boolean = false, allowBold: Boolean = true): String {
+	val quest = item.defData as FortQuestItemDefinition
 	val (completion, max) = getQuestCompletion(item)
 	val xpRewardScalar = item.attributes["xp_reward_scalar"]?.asFloat ?: 1f
 	var dn = item.displayName
@@ -416,12 +425,16 @@ fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: Str
 	} else ""
 	val boldTitle = if (allowBold) "**" else ""
 	val sb = StringBuilder("%s%s%s%s%s ".format(prefix, rarity, boldTitle, dn, boldTitle))
-	if (rewardsPrefix != null) {
-		sb.append("[%,d/%,d]".format(completion, max))
-	} else {
-		sb.append("**[%,d/%,d]**".format(completion, max))
+	var progress = "%,d/%,d".format(completion, max)
+	val difficulty = quest.minRating
+	if (difficulty != 0) {
+		progress = "%,d+ %s".format(difficulty, progress)
 	}
-	val quest = item.defData as FortQuestItemDefinition
+	if (rewardsPrefix != null) {
+		sb.append("[$progress]")
+	} else {
+		sb.append("**[$progress]**")
+	}
 	val bold = allowBold && isAthenaDaily && xpRewardScalar == 1f
 	quest.Rewards?.forEach { reward ->
 		if (reward.ItemPrimaryAssetId.PrimaryAssetType.Name.text != "Quest") {

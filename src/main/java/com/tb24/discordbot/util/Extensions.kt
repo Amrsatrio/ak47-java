@@ -39,6 +39,7 @@ import me.fungames.jfortniteparse.fort.exports.*
 import me.fungames.jfortniteparse.fort.objects.AthenaRewardItemReference
 import me.fungames.jfortniteparse.fort.objects.FortColorPalette
 import me.fungames.jfortniteparse.fort.objects.FortItemQuantityPair
+import me.fungames.jfortniteparse.fort.objects.FortMcpQuestObjectiveInfo
 import me.fungames.jfortniteparse.fort.objects.rows.CosmeticMarkupTagDataRow
 import me.fungames.jfortniteparse.fort.objects.rows.CosmeticSetDataRow
 import me.fungames.jfortniteparse.fort.objects.rows.FortQuestRewardTableRow
@@ -73,6 +74,7 @@ import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Future
+import java.util.regex.Pattern
 import kotlin.math.min
 
 @Throws(HttpException::class, IOException::class)
@@ -384,6 +386,36 @@ fun AthenaRewardItemReference.safeRender(): String {
 	} else {
 		asItemStack().render(showType = true)
 	}
+}
+
+private val numberRegex = Pattern.compile("\\d+")
+private val gameDifficultyGrowthBounds by lazy { loadObject<UDataTable>("/Game/Balance/DataTables/GameDifficultyGrowthBounds.GameDifficultyGrowthBounds")!! }
+
+val FortQuestItemDefinition.minRating: Int get() {
+	for (objective in Objectives) {
+		val minRating = objective.minRating
+		if (minRating != 0) {
+			return minRating
+		}
+	}
+	return 0
+}
+
+val FortMcpQuestObjectiveInfo.minRating: Int get() {
+	val objectiveStatRow = ObjectiveStatHandle.row ?: return 0
+	val condition = objectiveStatRow.get<String>("Condition")
+	if ("Zone.Difficulty" !in condition) {
+		return 0
+	}
+	val matcher = numberRegex.matcher(condition.substringAfter("Zone.Difficulty"))
+	if (!matcher.find()) {
+		return 0
+	}
+	val minDifficulty = matcher.group().toFloat()
+	if (minDifficulty == 0f) {
+		return 0
+	}
+	return gameDifficultyGrowthBounds.rows.values.firstOrNull { it.get<Float>("Difficulty") == minDifficulty }?.get<Int>("RecommendedRating") ?: 0
 }
 
 @Throws(CommandSyntaxException::class)
