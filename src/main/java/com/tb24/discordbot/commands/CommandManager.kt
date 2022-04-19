@@ -8,10 +8,7 @@ import com.mojang.brigadier.tree.LiteralCommandNode
 import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.HttpException
-import com.tb24.discordbot.util.CollectorException
-import com.tb24.discordbot.util.EmbedMessage
-import com.tb24.discordbot.util.escapeMarkdown
-import com.tb24.discordbot.util.getStackTraceAsString
+import com.tb24.discordbot.util.*
 import com.tb24.fn.network.AccountService.GrantType
 import com.tb24.fn.util.EAuthClient
 import net.dv8tion.jda.api.EmbedBuilder
@@ -495,7 +492,7 @@ ${e.getStackTraceAsString()}```""", null)
 				.setRequired(true)
 				.build()
 
-			event.replyModal(Modal.create("authCodeSubmission", "Log in to your Epic Games account")
+			event.replyModal(Modal.create("authCodeSubmission".appendMachineId(), "Log in to your Epic Games account")
 				.addActionRow(inputCode)
 				.build()).queue()
 		}
@@ -506,7 +503,7 @@ ${e.getStackTraceAsString()}```""", null)
 		if (member != null && !member.hasPermission(event.channel as GuildChannel, Permission.MESSAGE_SEND)) {
 			return
 		}
-		if (event.modalId == "authCodeSubmission") {
+		if (event.modalId == "authCodeSubmission".appendMachineId()) {
 			val code = event.getValue("code")!!.asString
 			val interaction = event.interaction
 			val source = CommandSourceStack(client, interaction, event.user.id)

@@ -45,6 +45,7 @@ import me.fungames.jfortniteparse.fort.objects.rows.FortQuestRewardTableRow
 import me.fungames.jfortniteparse.ue4.assets.exports.UDataTable
 import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
+import me.fungames.jfortniteparse.util.printHexBinary
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.*
 import net.dv8tion.jda.api.interactions.components.ActionRow
@@ -66,6 +67,8 @@ import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.PrintWriter
 import java.io.StringWriter
+import java.net.InetAddress
+import java.security.MessageDigest
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
@@ -723,6 +726,14 @@ fun BuildResponse.ManifestDownloadInfo.createRequest(): Request {
 		builder.addHeader(header.name, header.value)
 	}
 	return builder.build()
+}
+
+fun String.appendMachineId() = "$this-$machineId"
+
+val machineId: String by lazy {
+	val hostname = InetAddress.getLocalHost().hostName
+	val hash = MessageDigest.getInstance("MD5").digest(hostname.toByteArray()).printHexBinary()
+	hash.substring(0, 8)
 }
 
 fun Number.awtColor(hasAlpha: Boolean = toInt() ushr 24 != 0) = Color(toInt(), hasAlpha)
