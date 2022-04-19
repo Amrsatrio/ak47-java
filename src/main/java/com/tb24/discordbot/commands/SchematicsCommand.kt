@@ -3,6 +3,7 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.tb24.discordbot.util.getEmoteByName
 import com.tb24.discordbot.util.replyPaginated
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
@@ -32,15 +33,16 @@ class SchematicsCommand : BrigadierCommand("schematics", "Lists your or a given 
 				val alterations = mutableListOf<String>()
 				schem.attributes.getAsJsonArray("alterations")?.let {
 					for (alterationId in it) {
-						val alteration = FortItemStack(alterationId.asString, 1).defData
+						val alterationItem = FortItemStack(alterationId.asString, 1)
+						val alteration = alterationItem.defData
 						if (alteration == null) {
 							alterations.add(alterationId.asString)
 						} else {
-							alterations.add(alteration.Description.format() ?: alteration.DisplayName.format() ?: alterationId.asString)
+							alterations.add(getEmoteByName(alterationItem.rarity.name.toLowerCase() + '2')?.asMention + ' ' + (alteration.Description.format() ?: alteration.DisplayName.format() ?: alterationId.asString))
 						}
 					}
 				}
-				embed.addField("%s (Level %,d)".format(schem.displayName.trim(), schem.attributes["level"]?.asInt ?: 0), alterations.joinToString("\n"), true)
+				embed.addField("Lv%,d %s".format(schem.attributes["level"]?.asInt ?: 0, schem.displayName.trim()), alterations.joinToString("\n"), true)
 			}
 			MessageBuilder(embed)
 		}

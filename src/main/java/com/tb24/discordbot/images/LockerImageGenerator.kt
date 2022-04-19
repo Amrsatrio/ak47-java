@@ -77,7 +77,6 @@ class GenerateLockerImageParams(
 }
 
 fun generateLockerImage(items: List<FortItemStack>, params: GenerateLockerImageParams): BufferedImage {
-	val items = items.sortedWith(SimpleAthenaLockerItemComparator().apply { prioritizeFavorites = false })
 	val name = params.name
 	val icon = params.icon
 	val epicUser = params.epicUser
