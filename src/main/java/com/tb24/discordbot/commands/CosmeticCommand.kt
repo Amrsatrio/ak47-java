@@ -266,9 +266,6 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 		if (choice == "clear") {
 			"ItemTexture.None"
 		} else {
-			if (choice == "AthenaSprayItemDefinition") {
-				source.ensurePremium("Use sprays in emoticon slots")
-			}
 			val typeName = (interaction.component as Button).label
 			source.loadingMsg = source.complete("Type in the exact name of the %s that you want to pick, or `cancel` to cancel:".format(typeName))
 			val response = source.channel.awaitMessages({ collected, _, _ -> collected.author == source.author }, AwaitMessagesOptions().apply {

@@ -21,7 +21,6 @@ class MtxPlatformCommand : BrigadierCommand("vbucksplatform", "Changes the V-Buc
 			.suggests { _, b -> EFortMtxPlatform.values().fold(b) { acc, it -> acc.suggest(it.name) }.buildFuture() }
 			.executes { c ->
 				val source = c.source
-				source.ensurePremium("Change V-Bucks platform")
 				source.ensureSession()
 				val platformArg = getString(c, "platform")
 				val platform = EFortMtxPlatform.values().firstOrNull { it.name.equals(platformArg, true) }

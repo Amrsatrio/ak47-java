@@ -31,7 +31,6 @@ class GiftCommand : BrigadierCommand("gift", "Gifts a friend an offer from the i
 		)
 
 	private fun execute(source: CommandSourceStack, catalogOffer: CatalogOffer, recipient: GameProfile): Int {
-		source.ensurePremium("Gift an item")
 		val ce = catalogOffer.holder()
 		if (catalogOffer.giftInfo == null || !catalogOffer.giftInfo.bIsEnabled) {
 			throw SimpleCommandExceptionType(LiteralMessage("${ce.friendlyName} is not giftable.")).create()

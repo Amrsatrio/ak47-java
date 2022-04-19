@@ -78,7 +78,7 @@ class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the
 		source.complete(null, source.createEmbed()
 			.setTitle(Formatters.num.format(countMtxCurrency(commonCore)) + " V-Bucks")
 			.addField("Breakdown", if (breakdown.isEmpty()) "You have no V-Bucks." else breakdown.joinToString("\n"), false)
-			.setFooter("V-Bucks platform: " + current + (if (source.hasPremium()) " (" + source.prefix + "vbucksplatform to change)" else ""))
+			.setFooter("V-Bucks platform: " + current + (if (true) " (" + source.prefix + "vbucksplatform to change)" else ""))
 			.setThumbnail(Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Items/T-Items-MTX-L.T-Items-MTX-L"))
 			.build())
 		return Command.SINGLE_SUCCESS
