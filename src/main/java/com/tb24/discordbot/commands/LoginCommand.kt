@@ -314,7 +314,7 @@ val existingAuthCodeHintMessages = ExpiringMap.builder()
 	.build<Long, Message>()
 
 fun authorizationCodeHint(source: CommandSourceStack, authClient: EAuthClient): Int {
-	val submitRow = ActionRow.of(Button.secondary("submitAuthCode", "Submit code and log in..."))
+	val submitRow = ActionRow.of(Button.secondary("submitAuthCode".appendMachineId(), "Submit code and log in..."))
 	existingAuthCodeHintMessages[source.channel.idLong]?.let {
 		source.complete(null, EmbedBuilder().setColor(0x8AB4F8)
 			.setDescription("Check [the message above](${it.jumpUrl}) for instructions.")

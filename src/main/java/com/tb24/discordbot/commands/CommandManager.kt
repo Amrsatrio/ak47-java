@@ -484,7 +484,7 @@ ${e.getStackTraceAsString()}```""", null)
 
 	// region TODO Move to appropriate class
 	override fun onGenericComponentInteractionCreate(event: GenericComponentInteractionCreateEvent) {
-		if (event.componentId == "submitAuthCode") {
+		if (event.componentId == "submitAuthCode".appendMachineId()) {
 			val inputCode = TextInput.create("code", "Code", TextInputStyle.SHORT)
 				.setMinLength(32)
 				.setMaxLength(200)
