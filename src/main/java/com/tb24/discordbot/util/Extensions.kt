@@ -653,12 +653,12 @@ fun String.shortenUrl(source: CommandSourceStack): String {
 	return shortenerResponse.getString("shortLink")!!
 }
 
-inline fun <T> Iterable<T>.search(query: String, minimumSimilarity: Float = .33f, extractor: (T) -> String = { it.toString() }): T? {
+inline fun <T> Iterable<T>.search(query: String, minimumSimilarity: Float = .33f, filter: (T) -> Boolean = { true }, extractor: (T) -> String? = { it.toString() }): T? {
 	val query = query.toLowerCase()
 	var maxSim = minimumSimilarity
 	var result: T? = null
 	for (item in this) {
-		val key = extractor(item).toLowerCase()
+		val key = extractor(item)?.toLowerCase() ?: continue
 		if (key == query) {
 			return item
 		}
@@ -688,19 +688,13 @@ fun similarity(s1: String, s2: String): Float {
 
 fun searchItemDefinition(displayName: String, primaryAssetType: String, className: String? = null): Pair<String, FortItemDefinition>? {
 	val lowerPrimaryAssetType = primaryAssetType.toLowerCase()
-	for ((templateId, objectPath) in AssetManager.INSTANCE.assetRegistry.templateIdToObjectPathMap.entries) {
-		if (!templateId.startsWith(lowerPrimaryAssetType)) {
-			continue
+	val result = AssetManager.INSTANCE.assetRegistry.templateIdToAssetDataMap.entries.search(displayName) { (templateId, assetData) ->
+		if (!templateId.startsWith(lowerPrimaryAssetType) || className != null && assetData.assetClass != className) {
+			return@search null
 		}
-		val itemDef = loadObject<FortItemDefinition>(objectPath) ?: continue
-		if (className != null && itemDef.exportType != className) {
-			continue
-		}
-		if (itemDef.DisplayName.format()?.trim()?.equals(displayName, true) == true) {
-			return templateId to itemDef
-		}
+		assetData.displayName
 	}
-	return null
+	return result?.let { it.key to loadObject<FortItemDefinition>(it.value.objectPath)!! }
 }
 
 inline fun <reified T : AthenaSeasonItemData> AthenaSeasonItemDefinition.getAdditionalDataOfType() = AdditionalSeasonData?.firstOrNull { it.value is T }?.value as T?

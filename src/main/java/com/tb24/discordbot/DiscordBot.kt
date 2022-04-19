@@ -204,7 +204,7 @@ class DiscordBot(token: String) {
 
 	// region Scheduled tasks
 	private fun initTasks() {
-		if (ENV != "dev") {
+		if (isProd) {
 			scheduleUtcMidnightTask()
 			if (BotConfig.get().loadGameFiles != BotConfig.EGameFileLoadOption.NoLoad) {
 				scheduleKeychainTask()
@@ -314,7 +314,7 @@ class DiscordBot(token: String) {
 
 	// region Prefix manager
 	fun getCommandPrefix(guild: Guild?): String {
-		if (guild == null /*|| ENV == "dev"*/) {
+		if (guild == null /*|| !isProd*/) {
 			return BotConfig.get().defaultPrefix
 		}
 		val guildId = guild.idLong

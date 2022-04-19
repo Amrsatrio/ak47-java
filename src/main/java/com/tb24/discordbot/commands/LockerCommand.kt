@@ -8,7 +8,6 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.StringArgumentType.*
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.Rune
 import com.tb24.discordbot.images.EXCLUSIVES_DISTINGUISH
 import com.tb24.discordbot.images.EXCLUSIVES_INFO
@@ -334,7 +333,7 @@ fun generateAndSendLockerImage(source: CommandSourceStack, ids: Collection<FortI
 	}
 	val name = params.name
 	val message = MessageBuilder("**$name** (${Formatters.num.format(ids.size)})")
-	if (DiscordBot.ENV == "dev") {
+	if (!source.client.isProd) {
 		message.append("\nRendered: ${elapsed}ms")
 	}
 	source.complete(message.build(), AttachmentUpload(output, "$name-${source.api.currentLoggedIn.id}.png"))

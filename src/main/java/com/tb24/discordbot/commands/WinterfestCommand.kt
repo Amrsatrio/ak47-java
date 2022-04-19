@@ -7,7 +7,6 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
@@ -42,7 +41,7 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 
 	private fun display(source: CommandSourceStack, winterfestData: FortWinterfestData): Int {
 		var athena = source.api.profileManager.getProfileData("athena")
-		if (DiscordBot.ENV == "dev") {
+		if (!source.client.isProd) {
 			athena.items["FAKE_W19_REWARD_GRAPH"] = FortItemStack(winterfestData.WinterfestItemTemplateId, 1).apply {
 				attributes = JsonObject().apply {
 					addProperty("unlock_epoch", "2021-12-14T14:00:00Z")

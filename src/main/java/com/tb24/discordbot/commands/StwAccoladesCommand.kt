@@ -56,13 +56,13 @@ class StwAccoladesCommand : BrigadierCommand("stwaccolades", "Shows the amount o
 		if (!result.outdated) {
 			result.tracker.attributes.getAsJsonArray("match_accolades")?.forEach { matchAccolade_ ->
 				val matchAccolade = matchAccolade_.asJsonObject
-				val primaryMissionName = matchAccolade.getString("primaryMissionName")
-				val missionInfo = AssetManager.INSTANCE.assetRegistry.lookup("FortMissionInfo", primaryMissionName)?.let { loadObject(it) }
+				val primaryMissionName = matchAccolade.getString("primaryMissionName")!!
+				val missionInfo = AssetManager.INSTANCE.assetRegistry.lookup("FortMissionInfo", primaryMissionName)?.let { loadObject(it.objectPath) }
 				val missionName = missionInfo?.getOrNull<FText>("MissionName")?.format() ?: primaryMissionName
 				val accoladesText = matchAccolade.getAsJsonArray("accoladesToGrant")?.joinToString("\n") { accoladeToGrant_ ->
 					val accoladeToGrant = accoladeToGrant_.asJsonObject
 					val (type, name) = accoladeToGrant.getString("templateToGrant")!!.split(':')
-					val accoladeDef = AssetManager.INSTANCE.assetRegistry.lookup(type, name)?.let { loadObject<FortAccoladeItemDefinition>(it) }
+					val accoladeDef = AssetManager.INSTANCE.assetRegistry.lookup(type, name)?.let { loadObject<FortAccoladeItemDefinition>(it.objectPath) }
 					"%,d \u00d7 %s - %,d %s".format(accoladeToGrant.getInt("numToGrant"), accoladeDef?.DisplayName?.format() ?: name, accoladeToGrant.getInt("realXPGranted"), xpEmote?.asMention)
 				}
 				embed.addField("Last mission: %s - %,d %s".format(missionName, matchAccolade.getInt("totalXPEarnedInMatch"), xpEmote?.asMention), accoladesText, true)

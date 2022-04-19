@@ -37,7 +37,7 @@ class CatalogManager {
 
 	fun initialize(client: DiscordBot?) {
 		this.client = client
-		if (client != null) {
+		if (client != null && client.isProd) {
 			try {
 				ensureCatalogData(client.internalSession.api)
 			} catch (e: Exception) {
