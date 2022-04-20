@@ -193,16 +193,22 @@ class WebCampaign(val okHttpClient: OkHttpClient, val domainName: String) {
 		}
 	}
 
-	inner class WebCampaignReward(val index: Int, rewardsData: JsonObject) {
-		val type = when {
-			index == rewardsData.getInt("rewardIndex") -> RewardType.REGISTRATION
-			index == rewardsData.getInt("milestoneIndex") -> RewardType.MILESTONE
-			JsonPrimitive(index) in rewardsData.getAsJsonArray("milestoneIndexes") -> RewardType.MILESTONE
-			else -> RewardType.DAY
-		}
-		val name get() = localization.getString("Reward.$index.name", "Unknown")
+	inner class WebCampaignReward(val index: Int) {
+		val type: RewardType
+		val name get() = localization.getString("Reward.$index.name", "Unknown").replace("in-game cosmetic ", "")
 		val smallIcon get() = "https://$domainName.fortnite.com/images/rewards/prize.$index@2x.png"
 		val largeIcon get() = "https://$domainName.fortnite.com/images/rewards/prize.$index@3x.png"
+
+		init {
+			val rewardsData = environment.getAsJsonObject("settings").getAsJsonObject("rewards")
+			val milestoneIndexes = rewardsData.getAsJsonArray("milestoneIndexes")
+			type = when {
+				index == rewardsData.getInt("rewardIndex") -> RewardType.REGISTRATION
+				index == rewardsData.getInt("milestoneIndex") -> RewardType.MILESTONE
+				milestoneIndexes != null && JsonPrimitive(index) in milestoneIndexes -> RewardType.MILESTONE
+				else -> RewardType.DAY
+			}
+		}
 	}
 
 	enum class RewardType {
@@ -212,9 +218,8 @@ class WebCampaign(val okHttpClient: OkHttpClient, val domainName: String) {
 	val rewards by lazy {
 		val result = mutableListOf<WebCampaignReward>()
 		var index = 1
-		val rewardsData = environment.getAsJsonObject("settings").getAsJsonObject("rewards")
 		while (localization.has("Reward.$index.name")) {
-			result.add(WebCampaignReward(index, rewardsData))
+			result.add(WebCampaignReward(index))
 			index++
 		}
 		result

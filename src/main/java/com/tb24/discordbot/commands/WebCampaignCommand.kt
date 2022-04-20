@@ -4,6 +4,7 @@ import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.tb24.discordbot.L10N
+import com.tb24.discordbot.util.TextFormatter
 import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.exec
@@ -49,9 +50,10 @@ open class WebCampaignCommand(name: String, description: String, val domainName:
 			val day = day_.asJsonObject
 			val participantDay = participant.getAsJsonArray("dayProgresses").firstOrNull { it.asJsonObject.get("dayId").asString == day.getString("dayId") }?.asJsonObject
 			val statsPerPoint = day.getInt("statsPerPoint")
-			val max = day.getInt("completionThreshold") * statsPerPoint
+			val milestone = day.getInt("completionThreshold") * statsPerPoint
+			val participation = day.getInt("participationThreshold") * statsPerPoint
 			val total = participantDay?.getInt("stats") ?: 0
-			val current = total.coerceAtMost(max)
+			val current = total.coerceAtMost(milestone)
 			val statName = day.getString("statName", "")
 			val objectiveText = L10N.format("web_campaign.stat.${statName.toLowerCase()}.obj_name")
 			val startsAt = day.getLong("startsAt")
@@ -62,20 +64,20 @@ open class WebCampaignCommand(name: String, description: String, val domainName:
 			var name = ""
 			var value = ""
 			if (hasStarted) {
-				var progressText = "**%,d/%,d** %s".format(current, max, objectiveText)
-				if (current >= max) {
-					if (current > max) progressText += " \u00b7 Total: **%,d**".format(total)
+				var progressText = "**%,d/%,d** %s".format(current, milestone, TextFormatter.format(objectiveText, mapOf("0" to milestone)))
+				if (current >= milestone) {
+					if (current > milestone) progressText += " \u00b7 Total: **%,d**".format(total)
 					milestonesReached++
 				}
 				participantDay?.getLong("lastUpdatedAt")?.let {
 					progressText += " \u00b7 " + TimeFormat.RELATIVE.format(it)
 				}
-				val rewardText = (if ((participantDay?.getInt("points") ?: 0) >= day.getInt("participationThreshold")) "✅" else "❌") + ' ' + reward.name
+				val rewardText = "%s %s (%,d %s)".format(if (current >= participation) "✅" else "❌", reward.name, participation, TextFormatter.format(objectiveText, mapOf("0" to participation)))
 				if (hasEnded) {
 					name = "🔴 "
 				} else {
 					name = "🟢 "
-					value = "`${Utils.progress(current, max, 32)}`\n"
+					value = "`${Utils.progress(current, milestone, 32)}`\n"
 				}
 				value += "$progressText\n$rewardText"
 			} else {
