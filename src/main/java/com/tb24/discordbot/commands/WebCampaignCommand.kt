@@ -16,7 +16,7 @@ import net.dv8tion.jda.api.interactions.components.buttons.Button
 import net.dv8tion.jda.api.utils.TimeFormat
 import java.util.concurrent.CompletableFuture
 
-class WebCampaignCommand(name: String, description: String, val domainName: String, aliases: Array<String> = emptyArray()) : BrigadierCommand(name, description, aliases) {
+open class WebCampaignCommand(name: String, description: String, val domainName: String, aliases: Array<String> = emptyArray()) : BrigadierCommand(name, description, aliases) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it.source) }
 
@@ -44,7 +44,7 @@ class WebCampaignCommand(name: String, description: String, val domainName: Stri
 		}*/
 
 		// Days
-		var hasReachedMilestone = false
+		var milestonesReached = 0
 		competition.getAsJsonArray("days").forEachIndexed { i, day_ ->
 			val day = day_.asJsonObject
 			val participantDay = participant.getAsJsonArray("dayProgresses").firstOrNull { it.asJsonObject.get("dayId").asString == day.getString("dayId") }?.asJsonObject
@@ -65,12 +65,12 @@ class WebCampaignCommand(name: String, description: String, val domainName: Stri
 				var progressText = "**%,d/%,d** %s".format(current, max, objectiveText)
 				if (current >= max) {
 					if (current > max) progressText += " \u00b7 Total: **%,d**".format(total)
-					hasReachedMilestone = true
+					milestonesReached++
 				}
 				participantDay?.getLong("lastUpdatedAt")?.let {
 					progressText += " \u00b7 " + TimeFormat.RELATIVE.format(it)
 				}
-				val rewardText = (if (current >= statsPerPoint) "✅" else "❌") + ' ' + reward.name
+				val rewardText = (if ((participantDay?.getInt("points") ?: 0) >= day.getInt("participationThreshold")) "✅" else "❌") + ' ' + reward.name
 				if (hasEnded) {
 					name = "🔴 "
 				} else {
@@ -89,9 +89,8 @@ class WebCampaignCommand(name: String, description: String, val domainName: Stri
 		}
 
 		// Milestone
-		val milestoneReward = rewards[WebCampaign.RewardType.MILESTONE]?.firstOrNull()
-		if (milestoneReward != null) {
-			embed.addField(webCampaign.localization.getString("RewardCarousel.${milestoneReward.index + 1}.title"), (if (hasReachedMilestone) "✅" else "❌") + ' ' + milestoneReward.name, false)
+		rewards[WebCampaign.RewardType.MILESTONE]?.forEachIndexed { i, milestoneReward ->
+			embed.addField(getRewardTitle(webCampaign, milestoneReward), (if (milestonesReached >= i + 1) "✅" else "❌") + ' ' + milestoneReward.name, false)
 		}
 
 		val buttons = mutableListOf<Button>()
@@ -100,5 +99,9 @@ class WebCampaignCommand(name: String, description: String, val domainName: Stri
 
 		source.complete(null, embed.build(), ActionRow.of(buttons))
 		return Command.SINGLE_SUCCESS
+	}
+
+	open fun getRewardTitle(webCampaign: WebCampaign, reward: WebCampaign.WebCampaignReward): String {
+		return webCampaign.localization.getString("RewardCarousel.${reward.index}.title") ?: "Reward ${reward.index}"
 	}
 }

@@ -52,7 +52,7 @@ dependencies {
 	implementation 'com.tb24:epic-api:+'
 	//implementation 'dev.morphia.morphia:morphia-kotlin:2.2.3'
 	//implementation('net.dv8tion:JDA:4.+') { exclude module: 'opus-java' }
-	implementation('com.github.Xirado:JDA:feature~modals-SNAPSHOT') { exclude module: 'opus-java' }
+	implementation('com.github.Xirado:JDA:a0de537f41') { exclude module: 'opus-java' }
 	implementation 'net.jodah:expiringmap:0.5.10'
 	implementation 'net.sf.trove4j:trove4j:3.0.3'
 	implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'

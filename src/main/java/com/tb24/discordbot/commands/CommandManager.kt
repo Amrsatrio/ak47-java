@@ -164,6 +164,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 
 		// Web campaigns
 		register(WebCampaignCommand("zerobuild", "Zero Build Trials", "zerobuildtrials"))
+		register(LanternTrialsCommand())
 
 		// Misc utility commands
 		register(FortniteAndroidApkCommand())

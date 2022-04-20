@@ -2,6 +2,7 @@ package com.tb24.discordbot.webcampaign
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.google.gson.JsonPrimitive
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.exec
@@ -192,15 +193,16 @@ class WebCampaign(val okHttpClient: OkHttpClient, val domainName: String) {
 		}
 	}
 
-	inner class WebCampaignReward(val index: Int) {
-		val type = when (index) {
-			environment.getAsJsonObject("settings").getAsJsonObject("rewards").getInt("rewardIndex") - 1 -> RewardType.REGISTRATION
-			environment.getAsJsonObject("settings").getAsJsonObject("rewards").getInt("milestoneIndex") - 1 -> RewardType.MILESTONE
+	inner class WebCampaignReward(val index: Int, rewardsData: JsonObject) {
+		val type = when {
+			index == rewardsData.getInt("rewardIndex") -> RewardType.REGISTRATION
+			index == rewardsData.getInt("milestoneIndex") -> RewardType.MILESTONE
+			JsonPrimitive(index) in rewardsData.getAsJsonArray("milestoneIndexes") -> RewardType.MILESTONE
 			else -> RewardType.DAY
 		}
-		val name get() = localization.getString("Reward.${index + 1}.name", "Unknown")
-		val smallIcon get() = "https://$domainName.fortnite.com/images/rewards/prize.${index + 1}@2x.png"
-		val largeIcon get() = "https://$domainName.fortnite.com/images/rewards/prize.${index + 1}@3x.png"
+		val name get() = localization.getString("Reward.$index.name", "Unknown")
+		val smallIcon get() = "https://$domainName.fortnite.com/images/rewards/prize.$index@2x.png"
+		val largeIcon get() = "https://$domainName.fortnite.com/images/rewards/prize.$index@3x.png"
 	}
 
 	enum class RewardType {
@@ -209,9 +211,10 @@ class WebCampaign(val okHttpClient: OkHttpClient, val domainName: String) {
 
 	val rewards by lazy {
 		val result = mutableListOf<WebCampaignReward>()
-		var index = 0
-		while (localization.has("Reward.${index + 1}.name")) {
-			result.add(WebCampaignReward(index))
+		var index = 1
+		val rewardsData = environment.getAsJsonObject("settings").getAsJsonObject("rewards")
+		while (localization.has("Reward.$index.name")) {
+			result.add(WebCampaignReward(index, rewardsData))
 			index++
 		}
 		result
