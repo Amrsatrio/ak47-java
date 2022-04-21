@@ -148,18 +148,28 @@ private fun executeQuests(source: CommandSourceStack, campaign: McpProfile, cate
 	return Command.SINGLE_SUCCESS
 }
 
+private val xrayIcon by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-Items-Currency-X-RayLlama-L.T-Items-Currency-X-RayLlama-L") }
+
 private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, usersLazy: Lazy<Collection<GameProfile>>? = null): Int {
 	source.conditionalUseInternalSession()
-	val usersWith3dailies = ArrayList<String>()
+	val foundersWith3dailies = ArrayList<String>()
 	val entries = stwBulk(source, usersLazy) { campaign ->
 		val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:outpostquest_t1_l3" }?.attributes?.get("completion_complete_outpost_1_3")?.asInt ?: 0) > 0
 		if (!completedTutorial) return@stwBulk null
 		val quests = getQuestsOfCategory(campaign, categoryName)
 		val rendered = quests.joinToString("\n") { renderChallenge(it, "\u2800", null, allowBold = false) }
-		if (categoryName == "DailyQuests" && quests.size == 3) {
-			usersWith3dailies.add(campaign.owner.displayName)
+		var title = campaign.owner.displayName
+		if (categoryName == "DailyQuests") {
+			val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
+			if (canReceiveMtxCurrency) {
+				if (quests.size == 3) {
+					foundersWith3dailies.add(campaign.owner.displayName)
+				}
+			} else {
+				title = xrayIcon?.asMention + ' ' + title
+			}
 		}
-		campaign.owner.displayName to rendered
+		title to rendered
 	}
 	if (entries.isEmpty()) {
 		throw SimpleCommandExceptionType(LiteralMessage("All users we're trying to display aren't eligible to do daily quests.")).create()
@@ -183,8 +193,8 @@ private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, 
 			embed.setDescription("That must've taken a while 😩")
 		}
 	}
-	if (usersWith3dailies.isNotEmpty()) {
-		embed.setFooter("3 dailies (%d): %s".format(usersWith3dailies.size, usersWith3dailies.joinToString(", ")), null)
+	if (foundersWith3dailies.isNotEmpty()) {
+		embed.setFooter("3 dailies (%d): %s".format(foundersWith3dailies.size, foundersWith3dailies.joinToString(", ")), Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Boost/T-Icon-FoundersBadge-128.T-Icon-FoundersBadge-128"))
 	}
 	source.complete(null, embed.build())
 	return Command.SINGLE_SUCCESS
