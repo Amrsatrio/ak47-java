@@ -5,7 +5,10 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
-import com.tb24.discordbot.util.*
+import com.tb24.discordbot.util.Utils
+import com.tb24.discordbot.util.await
+import com.tb24.discordbot.util.dispatchClientCommandRequest
+import com.tb24.discordbot.util.render
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.item.FortCampsiteAccountItem
@@ -31,8 +34,7 @@ class CampsiteCommand : BrigadierCommand("tent", "Shows your stored items in you
 				embed.addField("Slot %,d".format(i + 1), "<Empty>", false)
 				return@forEachIndexed
 			}
-			val rarityIcon = getEmoteByName(item.rarity.name.toLowerCase() + '2')?.asMention
-			embed.addField("Slot %,d".format(i + 1), rarityIcon + ' ' + item.render(), false)
+			embed.addField("Slot %,d".format(i + 1), item.render(showLevelAndTier = false), false)
 		}
 		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS

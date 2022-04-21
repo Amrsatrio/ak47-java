@@ -199,7 +199,7 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 		val commonCore = profileManager.getProfileData("common_core")
 		val successEmbed = source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS)
 			.setTitle("✅ " + L10N.format("purchase.success.title"))
-			.addFieldSeparate(L10N.format("purchase.success.received"), results.toList(), 0) { it.asItemStack().render(showType = true, showRarity = if (results.size > 10) ShowRarityOption.SHOW_DEFAULT_EMOTE else ShowRarityOption.SHOW) }
+			.addFieldSeparate(L10N.format("purchase.success.received"), results.toList(), 0) { it.asItemStack().render(showType = true, showRarity = if (results.size > 10) RARITY_SHOW_DEFAULT_EMOTE else RARITY_SHOW) }
 			.addField(L10N.format("purchase.success.final_balance"), price.getAccountBalanceText(profileManager), false)
 			.setTimestamp(Instant.now())
 		if (offer.refundable && !isUndoUnderCooldown(commonCore, offer.offerId)) {

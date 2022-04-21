@@ -6,7 +6,7 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.CatalogEntryHolder
-import com.tb24.discordbot.item.ItemUtils
+import com.tb24.discordbot.item.cappedTier
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
@@ -76,8 +76,8 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 					if (aRating != bRating) {
 						return@sortedWith bRating.compareTo(aRating)
 					}
-					val aTier = ItemUtils.getTier(a.defData)
-					val bTier = ItemUtils.getTier(b.defData)
+					val aTier = a.defData.cappedTier
+					val bTier = b.defData.cappedTier
 					if (aTier != bTier) {
 						return@sortedWith aTier - bTier
 					}
@@ -96,7 +96,7 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 			val items = llama.items
 			val embed = source.createEmbed()
 				.setTitle(llama.name)
-				.addFieldSeparate("Contents", items, 0, true) { it.render(showRarity = if (items.size > 25) ShowRarityOption.SHOW_DEFAULT_EMOTE else ShowRarityOption.SHOW) }
+				.addFieldSeparate("Contents", items, 0, true) { it.render(showRarity = if (items.size > 25) RARITY_SHOW_DEFAULT_EMOTE else RARITY_SHOW) }
 				.setFooter("%,d of %,d".format(page + 1, pageCount))
 			MessageBuilder(embed.build())
 		}

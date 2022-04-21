@@ -8,6 +8,8 @@ import com.tb24.discordbot.util.replyPaginated
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.util.format
+import me.fungames.jfortniteparse.fort.exports.FortAlterationItemDefinition
+import me.fungames.jfortniteparse.fort.exports.FortAlterationItemDefinition.EFortAlteration
 import net.dv8tion.jda.api.MessageBuilder
 
 class SchematicsCommand : BrigadierCommand("schematics", "Lists your or a given user's schematics.", arrayOf("schems")) {
@@ -30,22 +32,35 @@ class SchematicsCommand : BrigadierCommand("schematics", "Lists your or a given 
 				.setTitle("Schematics")
 				.setFooter("Page %,d of %,d".format(page + 1, pageCount))
 			for (schem in content) {
-				val alterations = mutableListOf<String>()
-				schem.attributes.getAsJsonArray("alterations")?.let {
-					for (alterationId in it) {
-						val alterationItem = FortItemStack(alterationId.asString, 1)
-						val alteration = alterationItem.defData
-						if (alteration == null) {
-							alterations.add(alterationId.asString)
-						} else {
-							alterations.add(getEmoteByName(alterationItem.rarity.name.toLowerCase() + '2')?.asMention + ' ' + (alteration.Description.format() ?: alteration.DisplayName.format() ?: alterationId.asString))
-						}
-					}
+				val sb = StringBuilder()
+				val level = schem.attributes["level"]?.asInt ?: 0
+				if (level != 0) {
+					sb.append("Lv%,d ".format(level))
 				}
-				embed.addField("Lv%,d %s".format(schem.attributes["level"]?.asInt ?: 0, schem.displayName.trim()), alterations.joinToString("\n"), true)
+				sb.append(schem.displayName.trim())
+				embed.addField(sb.toString(), renderAlterations(schem), true)
 			}
 			MessageBuilder(embed)
 		}
 		return Command.SINGLE_SUCCESS
+	}
+
+	private fun renderAlterations(item: FortItemStack): String {
+		val alterations = mutableListOf<String>()
+		item.attributes.getAsJsonArray("alterations")?.let {
+			for (alterationId in it) {
+				val alterationItem = FortItemStack(alterationId.asString, 1)
+				val alteration = alterationItem.defData as? FortAlterationItemDefinition
+				if (alteration == null) {
+					alterations.add(alterationId.asString)
+				} else {
+					val tier = if (alteration.AlterationType != EFortAlteration.GameplaySlot && alterationItem.primaryAssetType != "Defender") {
+						getEmoteByName(alterationItem.rarity.name.toLowerCase() + '2')?.asMention + ' '
+					} else ""
+					alterations.add(tier + (alteration.Description.format() ?: alteration.DisplayName.format() ?: alterationId.asString))
+				}
+			}
+		}
+		return alterations.joinToString("\n")
 	}
 }

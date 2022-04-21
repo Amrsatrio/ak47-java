@@ -14,8 +14,8 @@ object ItemComparator : Comparator<FortItemStack> {
 		if (aRarity != bRarity) {
 			return bRarity.compareTo(aRarity)
 		}
-		val aTier = ItemUtils.getTier(a.defData)
-		val bTier = ItemUtils.getTier(b.defData)
+		val aTier = a.defData.cappedTier
+		val bTier = b.defData.cappedTier
 		if (aTier != bTier) {
 			return aTier - bTier
 		}
