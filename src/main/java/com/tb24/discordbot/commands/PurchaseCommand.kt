@@ -5,8 +5,6 @@ import com.google.gson.JsonObject
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
-import com.mojang.brigadier.arguments.IntegerArgumentType.getInteger
-import com.mojang.brigadier.arguments.IntegerArgumentType.integer
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
@@ -14,8 +12,7 @@ import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.L10N
-import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.catalogOffer
-import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.getCatalogEntry
+import com.tb24.discordbot.commands.arguments.CatalogOfferArgument
 import com.tb24.discordbot.util.*
 import com.tb24.discordbot.util.Utils
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
@@ -33,7 +30,7 @@ import com.tb24.fn.model.priceengine.QueryOfferPricesPayload.LineOfferReq
 import com.tb24.fn.util.*
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Emoji
-import net.dv8tion.jda.api.entities.Role
+import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.buttons.Button
 import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
@@ -47,20 +44,19 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.CompletableFuture
 
-class PurchaseCommand : BrigadierCommand("purchase", "Purchases a shop entry from the Battle Royale or Save the World Item Shop.", arrayOf("buy", "b")) {
+class PurchaseCommand : BrigadierCommand("buy", "Purchases an offer from the Battle Royale or Save the World Item Shop.", arrayOf("purchase", "b")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.then(argument("item number", catalogOffer())
-			.executes { purchaseOffer(it.source, getCatalogEntry(it, "item number")) }
-			.then(argument("quantity", integer())
-				.executes { purchaseOffer(it.source, getCatalogEntry(it, "item number"), getInteger(it, "quantity")) }
-				.then(argument("price index", integer())
-					.executes { purchaseOffer(it.source, getCatalogEntry(it, "item number"), getInteger(it, "quantity"), getInteger(it, "price index") - 1) }
-				)
-			)
+		.then(argument("offer", CatalogOfferArgument.catalogOffer(true))
+			.executes { purchaseOffer(it.source, CatalogOfferArgument.getCatalogEntry(it, "offer")) }
 		)
 		.then(literal("freebulk")
 			.executes { purchaseFree(it.source) }
 		)
+
+	override fun getSlashCommand() = newCommandBuilder()
+		.option(OptionType.STRING, "offer", "Name, number, or ID of the offer to purchase", true, argument = CatalogOfferArgument.catalogOffer(true))
+		.option(OptionType.INTEGER, "quantity", "Quantity to purchase")
+		.executes { purchaseOffer(it, it.getArgument<CatalogOfferArgument.Result>("offer")!!.getCatalogEntry(it), it.getOption("quantity")?.asInt ?: 1) }
 }
 
 fun purchaseFree(source: CommandSourceStack): Int {
@@ -75,7 +71,7 @@ fun purchaseFree(source: CommandSourceStack): Int {
 			profileManager.dispatchClientCommandRequest(QueryProfile(), "athena")
 		).await()
 		val sections = catalogManager.athenaSections.values
-		var purchased = StringBuilder()
+		val purchased = StringBuilder()
 		var numPurchased = 0
 		var numFreeOffers = 0
 		for ((_, section) in sections.withIndex()) {
@@ -115,7 +111,7 @@ fun purchaseFree(source: CommandSourceStack): Int {
 	return Command.SINGLE_SUCCESS
 }
 
-fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int = 1, priceIndex: Int = -1): Int {
+fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int = -1, priceIndex: Int = -1): Int {
 	var priceIndex = priceIndex
 	source.loading("Preparing your purchase")
 	val profileManager = source.api.profileManager
@@ -129,8 +125,10 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 	if (priceIndex < 0 && offer.prices.size > 1) { // ask which currency to use
 		val priceSelectionEbd = source.createEmbed().setColor(BrigadierCommand.COLOR_WARNING)
 			.setTitle("How do you want to pay?")
-			.addField("Prices", offer.prices.joinToString("\n") { it.render(quantity) }, true)
-			.addField("Balances", offer.prices.joinToString("\n") { it.getAccountBalanceText(profileManager) }, true)
+		offer.prices.joinTo(priceSelectionEbd.descriptionBuilder, "\n") { price ->
+			val balance = price.getAccountBalance(profileManager)
+			"%s %,d/%s each".format(price.icon(), balance, price.renderText())
+		}
 		val buttons = offer.prices.mapIndexed { i, price ->
 			val emote = price.emote()!!
 			Button.of(ButtonStyle.SECONDARY, i.toString(), Emoji.fromEmote(emote))
@@ -159,11 +157,16 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 		val priceIcon = price.icon()
 		throw SimpleCommandExceptionType(LiteralMessage("Not enough $priceIcon to afford ${sd.friendlyName}. You need $priceIcon ${Formatters.num.format(price.basePrice - accountBalance)} more.\nCurrent balance: $priceIcon ${Formatters.num.format(accountBalance)}")).create()
 	}
+	var quantity = quantity
+	if (quantity == -1) {
+		val maxQuantity = if (sd.purchaseLimit >= 0) sd.purchaseLimit - sd.purchasesCount else 1
+		quantity = (accountBalance / price.basePrice).coerceAtMost(maxQuantity)
+	}
 	val displayData = OfferDisplayData(offer)
 	var confirmed = true
 	if (sd.price.basePrice > 0) {
 		val embed = source.createEmbed()
-			.setTitle(L10N.format("purchase.confirmation.title"))
+			.setTitle("Purchase: " + sd.displayData.title)
 			.addField(L10N.format("catalog.items"), if (sd.compiledNames.isNotEmpty()) sd.compiledNames.mapIndexed { i, s ->
 				val strike = if (offer.offerType == ECatalogOfferType.DynamicBundle && profileManager.isItemOwned(offer.itemGrants[i].templateId, offer.itemGrants[i].quantity)) "~~" else ""
 				strike + s + strike
@@ -172,7 +175,7 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 			.addField(L10N.format("catalog.total_price"), price.render(quantity), true)
 			.addField(L10N.format("catalog.balance"), price.getAccountBalanceText(profileManager), true)
 			.setThumbnail(Utils.benBotExportAsset(displayData.imagePath))
-			.setColor(displayData.presentationParams?.vector?.get("Background_Color_B") ?: Role.DEFAULT_COLOR_RAW)
+			.setColor(displayData.color)
 			.renewAffiliateAndPopulateMtxFields(source, price)
 		val warnings = mutableListOf<String>()
 		if (isUndoUnderCooldown(profileManager.getProfileData("common_core"), offer.offerId)) {

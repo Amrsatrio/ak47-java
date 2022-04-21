@@ -690,13 +690,13 @@ fun String.shortenUrl(source: CommandSourceStack): String {
 	return shortenerResponse.getString("shortLink")!!
 }
 
-inline fun <T> Iterable<T>.search(query: String, minimumSimilarity: Float = .33f, filter: (T) -> Boolean = { true }, extractor: (T) -> String? = { it.toString() }): T? {
+inline fun <T> Iterable<T>.search(query: String, minimumSimilarity: Float = .33f, extractor: (T) -> String? = { it.toString() }): T? {
 	val query = query.toLowerCase()
 	var maxSim = minimumSimilarity
 	var result: T? = null
 	for (item in this) {
 		val key = extractor(item)?.toLowerCase() ?: continue
-		if (key == query) {
+		if (query in key) {
 			return item
 		}
 		val sim = similarity(key, query)

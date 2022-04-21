@@ -60,7 +60,7 @@ abstract class BrigadierCommand @JvmOverloads constructor(val name: String, val 
 	protected fun <R, T : CommandBuilder<CommandSourceStack, R, T>> CommandBuilder<CommandSourceStack, R, T>.withPublicProfile(func: (CommandSourceStack, McpProfile) -> Int, loadingMsg: String, profileId: String = "campaign"): T = this
 		.option(OptionType.STRING, "user", "The user to view the data of, leave blank to view your own data", argument = UserArgument.users(1))
 		.executes { source ->
-			val user = source.getArgument<UserArgument.Result>("user")?.getUsers(source, "Resolving users", null)?.values?.first()
+			val user = source.getArgument<UserArgument.Result>("user")?.getUsers(source)?.values?.first()
 			if (user != null) {
 				source.loading("$loadingMsg of ${user.displayName}")
 				source.api.profileManager.dispatchPublicCommandRequest(user, QueryPublicProfile(), profileId).await()

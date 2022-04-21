@@ -85,7 +85,7 @@ class WebCampaign(val okHttpClient: OkHttpClient, val domainName: String) {
 		}
 		if (DEBUG) println("Send: $data")
 		ws!!.send(data.toString())
-		val pendingResponse = PendingResponse(commandId)
+		val pendingResponse = PendingResponse(commandId, type)
 		pendingResponses[commandId] = pendingResponse
 		return pendingResponse.future
 	}
@@ -173,12 +173,12 @@ class WebCampaign(val okHttpClient: OkHttpClient, val domainName: String) {
 		connectionId = null
 	}
 
-	private inner class PendingResponse(commandId: String, timeout: Long = 5L) {
+	private inner class PendingResponse(commandId: String, type: String, timeout: Long = 5L) {
 		val future = CompletableFuture<JsonObject>()
 		private val timeoutTimer = timer.schedule(timeout * 1000) {
 			if (pendingResponses.containsKey(commandId)) {
 				pendingResponses.remove(commandId)
-				future.completeExceptionally(Exception("Timeout after $timeout seconds"))
+				future.completeExceptionally(Exception("Timeout waiting response of $type after $timeout seconds"))
 			}
 		}
 

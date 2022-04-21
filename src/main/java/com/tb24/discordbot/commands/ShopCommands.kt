@@ -45,6 +45,7 @@ import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.NewsChannel
+import net.dv8tion.jda.api.entities.Role
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.awt.image.BufferedImage
@@ -171,7 +172,7 @@ fun executeShopText(source: CommandSourceStack, subGame: ESubGame): Int {
 		.setColor(0x0099FF)
 		.setTitle(if (isCampaign) "⚡ " + "Save the World Item Shop" else "☂ " + "Battle Royale Item Shop")
 	if (showAccInfo) {
-		embed.setDescription(if (isCampaign) "Use `${source.prefix}buy` to buy an item listed below." else "Use `${source.prefix}buy` or `${source.prefix}gift` to perform operations with these items.")
+		embed.setDescription(if (isCampaign) "Use `${source.prefix}buy` to buy an item listed below.\nUse `${source.prefix}stwshop buyall` to buy all of them at once." else "Use `${source.prefix}buy` or `${source.prefix}gift` to perform operations with these items.")
 			.addField(if (prices.size == 1) "Balance" else "Balances", prices.values.joinToString(" \u00b7 ") { it.getAccountBalanceText(profileManager) }, false)
 		if (numOwned > 0) {
 			embed.appendDescription("\n**Owned:** %,d/%,d%s".format(numOwned, numShownItems, if (numOwned >= numShownItems) " ✅" else ""))
@@ -368,4 +369,6 @@ class OfferDisplayData {
 		}
 		// TODO banner
 	}
+
+	val color get() = presentationParams?.vector?.get("Background_Color_B") ?: palette?.Color2?.toFColor(true)?.toPackedARGB() ?: Role.DEFAULT_COLOR_RAW
 }

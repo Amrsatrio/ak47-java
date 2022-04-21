@@ -8,7 +8,7 @@ public class UserConfig {
 	public String id;
 	public HashMap<String, Token> sessions = new HashMap<>();
 	public String loggedInAccountId;
-	public GiftConfig gift;
+	public GiftConfig gift = new GiftConfig();
 	public LockerImageConfig lockerImage;
 	public transient boolean persisted;
 
@@ -21,8 +21,8 @@ public class UserConfig {
 	}
 
 	public static class GiftConfig {
-		public String wrap;
-		public String message;
+		public String wrap = "";
+		public String message = "";
 	}
 
 	public static class LockerImageConfig {

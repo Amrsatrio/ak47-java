@@ -60,7 +60,7 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 
 	class Result(val ids: List<Any>, val max: Int) {
 		@Suppress("UNCHECKED_CAST")
-		fun getUsers(source: CommandSourceStack, loadingText: String? = null, friends: Array<FriendV2>? = null): Map<String, GameProfile> {
+		fun getUsers(source: CommandSourceStack, loadingText: String? = "Resolving users", friends: Array<FriendV2>? = null): Map<String, GameProfile> {
 			var max = max
 			if (max == -1) {
 				max = source.getSavedAccountsLimit()

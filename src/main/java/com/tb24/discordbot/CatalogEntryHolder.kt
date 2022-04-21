@@ -11,12 +11,9 @@ import com.tb24.fn.model.gamesubcatalog.ECatalogOfferType
 import com.tb24.fn.model.gamesubcatalog.ECatalogSaleType
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats.PurchaseList
-import com.tb24.fn.util.Utils
 import com.tb24.fn.util.getInt
 import com.tb24.fn.util.isItemOwned
 import com.tb24.fn.util.isOwnedAndEligible
-import com.tb24.uasset.loadObject
-import me.fungames.jfortniteparse.fort.exports.FortMtxOfferData
 import java.util.*
 import kotlin.math.max
 
@@ -100,25 +97,23 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 			val purchaseLimitingEventId = getMeta("PurchaseLimitingEventId")
 			if (purchaseLimitingEventId != null) {
 				val eventPurchaseTracker = commonCore.items.values.firstOrNull { it.templateId == "EventPurchaseTracker:generic_instance" && it.attributes["event_instance_id"].asString == purchaseLimitingEventId }
-				purchasesCount += eventPurchaseTracker?.attributes?.getAsJsonObject("event_purchases")?.getInt(ce.offerId) ?: 0
+				purchasesCount = eventPurchaseTracker?.attributes?.getAsJsonObject("event_purchases")?.getInt(ce.offerId) ?: 0
 			}
 		} else if (ce.dailyLimit >= 0) {
 			purchaseLimit = ce.dailyLimit
-			purchasesCount += stats.daily_purchases.getPurchasesCount(1L)
+			purchasesCount = stats.daily_purchases.getPurchasesCount(1L)
 		} else if (ce.weeklyLimit >= 0) {
 			purchaseLimit = ce.weeklyLimit
-			purchasesCount += stats.weekly_purchases.getPurchasesCount(7L)
+			purchasesCount = stats.weekly_purchases.getPurchasesCount(7L)
 		} else if (ce.monthlyLimit >= 0) {
 			purchaseLimit = ce.monthlyLimit
-			purchasesCount += stats.monthly_purchases.getPurchasesCount(30L)
+			purchasesCount = stats.monthly_purchases.getPurchasesCount(30L)
 		}
 	}
 
 	private inline fun PurchaseList.getPurchasesCount(hours: Long): Int {
 		return if (System.currentTimeMillis() <= (lastInterval?.time ?: return 0) + hours * 24L * 60L * 60L * 1000L) purchaseList?.get(ce.offerId) ?: 0 else 0
 	}
-
-	val displayAsset by lazy { if (!Utils.isNone(ce.displayAssetPath)) loadObject<FortMtxOfferData>(ce.displayAssetPath) else null }
 
 	/*fun getDisplayPrice(qty: Int): String {
 		if (price == Price.NO_PRICE) {
@@ -136,8 +131,6 @@ class CatalogEntryHolder(val ce: CatalogOffer) {
 
 	val catalogOffer by lazy { if (ce.appStoreId.isNotEmpty()) FortCatalogResponse.sCatalogOffersMap[ce.appStoreId[EAppStore.EpicPurchasingService.ordinal]] else null }*/
 
-	val friendlyName by lazy {
-		val displayData = OfferDisplayData(ce, loadDAV2 = false)
-		"${displayData.title ?: compiledNames.joinToString(", ")} [${(if (ce.offerType == ECatalogOfferType.DynamicBundle) listOf(price) else ce.prices).joinToString(" | ") { it.render() }}]"
-	}
+	val displayData by lazy { OfferDisplayData(ce, loadDAV2 = false) }
+	val friendlyName get() = "${displayData.title ?: compiledNames.joinToString(", ")} [${(if (ce.offerType == ECatalogOfferType.DynamicBundle) listOf(price) else ce.prices).joinToString(" | ") { it.render() }}]"
 }

@@ -7,10 +7,8 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.L10N
-import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.catalogOffer
-import com.tb24.discordbot.commands.arguments.CatalogOfferArgument.Companion.getCatalogEntry
-import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
-import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
+import com.tb24.discordbot.commands.arguments.CatalogOfferArgument
+import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
@@ -20,15 +18,20 @@ import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.util.format
 import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText
 import net.dv8tion.jda.api.EmbedBuilder
-import net.dv8tion.jda.api.entities.Role
+import net.dv8tion.jda.api.interactions.commands.OptionType
 
 class GiftCommand : BrigadierCommand("gift", "Gifts a friend an offer from the item shop.", arrayOf("g")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.then(argument("item number", catalogOffer())
-			.then(argument("recipients", users(1))
-				.executes { execute(it.source, getCatalogEntry(it, "item number"), getUsers(it, "recipients").values.first()) }
+		.then(argument("offer", CatalogOfferArgument.catalogOffer())
+			.then(argument("recipient", UserArgument.users(1))
+				.executes { execute(it.source, CatalogOfferArgument.getCatalogEntry(it, "offer"), UserArgument.getUsers(it, "recipient").values.first()) }
 			)
 		)
+
+	override fun getSlashCommand() = newCommandBuilder()
+		.option(OptionType.STRING, "offer", "Name, number, or ID of the offer to gift", true, argument = CatalogOfferArgument.catalogOffer())
+		.option(OptionType.STRING, "recipient", "Display name, email, account ID, or friend number of the Epic user to gift to", true, argument = UserArgument.users(1))
+		.executes { execute(it, it.getArgument<CatalogOfferArgument.Result>("offer")!!.getCatalogEntry(it), it.getArgument<UserArgument.Result>("recipient")!!.getUsers(it).values.first()) }
 
 	private fun execute(source: CommandSourceStack, catalogOffer: CatalogOffer, recipient: GameProfile): Int {
 		val ce = catalogOffer.holder()
@@ -65,7 +68,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts a friend an offer from the i
 		val price = eligibilityResponse.price
 		val displayData = OfferDisplayData(catalogOffer)
 		val embed = source.createEmbed()
-			.setTitle("Confirm your Gift")
+			.setTitle("Gift: " + ce.displayData.title)
 			.setDescription(L10N.CANT_BE_REFUNDED.format())
 			.addField(L10N.format("catalog.items"), if (ce.compiledNames.isNotEmpty()) ce.compiledNames.mapIndexed { i, s ->
 				val correspondingItemGrant = catalogOffer.itemGrants[i]
@@ -77,7 +80,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts a friend an offer from the i
 			.addField(L10N.format("catalog.total_price"), price.render(), true)
 			.addField(L10N.format("catalog.balance"), price.getAccountBalanceText(profileManager), true)
 			.setThumbnail(Utils.benBotExportAsset(displayData.imagePath))
-			.setColor(displayData.presentationParams?.vector?.get("Background_Color_B") ?: Role.DEFAULT_COLOR_RAW)
+			.setColor(displayData.color)
 			.renewAffiliateAndPopulateMtxFields(source, price)
 		if (!source.complete(null, embed.build(), confirmationButtons()).awaitConfirmation(source.author).await()) {
 			throw SimpleCommandExceptionType(LiteralMessage("Gift canceled.")).create()

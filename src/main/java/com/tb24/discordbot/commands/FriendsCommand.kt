@@ -348,7 +348,9 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 	}
 
 	private fun bulk(source: CommandSourceStack, type: String, suppliedQueue: List<GameProfile>?, query: ((FriendsService, String, Boolean?) -> Call<Array<FriendV2>>)?, op: FriendsService.(String, String) -> Call<Void>): Int {
-		source.ensurePremium("Do bulk friend operations")
+		if (suppliedQueue == null) {
+			source.ensurePremium("Do bulk friend operations")
+		}
 		source.ensureSession()
 		val confirmationMessage = source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
 			.setTitle("Confirmation")
