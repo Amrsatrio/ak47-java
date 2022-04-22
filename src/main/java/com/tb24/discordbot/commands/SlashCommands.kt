@@ -88,15 +88,3 @@ class SubcommandGroupBuilder<T>(name: String, description: String) : CommandBuil
 
 	override fun getThis() = this
 }
-
-// region Option creation methods
-inline fun string(name: String, description: String, isRequired: Boolean = false) = OptionData(OptionType.STRING, name, description, isRequired)
-inline fun integer(name: String, description: String, isRequired: Boolean = false) = OptionData(OptionType.INTEGER, name, description, isRequired)
-inline fun boolean(name: String, description: String, isRequired: Boolean = false) = OptionData(OptionType.BOOLEAN, name, description, isRequired)
-inline fun user(name: String, description: String, isRequired: Boolean = false) = OptionData(OptionType.USER, name, description, isRequired)
-inline fun channel(name: String, description: String, isRequired: Boolean = false) = OptionData(OptionType.CHANNEL, name, description, isRequired)
-inline fun role(name: String, description: String, isRequired: Boolean = false) = OptionData(OptionType.ROLE, name, description, isRequired)
-inline fun mentionable(name: String, description: String, isRequired: Boolean = false) = OptionData(OptionType.MENTIONABLE, name, description, isRequired)
-inline fun number(name: String, description: String, isRequired: Boolean = false) = OptionData(OptionType.NUMBER, name, description, isRequired)
-inline fun attachment(name: String, description: String, isRequired: Boolean = false) = OptionData(OptionType.ATTACHMENT, name, description, isRequired)
-// endregion
