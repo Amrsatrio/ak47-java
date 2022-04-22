@@ -251,13 +251,16 @@ fun FortItemStack.render(displayQty: Int = quantity, showType: Boolean = false, 
 
 	// Icons
 	if (defData is FortAccountItemDefinition) {
-		if (itemTypeResolver == null) {
-			itemTypeResolver = ItemTypeResolver.resolveItemType(this)
+		itemTypeResolver = ItemTypeResolver.resolveItemType(this)
+		val middle = textureEmote(itemTypeResolver.middleImg)
+		val right = textureEmote(itemTypeResolver.rightImg)
+		val left = textureEmote(itemTypeResolver.leftImg)
+		middle?.let { sb.append(it.asMention) }
+		right?.let { sb.append(it.asMention) }
+		left?.let { sb.append(it.asMention) }
+		if (middle != null || right != null || left != null) {
+			sb.append(' ')
 		}
-		textureEmote(itemTypeResolver.middleImg)?.let { sb.append(it.asMention) }
-		textureEmote(itemTypeResolver.rightImg)?.let { sb.append(it.asMention) }
-		textureEmote(itemTypeResolver.leftImg)?.let { sb.append(it.asMention) }
-		sb.append(' ')
 	}
 
 	if (showLevelAndTier) {
