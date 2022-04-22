@@ -112,13 +112,15 @@ fun purchaseFree(source: CommandSourceStack): Int {
 }
 
 fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int = -1, priceIndex: Int = -1): Int {
-	var priceIndex = priceIndex
-	source.loading("Preparing your purchase")
+	if (!source.unattended) {
+		source.loading(L10N.format("purchase.loading"))
+	}
 	val profileManager = source.api.profileManager
 	CompletableFuture.allOf(
 		profileManager.dispatchClientCommandRequest(QueryProfile()),
 		profileManager.dispatchClientCommandRequest(QueryProfile(), if (offer.__ak47_storefront.startsWith("BR")) "athena" else "campaign") // there must be a better way to do this
 	).await()
+	var priceIndex = priceIndex
 	if (priceIndex < 0) { // find a free price
 		priceIndex = offer.prices.indexOfFirst { it.currencyType != EStoreCurrencyType.RealMoney && it.basePrice == 0 }
 	}
@@ -189,7 +191,9 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 	}
 	if (confirmed) {
 		source.errorTitle = "Purchase Failed"
-		source.loading("Purchasing ${sd.friendlyName}")
+		if (!source.unattended) {
+			source.loading("Purchasing ${sd.friendlyName}")
+		}
 		val response = source.api.profileManager.dispatchClientCommandRequest(PurchaseCatalogEntry().apply {
 			offerId = offer.offerId
 			purchaseQuantity = quantity

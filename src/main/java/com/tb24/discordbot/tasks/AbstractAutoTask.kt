@@ -50,6 +50,7 @@ abstract class AbstractAutoTask(val client: DiscordBot, val tableName: String) :
 			val user = client.discord.retrieveUserById(discordId).complete()
 			val channel = user.openPrivateChannel().complete()
 			val source = CommandSourceStack(client, channel)
+			source.unattended = true
 			val savedDevice = if (displayName != null) client.savedLoginsManager.get(discordId, epicId) else null
 			if (savedDevice == null) {
 				disableAutoClaim(epicId)
