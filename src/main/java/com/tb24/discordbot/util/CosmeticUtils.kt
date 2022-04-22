@@ -11,6 +11,7 @@ import me.fungames.jfortniteparse.fort.objects.variants.BaseVariantDef
 import me.fungames.jfortniteparse.ue4.objects.core.math.FLinearColor
 import me.fungames.jfortniteparse.ue4.reader.FByteArchive
 import me.fungames.jfortniteparse.util.parseHexBinary
+import net.dv8tion.jda.api.interactions.commands.Command.Choice
 import java.util.*
 
 fun parseCosmeticType(type: String): String {
@@ -32,6 +33,21 @@ fun parseCosmeticType(type: String): String {
 	}
 	return filterType
 }
+
+val COSMETIC_TYPE_CHOICES = arrayOf(
+	Choice("Outfit", "AthenaCharacter"),
+	Choice("Back Bling", "AthenaBackpack"),
+	Choice("Harvesting Tool", "AthenaPickaxe"),
+	Choice("Glider", "AthenaGlider"),
+	Choice("Contrail", "AthenaSkyDiveContrail"),
+	Choice("Dance", "AthenaDance:AthenaDanceItemDefinition"),
+	Choice("Emoticon", "AthenaDance:AthenaEmojiItemDefinition"),
+	Choice("Spray", "AthenaDance:AthenaSprayItemDefinition"),
+	Choice("Toy", "AthenaDance:AthenaToyItemDefinition"),
+	Choice("Wrap", "AthenaItemWrap"),
+	Choice("Music", "AthenaMusicPack"),
+	Choice("Loading Screen", "AthenaLoadingScreen")
+)
 
 val FortCosmeticVariant.backendChannelName get() = VariantChannelTag.toString().substringAfter("Cosmetics.Variant.Channel.")
 

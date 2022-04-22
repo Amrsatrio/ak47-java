@@ -30,6 +30,7 @@ import me.fungames.jfortniteparse.util.printHexBinary
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Emoji
+import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.buttons.Button
 import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
@@ -61,6 +62,17 @@ class CosmeticCommand : BrigadierCommand("cosmetic", "Shows info and options abo
 				}
 			)
 		)
+
+	override fun getSlashCommand() = newCommandBuilder()
+		.option(OptionType.STRING, "type", "Type of the cosmetic to search", true, choices = COSMETIC_TYPE_CHOICES)
+		.option(OptionType.STRING, "item", "Cosmetic to search for", true, argument = ItemArgument.item(true))
+		.executes { source ->
+			source.ensureSession()
+			source.loading("Getting cosmetics")
+			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+			val athena = source.api.profileManager.getProfileData("athena")
+			execute(source, source.getArgument<ItemArgument.Result>("item")!!.resolveWithFallback(athena, source.getOption("type")!!.asString), athena)
+		}
 }
 
 class CampaignCosmeticCommand : BrigadierCommand("stwcosmetic", "Shows info and options about a BR cosmetic you own, and interact with STW locker instead of BR.") {
@@ -82,6 +94,21 @@ class CampaignCosmeticCommand : BrigadierCommand("stwcosmetic", "Shows info and 
 				}
 			)
 		)
+
+	override fun getSlashCommand() = newCommandBuilder()
+		.option(OptionType.STRING, "type", "Type of the cosmetic to search", true, choices = COSMETIC_TYPE_CHOICES)
+		.option(OptionType.STRING, "item", "Cosmetic to search for", true, argument = ItemArgument.item(true))
+		.executes { source ->
+			source.ensureSession()
+			source.loading("Getting cosmetics")
+			CompletableFuture.allOf(
+				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena"),
+				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign")
+			).await()
+			val athena = source.api.profileManager.getProfileData("athena")
+			val campaign = source.api.profileManager.getProfileData("campaign")
+			execute(source, source.getArgument<ItemArgument.Result>("item")!!.resolveWithFallback(athena, source.getOption("type")!!.asString), campaign)
+		}
 }
 
 private fun execute(source: CommandSourceStack, item: FortItemStack, profile: McpProfile, alert: String? = null): Int {
@@ -96,7 +123,9 @@ private fun execute(source: CommandSourceStack, item: FortItemStack, profile: Mc
 	val buttons = mutableListOf<Button>()
 
 	if (!owned) {
-		embed.setFooter("Wishlist and auto-buy coming soon!")
+		if (defData.GameplayTags?.any { it.toString().startsWith("Cosmetics.Source.ItemShop", true) } == true) {
+			embed.setFooter(defData.name + "\nWishlist and auto-buy coming soon!")
+		}
 		source.complete(alert, embed.build())
 		return Command.SINGLE_SUCCESS
 	}

@@ -699,7 +699,7 @@ inline fun <T> Iterable<T>.search(query: String, minimumSimilarity: Float = .33f
 	var result: T? = null
 	for (item in this) {
 		val key = extractor(item)?.toLowerCase() ?: continue
-		if (query in key) {
+		if (key == query) {
 			return item
 		}
 		val sim = similarity(key, query)

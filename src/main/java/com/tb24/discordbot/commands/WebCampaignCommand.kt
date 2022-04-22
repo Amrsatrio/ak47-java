@@ -21,6 +21,8 @@ open class WebCampaignCommand(name: String, description: String, val domainName:
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it.source) }
 
+	override fun getSlashCommand() = newCommandBuilder().executes(::execute)
+
 	private fun execute(source: CommandSourceStack): Int {
 		source.ensureSession()
 		source.loading("Connecting")

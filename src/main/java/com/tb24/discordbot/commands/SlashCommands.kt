@@ -1,6 +1,7 @@
 package com.tb24.discordbot.commands
 
 import com.mojang.brigadier.arguments.ArgumentType
+import net.dv8tion.jda.api.interactions.commands.Command.Choice
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.*
 
@@ -18,8 +19,9 @@ abstract class CommandBuilder<SourceType, ResultType, ThisType : CommandBuilder<
 
 	abstract fun then(subcommand: CommandBuilder<SourceType, *, *>): ThisType
 
-	fun option(type: OptionType, name: String, description: String, isRequired: Boolean = false, argument: ArgumentType<*>? = null): ThisType {
-		options.add(OptionData(type, name, description, isRequired))
+	fun option(type: OptionType, name: String, description: String, isRequired: Boolean = false, choices: Array<Choice> = emptyArray(), argument: ArgumentType<*>? = null): ThisType {
+		val option = OptionData(type, name, description, isRequired).addChoices(*choices)
+		options.add(option)
 		if (argument != null) {
 			optionArguments[name] = argument
 		}
@@ -86,3 +88,15 @@ class SubcommandGroupBuilder<T>(name: String, description: String) : CommandBuil
 
 	override fun getThis() = this
 }
+
+// region Option creation methods
+inline fun string(name: String, description: String, isRequired: Boolean = false) = OptionData(OptionType.STRING, name, description, isRequired)
+inline fun integer(name: String, description: String, isRequired: Boolean = false) = OptionData(OptionType.INTEGER, name, description, isRequired)
+inline fun boolean(name: String, description: String, isRequired: Boolean = false) = OptionData(OptionType.BOOLEAN, name, description, isRequired)
+inline fun user(name: String, description: String, isRequired: Boolean = false) = OptionData(OptionType.USER, name, description, isRequired)
+inline fun channel(name: String, description: String, isRequired: Boolean = false) = OptionData(OptionType.CHANNEL, name, description, isRequired)
+inline fun role(name: String, description: String, isRequired: Boolean = false) = OptionData(OptionType.ROLE, name, description, isRequired)
+inline fun mentionable(name: String, description: String, isRequired: Boolean = false) = OptionData(OptionType.MENTIONABLE, name, description, isRequired)
+inline fun number(name: String, description: String, isRequired: Boolean = false) = OptionData(OptionType.NUMBER, name, description, isRequired)
+inline fun attachment(name: String, description: String, isRequired: Boolean = false) = OptionData(OptionType.ATTACHMENT, name, description, isRequired)
+// endregion
