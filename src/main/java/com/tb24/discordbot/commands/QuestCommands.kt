@@ -1,6 +1,5 @@
 package com.tb24.discordbot.commands
 
-import com.google.gson.reflect.TypeToken
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
@@ -15,31 +14,30 @@ import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.account.GameProfile
-import com.tb24.fn.model.assetdata.RewardCategoryTabData
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.subgame.FortRerollDailyQuest
 import com.tb24.fn.model.mcpprofile.stats.IQuestManager
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
-import com.tb24.uasset.getProp
+import com.tb24.fn.util.getPathName
 import com.tb24.uasset.loadObject
-import me.fungames.jfortniteparse.fort.enums.EFortRarity
 import me.fungames.jfortniteparse.fort.exports.AthenaDailyQuestDefinition
-import me.fungames.jfortniteparse.fort.exports.FortChallengeBundleItemDefinition
 import me.fungames.jfortniteparse.fort.exports.FortQuestItemDefinition
-import me.fungames.jfortniteparse.fort.exports.FortTandemCharacterData
 import me.fungames.jfortniteparse.fort.objects.rows.FortCategoryTableRow
 import me.fungames.jfortniteparse.fort.objects.rows.FortQuestRewardTableRow
 import me.fungames.jfortniteparse.ue4.assets.exports.UDataTable
-import me.fungames.jfortniteparse.ue4.assets.exports.UObject
 import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
-import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import net.dv8tion.jda.api.EmbedBuilder
-import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.interactions.commands.OptionType
+import net.dv8tion.jda.api.interactions.components.ActionRow
+import net.dv8tion.jda.api.interactions.components.ComponentInteraction
+import net.dv8tion.jda.api.interactions.components.selections.SelectMenu
+import net.dv8tion.jda.api.interactions.components.selections.SelectMenuInteraction
+import java.util.concurrent.CompletableFuture
 
 class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manages your active BR daily challenges.", arrayOf("dailychals", "brdailies", "bd")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -232,93 +230,6 @@ private fun bulkFilter(source: CommandSourceStack, filter: String): Int {
 class DailyQuestsCommand : BaseQuestsCommand("dailyquests", "Manages your active STW daily quests.", "DailyQuests", true, arrayOf("dailies", "stwdailies", "dq"))
 class WeeklyQuestsCommand : BaseQuestsCommand("weeklychallenges", "Shows your active STW weekly challenges.", "WeeklyQuests", false, arrayOf("weeklies", "stwweeklies", "wq"))
 
-class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR quests.", arrayOf("challenges", "chals")) {
-	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { execute(it.source) }
-		.then(argument("tab", greedyString())
-			.executes { execute(it.source, getString(it, "tab").toLowerCase()) }
-		)
-
-	private fun execute(source: CommandSourceStack, search: String? = null): Int {
-		source.ensureSession()
-		var tab: RewardCategoryTabData? = null
-		if (search != null) {
-			val tabs = getTabs()
-			tab = tabs.search(search) { it.DisplayName.format()!! }
-				?: throw SimpleCommandExceptionType(LiteralMessage("No matches found for \"$search\". Available options:\n${tabs.joinToString("\n") { "\u2022 " + it.DisplayName.format().orDash() }}")).create()
-		}
-		source.loading("Getting challenges")
-		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
-		val athena = source.api.profileManager.getProfileData("athena")
-		val entries = mutableListOf<FortItemStack>()
-		for (item in athena.items.values) {
-			if (item.primaryAssetType != "Quest") {
-				continue
-			}
-			val defData = item.defData
-			if (defData !is FortQuestItemDefinition || defData.bHidden == true || item.attributes["quest_state"]?.asString != "Active") {
-				continue
-			}
-			if (tab != null) {
-				val bundleDef = athena.items[item.attributes["challenge_bundle_id"]?.asString]?.defData as? FortChallengeBundleItemDefinition
-					?: continue
-				val tags = bundleDef.GameplayTags ?: FGameplayTagContainer()
-				if (!tab.IncludeTag.TagName.isNone() && tags.getValue(tab.IncludeTag.toString()) == null
-					|| !tab.ExcludeTag.TagName.isNone() && tags.getValue(tab.ExcludeTag.toString()) != null) {
-					continue
-				}
-			}
-			entries.add(item)
-		}
-		if (entries.isNotEmpty()) {
-			entries.sortWith { a, b ->
-				val rarity1 = a.rarity
-				val rarity2 = b.rarity
-				val rarityCmp = rarity2.compareTo(rarity1)
-				if (rarityCmp != 0) {
-					rarityCmp
-				} else {
-					val tandem1 = (a.defData as? FortQuestItemDefinition)?.TandemCharacterData?.load<FortTandemCharacterData>()?.DisplayName?.format() ?: ""
-					val tandem2 = (b.defData as? FortQuestItemDefinition)?.TandemCharacterData?.load<FortTandemCharacterData>()?.DisplayName?.format() ?: ""
-					val tandemCmp = tandem1.compareTo(tandem2, true)
-					if (tandemCmp != 0) {
-						tandemCmp
-					} else { // custom, game does not sort by challenge bundle
-						val challengeBundleId1 = a.attributes["challenge_bundle_id"]?.asString ?: ""
-						val challengeBundleId2 = b.attributes["challenge_bundle_id"]?.asString ?: ""
-						challengeBundleId1.compareTo(challengeBundleId2, true)
-					}
-				}
-			}
-			source.replyPaginated(entries, 15) { content, page, pageCount ->
-				val entriesStart = page * 15 + 1
-				val entriesEnd = entriesStart + content.size
-				val value = content.joinToString("\n") {
-					renderChallenge(it, "• ", "\u2800", showRarity = true)
-				}
-				val embed = source.createEmbed()
-					.setTitle("Battle Royale Quests" + if (tab != null) " / " + tab.DisplayName.format() else "")
-					.setDescription("Showing %,d to %,d of %,d entries\n\n%s".format(entriesStart, entriesEnd - 1, entries.size, value))
-					.setFooter("Page %,d of %,d".format(page + 1, pageCount))
-				MessageBuilder(embed)
-			}
-		} else {
-			if (tab != null) {
-				throw SimpleCommandExceptionType(LiteralMessage("You have no quests in category ${tab.DisplayName.format()}.")).create()
-			} else {
-				throw SimpleCommandExceptionType(LiteralMessage("You have no quests.")).create()
-			}
-		}
-		return Command.SINGLE_SUCCESS
-	}
-
-	private fun getTabs(): List<RewardCategoryTabData> {
-		val d = loadObject<UObject>("/Game/Athena/HUD/Minimap/AthenaMapGamePanel_BP.TabList_QuestCategories") /*AthenaMapGamePanel_BP_C:WidgetTree.TabList_QuestCategories*/
-			?: throw SimpleCommandExceptionType(LiteralMessage("Object defining categories not found.")).create()
-		return d.getProp<List<RewardCategoryTabData>>("RewardTabsData", TypeToken.getParameterized(List::class.java, RewardCategoryTabData::class.java).type)!!
-	}
-}
-
 fun renderQuestObjectives(item: FortItemStack, short: Boolean = false): String {
 	val quest = item.defData as FortQuestItemDefinition
 	val objectives = quest.Objectives.filter { !it.bHidden }
@@ -416,7 +327,9 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 	return Command.SINGLE_SUCCESS
 }
 
-fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: String? = "", isAthenaDaily: Boolean = false, showRarity: Boolean = isAthenaDaily, conditionalCondition: Boolean = false, allowBold: Boolean = true): String {
+private val rewardsTableCache = hashMapOf<String, Map<FName, FortQuestRewardTableRow>>()
+
+fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: String? = "", isAthenaDaily: Boolean = false, conditionalCondition: Boolean = false, allowBold: Boolean = true): String {
 	val quest = item.defData as FortQuestItemDefinition
 	val (completion, max) = getQuestCompletion(item)
 	val xpRewardScalar = item.attributes["xp_reward_scalar"]?.asFloat ?: 1f
@@ -424,17 +337,11 @@ fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: Str
 	if (dn.isEmpty()) {
 		dn = item.templateId
 	}
-	val rarity = if (showRarity) {
-		var rarity = item.rarity
-		item.attributes["quest_rarity"]?.asString?.let { overrideRarity ->
-			EFortRarity.values().firstOrNull { it.name.equals(overrideRarity, true) }?.let {
-				rarity = it
-			}
-		}
-		"[${rarity.rarityName.format()}] "
-	} else ""
-	val boldTitle = if (allowBold) "**" else ""
-	val sb = StringBuilder("%s%s%s%s%s ".format(prefix, rarity, boldTitle, dn, boldTitle))
+	val sb = StringBuilder(prefix)
+	if (allowBold) sb.append("**")
+	sb.append(dn)
+	if (allowBold) sb.append("**")
+	sb.append(' ')
 	var progress = "%,d/%,d".format(completion, max)
 	val difficulty = quest.minRating
 	if (difficulty != 0) {
@@ -455,11 +362,14 @@ fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: Str
 		}
 	}
 	if (rewardsPrefix != null) {
-		quest.RewardsTable?.value?.rows
-			?.mapValues { it.value.mapToClass(FortQuestRewardTableRow::class.java) }
-			?.filter { it.value.QuestTemplateId == "*" || it.value.QuestTemplateId == item.templateId && !it.value.Hidden }
-			?.render(rewardsPrefix, rewardsPrefix, xpRewardScalar, bold, conditionalCondition)
-			?.forEach { sb.append('\n').append(it) }
+		val rewardsTablePath = quest.RewardsTable?.getPathName()
+		if (rewardsTablePath != null) {
+			rewardsTableCache
+				.getOrPut(rewardsTablePath) { quest.RewardsTable.value.rows.mapValues { it.value.mapToClass(FortQuestRewardTableRow::class.java) } }
+				.filter { it.value.QuestTemplateId == "*" || it.value.QuestTemplateId == item.templateId && !it.value.Hidden }
+				.render(rewardsPrefix, rewardsPrefix, xpRewardScalar, bold, conditionalCondition)
+				.forEach { sb.append('\n').append(it) }
+		}
 	}
 	return sb.toString()
 }
@@ -485,3 +395,24 @@ fun getQuestsOfCategory(campaign: McpProfile, categoryName: String) =
 	campaign.items.values
 		.filter { it.primaryAssetType == "Quest" && it.attributes["quest_state"]?.asString == "Active" && (it.defData as? FortQuestItemDefinition)?.Category?.rowName?.toString() == categoryName }
 		.sortedByDescending { (it.defData as FortQuestItemDefinition).SortPriority ?: 0 }
+
+class CategoryPaginatorComponents<T>(val select: SelectMenu.Builder, val event: CompletableFuture<String?>) : PaginatorCustomComponents<T> {
+	private var confirmed = false
+
+	override fun modifyComponents(paginator: Paginator<T>, rows: MutableList<ActionRow>) {
+		rows.add(ActionRow.of(select.build()))
+	}
+
+	override fun handleComponent(paginator: Paginator<T>, item: ComponentInteraction, user: User?) {
+		if (!confirmed && item.componentId == "category") {
+			confirmed = true
+			paginator.source.loadingMsg = item.message
+			event.complete((item as SelectMenuInteraction).values.first())
+			paginator.stop()
+		}
+	}
+
+	override fun onEnd(collected: Map<Any, ComponentInteraction>, reason: CollectorEndReason) {
+		event.complete(null)
+	}
+}

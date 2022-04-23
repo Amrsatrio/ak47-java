@@ -11,10 +11,10 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.commandName
 import com.tb24.discordbot.util.dispatchClientCommandRequest
+import com.tb24.discordbot.util.format
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.commonpublic.SetHomebaseName
 import com.tb24.fn.model.mcpprofile.stats.CommonPublicProfileStats
-import java.text.SimpleDateFormat
 
 class HomebaseNameCommand : BrigadierCommand("homebasename", "Displays or changes the homebase name. (STW owning accounts only)") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -39,7 +39,7 @@ class HomebaseNameCommand : BrigadierCommand("homebasename", "Displays or change
 			source.complete(null, source.createEmbed()
 				.setTitle("Homebase name")
 				.addField("Current", currentHomebaseName, false)
-				.addField("Last updated (UTC)", SimpleDateFormat().format(commonPublic.updated), false)
+				.addField("Last updated", commonPublic.updated.format(), false)
 				.setFooter("Use '" + source.prefix + context.commandName + " <new name>' to change it.")
 				.build())
 		} else {

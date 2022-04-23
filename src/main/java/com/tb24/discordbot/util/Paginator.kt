@@ -55,8 +55,12 @@ class Paginator<T>(
 		return rows
 	}
 
-	fun stopAndFinalizeComponents(selectedIds: Collection<String>) {
+	fun stop() {
 		collector.stop()
+	}
+
+	fun stopAndFinalizeComponents(selectedIds: Collection<String>) {
+		stop()
 		collector.message?.editMessageComponents(actionRows.map { row ->
 			ActionRow.of(*row.components.map {
 				when (it) {
@@ -107,9 +111,9 @@ fun <T> CommandSourceStack.replyPaginated(
 	all: List<T>,
 	pageSize: Int,
 	initialPage: Int = 0,
-	customReactions: PaginatorCustomComponents<T>? = null,
+	customComponents: PaginatorCustomComponents<T>? = null,
 	render: (content: List<T>, page: Int, pageCount: Int) -> MessageBuilder
-) = Paginator(this, all, pageSize, initialPage, customReactions, render)
+) = Paginator(this, all, pageSize, initialPage, customComponents, render)
 
 interface PaginatorCustomComponents<T> {
 	fun modifyComponents(paginator: Paginator<T>, rows: MutableList<ActionRow>)

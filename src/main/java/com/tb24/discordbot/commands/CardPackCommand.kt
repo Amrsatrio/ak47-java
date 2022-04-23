@@ -91,7 +91,7 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 			throw SimpleCommandExceptionType(LiteralMessage("You have no llamas.")).create()
 		}
 		val event = CompletableFuture<CatalogOffer?>()
-		source.replyPaginated(llamas, 1, customReactions = PaginatorComponents(llamas, event)) { content, page, pageCount ->
+		source.replyPaginated(llamas, 1, customComponents = PaginatorComponents(llamas, event)) { content, page, pageCount ->
 			val llama = content.first()
 			val items = llama.items
 			val embed = source.createEmbed()
