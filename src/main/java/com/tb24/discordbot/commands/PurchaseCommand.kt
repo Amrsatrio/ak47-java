@@ -161,8 +161,8 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 	}
 	var quantity = quantity
 	if (quantity == -1) {
-		val maxQuantity = if (sd.purchaseLimit >= 0) sd.purchaseLimit - sd.purchasesCount else 1
-		quantity = (accountBalance / price.basePrice).coerceAtMost(maxQuantity)
+		val maxQuantity = if (sd.purchaseLimit >= 0) sd.purchaseLimit - sd.purchasesCount else sd.getMeta("MaxConcurrentPurchases")?.toIntOrNull() ?: 1
+		quantity = (if (price.basePrice == 0) maxQuantity else (accountBalance / price.basePrice).coerceAtMost(maxQuantity))
 	}
 	val displayData = OfferDisplayData(offer)
 	var confirmed = true

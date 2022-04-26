@@ -43,6 +43,7 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 		var researchPoints = 0
 		val mythicSchematics = mutableListOf<FortItemStack>()
 		val foundersTiers = TreeSet<FoundersEdition>()
+		var canReceiveMtxCurrency = false
 		for (item in campaign.items.values) {
 			when {
 				item.templateId == "Token:collectionresource_nodegatetoken01" -> researchPoints += item.quantity
@@ -52,6 +53,7 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 				item.templateId == "Quest:foundersquest_getrewards_2_3" -> foundersTiers.add(FoundersEdition.SUPER_DELUXE)
 				item.templateId == "Quest:foundersquest_getrewards_3_4" -> foundersTiers.add(FoundersEdition.LIMITED)
 				item.templateId == "Quest:foundersquest_getrewards_4_5" -> foundersTiers.add(FoundersEdition.ULTIMATE)
+				item.templateId == "Token:receivemtxcurrency" -> canReceiveMtxCurrency = true
 				item.templateId in quests -> questItems[item.templateId] = item
 			}
 		}
@@ -97,8 +99,8 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 			stats.gameplay_stats?.firstOrNull { it.statName == "zonescompleted" }?.statValue?.toIntOrNull() ?: 0
 		), true)
 		val foundersEdition = if (foundersTiers.isNotEmpty()) foundersTiers.last() else null
-		if (foundersEdition != null) {
-			embed.setFooter(foundersEdition.displayName + " Founders Account", Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Boost/T-Icon-FoundersBadge-128.T-Icon-FoundersBadge-128"))
+		if (foundersEdition != null || canReceiveMtxCurrency) {
+			embed.setFooter(foundersEdition?.let { it.displayName + " Founders Account" } ?: "Founders Account (Unknown edition, account is broken!)", Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Boost/T-Icon-FoundersBadge-128.T-Icon-FoundersBadge-128"))
 		} else {
 			embed.setFooter("Non-Founders Account", Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Items/T-Items-Currency-X-RayLlama.T-Items-Currency-X-RayLlama"))
 		}
