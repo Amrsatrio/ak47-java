@@ -52,7 +52,7 @@ fun getExclusiveItems(profiles: Collection<McpProfile>, types: EnumSet<Exclusive
 	// Cosmetic Variant Tokens need special treatment
 	val athena = profiles.first { it.profileId == "athena" }
 	for (e in localExclusives) {
-		if (!e.templateId.startsWith("CosmeticVariantToken:")) {
+		if (!e.templateId.startsWith("CosmeticVariantToken:") || e.type !in types) {
 			continue
 		}
 		val variantTokenItem = FortItemStack(e.templateId, 1)
@@ -66,6 +66,6 @@ fun getExclusiveItems(profiles: Collection<McpProfile>, types: EnumSet<Exclusive
 	}
 
 	return profiles.flatMapTo(myExclusives) { profile: McpProfile ->
-		profile.items.values.filter { item -> item.primaryAssetType != "CosmeticVariantToken" && localExclusives.any { it.templateId.equals(item.templateId, true) && types.contains(it.type) } && (!onlyCosmetics || item.primaryAssetType != "HomebaseBannerIcon") }
+		profile.items.values.filter { item -> item.primaryAssetType != "CosmeticVariantToken" && localExclusives.any { it.templateId.equals(item.templateId, true) && it.type in types } && (!onlyCosmetics || item.primaryAssetType != "HomebaseBannerIcon") }
 	}
 }
