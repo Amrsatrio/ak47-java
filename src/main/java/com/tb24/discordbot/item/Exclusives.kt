@@ -6,8 +6,11 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.util.readString0
+import com.tb24.fn.EpicApi
 import com.tb24.fn.model.FortItemStack
+import com.tb24.fn.model.McpVariantReader
 import com.tb24.fn.model.mcpprofile.McpProfile
+import me.fungames.jfortniteparse.fort.exports.FortVariantTokenType
 import okhttp3.Request
 import java.util.*
 
@@ -44,7 +47,25 @@ val exclusives by lazy {
 
 fun getExclusiveItems(profiles: Collection<McpProfile>, types: EnumSet<ExclusivesType>, onlyCosmetics: Boolean): List<FortItemStack> {
 	val localExclusives = exclusives.values
-	return profiles.flatMap { profile ->
-		profile.items.values.filter { item -> localExclusives.any { it.templateId.equals(item.templateId, true) && types.contains(it.type) } && (!onlyCosmetics || item.primaryAssetType != "CosmeticVariantToken" && item.primaryAssetType != "HomebaseBannerIcon") }
+	val myExclusives = mutableListOf<FortItemStack>()
+
+	// Cosmetic Variant Tokens need special treatment
+	val athena = profiles.first { it.profileId == "athena" }
+	for (e in localExclusives) {
+		if (!e.templateId.startsWith("CosmeticVariantToken:")) {
+			continue
+		}
+		val variantTokenItem = FortItemStack(e.templateId, 1)
+		val variantTokenDef = variantTokenItem.defData as? FortVariantTokenType ?: continue
+		val cosmeticItemName = variantTokenDef.cosmetic_item.name.toString().toLowerCase()
+		val item = athena.items.values.firstOrNull { it.primaryAssetName == cosmeticItemName } ?: continue
+		val itemVariants = EpicApi.GSON.fromJson(item.attributes.getAsJsonArray("variants"), Array<McpVariantReader>::class.java)
+		if (itemVariants.any { it.channel == variantTokenDef.VariantChanelTag.toString().substringAfterLast('.') && variantTokenDef.VariantNameTag.toString().substringAfterLast('.') in it.owned }) {
+			myExclusives.add(variantTokenItem)
+		}
+	}
+
+	return profiles.flatMapTo(myExclusives) { profile: McpProfile ->
+		profile.items.values.filter { item -> item.primaryAssetType != "CosmeticVariantToken" && localExclusives.any { it.templateId.equals(item.templateId, true) && types.contains(it.type) } && (!onlyCosmetics || item.primaryAssetType != "HomebaseBannerIcon") }
 	}
 }
