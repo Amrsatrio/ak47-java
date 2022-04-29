@@ -53,62 +53,26 @@ class WakeCommand : BrigadierCommand("wake", "Wake on LAN", arrayOf("wol")) {
 		val db = r.table("wol").run(source.client.dbConn, WakeEntry::class.java)
 		if (mac == null && (ipPort.split(".").size <= 1 || ipPort.split(":").size >= 2)) {
 			val entry = db.toList().firstOrNull { it.registrantId == source.author.id && it.name == ipPort } ?: throw SimpleCommandExceptionType(LiteralMessage("You don't have an entry with this name.")).create()
-			val macBytes = entry.mac.parseHexBinary()
-			val buf = ByteBuffer.allocate(6 + 16 * macBytes.size)
-			repeat(6) { buf.put(0xFF.toByte()) }
-			repeat(16) { buf.put(macBytes) }
 			val ip = entry.ipPort.split(":")[0]
 			val port = entry.ipPort.split(":")[1].toInt()
-			val address = InetAddress.getByName(ip)
-			val packet = DatagramPacket(buf.array(), buf.array().size, address, port)
-			try {
-				DatagramSocket().use { it.send(packet) }
-			} catch (e: Exception) {
-				throw SimpleCommandExceptionType(LiteralMessage("Failed to send packet.")).create()
-			}
+			val macBytes = entry.mac.parseHexBinary()
+			sendMagicPacket(ip, port, macBytes)
 			source.complete("✅")
 			return Command.SINGLE_SUCCESS
 		}
 		if (mac == null) {
 			throw SimpleCommandExceptionType(LiteralMessage("You must specify a MAC address.")).create()
 		}
-		val macBytes = try {
-			mac.replace(":", "").replace("-", "").parseHexBinary()
-		} catch (e: Exception) {
-			throw invalidMacError
-		}
-		if (macBytes.size != 6) {
-			throw invalidMacError
-		}
-		val buf = ByteBuffer.allocate(6 + 16 * macBytes.size)
-		repeat(6) { buf.put(0xFF.toByte()) }
-		repeat(16) { buf.put(macBytes) }
 		val ip = ipPort.substringBefore(":")
 		val port = ipPort.substringAfter(":").toIntOrNull() ?: 9
-		val address = try {
-			InetAddress.getByName(ip)
-		} catch (e: UnknownHostException) {
-			throw SimpleCommandExceptionType(LiteralMessage("Failed to resolve host.")).create()
-		}
-		val packet = DatagramPacket(buf.array(), buf.array().size, address, port)
-		try {
-			DatagramSocket().use { it.send(packet) }
-		} catch (e: Exception) {
-			throw SimpleCommandExceptionType(LiteralMessage("Failed to send packet.")).create()
-		}
+		val macBytes = parseMac(mac)
+		sendMagicPacket(ip, port, macBytes)
 		source.complete("✅")
 		return Command.SINGLE_SUCCESS
 	}
 
 	private fun save(source: CommandSourceStack, ipPort: String, mac: String, name: String): Int {
-		val macBytes = try {
-			mac.replace(":", "").replace("-", "").parseHexBinary()
-		} catch (e: Exception) {
-			throw invalidMacError
-		}
-		if (macBytes.size != 6) {
-			throw invalidMacError
-		}
+		parseMac(mac)
 		try {
 			InetAddress.getByName(ipPort.substringBefore(":"))
 		} catch (e: UnknownHostException) {
@@ -118,8 +82,8 @@ class WakeCommand : BrigadierCommand("wake", "Wake on LAN", arrayOf("wol")) {
 		if (db.firstOrNull { it.name == name && it.registrantId == source.author.id } != null) {
 			throw SimpleCommandExceptionType(LiteralMessage("You already have an entry with that name.")).create()
 		}
-		val mac = mac.replace(":", "").replace("-", "").toUpperCase()
-		r.table("wol").insert(WakeEntry(source.author.id, ipPort, mac, name)).run(source.client.dbConn)
+		val normalizedMac = mac.replace(":", "").replace("-", "").toUpperCase()
+		r.table("wol").insert(WakeEntry(source.author.id, ipPort, normalizedMac, name)).run(source.client.dbConn)
 		source.complete("✅ Saved", null)
 		return Command.SINGLE_SUCCESS
 	}
@@ -137,9 +101,37 @@ class WakeCommand : BrigadierCommand("wake", "Wake on LAN", arrayOf("wol")) {
 		val entries = db.filter { it.registrantId == source.author.id }.map { it.name }
 		if (entries.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("You don't have any entries.")).create()
-		} else {
-			source.complete("Wake entries: %s".format(entries.joinToString(", ")), null)
-			return Command.SINGLE_SUCCESS
+		}
+		source.complete("Wake entries: %s".format(entries.joinToString(", ")), null)
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun parseMac(mac: String): ByteArray {
+		val macBytes = try {
+			mac.replace(":", "").replace("-", "").parseHexBinary()
+		} catch (e: Exception) {
+			throw invalidMacError
+		}
+		if (macBytes.size != 6) {
+			throw invalidMacError
+		}
+		return macBytes
+	}
+
+	private fun sendMagicPacket(ip: String, port: Int, macBytes: ByteArray) {
+		val buf = ByteBuffer.allocate(6 + 16 * macBytes.size)
+		repeat(6) { buf.put(0xFF.toByte()) }
+		repeat(16) { buf.put(macBytes) }
+		val address = try {
+			InetAddress.getByName(ip)
+		} catch (e: UnknownHostException) {
+			throw SimpleCommandExceptionType(LiteralMessage("Failed to resolve host.")).create()
+		}
+		val packet = DatagramPacket(buf.array(), buf.array().size, address, port)
+		try {
+			DatagramSocket().use { it.send(packet) }
+		} catch (e: Exception) {
+			throw SimpleCommandExceptionType(LiteralMessage("Failed to send packet.")).create()
 		}
 	}
 }
