@@ -142,6 +142,8 @@ class Session(val client: DiscordBot, val id: String, private var persistent: Bo
 	fun clear() {
 		api.clear()
 		otherClientApis.clear()
+		webCampaignManagers.values.forEach { runCatching { it.disconnect() } }
+		webCampaignManagers.clear()
 		if (persistent) SessionPersister.remove(id)
 	}
 

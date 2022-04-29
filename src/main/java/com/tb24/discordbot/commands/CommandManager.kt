@@ -411,7 +411,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		val isEpicGames = host.endsWith("epicgames.com") || host.endsWith("fortnite.qq.com")
 		if (isEpicGames) {
 			val session = source.session
-			if ((e.code() == HttpURLConnection.HTTP_UNAUTHORIZED || (e.code() == HttpURLConnection.HTTP_FORBIDDEN && e.epicError.errorCode == "com.epicgames.common.token_verify_failed") /*special case for events service*/ || e.response.request.url.toString().contains("epicgames.com/id/logout")) && session.api.userToken?.account_id != null) {
+			if ((e.code() == HttpURLConnection.HTTP_UNAUTHORIZED || (e.code() == HttpURLConnection.HTTP_FORBIDDEN && e.epicError.errorCode == "com.epicgames.common.token_verify_failed") /*special case for events service*/ || e.response.request.url.toString().let { "accounts.epicgames.com/logout" in it || "epicgames.com/id/logout" in it }) && session.api.userToken?.account_id != null) {
 				val invalidToken = session.api.userToken
 				session.api.setToken(null)
 				session.otherClientApis.clear()

@@ -5,17 +5,13 @@ import com.google.gson.JsonParser
 import com.google.gson.JsonPrimitive
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.util.await
-import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.to
 import com.tb24.fn.EpicApi
 import com.tb24.fn.util.getBoolean
 import com.tb24.fn.util.getInt
 import com.tb24.fn.util.getLong
 import com.tb24.fn.util.getString
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.WebSocket
-import okhttp3.WebSocketListener
+import okhttp3.*
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileReader
@@ -50,15 +46,18 @@ class WebCampaign(val okHttpClient: OkHttpClient, val domainName: String) {
 		val request = Request.Builder()
 			.url("https://$domainName.fortnite.com/environment.js")
 			.build()
-		val response = okHttpClient.newCall(request).exec().body!!.string()
-		JsonParser.parseString(response.substringAfter("window.emconfig = ")).asJsonObject
+		val response = okHttpClient.newCall(request).execute()
+		checkIfRedirected(response)
+		JsonParser.parseString(response.body!!.string().substringAfter("window.emconfig = ")).asJsonObject
 	}
 
 	val localization: JsonObject = localizations.getOrPut(domainName) {
 		val request = Request.Builder()
 			.url("https://$domainName.fortnite.com/static/locales/en-US/general.json")
 			.build()
-		okHttpClient.newCall(request).exec().to()
+		val response = okHttpClient.newCall(request).execute()
+		checkIfRedirected(response)
+		response.to()
 	}
 
 	fun send(type: String, payload: JsonObject? = null): CompletableFuture<JsonObject> {
@@ -173,12 +172,19 @@ class WebCampaign(val okHttpClient: OkHttpClient, val domainName: String) {
 		connectionId = null
 	}
 
+	private fun checkIfRedirected(response: Response) {
+		if (response.code == 302) {
+			response.close()
+			throw WebCampaignException("This event is no longer available.")
+		}
+	}
+
 	private inner class PendingResponse(commandId: String, type: String, timeout: Long = 5L) {
 		val future = CompletableFuture<JsonObject>()
 		private val timeoutTimer = timer.schedule(timeout * 1000) {
 			if (pendingResponses.containsKey(commandId)) {
 				pendingResponses.remove(commandId)
-				future.completeExceptionally(Exception("Timeout waiting response of $type after $timeout seconds"))
+				future.completeExceptionally(WebCampaignException("Timeout waiting response of $type after $timeout seconds"))
 			}
 		}
 
@@ -189,7 +195,7 @@ class WebCampaign(val okHttpClient: OkHttpClient, val domainName: String) {
 
 		fun receiveError(payload: JsonObject) {
 			timeoutTimer.cancel()
-			future.completeExceptionally(Exception("$payload"))
+			future.completeExceptionally(WebCampaignException("$payload"))
 		}
 	}
 
@@ -225,6 +231,8 @@ class WebCampaign(val okHttpClient: OkHttpClient, val domainName: String) {
 		result
 	}
 }
+
+class WebCampaignException(message: String) : Exception(message)
 
 fun main() {
 	val file = File("webcampaign.json")
