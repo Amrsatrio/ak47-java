@@ -2,6 +2,8 @@ package com.tb24.discordbot
 
 import com.google.gson.JsonObject
 import com.mojang.brigadier.Command
+import com.mojang.brigadier.LiteralMessage
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.commands.BrigadierCommand
 import com.tb24.discordbot.commands.CommandSourceStack
 import com.tb24.discordbot.managers.ChannelsManager
@@ -9,6 +11,7 @@ import com.tb24.discordbot.managers.HomebaseManager
 import com.tb24.discordbot.managers.PartyManager
 import com.tb24.discordbot.util.*
 import com.tb24.discordbot.webcampaign.WebCampaign
+import com.tb24.discordbot.webcampaign.WebCampaignException
 import com.tb24.fn.EpicApi
 import com.tb24.fn.event.ProfileUpdatedEvent
 import com.tb24.fn.model.FortItemStack
@@ -207,19 +210,27 @@ class Session(val client: DiscordBot, val id: String, private var persistent: Bo
 
 	fun getPartyManager(accountId: String) = partyManagers.getOrPut(accountId) { PartyManager(api) }
 
-	fun getWebCampaignManager(id: String) = webCampaignManagers.getOrPut(id) {
-		WebCampaign(api.okHttpClient, id).apply {
-			/*onUpdateProperties = { properties ->
-				source.session.config.webCampaigns[domainName] = properties
-			}*/
-			onRequestAuth = { payload ->
-				val clientId = environment.getAsJsonObject("settings").getAsJsonObject("epic").getString("clientId")
-				val redirectResponse = api.performWebApiRequest<JsonObject>("https://www.epicgames.com/id/api/redirect?clientId=$clientId&responseType=code")
-				payload.addProperty("authenticationToken", redirectResponse.getString("authorizationCode"))
-				payload.addProperty("redirectUri", redirectResponse.getString("redirectUrl"))
+	fun getWebCampaignManager(id: String): WebCampaign {
+		try {
+			val wc = webCampaignManagers.getOrPut(id) {
+				WebCampaign(api.okHttpClient, id).apply {
+					/*onUpdateProperties = { properties ->
+						source.session.config.webCampaigns[domainName] = properties
+					}*/
+					onRequestAuth = { payload ->
+						val clientId = environment.getAsJsonObject("settings").getAsJsonObject("epic").getString("clientId")
+						val redirectResponse = api.performWebApiRequest<JsonObject>("https://www.epicgames.com/id/api/redirect?clientId=$clientId&responseType=code")
+						payload.addProperty("authenticationToken", redirectResponse.getString("authorizationCode"))
+						payload.addProperty("redirectUri", redirectResponse.getString("redirectUrl"))
+					}
+				}
 			}
+			wc.connect()
+			return wc
+		} catch (e: WebCampaignException) {
+			throw SimpleCommandExceptionType(LiteralMessage(e.message)).create()
 		}
-	}.apply { connect() }
+	}
 
 	fun getAvatar(accountId: String) = avatarCache.getOrPut(accountId) {
 		val response = api.avatarService.queryAvatars("fortnite", accountId).execute()
