@@ -63,7 +63,12 @@ class BaseCommandBuilder<SourceType>(name: String, description: String) : Comman
 
 class SubcommandBuilder<T>(name: String, description: String) : CommandBuilder<T, SubcommandData, SubcommandBuilder<T>>(name, description) {
 	override fun then(subcommand: CommandBuilder<T, *, *>) = throw UnsupportedOperationException("Subcommands cannot have children")
-	override fun build() = SubcommandData(name, description)
+
+	override fun build(): SubcommandData {
+		val data = SubcommandData(name, description)
+		if (options.isNotEmpty()) data.addOptions(options)
+		return data
+	}
 
 	override fun getThis() = this
 }
