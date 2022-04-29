@@ -47,7 +47,7 @@ class DailyRewardsCommand : BrigadierCommand("daily", "Claims the STW daily rewa
 				val msg = if (source.api.profileManager.getProfileData("common_core").items.values.none { it.templateId == "Token:campaignaccess" }) {
 					"You don't have access to Save the World."
 				} else {
-					"You have access to STW, but you can start receiving daily rewards after completing Stonewood Storm Shield Defense 3."
+					"You have access to STW, but you can start receiving daily rewards after completing Stonewood Storm Shield Defense 1."
 				}
 				source.complete(null, source.createEmbed().setColor(COLOR_ERROR)
 					.setDescription("❌ $msg")
@@ -88,6 +88,9 @@ fun notifyDailyRewardsClaimed(source: CommandSourceStack, campaign: McpProfile, 
 		embed.setColor(BrigadierCommand.COLOR_SUCCESS).setTitle("✅ Daily rewards claimed")
 	} else {
 		embed.setTitle("Daily rewards already claimed")
+	}
+	if (!source.unattended && !source.hasPremium() && canReceiveMtxCurrency) {
+		embed.setFooter("Tired of claiming manually? Get premium so you can get free V-Bucks without thinking about it!")
 	}
 	source.complete(null, embed.build())
 }
