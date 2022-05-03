@@ -67,28 +67,28 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 			val questItem = campaign.items.values.firstOrNull { it.templateId == questTemplateId }
 				?: FortItemStack(questTemplateId, 1)
 			val (completion, max) = getQuestCompletion(questItem)
-			"%s **%s:** %,d/%,d (%s)".format(
+			"%s **%s:**\n%,d/%,d (%s)".format(
 				textureEmote(questItem.defData.LargePreviewImage.toString())?.asMention,
 				questItem.displayName,
 				completion, max,
 				Formatters.percentZeroFraction.format(completion.toDouble() / max.toDouble())
 			)
 		}, true)
-		embed.addField("Dates", "**First Played:** %s\n**Last Updated:** %s".format(
+		embed.addField("Dates", "**First Played:**\n%s\n**Last Updated:**\n%s".format(
 			TimeFormat.DATE_LONG.format(campaign.created.time),
 			TimeFormat.DATE_LONG.format(campaign.updated.time)
 		), true)
 		val sb = StringBuilder()
-		for (statType in arrayOf(Fortitude, Offense, Resistance, Technology)) {
-			sb.append("%s %,d\n".format(textureEmote(statType.icon)?.asMention, stats.research_levels[statType]))
-		}
-		sb.append("%s %,d".format(textureEmote("/Game/UI/Foundation/Textures/Icons/Currency/T-Icon-ResearchPoint-128.T-Icon-ResearchPoint-128")?.asMention, researchPoints))
+		sb.append(arrayOf(arrayOf(Fortitude, Offense), arrayOf(Resistance, Technology)).joinToString("\n") { line ->
+			line.joinToString(" ") { statType -> "%s %,d".format(textureEmote(statType.icon)?.asMention, stats.research_levels[statType]) }
+		})
+		sb.append("\n%s %,d".format(textureEmote("/Game/UI/Foundation/Textures/Icons/Currency/T-Icon-ResearchPoint-128.T-Icon-ResearchPoint-128")?.asMention, researchPoints))
 		embed.addField("Research", sb.toString(), true)
 		embed.addField("Collection Book", "**Level:** %,d\n**Spent for Unslotting:** %,d".format(
 			stats.collection_book.maxBookXpLevelAchieved ?: 0,
 			stats.unslot_mtx_spend
 		), true)
-		embed.addField("Inventory Size", "**Personnel & Schematics:** %,d\n**Backpack:** %,d\n**Storage:** %,d".format(
+		embed.addField("Inventory Size", "**Armory:** %,d\n**Backpack:** %,d\n**Storage:** %,d".format(
 			hb.getAccountInventorySize(),
 			hb.getWorldInventorySize(),
 			hb.getStorageInventorySize()
