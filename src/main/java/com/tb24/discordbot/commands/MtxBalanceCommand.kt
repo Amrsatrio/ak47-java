@@ -27,7 +27,7 @@ class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { balance(it.source) }
 		.then(literal("totalpurchased").executes { totalPurchased(it.source) })
-		.then(literal("bulk").executes { bulk(it.source, null) }.then(argument("bulk users", UserArgument.users(-1)).executes { bulk(it.source, UserArgument.getUsers(it, "bulk users", loadingText = null)) }))
+		.then(literal("bulk").executes { bulk(it.source, null) }.then(argument("bulk users", UserArgument.users(100)).executes { bulk(it.source, UserArgument.getUsers(it, "bulk users", loadingText = null)) }))
 
 	override fun getSlashCommand() = newCommandBuilder()
 		.then(subcommand("balance", description).executes { balance(it) })

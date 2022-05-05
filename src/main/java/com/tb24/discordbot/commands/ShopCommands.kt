@@ -73,7 +73,7 @@ class CampaignShopCommand : BrigadierCommand("stwshop", "Sends the current Save 
 			.then(literal("bulk")
 				.executes{ execBuyAllCampaignBulk(it.source, null) }
 			)
-			.then(argument("bulk users", UserArgument.users(-1))
+			.then(argument("bulk users", UserArgument.users(100))
 				.executes { execBuyAllCampaignBulk(it.source, UserArgument.getUsers(it, "bulk users", loadingText = null)) }
 			)
 

@@ -62,7 +62,7 @@ class MentionArgument private constructor(private val mentionType: MentionType) 
 
 		private fun matchUser(matcher: Matcher): User? {
 			val userId = parseSnowflake(matcher.group(1))
-			return source.jda.getUserById(userId) ?: source.jda.retrieveUserById(userId).complete()
+			return source.jda.retrieveUserById(userId).complete()
 		}
 
 		private fun matchRole(matcher: Matcher): Role? {

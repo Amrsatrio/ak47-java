@@ -5,6 +5,7 @@ import com.mojang.brigadier.StringReader
 import com.mojang.brigadier.arguments.ArgumentType
 import com.mojang.brigadier.context.CommandContext
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.L10N
 import com.tb24.discordbot.commands.CommandSourceStack
@@ -13,6 +14,9 @@ import com.tb24.fn.model.account.EExternalAuthType
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.friends.FriendV2
 import com.tb24.fn.util.Formatters
+import net.dv8tion.jda.api.entities.Message.MentionType
+import net.dv8tion.jda.api.exceptions.ErrorResponseException
+import net.dv8tion.jda.api.requests.ErrorResponse
 
 class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgument.Result> {
 	companion object {
@@ -32,17 +36,11 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 	val separator = ';'
 
 	override fun parse(reader: StringReader): Result {
-		val ids = mutableListOf<Any>()
+		val queries = mutableListOf<Query>()
 		val terminators = if (greedy) hashSetOf(separator) else hashSetOf(' ', separator)
 		var hasNext = reader.canRead() && reader.peek() != ' '
 		while (hasNext) {
-			val isHashtag = reader.peek() == '#'
-			if (isHashtag) { // friend number TODO use this if string length is 3 or less
-				reader.skip()
-				ids.add(FriendEntryQuery(reader.readInt(), reader))
-			} else { // display name, email, or account id
-				ids.add(reader.readString0(terminators))
-			}
+			readQuery(reader, terminators)?.let(queries::add)
 			reader.checkConsumed(terminators)
 			hasNext = if (reader.canRead() && reader.peek() == separator) {
 				reader.skip()
@@ -51,133 +49,254 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 				false
 			}
 		}
-		return Result(ids, max)
+		return Result(queries, max)
+	}
+
+	private fun readQuery(reader: StringReader, terminators: Set<Char>): Query? {
+		// Explicit friend number
+		val isHashtag = reader.peek() == '#'
+		if (isHashtag) {
+			reader.skip()
+			return FriendEntryQuery(reader.readInt(), reader)
+		}
+
+		val s = reader.readString0(terminators)
+		if (s.isEmpty()) {
+			return null
+		}
+
+		// Friend number
+		if (s.length <= 3) {
+			s.toIntOrNull()?.let {
+				return FriendEntryQuery(it, reader)
+			}
+		}
+
+		// Account ID
+		if (s.length == 32) {
+			return AccountIdQuery(s, reader)
+		}
+
+		// Email
+		if (Utils.EMAIL_ADDRESS.matcher(s).matches()) {
+			return EmailQuery(s, reader)
+		}
+
+		// User's saved accounts
+		if (BotConfig.get().userArgumentAllowMentions) {
+			s.toLongOrNull()?.let {
+				return DiscordUserIdQuery(it, reader)
+			}
+			val matcher = MentionType.USER.pattern.matcher(s)
+			if (matcher.find()) {
+				matcher.group(1).toLongOrNull()?.let {
+					return DiscordUserIdQuery(it, reader)
+				}
+			}
+		}
+
+		// Display name
+		return NameQuery(s, reader)
 	}
 
 	override fun getExamples() = EXAMPLES
 
-	class FriendEntryQuery(val index: Int, val reader: StringReader, val start: Int = reader.cursor)
+	abstract class Query(val reader: StringReader) {
+		val start = reader.cursor
+		abstract fun resolve(result: Result)
+	}
 
-	class Result(val ids: List<Any>, val max: Int) {
+	class AccountIdQuery(val accountId: String, reader: StringReader) : Query(reader) {
+		override fun resolve(result: Result) {
+			result.add(null, accountId) // Will be looked up at once later
+		}
+	}
+
+	class EmailQuery(val email: String, reader: StringReader) : Query(reader) {
+		override fun resolve(result: Result) {
+			val source = result.source
+			val user = source.api.accountService.getByEmail(email).exec().body()!!
+			source.userCache[user.id] = user
+			result.add(user)
+		}
+	}
+
+	class NameQuery(val name: String, reader: StringReader) : Query(reader) {
+		override fun resolve(result: Result) {
+			val source = result.source
+			val colonIndex = name.indexOf(':')
+			var user: GameProfile? = null
+			var authType = EExternalAuthType.epic
+			var nameQuery = name
+			var errorMessage: String? = null
+
+			if (colonIndex != -1) {
+				val authTypeStr = name.substring(0, colonIndex).toLowerCase()
+				if (authTypeStr != "epic" && authTypeStr != "psn" && authTypeStr != "xbl") {
+					result.error("Unknown account type $authTypeStr. Must be either Epic, PSN, or XBL.")
+					return
+				}
+				authType = EExternalAuthType.valueOf(authTypeStr)
+				nameQuery = name.substring(colonIndex + 1)
+			}
+
+			if (authType == EExternalAuthType.epic) { // Display name search
+				try {
+					user = source.api.accountService.getByDisplayName(nameQuery).exec().body()!!
+				} catch (e: HttpException) {
+					if (e.epicError.errorCode == "errors.com.epicgames.account.account_not_found") {
+						errorMessage = "Couldn't find an Epic account with name `$nameQuery`."
+					} else throw e
+				}
+			} else { // External display name search
+				user = source.api.accountService.getExternalIdMappingsByDisplayName(authType, nameQuery, true).exec().body()!!.firstOrNull()
+				if (user == null) {
+					errorMessage = "Couldn't find an Epic account with ${L10N.format("account.ext.${authType.name}.name")} `$nameQuery`."
+				}
+			}
+
+			if (user != null) {
+				source.userCache[user.id] = user
+				result.add(user)
+				return
+			}
+
+			// Show error and search for users with similar names
+			if (result.max > 1) {
+				result.error(errorMessage ?: "")
+				return
+			}
+			val sb = StringBuilder(errorMessage)
+			val searchResults = source.api.userSearchService.queryUsers(source.api.currentLoggedIn.id, name, authType).exec().body()!!
+			if (searchResults.isNotEmpty()) {
+				sb.append("\nDid you mean:")
+				for ((i, entry) in searchResults.withIndex()) {
+					sb.append("\n\u2022 ")
+					if (i >= 20) {
+						sb.append("... and more ...")
+						break
+					}
+					entry.matches.firstOrNull()?.let {
+						if (it.platform != EExternalAuthType.epic) {
+							sb.append(it.platform.name).append(':')
+						}
+						sb.append(it.value).append(" - ")
+					}
+					sb.append('`').append(entry.accountId).append('`')
+					if (entry.epicMutuals > 0) {
+						sb.append(" (").append(Formatters.num.format(entry.epicMutuals)).append(" mutual)")
+					}
+				}
+			}
+			throw SimpleCommandExceptionType(LiteralMessage(sb.toString())).create()
+		}
+	}
+
+	class FriendEntryQuery(val index: Int, reader: StringReader) : Query(reader) {
+		override fun resolve(result: Result) {
+			val source = result.source
+			val unsortedFriends = result.friends ?: source.api.friendsService.queryFriends(source.api.currentLoggedIn.id, true).exec().body()!!
+			source.queryUsers_map(unsortedFriends.map { it.accountId })
+			val sortedFriends = unsortedFriends.sortedFriends(source)
+			if (sortedFriends.isEmpty()) {
+				result.error("No friends to choose from.")
+				return
+			}
+			val friend = sortedFriends.safeGetOneIndexed(index, reader, start)
+			result.add(source.userCache[friend.accountId]!!)
+		}
+	}
+
+	class DiscordUserIdQuery(val id: Long, reader: StringReader) : Query(reader) {
+		override fun resolve(result: Result) {
+			val source = result.source
+			val discordUser = try {
+				source.jda.retrieveUserById(id).complete()
+			} catch (e: ErrorResponseException) {
+				if (e.errorResponse == ErrorResponse.UNKNOWN_USER) {
+					result.error("Unknown Discord user ID: $id")
+					return
+				} else throw e
+			}
+			val devices = source.client.savedLoginsManager.getAll(discordUser.id)
+			if (devices.isEmpty()) {
+				result.error("${discordUser.name} has no saved accounts.")
+				return
+			}
+			devices.forEach { result.add(null, it.accountId) }
+		}
+	}
+
+	class Result(private val queries: List<Query>, val max: Int) {
+		lateinit var source: CommandSourceStack
+			private set
+		var friends: Array<FriendV2>? = null
+			private set
+
+		private val users = mutableMapOf<String, GameProfile?>()
+		private val errors = mutableListOf<String>()
+		private var limitErrorAdded = false
+		private var duplicateErrorIds = hashSetOf<String>()
+
 		@Suppress("UNCHECKED_CAST")
 		fun getUsers(source: CommandSourceStack, loadingText: String? = "Resolving users", friends: Array<FriendV2>? = null): Map<String, GameProfile> {
-			var max = max
-			if (max == -1) {
-				max = source.getSavedAccountsLimit()
-			}
-			if (ids.size > max) {
+			this.source = source
+			this.friends = friends
+			if (queries.size > max) {
 				throw SimpleCommandExceptionType(LiteralMessage("No more than ${Formatters.num.format(max)} users")).create()
 			}
 			source.conditionalUseInternalSession()
 			loadingText?.let(source::loading)
-			val users = Array<GameProfile?>(ids.size) { null } as Array<GameProfile>
-			val idsToQuery = mutableSetOf<String>()
-			val idIndices = mutableListOf<Int>()
+			queries.forEach { it.resolve(this) }
 
-			// verify if recipients are account IDs and transforms non account IDs to account IDs using display name/email lookup
-			for ((i, query) in ids.withIndex()) {
-				if (query is FriendEntryQuery) {
-					val recipientN = query.index
-					val unsortedFriends = friends ?: source.api.friendsService.queryFriends(source.api.currentLoggedIn.id, true).exec().body()!!
-					source.queryUsers_map(unsortedFriends.map { it.accountId })
-					val sortedFriends = unsortedFriends.sortedFriends(source)
-					if (sortedFriends.isEmpty()) {
-						throw SimpleCommandExceptionType(LiteralMessage("No friends to choose from.")).create()
-					}
-					val friend = sortedFriends.safeGetOneIndexed(recipientN, query.reader, query.start)
-					users[i] = source.userCache[friend.accountId]!!
-				} else if (query is String) {
-					when {
-						query.isEmpty() -> throw SimpleCommandExceptionType(LiteralMessage("A user cannot be empty.")).create()
-						query.length == 32 -> {
-							idsToQuery.add(query)
-							idIndices.add(i)
-						}
-						else -> {
-							val user = (if (Utils.EMAIL_ADDRESS.matcher(query).matches()) {
-								source.api.accountService.getByEmail(query).exec().body()!!
-							} else {
-								val colonIndex = query.indexOf(':')
-								var result: GameProfile? = null
-								var externalAuthType = EExternalAuthType.epic
-								var errorMessage: String? = null
-								if (colonIndex == -1) {
-									try {
-										result = source.api.accountService.getByDisplayName(query).exec().body()!!
-									} catch (e: HttpException) {
-										if (e.epicError.errorCode == "errors.com.epicgames.account.account_not_found") {
-											errorMessage = "Couldn't find an Epic account with name `$query`."
-										} else {
-											throw e
-										}
-									}
-								} else {
-									val externalAuthTypeStr = query.substring(0, colonIndex).toLowerCase()
-									if (externalAuthTypeStr != "psn" && externalAuthTypeStr != "xbl") {
-										throw SimpleCommandExceptionType(LiteralMessage("Must be either PSN or XBL.")).create()
-									}
-									externalAuthType = EExternalAuthType.valueOf(externalAuthTypeStr)
-									val externalNameQuery = query.substring(colonIndex + 1)
-									result = source.api.accountService.getExternalIdMappingsByDisplayName(externalAuthType, externalNameQuery, true).exec().body()!!.firstOrNull()
-									if (result == null) {
-										errorMessage = "Couldn't find an Epic account with ${L10N.format("account.ext.${externalAuthType.name}.name")} `$externalNameQuery`."
-									}
-								}
-								if (result != null) {
-									source.userCache[result.id] = result
-								} else {
-									val sb = StringBuilder(errorMessage)
-									val searchResults = source.api.userSearchService.queryUsers(source.api.currentLoggedIn.id, query, externalAuthType).exec().body()!!
-									if (searchResults.isNotEmpty()) {
-										sb.append("\nDid you mean:")
-										for ((i, entry) in searchResults.withIndex()) {
-											sb.append("\n\u2022 ")
-											if (i >= 20) {
-												sb.append("... and more ...")
-												break
-											}
-											entry.matches.firstOrNull()?.let {
-												if (it.platform != EExternalAuthType.epic) {
-													sb.append(it.platform.name).append(':')
-												}
-												sb.append(it.value).append(" - ")
-											}
-											sb.append('`').append(entry.accountId).append('`')
-											if (entry.epicMutuals > 0) {
-												sb.append(" (").append(Formatters.num.format(entry.epicMutuals)).append(" mutual)")
-											}
-										}
-									}
-									throw SimpleCommandExceptionType(LiteralMessage(sb.toString())).create()
-								}
-								result
-							})
-							users[i] = user
-						}
-					}
-				}
-			}
-
-			if (idsToQuery.size > 0) {
+			val idsToQuery = users.filter { it.value == null }.keys
+			if (idsToQuery.isNotEmpty()) {
 				source.queryUsers_map(idsToQuery)
 				val notFound = mutableListOf<String>()
-				for ((i, id) in idsToQuery.withIndex()) {
+				for (id in idsToQuery) {
 					val user = source.userCache[id]
 					if (user != null) {
-						users[idIndices[i]] = user
+						users[id] = user
 					} else {
 						notFound.add(id)
+						users.remove(id)
 					}
 				}
 				if (notFound.isNotEmpty()) {
-					throw SimpleCommandExceptionType(LiteralMessage("Invalid Account ID(s): " + notFound.joinToString())).create()
+					error("Invalid account ID(s): " + notFound.joinToString())
 				}
 			}
-			val dupes = ids.filterIndexed { index, item -> ids.indexOf(item) != index }
-			if (dupes.isNotEmpty()) {
-				throw SimpleCommandExceptionType(LiteralMessage(dupes.joinToString("\n", "Duplicate users:\n") { source.userCache[it]?.run { "$displayName - $it" } ?: it.toString() })).create()
+
+			if (errors.isNotEmpty()) {
+				source.channel.sendMessage(errors.joinToString("\n", "Epic account lookup errors:\n") { "\u2022 $it" }).queue()
 			}
-			return users.associateBy { it.id }
+
+			return users as Map<String, GameProfile>
+		}
+
+		fun add(user: GameProfile?, id: String = user!!.id) {
+			if (users.size >= max) {
+				if (!limitErrorAdded) {
+					limitErrorAdded = true
+					error("No more than ${Formatters.num.format(max)} users")
+				}
+				return
+			}
+			if (id in users) {
+				if (id !in duplicateErrorIds) {
+					duplicateErrorIds.add(id)
+					error("Duplicate: ${source.userCache[id]?.run { "$displayName - `$id`" } ?: "`$id`"}")
+				}
+				return
+			}
+			users[id] = user
+		}
+
+		fun error(message: String) {
+			if (max == 1) {
+				throw SimpleCommandExceptionType(LiteralMessage(message)).create()
+			}
+			errors.add(message)
 		}
 	}
 }

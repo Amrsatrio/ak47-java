@@ -33,6 +33,7 @@ public class BotConfig {
 	public String exclusivesCsvUrl;
 
 	public boolean slashCommandsEnabled = false;
+	public boolean userArgumentAllowMentions = false;
 	public long homeGuildId;
 	public String homeGuildInviteLink;
 	public long itemShopChannelId;
