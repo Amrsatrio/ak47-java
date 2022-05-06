@@ -18,27 +18,40 @@ import me.fungames.jfortniteparse.fort.exports.FortQuestItemDefinition
 import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
+import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.components.selections.SelectMenu
 import java.util.concurrent.CompletableFuture
 
 class CampaignQuestsCommand : BrigadierCommand("quests", "STW quest log.", arrayOf("quest")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { categories(it.source) }
-		.then(argument("item", ItemArgument.item(true))
-			.executes {
-				val source = it.source
+		.withPublicProfile(::categories, "Getting quests")
+		.then(literal("detail")
+			.then(argument("quest", ItemArgument.item(true))
+				.executes {
+					val source = it.source
+					source.ensureSession()
+					source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
+					val campaign = source.api.profileManager.getProfileData("campaign")
+					questDetails(source, ItemArgument.getItem(it, "quest", campaign, "Quest"))
+				}
+			)
+		)
+
+	override fun getSlashCommand() = newCommandBuilder()
+		.then(subcommand("view", description)
+			.withPublicProfile(::categories, "Getting quests")
+		)
+		.then(subcommand("detail", "Show details of a quest.")
+			.option(OptionType.STRING, "quest", "Quest name", true, argument = ItemArgument.item(true))
+			.executes { source ->
 				source.ensureSession()
 				source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
 				val campaign = source.api.profileManager.getProfileData("campaign")
-				questDetails(source, ItemArgument.getItem(it, "item", campaign, "Quest"))
+				questDetails(source, source.getArgument<ItemArgument.Result>("quest")!!.resolve(campaign, "Quest"))
 			}
 		)
 
-	private fun categories(source: CommandSourceStack): Int {
-		source.ensureSession()
-		source.loading("Getting quests")
-		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
-		val campaign = source.api.profileManager.getProfileData("campaign")
+	private fun categories(source: CommandSourceStack, campaign: McpProfile): Int {
 		val questsByCategory = campaign.items.values.filter { it.primaryAssetType == "Quest" && it.attributes["quest_state"]?.asString == "Active" }.groupBy {
 			val handle = (it.defData as? FortQuestItemDefinition)?.Category
 			handle?.rowName?.toString() to handle?.row
@@ -49,7 +62,7 @@ class CampaignQuestsCommand : BrigadierCommand("quests", "STW quest log.", array
 			select.addOption((category?.get<FText>("Name")?.format() ?: "Unknown") + " (${quests.size})", categoryName ?: "Unknown")
 		}
 		if (select.options.isEmpty()) {
-			source.complete(null, source.createEmbed().setDescription("No quests").build())
+			source.complete(null, source.createEmbed(campaign.owner).setDescription("No quests").build())
 			return Command.SINGLE_SUCCESS
 		}
 		var categoryNameToView = select.options.first().value
@@ -74,7 +87,7 @@ class CampaignQuestsCommand : BrigadierCommand("quests", "STW quest log.", array
 	private fun categoryEmbed(source: CommandSourceStack, campaign: McpProfile, categoryNameToView: String, quests: List<FortItemStack> = getQuestsOfCategory(campaign, categoryNameToView)): EmbedBuilder {
 		val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
 		val category = questCategoryTable.findRow(categoryNameToView)
-		return source.createEmbed()
+		return source.createEmbed(campaign.owner)
 			.setTitle(category?.get<FText>("Name")?.format() ?: "Unknown")
 			.setDescription(quests.joinToString("\n") {
 				renderChallenge(it, rewardsPrefix = "\u2800", conditionalCondition = canReceiveMtxCurrency)

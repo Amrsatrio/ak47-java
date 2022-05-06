@@ -27,7 +27,7 @@ class StwAccoladesCommand : BrigadierCommand("stwaccolades", "Shows the amount o
 		.withPublicProfile(::display, "Getting STW profile data")
 		.then(literal("bulk")
 			.executes { executeBulk(it.source) }
-			.then(argument("users", UserArgument.users(25))
+			.then(argument("users", UserArgument.users(100))
 				.executes { executeBulk(it.source, lazy { UserArgument.getUsers(it, "users").values }) }
 			)
 		)
@@ -37,7 +37,7 @@ class StwAccoladesCommand : BrigadierCommand("stwaccolades", "Shows the amount o
 			.withPublicProfile(::display, "Getting STW profile data")
 		)
 		.then(subcommand("bulk", "Shows the amount of Battle Royale XP earned from STW of multiple users.")
-			.option(OptionType.STRING, "users", "Users to display or leave blank to display your saved accounts", argument = UserArgument.users(25))
+			.option(OptionType.STRING, "users", "Users to display or leave blank to display your saved accounts", argument = UserArgument.users(100))
 			.executes { source ->
 				val usersResult = source.getArgument<UserArgument.Result>("users")
 				executeBulk(source, usersResult?.let { lazy { it.getUsers(source).values } })

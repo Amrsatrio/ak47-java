@@ -90,7 +90,7 @@ abstract class BaseQuestsCommand(name: String, description: String, private val 
 		}
 		node.then(literal("bulk")
 			.executes { executeQuestsBulk(it.source, categoryName) }
-			.then(argument("users", UserArgument.users(25))
+			.then(argument("users", UserArgument.users(100))
 				.executes { executeQuestsBulk(it.source, categoryName, lazy { UserArgument.getUsers(it, "users").values }) }
 			)
 		)
@@ -115,7 +115,7 @@ abstract class BaseQuestsCommand(name: String, description: String, private val 
 			)
 		}
 		node.then(subcommand("bulk", "Multiple users version of /%s view.".format(name))
-			.option(OptionType.STRING, "users", "Users to display or leave blank to display your saved accounts", argument = UserArgument.users(25))
+			.option(OptionType.STRING, "users", "Users to display or leave blank to display your saved accounts", argument = UserArgument.users(100))
 			.executes { source ->
 				val usersResult = source.getArgument<UserArgument.Result>("users")
 				executeQuestsBulk(source, categoryName, usersResult?.let { lazy { it.getUsers(source).values } })

@@ -93,7 +93,7 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 		.withPublicProfile(::executeMtxAlerts, "Getting mission alerts info")
 		.then(literal("bulk")
 			.executes { executeBulk(it.source) }
-			.then(argument("users", UserArgument.users(25))
+			.then(argument("users", UserArgument.users(100))
 				.executes { executeBulk(it.source, lazy { UserArgument.getUsers(it, "users").values }) }
 			)
 		)
@@ -103,7 +103,7 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 			.withPublicProfile(::executeMtxAlerts, "Getting mission alerts info")
 		)
 		.then(subcommand("bulk", "Shows the completion of V-Bucks mission alerts of multiple users.")
-			.option(OptionType.STRING, "users", "Users to display or leave blank to display your saved accounts", argument = UserArgument.users(25))
+			.option(OptionType.STRING, "users", "Users to display or leave blank to display your saved accounts", argument = UserArgument.users(100))
 			.executes { source ->
 				val usersResult = source.getArgument<UserArgument.Result>("users")
 				executeBulk(source, usersResult?.let { lazy { it.getUsers(source).values } })

@@ -26,7 +26,7 @@ abstract class AbstractAutoTask(val client: DiscordBot, val tableName: String) :
 		isRunning.set(true)
 		logger.info("Task started")
 		client.ensureInternalSession()
-		val autoClaimEntries = r.table(tableName).run(client.dbConn, AutoClaimEntry::class.java).shuffled(random)
+		val autoClaimEntries = r.table(tableName).run(client.dbConn, entryClass()).shuffled(random)
 		val users = client.internalSession.queryUsersMap(autoClaimEntries.map { it.id })
 		for (entry in autoClaimEntries) {
 			var attempts = 5
@@ -57,7 +57,7 @@ abstract class AbstractAutoTask(val client: DiscordBot, val tableName: String) :
 				source.complete("Disabled ${text1()} of `$displayName` because we couldn't login to the account.")
 				return true
 			}
-			withDevice(source, savedDevice, { performForAccount(source) }, { disableAutoClaim(epicId) }, users)
+			withDevice(source, savedDevice, { performForAccount(source, entry) }, { disableAutoClaim(epicId) }, users)
 			return true
 		} catch (e: ErrorResponseException) {
 			client.dlog("Failed to ${text2()} for ${displayName ?: epicId} (registered by <@$discordId>)\n$e", null)
@@ -74,7 +74,7 @@ abstract class AbstractAutoTask(val client: DiscordBot, val tableName: String) :
 		r.table(tableName).get(accountId).delete().run(client.dbConn)
 	}
 
-	protected abstract fun performForAccount(source: CommandSourceStack): Int
+	protected abstract fun performForAccount(source: CommandSourceStack, entry: AutoClaimEntry): Int
 
 	protected open fun delay() {
 		Thread.sleep(2500L + random.nextInt(2500))
@@ -82,4 +82,5 @@ abstract class AbstractAutoTask(val client: DiscordBot, val tableName: String) :
 
 	protected abstract fun text1(): String
 	protected abstract fun text2(): String
+	protected open fun entryClass(): Class<out AutoClaimEntry> = AutoClaimEntry::class.java
 }

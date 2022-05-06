@@ -3,17 +3,16 @@ package com.tb24.discordbot.images
 import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.commands.OfferDisplayData
 import com.tb24.discordbot.managers.CatalogManager
-import com.tb24.discordbot.util.*
-import com.tb24.fn.EpicApi
+import com.tb24.discordbot.util.ResourcesContext
+import com.tb24.discordbot.util.awtColor
+import com.tb24.discordbot.util.createAndDrawCanvas
+import com.tb24.discordbot.util.holder
 import com.tb24.fn.model.EItemShopTileSize
-import com.tb24.fn.model.FortCmsData
-import com.tb24.fn.model.gamesubcatalog.CatalogDownload
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 import com.tb24.fn.model.gamesubcatalog.ECatalogOfferType
 import com.tb24.fn.model.gamesubcatalog.EStoreCurrencyType
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.format
-import com.tb24.uasset.AssetManager
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.exports.CatalogMessaging
 import me.fungames.jfortniteparse.ue4.assets.exports.mats.UMaterialInstance
@@ -22,30 +21,14 @@ import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
 import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import me.fungames.jfortniteparse.ue4.objects.core.math.FVector2D
 import me.fungames.jfortniteparse.util.drawCenteredString
-import me.fungames.jfortniteparse.util.toPngArray
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.awt.*
 import java.awt.font.FontRenderContext
 import java.awt.geom.AffineTransform
 import java.awt.geom.Path2D
 import java.awt.image.BufferedImage
-import java.io.File
-import java.io.FileReader
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.sqrt
-import kotlin.system.exitProcess
-
-fun main() {
-	AssetManager.INSTANCE.loadPaks()
-	val catalogManager = CatalogManager()
-	catalogManager.catalogData = FileReader("D:/Downloads/shop-09-05-2021-en.json").use { EpicApi.GSON.fromJson(it, CatalogDownload::class.java) }
-	catalogManager.sectionsData = OkHttpClient().newCall(Request.Builder().url("https://fortnitecontent-website-prod07.ol.epicgames.com/content/api/pages/fortnite-game/shop-sections").build()).exec().to<FortCmsData.ShopSectionsData>()
-	catalogManager.validate()
-	File("out.png").writeBytes(generateShopImage(catalogManager, 2).toPngArray())
-	exitProcess(0)
-}
 
 val catalogMessages by lazy { loadObject<CatalogMessaging>("/Game/Athena/UI/Frontend/CatalogMessages.CatalogMessages")!! }
 
