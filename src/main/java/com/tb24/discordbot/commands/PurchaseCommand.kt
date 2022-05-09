@@ -165,7 +165,6 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 		quantity = (if (price.basePrice == 0) maxQuantity else (accountBalance / price.basePrice).coerceAtMost(maxQuantity))
 	}
 	val displayData = OfferDisplayData(offer)
-	var confirmed = true
 	if (sd.price.basePrice > 0) {
 		val embed = source.createEmbed()
 			.setTitle("Purchase: " + sd.displayData.title)
@@ -187,36 +186,38 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 			warnings.add("This purchase is not eligible for refund.")
 		}
 		embed.setDescription(warnings.joinToString("\n") { "⚠ $it" })
-		confirmed = source.complete(null, embed.build(), confirmationButtons()).awaitConfirmation(source.author).await()
-	}
-	if (confirmed) {
-		source.errorTitle = "Purchase Failed"
 		if (!source.unattended) {
-			source.loading("Purchasing ${sd.friendlyName}")
+			if (!source.complete(null, embed.build(), confirmationButtons()).awaitConfirmation(source.author).await()) {
+				throw SimpleCommandExceptionType(LiteralMessage("Purchase canceled.")).create()
+			}
+		} else {
+			source.complete(null, embed.build())
 		}
-		val response = source.api.profileManager.dispatchClientCommandRequest(PurchaseCatalogEntry().apply {
-			offerId = offer.offerId
-			purchaseQuantity = quantity
-			currency = price.currencyType
-			currencySubType = price.currencySubType
-			expectedTotalPrice = quantity * price.basePrice
-			gameContext = "Frontend.ItemShopScreen"
-		}).await()
-		val results = response.notifications.filterIsInstance<CatalogPurchaseNotification>().firstOrNull()?.lootResult?.items ?: emptyArray()
-		val commonCore = profileManager.getProfileData("common_core")
-		val successEmbed = source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS)
-			.setTitle("✅ " + L10N.format("purchase.success.title"))
-			.addFieldSeparate(L10N.format("purchase.success.received"), results.toList(), 0) { it.asItemStack().render(showType = true, showRarity = if (results.size > 10) RARITY_SHOW_DEFAULT_EMOTE else RARITY_SHOW) }
-			.addField(L10N.format("purchase.success.final_balance"), price.getAccountBalanceText(profileManager), false)
-			.setTimestamp(Instant.now())
-		if (offer.refundable && !isUndoUnderCooldown(commonCore, offer.offerId)) {
-			successEmbed.setDescription(L10N.format("purchase.success.undo_instruction", source.prefix))
-		}
-		source.complete(null, successEmbed.build())
-		return Command.SINGLE_SUCCESS
-	} else {
-		throw SimpleCommandExceptionType(LiteralMessage("Purchase canceled.")).create()
 	}
+	source.errorTitle = "Purchase Failed"
+	if (!source.unattended) {
+		source.loading("Purchasing ${sd.friendlyName}")
+	}
+	val response = source.api.profileManager.dispatchClientCommandRequest(PurchaseCatalogEntry().apply {
+		offerId = offer.offerId
+		purchaseQuantity = quantity
+		currency = price.currencyType
+		currencySubType = price.currencySubType
+		expectedTotalPrice = quantity * price.basePrice
+		gameContext = "Frontend.ItemShopScreen"
+	}).await()
+	val results = response.notifications.filterIsInstance<CatalogPurchaseNotification>().firstOrNull()?.lootResult?.items ?: emptyArray()
+	val commonCore = profileManager.getProfileData("common_core")
+	val successEmbed = source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS)
+		.setTitle("✅ " + L10N.format("purchase.success.title"))
+		.addFieldSeparate(L10N.format("purchase.success.received"), results.toList(), 0) { it.asItemStack().render(showType = true, showRarity = if (results.size > 10) RARITY_SHOW_DEFAULT_EMOTE else RARITY_SHOW) }
+		.addField(L10N.format("purchase.success.final_balance"), price.getAccountBalanceText(profileManager), false)
+		.setTimestamp(Instant.now())
+	if (!source.unattended && offer.refundable && !isUndoUnderCooldown(commonCore, offer.offerId)) {
+		successEmbed.setDescription(L10N.format("purchase.success.undo_instruction", source.prefix))
+	}
+	source.complete(null, successEmbed.build())
+	return Command.SINGLE_SUCCESS
 }
 
 private fun realMoneyPurchase(source: CommandSourceStack, offer: CatalogOffer, sd: CatalogEntryHolder): Int {
