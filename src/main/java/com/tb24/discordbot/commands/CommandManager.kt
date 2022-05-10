@@ -132,7 +132,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(MtxPlatformCommand())
 		register(NewsCommand())
 		register(OfferCommand())
-		//register(PartyCommand())
+		register(PartyCommand())
 		register(PhoenixCommand())
 		register(PurchaseCommand())
 		register(PurchasesCommand())
