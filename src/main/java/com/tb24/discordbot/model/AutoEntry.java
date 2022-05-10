@@ -1,12 +1,12 @@
 package com.tb24.discordbot.model;
 
-public class AutoClaimEntry {
+public class AutoEntry {
 	public String id;
 	public String registrantId;
 
-	public AutoClaimEntry() {}
+	public AutoEntry() {}
 
-	public AutoClaimEntry(String id, String registrantId) {
+	public AutoEntry(String id, String registrantId) {
 		this.id = id;
 		this.registrantId = registrantId;
 	}

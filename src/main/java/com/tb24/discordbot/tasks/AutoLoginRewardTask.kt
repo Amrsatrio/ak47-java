@@ -3,7 +3,7 @@ package com.tb24.discordbot.tasks
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.commands.CommandSourceStack
 import com.tb24.discordbot.commands.notifyDailyRewardsClaimed
-import com.tb24.discordbot.model.AutoClaimEntry
+import com.tb24.discordbot.model.AutoEntry
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.fn.model.mcpprofile.commands.campaign.ClaimLoginReward
@@ -12,7 +12,7 @@ import com.tb24.fn.model.mcpprofile.notifications.DailyRewardsNotification
 import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
 
 class AutoLoginRewardTask(client: DiscordBot) : AbstractAutoTask(client, "auto_claim") {
-	override fun performForAccount(source: CommandSourceStack, entry: AutoClaimEntry): Int {
+	override fun performForAccount(source: CommandSourceStack, entry: AutoEntry): Int {
 		source.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "campaign").await()
 		val dailyRewardStat = (source.api.profileManager.getProfileData("campaign").stats as CampaignProfileStats).daily_rewards
 		val millisInDay = 24L * 60L * 60L * 1000L

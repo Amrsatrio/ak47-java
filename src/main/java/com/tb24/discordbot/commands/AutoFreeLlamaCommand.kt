@@ -9,7 +9,7 @@ import com.rethinkdb.RethinkDB.r
 import com.tb24.discordbot.Rune
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
-import com.tb24.discordbot.model.AutoClaimEntry
+import com.tb24.discordbot.model.AutoEntry
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryPublicProfile
@@ -49,7 +49,7 @@ class AutoFreeLlamaCommand : BrigadierCommand("autollama", "Enroll/unenroll your
 		var accountId = user?.id
 		var user = user
 		val discordId = source.author.id
-		val autoClaimEntries = r.table("auto_llama").run(source.client.dbConn, AutoClaimEntry::class.java).toList()
+		val autoClaimEntries = r.table("auto_llama").run(source.client.dbConn, AutoEntry::class.java).toList()
 		val devices = source.client.savedLoginsManager.getAll(source.author.id)
 		if (devices.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("You don't have saved logins. Please perform `.savelogin` before continuing.")).create()
@@ -94,7 +94,7 @@ class AutoFreeLlamaCommand : BrigadierCommand("autollama", "Enroll/unenroll your
 			source.api.profileManager.dispatchPublicCommandRequest(user, QueryPublicProfile(), "campaign").await()
 			val campaign = source.api.profileManager.getProfileData(user.id, "campaign")
 			source.ensureCompletedCampaignTutorial(campaign)
-			r.table("auto_llama").insert(AutoClaimEntry(accountId, discordId)).run(source.client.dbConn)
+			r.table("auto_llama").insert(AutoEntry(accountId, discordId)).run(source.client.dbConn)
 			source.complete(null, EmbedBuilder().setColor(COLOR_SUCCESS)
 				.setTitle("✅ Enrolled auto free llama claiming for account `${user.displayName ?: accountId}`")
 				.build())

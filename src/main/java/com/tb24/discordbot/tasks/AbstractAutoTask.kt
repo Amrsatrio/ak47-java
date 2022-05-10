@@ -5,7 +5,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
 import com.tb24.discordbot.DiscordBot
 import com.tb24.discordbot.commands.CommandSourceStack
-import com.tb24.discordbot.model.AutoClaimEntry
+import com.tb24.discordbot.model.AutoEntry
 import com.tb24.discordbot.util.withDevice
 import com.tb24.fn.model.account.GameProfile
 import net.dv8tion.jda.api.exceptions.ErrorResponseException
@@ -41,7 +41,7 @@ abstract class AbstractAutoTask(val client: DiscordBot, val tableName: String) :
 		isRunning.set(false)
 	}
 
-	private fun perform(entry: AutoClaimEntry, users: Map<String, GameProfile>): Boolean {
+	private fun perform(entry: AutoEntry, users: Map<String, GameProfile>): Boolean {
 		val epicId = entry.id
 		val discordId = entry.registrantId
 		var displayName: String? = null
@@ -74,7 +74,7 @@ abstract class AbstractAutoTask(val client: DiscordBot, val tableName: String) :
 		r.table(tableName).get(accountId).delete().run(client.dbConn)
 	}
 
-	protected abstract fun performForAccount(source: CommandSourceStack, entry: AutoClaimEntry): Int
+	protected abstract fun performForAccount(source: CommandSourceStack, entry: AutoEntry): Int
 
 	protected open fun delay() {
 		Thread.sleep(2500L + random.nextInt(2500))
@@ -82,5 +82,5 @@ abstract class AbstractAutoTask(val client: DiscordBot, val tableName: String) :
 
 	protected abstract fun text1(): String
 	protected abstract fun text2(): String
-	protected open fun entryClass(): Class<out AutoClaimEntry> = AutoClaimEntry::class.java
+	protected open fun entryClass(): Class<out AutoEntry> = AutoEntry::class.java
 }

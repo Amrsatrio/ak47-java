@@ -9,7 +9,7 @@ import com.rethinkdb.RethinkDB.r
 import com.tb24.discordbot.Rune
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.getUsers
 import com.tb24.discordbot.commands.arguments.UserArgument.Companion.users
-import com.tb24.discordbot.model.AutoClaimEntry
+import com.tb24.discordbot.model.AutoEntry
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryPublicProfile
@@ -45,7 +45,7 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 		var accountId = user?.id
 		var user = user
 		val discordId = source.author.id
-		val autoClaimEntries = r.table("auto_claim").run(source.client.dbConn, AutoClaimEntry::class.java).toList()
+		val autoClaimEntries = r.table("auto_claim").run(source.client.dbConn, AutoEntry::class.java).toList()
 		val devices = source.client.savedLoginsManager.getAll(source.author.id)
 		if (devices.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("You don't have saved logins. Please perform `.savelogin` before continuing.")).create()
@@ -90,7 +90,7 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 			source.api.profileManager.dispatchPublicCommandRequest(user, QueryPublicProfile(), "campaign").await()
 			val campaign = source.api.profileManager.getProfileData(user.id, "campaign")
 			source.ensureCompletedCampaignTutorial(campaign)
-			r.table("auto_claim").insert(AutoClaimEntry(accountId, discordId)).run(source.client.dbConn)
+			r.table("auto_claim").insert(AutoEntry(accountId, discordId)).run(source.client.dbConn)
 			val millisInDay = 24L * 60L * 60L * 1000L
 			val nextUtcMidnight = (System.currentTimeMillis() / millisInDay + 1) * millisInDay
 			source.complete(null, EmbedBuilder().setColor(COLOR_SUCCESS)
