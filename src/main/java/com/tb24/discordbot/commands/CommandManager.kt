@@ -120,7 +120,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(HeroLoadoutCommand())
 		register(HomebaseNameCommand())
 		register(InviteBotCommand())
-		//register(ItemCollectCommand())
+		register(ItemCollectCommand())
 		register(ItemCommand())
 		register(LaunchAndroidCommand())
 		register(LaunchWindowsCommand())

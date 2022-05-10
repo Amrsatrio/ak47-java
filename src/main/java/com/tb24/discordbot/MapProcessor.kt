@@ -4,6 +4,7 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.tb24.fn.model.assetdata.BuildingGameplayActorPropQuest
 import com.tb24.uasset.JWPSerializer
+import com.tb24.uasset.getOrNullTraversing
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.exceptions.ParserException
 import me.fungames.jfortniteparse.fort.exports.actors.BuildingFoundation
@@ -65,7 +66,7 @@ class MapProcessor {
 			}
 			if (actor is BuildingGameplayActorPropQuest) { // S17: BP_S17_AlienArtifact_Variant1_C
 				val consolidatedQuestComponent = actor.ConsolidatedQuestComponent?.value ?: continue
-				addEntry(consolidatedQuestComponent.ObjectiveBackendName, actor.StaticGameplayTags, objectLoc, actor.QuestIconComponent?.value?.MapIconData?.MapIcon?.resolvedObject?.getPathName())
+				addEntry(consolidatedQuestComponent.getOrNullTraversing("ObjectiveBackendName"), actor.StaticGameplayTags, objectLoc, actor.QuestIconComponent?.value?.MapIconData?.MapIcon?.resolvedObject?.getPathName())
 			}
 			if (actor is BuildingFoundation) {
 				actor.AdditionalWorlds?.forEach {
@@ -88,14 +89,12 @@ class MapProcessor {
 	}
 
 	private fun addEntry(questBackendName: FName?, tags: FGameplayTagContainer?, location: FVector, icon: String? = null) {
-		if (tags == null) return
+		if (questBackendName == null) return
 		entries.add(JsonObject().apply {
-			addProperty("questBackendName", questBackendName?.text)
-			add("objStatTag", JWPSerializer.GSON.toJsonTree(tags.gameplayTags))
+			addProperty("questBackendName", questBackendName.text)
+			tags?.let { add("objStatTag", JWPSerializer.GSON.toJsonTree(it.gameplayTags)) }
 			add("loc", JWPSerializer.GSON.toJsonTree(location))
-			if (icon != null) {
-				addProperty("icon", icon)
-			}
+			icon?.let { addProperty("icon", it) }
 		})
 	}
 }

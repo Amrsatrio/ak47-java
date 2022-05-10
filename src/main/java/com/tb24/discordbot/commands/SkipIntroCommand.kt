@@ -12,6 +12,7 @@ import com.tb24.fn.model.mcpprofile.commands.commoncore.SetForcedIntroPlayed
 
 class SkipIntroCommand : BrigadierCommand("skipintro", "Skips the forced Chapter 2, Season 6 intro on your account.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.requires { INTRO_NAME != null }
 		.executes {
 			val source = it.source
 			if (INTRO_NAME == null) {

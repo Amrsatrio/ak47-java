@@ -79,11 +79,11 @@ public class Utils {
 
 	public static int getCompletion(FortMcpQuestObjectiveInfo objective, FortItemStack item) {
 		if (item == null || item.attributes == null) {
-			return -1;
+			return 0;
 		}
 
 		String backendName = "completion_" + objective.BackendName.toString().toLowerCase(Locale.ROOT);
-		return JsonUtils.getIntOr(backendName, item.attributes, -1);
+		return JsonUtils.getIntOr(backendName, item.attributes, 0);
 	}
 
 	public static int mod(int a, int b) {

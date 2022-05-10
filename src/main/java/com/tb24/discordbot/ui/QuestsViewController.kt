@@ -80,10 +80,9 @@ class QuestsViewController(athena: McpProfile, knownCategories: List<QuestCatego
 				val cbDef = cb?.defData as? FortChallengeBundleItemDefinition
 
 				// Is this a normal quest or a bonus goal quest?
-				val goalCardDisplayData = if (cbDef != null && cbDef.bSkipAddToGoalBundles != true) cbDef.GoalCardDisplayData else null
-				if (goalCardDisplayData != null) {
+				if (cbDef != null && cbDef.bSkipAddToGoalBundles != true && cbDef.GoalCardDisplayData != null) {
 					// Bonus goal quest
-					goalCards[cb!!.itemId]!!.addQuest(quest)
+					goalCards[cb.itemId]!!.addQuest(quest)
 				} else {
 					// Add quest to the subcategory (header) it belongs to
 					val header = allHeaders.firstOrNull { tags.getValue(it.tag.toString()) != null } ?: defaultHeader

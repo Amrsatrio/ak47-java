@@ -1,6 +1,5 @@
 package com.tb24.discordbot.commands
 
-import com.google.gson.internal.bind.util.ISO8601Utils
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
@@ -14,7 +13,6 @@ import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.countMtxCurrency
 import com.tb24.fn.util.getUndoCooldown
-import java.text.ParsePosition
 
 class UndoCommand : BrigadierCommand("undo", "Cancel your last purchase.", arrayOf("cancelpurchase", "refund")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -27,13 +25,11 @@ class UndoCommand : BrigadierCommand("undo", "Cancel your last purchase.", array
 			val commonCore = profileManager.getProfileData("common_core")
 			val stats = commonCore.stats as CommonCoreProfileStats
 			val purchase = stats.mtx_purchase_history?.purchases?.lastOrNull()
-			if (purchase == null || stats.undo_timeout == "min") {
-				throw SimpleCommandExceptionType(LiteralMessage(L10N.format("undo.failed.nothing_to_undo"))).create()
-			}
+				?: throw SimpleCommandExceptionType(LiteralMessage(L10N.format("undo.failed.nothing_to_undo"))).create()
 			source.client.catalogManager.ensureCatalogData(source.client.internalSession.api)
 			val catalogEntry = source.client.catalogManager.purchasableCatalogEntries.firstOrNull { it.offerId == purchase.offerId }
 			val catalogEntryName = catalogEntry?.holder()?.friendlyName ?: "<Item outside of current shop>"
-			if (System.currentTimeMillis() >= ISO8601Utils.parse(stats.undo_timeout, ParsePosition(0)).time) {
+			if (System.currentTimeMillis() >= purchase.purchaseDate.time + 60L * 60L * 1000L) {
 				throw SimpleCommandExceptionType(LiteralMessage(L10N.format("undo.failed.expired", catalogEntryName))).create()
 			}
 			val undoCooldown = getUndoCooldown(commonCore, purchase.offerId)
