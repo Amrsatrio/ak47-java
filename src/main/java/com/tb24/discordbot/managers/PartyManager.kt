@@ -86,7 +86,7 @@ class PartyManager(private val api: EpicApi) {
 		}).exec()
 
 	fun ping(accountId: String): Response<FPingInfo> =
-		api.partyService.createPing("Fortnite", accountId, accountId, MetaStringMap().apply {
+		api.partyService.createPing("Fortnite", accountId, api.currentLoggedIn.id, MetaStringMap().apply {
 			put("urn:epic:invite:platformdata", "")
 		}).exec()
 
