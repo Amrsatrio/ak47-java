@@ -97,6 +97,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(DailyQuestsCommand())
 		register(DailyRewardsCommand())
 		register(DecompileCommand())
+		register(Decompile2Command())
 		register(DeleteMessageCommand())
 		register(DeleteSavedLoginCommand())
 		register(DeviceAuthCommand())

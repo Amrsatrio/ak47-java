@@ -132,6 +132,14 @@ class DecompileCommand : BrigadierCommand("decompile", "Class dump++.", arrayOf(
 		)
 }
 
+class Decompile2Command : BrigadierCommand("decompile2", "Class dump+++.", arrayOf("dec2")) {
+	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.requires(DUMP_CLASS_REQUIREMENT)
+		.then(argument("path", greedyString())
+			.executes { dumpClass(it.source, getString(it, "path"), EFunctionBodyOption.DecompileV2) }
+		)
+}
+
 private fun dumpClass(source: CommandSourceStack, path: String, functionBodyOption: EFunctionBodyOption = EFunctionBodyOption.NoBody): Int {
 	var path = path
 	if (!path.contains('.')) {
