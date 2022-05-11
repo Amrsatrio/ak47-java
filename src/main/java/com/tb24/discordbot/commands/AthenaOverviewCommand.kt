@@ -6,17 +6,21 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.INTRO_NAME
+import com.tb24.discordbot.SEASON_NUM
 import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.util.*
 import com.tb24.discordbot.util.Utils
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.account.GameProfile
-import com.tb24.fn.model.assetdata.AthenaSeasonItemData_Level
-import com.tb24.fn.model.assetdata.AthenaSeasonItemDefinition
+import com.tb24.fn.model.assetdata.*
+import com.tb24.fn.model.assetdata.AthenaSeasonItemDefinition.SeasonCurrencyMcpData
+import com.tb24.fn.model.assetdata.rows.AthenaBattlePassOfferPriceRow
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.util.*
+import com.tb24.uasset.AssetManager
+import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.exports.FortItemDefinition
 import me.fungames.jfortniteparse.fort.exports.FortPersistentResourceItemDefinition
 import me.fungames.jfortniteparse.fort.objects.rows.AthenaExtendedXPCurveEntry
@@ -31,6 +35,8 @@ val battlePassEmote by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/I
 val freePassEmote by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass-Default-L.T-FNBR-BattlePass-Default-L") }
 val xpEmote by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T_UI_FNBR_XPeverywhere_L.T_UI_FNBR_XPeverywhere_L") }
 val victoryCrownEmote by lazy { textureEmote("/VictoryCrownsGameplay/Icons/T-T-Icon-BR-VictoryCrownItem-L.T-T-Icon-BR-VictoryCrownItem-L") }
+
+val seasonData by lazy { loadObject<AthenaSeasonItemDefinition>(AssetManager.INSTANCE.assetRegistry.lookup("AthenaSeason", "AthenaSeason$SEASON_NUM")?.objectPath) }
 
 class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your Battle Royale data, such as current level and supercharged XP.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -52,7 +58,7 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 		}
 		val athena = source.api.profileManager.getProfileData("athena")
 		val stats = athena.stats as AthenaProfileStats
-		val seasonData = FortItemStack("AthenaSeason:athenaseason${stats.season_num}", 1).defData as? AthenaSeasonItemDefinition
+		val seasonData = if (stats.season_num == SEASON_NUM) seasonData else null
 		val xpToNextLevel = getXpToNextLevel(seasonData, stats.level)
 		val nextLevelReward = getNextLevelReward(seasonData, stats.level, stats.book_purchased)
 		val inventory = source.api.fortniteService.inventorySnapshot(source.api.currentLoggedIn.id).exec().body()!!
@@ -77,11 +83,8 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 			}
 			embed.addField("Supercharged XP", restedXpText, false)
 		}
-		val seasonResources = mutableListOf<String>()
-		seasonData?.SeasonCurrencyMcpDataList?.forEach {
-			val currencyDef = it.CurrencyDefinition.load<FortPersistentResourceItemDefinition>() ?: return@forEach
-			val balance = AthenaProfileStats::class.java.getField(currencyDef.StatName).get(stats) as Int? ?: 0
-			seasonResources.add("%s %s **%,d**".format(currencyDef.DisplayName.format(), textureEmote(currencyDef.LargePreviewImage.toString())?.asMention, balance))
+		val seasonResources = seasonCurrencyData.mapTo(mutableListOf()) {
+			"%s %s **%,d**".format(it.def.DisplayName.format(), textureEmote(it.def.LargePreviewImage.toString())?.asMention, it.getBalance(stats))
 		}
 		seasonResources.add("%s %s **%,d**".format("Bars", barsEmote?.asMention, inventory.stash["globalcash"] ?: 0))
 		embed.addField("Season Resources", seasonResources.joinToString("\n"), false)
@@ -123,8 +126,8 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 		val totalBattleStars = stats.battlestars_season_total ?: 0
 		val spentBattleStars = totalBattleStars - currentBattleStars
 		val currentStylePoints = stats.style_points ?: 0
-		val spentStylePoints = stats.purchasedBpOffers.values.sumOf { if (it.currencyType == "style_points") it.totalCurrencyPaid else 0 }
-		val totalStylePoints = currentStylePoints + spentStylePoints
+		val totalStylePoints = stats.style_points_season_total ?: 0
+		val spentStylePoints = totalStylePoints - currentStylePoints
 		embed.addField("%s Battle Stars".format(battleStarEmote?.asMention), "%,d spent, %,d total".format(spentBattleStars, totalBattleStars), true)
 		embed.addField("Style Points", "%,d spent, %,d total".format(spentStylePoints, totalStylePoints), true)
 		INTRO_NAME?.let {
@@ -204,7 +207,10 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 			val athena = source.api.profileManager.getProfileData("athena")
 			val stats = athena.stats as AthenaProfileStats
-			val ed = "%s %,d".format((if (stats.book_purchased) battlePassEmote else freePassEmote)?.asMention, stats.level)
+			val ed = "%s %,d ".format((if (stats.book_purchased) battlePassEmote else freePassEmote)?.asMention, stats.level) + seasonCurrencyData.joinToString(" ") {
+				val spent = it.getTotal(stats) - it.getBalance(stats)
+				textureEmote(it.def.LargePreviewImage.toString())?.asMention + (if (spent >= it.max) "✅" else "❌")
+			}
 			if (embed.fields.size == 25) {
 				source.complete(null, embed.build())
 				embed.clearFields()
@@ -215,4 +221,37 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 		source.complete(null, embed.build())
 		return Command.SINGLE_SUCCESS
 	}
+}
+
+val seasonCurrencyData by lazy {
+	val seasonData = seasonData ?: return@lazy emptyList()
+	val totals = hashMapOf<String, Int>()
+
+	fun gather(entries: List<Lazy<AthenaSeasonItemEntryBase>>) {
+		for (entry in entries) {
+			val reward = entry.value as? AthenaSeasonItemEntryOfferBase ?: continue
+			val price = reward.BattlePassOffer.OfferPriceRowHandle.getRowMapped<AthenaBattlePassOfferPriceRow>()!!
+			totals[price.CurrencyItemTemplate.PrimaryAssetName.toString().toLowerCase()] = price.Cost
+		}
+	}
+
+	seasonData.getAdditionalDataOfType<AthenaSeasonItemData_BattleStar>()?.apply {
+		PageList?.forEach { gather(it.RewardEntryList) }
+		BonusPageList?.forEach { gather(it.RewardEntryList) }
+		CustomizationPageList?.forEach { gather(it.RewardEntryList) }
+	}
+
+	seasonData.getAdditionalDataOfType<AthenaSeasonItemData_CustomSkin>()?.apply {
+		Categories?.forEach { gather(it.Entries) }
+	}
+
+	seasonData.SeasonCurrencyMcpDataList.map { SeasonCurrency(it, totals) }
+}
+
+class SeasonCurrency(backing: SeasonCurrencyMcpData, totals: Map<String, Int>) {
+	val def = backing.CurrencyDefinition.load<FortPersistentResourceItemDefinition>()!!
+	val max = totals[def.name.toLowerCase()] ?: 0
+
+	fun getBalance(stats: AthenaProfileStats) = stats.javaClass.getField(def.StatName).get(stats) as Int
+	fun getTotal(stats: AthenaProfileStats) = stats.javaClass.getField(def.StatTotalName).get(stats) as Int
 }

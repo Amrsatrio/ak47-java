@@ -13,9 +13,11 @@ import com.tb24.discordbot.images.MapImageGenerator.MapPath
 import com.tb24.discordbot.images.MapImageGenerator.MapPath.EPathOp
 import com.tb24.discordbot.util.*
 import com.tb24.fn.EpicApi
-import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.QueryMultipleUserStats
-import com.tb24.fn.model.assetdata.*
+import com.tb24.fn.model.assetdata.FortAthenaPatrolPath
+import com.tb24.fn.model.assetdata.FortAthenaPatrolPathPointProvider
+import com.tb24.fn.model.assetdata.FortQuestIndicatorData
+import com.tb24.fn.model.assetdata.GameDataBR
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.item.FortMcpCollectionBase
 import com.tb24.fn.model.mcpprofile.item.FortMcpCollectionBase.*
@@ -73,7 +75,7 @@ class CharacterCollectionCommand : BrigadierCommand("charactercollection", "Show
 				collected.addAll(item.getAttributes(FortMcpCollectionBase::class.java).collected)
 			}
 		}
-		val seasonData = FortItemStack("AthenaSeason:athenaseason$SEASON_NUM", 1).defData as? AthenaSeasonItemDefinition
+		val seasonData = seasonData
 			?: throw SimpleCommandExceptionType(LiteralMessage("Season data not found.")).create()
 		val data = seasonData.CollectionsDataTable.load<FortCollectionsDataTable>()?.Collections
 			?.firstOrNull { it.CollectionType == "CollectableCharacter" }?.Collection?.load<FortCollectionDataCharacter>()?.Entries
@@ -250,7 +252,7 @@ class FishCollectionCommand : BrigadierCommand("fishcollection", "Shows your fis
 				collected.addAll(item.getAttributes(FortMcpCollectionBase::class.java).collected)
 			}
 		}
-		val seasonData = FortItemStack("AthenaSeason:athenaseason$SEASON_NUM", 1).defData as? AthenaSeasonItemDefinition
+		val seasonData = seasonData
 			?: throw SimpleCommandExceptionType(LiteralMessage("Season data not found.")).create()
 		val data = seasonData.CollectionsDataTable.load<FortCollectionsDataTable>()?.Collections
 			?.firstOrNull { it.CollectionType == "CollectableFish" }?.Collection?.load<FortCollectionDataFishing>()?.Entries
