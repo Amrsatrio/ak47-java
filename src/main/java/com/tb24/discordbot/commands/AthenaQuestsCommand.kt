@@ -7,6 +7,7 @@ import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.ui.QuestsViewController
+import com.tb24.discordbot.ui.QuestsViewController.*
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.util.format
@@ -91,14 +92,15 @@ class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR q
 		}
 	}
 
-	class Entry(val quest: QuestsViewController.Quest, val header: QuestsViewController.QuestCategoryHeader?, val goalCard: QuestsViewController.GoalCard?, val showHeader: Boolean) {
+	class Entry(val quest: Quest, val header: QuestCategoryHeader?, val goalCard: GoalCard?, val showHeader: Boolean) {
 		fun render(): String {
 			return (if (showHeader) {
 				if (header != null) {
 					"\n__**${header.name.format()}**__\n"
 				} else {
 					val dd = goalCard!!.displayData
-					"\n__**" + (dd.MilestoneTier?.let { "[%,d] ".format(it) } ?: "") + dd.HeaderText.format() + "**__\n" + (dd.SubHeaderText?.let { it.format() + "\n" } ?: "")
+					val tier = dd.MilestoneTier
+					"\n" + (tier?.let { textureEmote(GoalCard.Level.fromTier(it).medalTexture)?.asMention + ' ' } ?: "") + "__**" + (tier?.let { "[%,d] ".format(it) } ?: "") + dd.HeaderText.format() + "**__\n" + (goalCard.subHeaderText?.let { "$it\n" } ?: "")
 				}
 			} else "") + renderChallenge(quest.quest, rewardsPrefix = "\u2800")
 		}
