@@ -159,13 +159,14 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 		val priceIcon = price.icon()
 		throw SimpleCommandExceptionType(LiteralMessage("Not enough $priceIcon to afford ${sd.friendlyName}. You need $priceIcon ${Formatters.num.format(price.basePrice - accountBalance)} more.\nCurrent balance: $priceIcon ${Formatters.num.format(accountBalance)}")).create()
 	}
-	var quantity = quantity
-	if (quantity == -1) {
-		var maxQuantity = if (sd.purchaseLimit >= 0) sd.purchaseLimit - sd.purchasesCount else 1
-		sd.getMeta("MaxConcurrentPurchases")?.toIntOrNull()?.let {
-			maxQuantity = maxQuantity.coerceAtMost(it)
-		}
-		quantity = (if (price.basePrice == 0) maxQuantity else (accountBalance / price.basePrice).coerceAtMost(maxQuantity))
+	var maxQuantity = if (sd.purchaseLimit >= 0) sd.purchaseLimit - sd.purchasesCount else 1
+	sd.getMeta("MaxConcurrentPurchases")?.toIntOrNull()?.let {
+		maxQuantity = maxQuantity.coerceAtMost(it)
+	}
+	val quantity = if (quantity == -1) {
+		if (price.basePrice == 0) maxQuantity else (accountBalance / price.basePrice).coerceAtMost(maxQuantity)
+	} else {
+		quantity.coerceAtMost(maxQuantity)
 	}
 	val displayData = OfferDisplayData(offer)
 	if (sd.price.basePrice > 0) {

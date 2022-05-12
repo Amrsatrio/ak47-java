@@ -152,9 +152,10 @@ class QuestsViewController(athena: McpProfile, knownCategories: List<QuestCatego
 		val displayData get() = cb?.let { (it.defData as FortChallengeBundleItemDefinition).GoalCardDisplayData!! }
 			?: loadObject("/Game/Athena/HUD/MiniMap/GoalsPage/GoalsPageQuestCard.Default__GoalsPageQuestCard_C")!!.get("DailyCardDisplayData")
 		val subHeaderText get() = displayData.let {
+			val tier = it.MilestoneTier ?: 0
 			it.SubHeaderText?.format()
-				?: (if (it.MilestoneTier > 0 && it.MilestoneTier < 10) {
-					FText("", "48CB814E41A1276156D22784AE137546", "Complete all to advance to Tier {tier}").format()!!.replace("{tier}", Formatters.num.format(it.MilestoneTier + 1))
+				?: (if (tier > 0 && tier < 10) {
+					FText("", "48CB814E41A1276156D22784AE137546", "Complete all to advance to Tier {tier}").format()!!.replace("{tier}", Formatters.num.format(tier + 1))
 				} else null)
 		}
 		private var indices: Map<String, Int>? = null

@@ -19,6 +19,7 @@ import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
 import com.tb24.fn.util.*
+import com.tb24.fn.util.Utils.sumKV
 import com.tb24.uasset.AssetManager
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.exports.FortItemDefinition
@@ -231,7 +232,7 @@ val seasonCurrencyData by lazy {
 		for (entry in entries) {
 			val reward = entry.value as? AthenaSeasonItemEntryOfferBase ?: continue
 			val price = reward.BattlePassOffer.OfferPriceRowHandle.getRowMapped<AthenaBattlePassOfferPriceRow>()!!
-			totals[price.CurrencyItemTemplate.PrimaryAssetName.toString().toLowerCase()] = price.Cost
+			sumKV(totals, price.CurrencyItemTemplate.PrimaryAssetName.toString().toLowerCase(), price.Cost)
 		}
 	}
 
