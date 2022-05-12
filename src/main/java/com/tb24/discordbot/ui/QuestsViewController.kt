@@ -132,6 +132,9 @@ class QuestsViewController(athena: McpProfile, knownCategories: List<QuestCatego
 
 		private fun onNewChallengeBundle(cb: FortItemStack) {
 			val cbDef = cb.defData as FortChallengeBundleItemDefinition
+			if (cbDef.bSkipAddToGoalBundles == true) {
+				return
+			}
 			cbDef.GoalCardDisplayData?.let {
 				val goalCard = GoalCard(cb)
 				goalCards[cb.itemId] = goalCard
