@@ -164,9 +164,9 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 		maxQuantity = maxQuantity.coerceAtMost(it)
 	}
 	val quantity = if (quantity == -1) {
-		if (price.basePrice == 0) maxQuantity else (accountBalance / price.basePrice).coerceAtMost(maxQuantity)
+		if (price.basePrice == 0) maxQuantity else (accountBalance / price.basePrice).coerceIn(1, maxQuantity)
 	} else {
-		quantity.coerceAtMost(maxQuantity)
+		quantity.coerceIn(1, maxQuantity)
 	}
 	val displayData = OfferDisplayData(offer)
 	if (sd.price.basePrice > 0) {
