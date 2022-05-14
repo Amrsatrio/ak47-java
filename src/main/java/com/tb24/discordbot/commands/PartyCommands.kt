@@ -25,8 +25,8 @@ class PartyCommand : BrigadierCommand("party", "Manages your party.", arrayOf("p
 	// party leave: leaves party
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { party(it.source) }
-		.then(literal("invite").then(argument("user", UserArgument.users(1)).executes { partyInvite(it.source, UserArgument.getUsers(it, "user").values.first()) }))
-		.then(literal("kick").then(argument("user", UserArgument.users(1)).executes { partyKick(it.source, UserArgument.getUsers(it, "user").values.first()) }))
+		.then(literal("invite").then(argument("user", UserArgument.users(3)).executes { partyInvite(it.source, UserArgument.getUsers(it, "user").values) }))
+		.then(literal("kick").then(argument("user", UserArgument.users(3)).executes { partyKick(it.source, UserArgument.getUsers(it, "user").values) }))
 		.then(literal("promote").then(argument("user", UserArgument.users(1)).executes { partyPromote(it.source, UserArgument.getUsers(it, "user").values.first()) }))
 		.then(literal("leave").executes { partyLeave(it.source) })
 
@@ -149,7 +149,7 @@ class PartyKickAllCommand : BrigadierCommand("kickall", "Kicks all party members
 			}
 			var numKicked = 0
 			if (partyInfo.members.firstOrNull { it.account_id == source.api.currentLoggedIn.id }!!.role == FMemberInfo.EPartyMemberRole.CAPTAIN ) {
-				for(member in partyInfo!!.members) {
+				for(member in partyInfo.members) {
 					if (member.account_id == source.api.currentLoggedIn.id) {
 						continue
 					}
@@ -164,28 +164,44 @@ class PartyKickAllCommand : BrigadierCommand("kickall", "Kicks all party members
 		}
 }
 
-private fun partyInvite(source: CommandSourceStack, user: GameProfile): Int {
+class LeavePartyCommand : BrigadierCommand("leaveparty", "Leaves the party", arrayOf("lp")) {
+	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.executes { partyLeave(it.source) }
+}
+
+private fun partyInvite(source: CommandSourceStack, users: Collection<GameProfile>): Int {
 	source.ensureSession()
 	source.loading("Getting party info")
 	val partyManager = source.session.getPartyManager(source.api.currentLoggedIn.id)
 	partyManager.fetchParty()
 	val party = partyManager.partyInfo ?: throw SimpleCommandExceptionType(LiteralMessage("You are not in a party.")).create()
-	if (party.members.firstOrNull { it.account_id == user.id } != null) {
-		throw SimpleCommandExceptionType(LiteralMessage("**%s** is already in the party.".format(user.displayName))).create()
+	val friends = source.api.friendsService.queryFriends(source.api.currentLoggedIn.id, true).exec().body()!!
+	val invites = mutableListOf<String>()
+	for (user in users) {
+		if (party.members.firstOrNull { it.account_id == user.id } != null) {
+			source.channel.sendMessage("**%s** is already in the party.".format(user.displayName)).queue()
+			continue
+		}
+		if (!friends.any { it.accountId == user.id}) {
+			source.channel.sendMessage("**%s** is not your friend.".format(user.displayName)).queue()
+			continue
+		}
+		val invite = party.invites.firstOrNull { it.sent_to == user.id }
+		if (invite != null) {
+			partyManager.ping(user.id)
+		} else {
+			partyManager.invite(user.id)
+		}
+		invites.add(user.displayName)
 	}
-	source.api.friendsService.queryFriends(source.api.currentLoggedIn.id, true).exec().body()!!
-		.firstOrNull { it.accountId == user.id} ?: throw SimpleCommandExceptionType(LiteralMessage("**%s** is not in your friend list".format(user.displayName))).create()
-	val invite = party.invites.firstOrNull { it.sent_to == user.id }
-	if (invite != null) {
-		partyManager.ping(user.id)
-	} else {
-		partyManager.invite(user.id)
+	if (invites.isEmpty()) {
+		throw SimpleCommandExceptionType(LiteralMessage("No users were invited.")).create()
 	}
-	source.complete(null, source.createEmbed().setDescription("✅ Invited **%s** to the party.".format(user.displayName)).build())
+	source.complete(null, source.createEmbed().setDescription("✅ Invited **%s** to the party.".format(invites.joinToString(", "))).build())
 	return Command.SINGLE_SUCCESS
 }
 
-private fun partyKick(source: CommandSourceStack, user: GameProfile): Int {
+private fun partyKick(source: CommandSourceStack, users: Collection<GameProfile>): Int {
 	source.ensureSession()
 	source.loading("Getting party info")
 	val partyManager = source.session.getPartyManager(source.api.currentLoggedIn.id)
@@ -194,9 +210,19 @@ private fun partyKick(source: CommandSourceStack, user: GameProfile): Int {
 	if (party.members.firstOrNull { it.account_id == source.api.currentLoggedIn.id }?.role != FMemberInfo.EPartyMemberRole.CAPTAIN) {
 		throw SimpleCommandExceptionType(LiteralMessage("You are not the party leader.")).create()
 	}
-	party.members.firstOrNull { it.account_id == user.id } ?: throw SimpleCommandExceptionType(LiteralMessage("**%s** is not in your party.".format(user.displayName))).create()
-	partyManager.kick(user.id)
-	source.complete(null, source.createEmbed().setDescription("✅ Successfully kicked **%s**.".format(user.displayName)).build())
+	val kicked = mutableListOf<String>()
+	for(user in users) {
+		if (!party.members.any { it.account_id == user.id }) {
+			source.channel.sendMessage("**%s** is not in your party.".format(user.displayName)).queue()
+			continue
+		}
+		partyManager.kick(user.id)
+		kicked.add(user.displayName)
+	}
+	if (kicked.isEmpty()) {
+		throw SimpleCommandExceptionType(LiteralMessage("No users were kicked.")).create()
+	}
+	source.complete(null, source.createEmbed().setDescription("✅ Successfully kicked **%s**.".format(kicked.joinToString(", "))).build())
 	return Command.SINGLE_SUCCESS
 }
 

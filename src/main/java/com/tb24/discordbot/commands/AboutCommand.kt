@@ -15,7 +15,7 @@ class AboutCommand : BrigadierCommand("about", "Shows credits of this bot.") {
 			val selfUser = it.source.jda.selfUser
 			val embed = EmbedBuilder()
 				.setTitle("${selfUser.name} Kotlin/JVM")
-				.addField("Developers", "kemo, amrsatrio", false)
+				.addField("Developers", "kemo, amrsatrio, m4tonoob", false)
 				.addField("Helpers", "a.bakedpotato, Beat YT, FunGames, HYPEX, Liimiitz, Officer, Sprayxe", false)
 				.addField("Third party libraries", arrayOf(
 					"Brigadier",

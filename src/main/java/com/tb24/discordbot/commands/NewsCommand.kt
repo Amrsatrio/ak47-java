@@ -1,9 +1,12 @@
 package com.tb24.discordbot.commands
 
+import com.github.salomonbrys.kotson.isEmpty
 import com.google.gson.JsonObject
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.dispatchClientCommandRequest
 import com.tb24.discordbot.util.exec
@@ -65,6 +68,9 @@ class NewsCommand : BrigadierCommand("news", "Shows the in-game news.") {
 			.url("https://prm-dialogue-public-api-prod.edea.live.use1a.on.epicgames.com/api/v1/fortnite-br/surfaces/motd/target")
 			.post(EpicApi.GSON.toJson(p).toRequestBody("application/json".toMediaType()))
 			.build()).exec().to<JsonObject>()
+		if (prmResponse.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("No news.")).create()
+		}
 		val motds = prmResponse.getAsJsonArray("contentItems").map { EpicApi.GSON.fromJson(it.asJsonObject.getAsJsonObject("contentFields"), CommonUISimpleMessageMOTD::class.java) }
 		displayNews(motds, source)
 		return Command.SINGLE_SUCCESS
