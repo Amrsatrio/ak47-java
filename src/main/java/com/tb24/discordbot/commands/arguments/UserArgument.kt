@@ -162,20 +162,16 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 			}
 
 			// Show error and search for users with similar names
-			if (result.max > 1) {
-				result.error(errorMessage ?: "")
-				return
-			}
 			val sb = StringBuilder(errorMessage)
 			val searchResults = source.api.userSearchService.queryUsers(source.api.currentLoggedIn.id, name, authType).exec().body()!!
 			if (searchResults.isNotEmpty()) {
 				sb.append("\nDid you mean:")
+				val resultMax = if (result.max > 1) 20 else 3
 				for ((i, entry) in searchResults.withIndex()) {
-					sb.append("\n\u2022 ")
-					if (i >= 20) {
-						sb.append("... and more ...")
+					if (i >= resultMax) {
 						break
 					}
+					sb.append("\n\u2022 ")
 					entry.matches.firstOrNull()?.let {
 						if (it.platform != EExternalAuthType.epic) {
 							sb.append(it.platform.name).append(':')
@@ -188,7 +184,7 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 					}
 				}
 			}
-			throw SimpleCommandExceptionType(LiteralMessage(sb.toString())).create()
+			result.error(sb.toString())
 		}
 	}
 
@@ -268,11 +264,19 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 			}
 
 			if (errors.isNotEmpty()) {
-				source.channel.sendMessage(errors.joinToString("\n", "Epic account lookup errors:\n") { "\u2022 $it" }).queue()
+				if (users.isEmpty()) {
+					val message = if (errors.size == 1) errors[0] else {
+						errors.joinToString("\n", "No users found.\n", limit = 15, transform = ::errorLine)
+					}
+					throw SimpleCommandExceptionType(LiteralMessage(message)).create()
+				}
+				source.channel.sendMessage(errors.joinToString("\n", "Epic account lookup errors:\n", limit = 15, transform = ::errorLine)).queue()
 			}
 
 			return users as Map<String, GameProfile>
 		}
+
+		private fun errorLine(message: String) = message.lines().mapIndexed { i, line -> if (i == 0) "\u2022 $line" else "\u2800$line" }.joinToString("\n")
 
 		fun add(user: GameProfile?, id: String = user!!.id) {
 			if (users.size >= max) {
@@ -293,9 +297,6 @@ class UserArgument(val max: Int, val greedy: Boolean) : ArgumentType<UserArgumen
 		}
 
 		fun error(message: String) {
-			if (max == 1) {
-				throw SimpleCommandExceptionType(LiteralMessage(message)).create()
-			}
 			errors.add(message)
 		}
 	}

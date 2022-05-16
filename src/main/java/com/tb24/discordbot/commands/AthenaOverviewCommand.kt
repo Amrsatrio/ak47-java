@@ -136,7 +136,7 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 		}
 		embed.addFieldSeparate("Past seasons", stats.past_seasons.toList(), 0) {
 			if (it.seasonNumber >= 11) {
-				"%s `%2d` Level %,d, %,d wins".format((if (it.purchasedVIP) battlePassEmote else freePassEmote)?.asMention, it.seasonNumber, it.seasonLevel, it.numWins)
+				"%s `%2d` Level %,d, %,d wins%s".format((if (it.purchasedVIP) battlePassEmote else freePassEmote)?.asMention, it.seasonNumber, it.seasonLevel, it.numWins, if (it.seasonNumber >= 19) " (%,d crowned)".format(it.numRoyalRoyales) else "")
 			} else {
 				"%s `%2d` Level %,d, Tier %,d, %,d wins".format((if (it.purchasedVIP) battlePassEmote else freePassEmote)?.asMention, it.seasonNumber, it.seasonLevel, it.bookLevel, it.numWins)
 			}

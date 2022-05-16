@@ -47,7 +47,7 @@ fun main() {
 	exitProcess(0)
 }
 
-class RollCommand : BrigadierCommand("roll", "Simulate a given loot pool.", arrayOf("r")) {
+class RollCommand : BrigadierCommand("roll", "Simulate a given loot pool.") {
 	val context by lazy {
 		val context = LootContext()
 		context.addLootPackages(loadObject<UDataTable>("/Game/Items/DataTables/AthenaLootPackages_Client.AthenaLootPackages_Client"))
