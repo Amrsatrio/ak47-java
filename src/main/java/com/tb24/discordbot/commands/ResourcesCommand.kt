@@ -86,7 +86,7 @@ class ResourcesCommand : BrigadierCommand("resources", "Displays a given user's 
 		.then(literal("bulk")
 			.then(argument("type", StringArgumentType.word())
 				.executes { executeBulk(it.source, StringArgumentType.getString(it, "type")) }
-				.then(argument("bulk users", UserArgument.users(100))
+				.then(argument("users", UserArgument.users(100))
 					.executes { executeBulk(it.source, StringArgumentType.getString(it, "type"), lazy { UserArgument.getUsers(it, "users").values }) }
 				)
 			)

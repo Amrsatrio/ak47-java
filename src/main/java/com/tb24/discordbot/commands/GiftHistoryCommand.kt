@@ -21,7 +21,7 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 		.executes { summary(it.source) }
 		.then(literal("sent").executes { detail(it.source, false) })
 		.then(literal("received").executes { detail(it.source, true) })
-		.then(literal("bulk").executes { bulk(it.source, null) }.then(argument("bulk users", UserArgument.users(100)).executes { bulk(it.source, UserArgument.getUsers(it, "bulk users", loadingText = null)) }))
+		.then(literal("bulk").executes { bulk(it.source, null) }.then(argument("users", UserArgument.users(100)).executes { bulk(it.source, UserArgument.getUsers(it, "users", loadingText = null)) }))
 
 	override fun getSlashCommand() = newCommandBuilder()
 		.then(subcommand("summary", description).executes { summary(it) })

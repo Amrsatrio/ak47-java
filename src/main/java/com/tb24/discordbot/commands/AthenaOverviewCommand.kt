@@ -45,7 +45,7 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 		.then(literal("info")
 			.executes { info(it.source) }
 		)
-		.then(literal("bulk").executes { bulk(it.source, null) }.then(argument("bulk users", UserArgument.users(100)).executes { bulk(it.source, UserArgument.getUsers(it, "bulk users", loadingText = null)) }))
+		.then(literal("bulk").executes { bulk(it.source, null) }.then(argument("users", UserArgument.users(100)).executes { bulk(it.source, UserArgument.getUsers(it, "users", loadingText = null)) }))
 
 	override fun getSlashCommand() = newCommandBuilder()
 		.then(subcommand("summary", description).executes(::summary))
