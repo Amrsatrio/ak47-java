@@ -92,8 +92,8 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 		val victoryCrown = athena.items.values.firstOrNull { it.templateId == "VictoryCrown:defaultvictorycrown" }
 		if (victoryCrown != null) {
 			val victoryCrownAccountData = victoryCrown.attributes.getAsJsonObject("victory_crown_account_data")
-			val hasVictoryCrown = victoryCrownAccountData.getBoolean("has_victory_crown")
-			val totalRoyalRoyalesAchievedCount = victoryCrownAccountData.getInt("total_royal_royales_achieved_count")
+			val hasVictoryCrown = victoryCrownAccountData?.getBoolean("has_victory_crown") ?: false
+			val totalRoyalRoyalesAchievedCount = victoryCrownAccountData?.getInt("total_royal_royales_achieved_count") ?: 0
 			embed.addField("Victory Crown", "Owned %s\nCrowned Wins %s **%,d**".format(if (hasVictoryCrown) "✅" else "❌", victoryCrownEmote?.asMention, totalRoyalRoyalesAchievedCount), false)
 		}
 		stats.last_match_end_datetime?.apply {
