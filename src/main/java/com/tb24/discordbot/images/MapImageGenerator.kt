@@ -23,7 +23,7 @@ class MapImageGenerator(var background: BufferedImage?, var backgroundMask: Buff
 		}
 	}
 
-	var worldRadius = 135000
+	var worldRadius = 131250
 	var w = 2048
 	var h = 2048
 	var markers = mutableListOf<MapMarker>()
