@@ -195,7 +195,7 @@ private fun execute(source: CommandSourceStack, item: FortItemStack, profile: Mc
 		if (cosmeticVariant is FortCosmeticProfileBannerVariant) {
 			return@forEach
 		}
-		variants.add(VariantContainer(cosmeticVariant, EpicApi.GSON.fromJson(item.attributes.getAsJsonArray("variants"), Array<McpVariantReader>::class.java)))
+		variants.add(VariantContainer(cosmeticVariant, EpicApi.GSON.fromJson(item.attributes.getAsJsonArray("variants"), Array<McpVariantReader>::class.java) ?: emptyArray()))
 	}
 	if (variants.isNotEmpty()) {
 		embed.addField("Styles", variants.joinToString("\n") {

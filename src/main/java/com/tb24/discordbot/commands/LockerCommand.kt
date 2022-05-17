@@ -356,7 +356,7 @@ class LockerEntry(val cosmetic: FortItemStack, queryAccountIds: MutableCollectio
 	var description = defData?.Description.format()
 	var shortDescription = defData?.ShortDescription.format()
 	private val giftFromAccountId = cosmetic.attributes?.getString("giftFromAccountId")
-	private val backendVariants = EpicApi.GSON.fromJson(cosmetic.attributes.getAsJsonArray("variants"), Array<McpVariantReader>::class.java)
+	private val backendVariants = EpicApi.GSON.fromJson(cosmetic.attributes.getAsJsonArray("variants"), Array<McpVariantReader>::class.java) ?: emptyArray()
 
 	init {
 		giftFromAccountId?.let { queryAccountIds.add(it) }

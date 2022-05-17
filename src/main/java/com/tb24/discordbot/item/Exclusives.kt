@@ -59,7 +59,7 @@ fun getExclusiveItems(profiles: Collection<McpProfile>, types: EnumSet<Exclusive
 		val variantTokenDef = variantTokenItem.defData as? FortVariantTokenType ?: continue
 		val cosmeticItemName = variantTokenDef.cosmetic_item.name.toString().toLowerCase()
 		val item = athena.items.values.firstOrNull { it.primaryAssetName == cosmeticItemName } ?: continue
-		val itemVariants = EpicApi.GSON.fromJson(item.attributes.getAsJsonArray("variants"), Array<McpVariantReader>::class.java)
+		val itemVariants = EpicApi.GSON.fromJson(item.attributes.getAsJsonArray("variants"), Array<McpVariantReader>::class.java) ?: emptyArray()
 		if (itemVariants.any { it.channel == variantTokenDef.VariantChanelTag.toString().substringAfterLast('.') && variantTokenDef.VariantNameTag.toString().substringAfterLast('.') in it.owned }) {
 			myExclusives.add(variantTokenItem)
 		}
