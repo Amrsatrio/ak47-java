@@ -229,12 +229,12 @@ private fun buyAll(session: Session): BuyAllResult {
 			if (sd.purchaseLimit == -1) {
 				continue
 			}
-			totalItems++
 			// Skip sold out items
 			val ownedOrSoldOut = sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit
 			if (ownedOrSoldOut) {
 				continue
 			}
+			totalItems++
 			ownedAll = false
 			val quantity = sd.purchaseLimit - sd.purchasesCount
 			val price = quantity * sd.price.basePrice
@@ -291,7 +291,7 @@ private fun execBuyAllCampaignBulk(source: CommandSourceStack, users: Map<String
 		val result = try {
 			buyAll(it)
 		} catch (e: Exception) {
-			embed.addField(it.api.currentLoggedIn.displayName, "❌ ${e.message}", false)
+			embed.addField(it.api.currentLoggedIn.displayName, "💥 ${e.message}", false)
 			return@forEachSavedAccounts null
 		}
 		embed.addField(it.api.currentLoggedIn.displayName, when {
