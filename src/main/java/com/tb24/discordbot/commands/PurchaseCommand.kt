@@ -41,7 +41,6 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.text.NumberFormat
-import java.time.Instant
 import java.util.*
 import java.util.concurrent.CompletableFuture
 
@@ -170,7 +169,8 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 		quantity.coerceIn(1, maxQuantity)
 	}
 	val displayData = OfferDisplayData(offer)
-	if (sd.price.basePrice > 0) {
+	val isPaid = sd.price.basePrice > 0
+	if (isPaid) {
 		val embed = source.createEmbed()
 			.setTitle("Purchase: " + sd.displayData.title)
 			.addField(L10N.format("catalog.items"), if (sd.compiledNames.isNotEmpty()) sd.compiledNames.mapIndexed { i, s ->
@@ -220,8 +220,9 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 		.addFieldSeparate(L10N.format("purchase.success.received"), if (isCardPack) results.toSortedSet(CardPackItemsComparator) else results.toList(), 0) {
 			it.render(showRarity = if (results.size > 10) RARITY_SHOW_DEFAULT_EMOTE else RARITY_SHOW, showType = !isCardPack)
 		}
-		.addField(L10N.format("purchase.success.final_balance"), price.getAccountBalanceText(profileManager), false)
-		.setTimestamp(Instant.now())
+	if (isPaid) {
+		successEmbed.addField(L10N.format("purchase.success.final_balance"), price.getAccountBalanceText(profileManager), false)
+	}
 	if (!source.unattended && offer.refundable && !isUndoUnderCooldown(commonCore, offer.offerId)) {
 		successEmbed.setDescription(L10N.format("purchase.success.undo_instruction", source.prefix))
 	}
