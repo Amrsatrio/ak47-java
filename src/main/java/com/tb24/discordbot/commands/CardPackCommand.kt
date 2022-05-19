@@ -35,9 +35,9 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 
 	override fun getSlashCommand() = newCommandBuilder()
 		.option(OptionType.INTEGER, "llama-number", "The number of the llama to view")
-		.executes(::execute)
+		.executes { execute(it, it.getOption("llama-number")?.asInt ?: 1) }
 
-	private fun execute(source: CommandSourceStack, llamaNumber: Int = 0): Int {
+	private fun execute(source: CommandSourceStack, llamaNumber: Int = 1): Int {
 		source.ensureSession()
 		source.loading("X-raying llamas")
 		val profileManager = source.api.profileManager
