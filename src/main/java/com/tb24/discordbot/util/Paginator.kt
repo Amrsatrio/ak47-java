@@ -101,7 +101,7 @@ class Paginator<T>(
 	override fun onEnd(collected: Map<Any, ComponentInteraction>, reason: CollectorEndReason) {
 		customComponents?.onEnd(collected, reason)
 		if (reason == CollectorEndReason.IDLE) {
-			collector.message?.finalizeComponents(emptySet())
+			stopAndFinalizeComponents(emptySet())
 		}
 	}
 	// endregion

@@ -3,6 +3,7 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
+import com.mojang.brigadier.arguments.IntegerArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.CatalogEntryHolder
@@ -18,6 +19,7 @@ import com.tb24.fn.util.getString
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.ComponentInteraction
 import net.dv8tion.jda.api.interactions.components.buttons.Button
@@ -27,10 +29,15 @@ import java.util.concurrent.CompletableFuture
 class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open them.", arrayOf("ll", "ocp")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it.source) }
+		.then(argument("llama #", IntegerArgumentType.integer(1))
+			.executes { execute(it.source, IntegerArgumentType.getInteger(it, "llama #")) }
+		)
 
-	override fun getSlashCommand() = newCommandBuilder().executes(::execute)
+	override fun getSlashCommand() = newCommandBuilder()
+		.option(OptionType.INTEGER, "llama-number", "The number of the llama to view")
+		.executes(::execute)
 
-	private fun execute(source: CommandSourceStack): Int {
+	private fun execute(source: CommandSourceStack, llamaNumber: Int = 0): Int {
 		source.ensureSession()
 		source.loading("X-raying llamas")
 		val profileManager = source.api.profileManager
@@ -45,7 +52,7 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 		}
 		val catalogManager = source.client.catalogManager
 		catalogManager.ensureCatalogData(source.client.internalSession.api)
-		val section = catalogManager.catalogData?.storefronts?.find { it.name == "CardPackStorePreroll" }
+		val section = catalogManager.catalogData?.storefronts?.firstOrNull { it.name == "CardPackStorePreroll" }
 			?: throw SimpleCommandExceptionType(LiteralMessage("Could not find preroll section.")).create()
 		val llamas = mutableListOf<Entry>()
 		for (offer in section.catalogEntries) {
@@ -65,33 +72,15 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 			}
 			val items = EpicApi.GSON.fromJson(prerollData.attributes.getAsJsonArray("items"), Array<McpLootEntry>::class.java)
 				.map { it.asItemStack() }
-				.sortedWith { a, b ->
-					val aRarity = a.rarity
-					val bRarity = b.rarity
-					if (aRarity != bRarity) {
-						return@sortedWith bRarity.compareTo(aRarity)
-					}
-					val aRating = a.powerLevel
-					val bRating = b.powerLevel
-					if (aRating != bRating) {
-						return@sortedWith bRating.compareTo(aRating)
-					}
-					val aTier = a.defData.cappedTier
-					val bTier = b.defData.cappedTier
-					if (aTier != bTier) {
-						return@sortedWith aTier - bTier
-					}
-					val aDisplayName = a.displayName
-					val bDisplayName = b.displayName
-					aDisplayName.compareTo(bDisplayName)
-				}
+				.sortedWith(CardPackItemsComparator)
 			llamas.add(Entry(sd.compiledNames.joinToString(", "), items).apply { addOffer(sd) })
 		}
 		if (llamas.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("You have no llamas.")).create()
 		}
 		val event = CompletableFuture<CatalogOffer?>()
-		source.replyPaginated(llamas, 1, customComponents = PaginatorComponents(llamas, event)) { content, page, pageCount ->
+		llamas.safeGetOneIndexed(llamaNumber)
+		source.replyPaginated(llamas, 1, llamaNumber - 1, customComponents = PaginatorComponents(llamas, event)) { content, page, pageCount ->
 			val llama = content.first()
 			val items = llama.items
 			val embed = source.createEmbed()
@@ -142,6 +131,24 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 
 		override fun onEnd(collected: Map<Any, ComponentInteraction>, reason: CollectorEndReason) {
 			event.complete(null)
+		}
+	}
+
+	object CardPackItemsComparator : Comparator<FortItemStack> {
+		override fun compare(a: FortItemStack, b: FortItemStack): Int {
+			val rarityCmp = b.rarity.compareTo(a.rarity)
+			if (rarityCmp != 0) {
+				return rarityCmp
+			}
+			val ratingCmp = b.powerLevel.compareTo(a.powerLevel)
+			if (ratingCmp != 0) {
+				return ratingCmp
+			}
+			val tierCmp = a.defData.cappedTier - b.defData.cappedTier
+			if (tierCmp != 0) {
+				return tierCmp
+			}
+			return a.displayName.compareTo(b.displayName)
 		}
 	}
 }

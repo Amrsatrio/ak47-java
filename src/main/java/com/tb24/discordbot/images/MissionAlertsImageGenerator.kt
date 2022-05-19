@@ -145,7 +145,7 @@ class MissionHolder(val theater: FortTheaterInfo.FortTheaterMapData, val mission
 		var rewardsSz = 20
 		ctx.color = Color.WHITE
 		ctx.font = Font("Segoe UI", 0, rewardsSz)
-		val text = prominentAlertReward.render()
+		val text = prominentAlertReward.render(showIcons = false)
 
 		while (ctx.fontMetrics.stringWidth(text) > 280) {
 			rewardsSz--

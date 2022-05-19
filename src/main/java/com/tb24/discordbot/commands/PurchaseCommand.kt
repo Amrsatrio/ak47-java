@@ -12,6 +12,7 @@ import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.L10N
+import com.tb24.discordbot.commands.CardPackCommand.CardPackItemsComparator
 import com.tb24.discordbot.commands.arguments.CatalogOfferArgument
 import com.tb24.discordbot.util.*
 import com.tb24.discordbot.util.Utils
@@ -210,11 +211,15 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 		expectedTotalPrice = quantity * price.basePrice
 		gameContext = "Frontend.ItemShopScreen"
 	}).await()
-	val results = response.notifications.filterIsInstance<CatalogPurchaseNotification>().firstOrNull()?.lootResult?.items ?: emptyArray()
+	val results = response.notifications.filterIsInstance<CatalogPurchaseNotification>().firstOrNull()?.lootResult?.items?.map { it.asItemStack() } ?: emptyList()
 	val commonCore = profileManager.getProfileData("common_core")
+	val isPreroll = sd.getMeta("Preroll").equals("true", true)
+	val isCardPack = isPreroll || sd.getMeta("open_cardpacks").equals("true", true)
 	val successEmbed = source.createEmbed().setColor(BrigadierCommand.COLOR_SUCCESS)
 		.setTitle("✅ " + L10N.format("purchase.success.title"))
-		.addFieldSeparate(L10N.format("purchase.success.received"), results.toList(), 0) { it.asItemStack().render(showType = true, showRarity = if (results.size > 10) RARITY_SHOW_DEFAULT_EMOTE else RARITY_SHOW) }
+		.addFieldSeparate(L10N.format("purchase.success.received"), if (isCardPack) results.toSortedSet(CardPackItemsComparator) else results.toList(), 0) {
+			it.render(showRarity = if (results.size > 10) RARITY_SHOW_DEFAULT_EMOTE else RARITY_SHOW, showType = !isCardPack)
+		}
 		.addField(L10N.format("purchase.success.final_balance"), price.getAccountBalanceText(profileManager), false)
 		.setTimestamp(Instant.now())
 	if (!source.unattended && offer.refundable && !isUndoUnderCooldown(commonCore, offer.offerId)) {

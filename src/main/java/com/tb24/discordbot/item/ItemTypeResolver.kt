@@ -86,18 +86,19 @@ class ItemTypeResolver {
 					}
 				}
 			} else if (originalDefinition is FortWorkerType) {
-				val key: String
+				val secondary = item.attributes.getString("personality") ?: originalDefinition.FixedPersonalityTag?.firstOrNull()?.toString()
+				val tertiary: String?
 				if (originalDefinition.bIsManager) {
 					leftImg = "/Game/UI/Foundation/Textures/Icons/Stats/T-Icon-Leader-128.T-Icon-Leader-128"
 					asText = L10N.Manager
-					key = "managerSynergy"
+					tertiary = item.attributes.getString("managerSynergy") ?: originalDefinition.ManagerSynergyTag?.firstOrNull()?.toString()
 				} else {
-					key = "set_bonus"
+					tertiary = item.attributes.getString("set_bonus") ?: originalDefinition.FixedSetBonusTag?.firstOrNull()?.toString()
 				}
-				secondaryCategory = matchCategory(item.attributes.getString("personality", null))?.apply {
+				secondaryCategory = matchCategory(secondary)?.apply {
 					middleImg = CategoryBrush.Brush_XL.ResourceObject.getPathName()
 				}
-				tertiaryCategory = matchCategory(item.attributes.getString(key, null), true)?.apply {
+				tertiaryCategory = matchCategory(tertiary, true)?.apply {
 					rightImg = CategoryBrush.Brush_XL.ResourceObject.getPathName()
 				}
 			} else if (originalDefinition is FortDefenderItemDefinition) {

@@ -224,13 +224,13 @@ const val RARITY_SHOW = 0
 const val RARITY_SHOW_DEFAULT_EMOTE = 1
 const val RARITY_HIDE = 2
 
-fun FortItemStack.render(displayQty: Int = quantity, showType: Boolean = false, showRarity: Int = RARITY_SHOW, showLevelAndTier: Boolean = true): String {
+fun FortItemStack.render(displayQty: Int = quantity, showIcons: Boolean = true, showRarity: Int = RARITY_SHOW, showLevelAndTier: Boolean = true, showType: Boolean = false): String {
 	var showType = showType
 	var itemTypeResolver: ItemTypeResolver? = null
 	val sb = StringBuilder()
 
 	// Rarity
-	if (showRarity != RARITY_HIDE) {
+	if (showIcons && showRarity != RARITY_HIDE) {
 		if (showRarity == RARITY_SHOW_DEFAULT_EMOTE) {
 			val defaultRarityEmotes = listOf("⬜", "🟩", "🟦", "🟪", "🟧", "🟨")
 			sb.append(defaultRarityEmotes[rarity.ordinal])
@@ -246,7 +246,7 @@ fun FortItemStack.render(displayQty: Int = quantity, showType: Boolean = false, 
 	}
 
 	// Icons
-	if (defData is FortAccountItemDefinition) {
+	if (showIcons && defData is FortAccountItemDefinition) {
 		itemTypeResolver = ItemTypeResolver.resolveItemType(this)
 		val middle = textureEmote(itemTypeResolver.middleImg)
 		val right = textureEmote(itemTypeResolver.rightImg)
@@ -300,7 +300,7 @@ fun FortItemStack.render(displayQty: Int = quantity, showType: Boolean = false, 
 
 fun FortItemStack.renderWithIcon(displayQty: Int = quantity, bypassWhitelist: Boolean = false, showType: Boolean = false): String {
 	transformedDefData // resolves this item if it is FortConditionalResourceItemDefinition
-	return (getItemIconEmoji(this, bypassWhitelist)?.run { "$asMention " } ?: "") + render(displayQty, showType = showType, showRarity = RARITY_HIDE)
+	return (getItemIconEmoji(this, bypassWhitelist)?.run { "$asMention " } ?: "") + render(displayQty, showRarity = RARITY_HIDE, showType = showType)
 }
 
 fun getSurvivorPersonalityText(personalityTag: String): FText? {

@@ -144,7 +144,7 @@ class ResourcesCommand : BrigadierCommand("resources", "Displays a given user's 
 
 	private fun get(campaign: McpProfile, categoryName: String, singleLine: Boolean = false) =
 		CATEGORIES[categoryName]!!.joinToString(if (singleLine) " " else "\n") { inTid ->
-			val tid = if (inTid == "AccountResource:campaign_event_currency") (campaign.stats as CampaignProfileStats).event_currency.templateId else inTid
+			val tid = if (inTid == "AccountResource:campaign_event_currency") (campaign.stats as CampaignProfileStats).event_currency.templateId ?: inTid else inTid
 			val item = campaign.items.values.firstOrNull { it.templateId == tid } ?: FortItemStack(tid, 0)
 			(getItemIconEmoji(item)?.asMention ?: tid) + ' ' + Formatters.num.format(item.quantity)
 		}
