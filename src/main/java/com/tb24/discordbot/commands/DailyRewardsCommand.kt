@@ -2,9 +2,7 @@ package com.tb24.discordbot.commands
 
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
-import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.HttpException
 import com.tb24.discordbot.util.Utils
 import com.tb24.discordbot.util.await
@@ -59,8 +57,7 @@ class DailyRewardsCommand : BrigadierCommand("daily", "Claims the STW daily rewa
 }
 
 fun notifyDailyRewardsClaimed(source: CommandSourceStack, campaign: McpProfile, notification: DailyRewardsNotification?) {
-	val daysLoggedIn = (campaign.stats as CampaignProfileStats).daily_rewards?.totalDaysLoggedIn
-		?: throw SimpleCommandExceptionType(LiteralMessage("Daily rewards data not found.")).create()
+	val daysLoggedIn = (campaign.stats as CampaignProfileStats).daily_rewards.totalDaysLoggedIn
 	val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
 	val claimedIndex = daysLoggedIn - 1
 	val todaysReward = defaultScheduleRewards[claimedIndex % defaultScheduleRewards.size]

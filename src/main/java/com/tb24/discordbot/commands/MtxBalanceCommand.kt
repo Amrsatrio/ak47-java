@@ -40,7 +40,7 @@ class MtxBalanceCommand : BrigadierCommand("vbucks", "Shows how much V-Bucks the
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 		}
 		val commonCore = source.api.profileManager.getProfileData("common_core")
-		val fulfillments = (commonCore.stats as CommonCoreProfileStats).in_app_purchases?.fulfillmentCounts
+		val fulfillments = (commonCore.stats as CommonCoreProfileStats).in_app_purchases.fulfillmentCounts
 		var total = 0
 		val entries = sortedMapOf<Int, Int>()
 		fulfillments?.forEach { (name, count) ->

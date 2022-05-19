@@ -23,7 +23,7 @@ class ReceiptsCommand : BrigadierCommand("receipts", "You asked for it") {
 				source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 			}
 			val commonCore = source.api.profileManager.getProfileData("common_core")
-			val receipts = (commonCore.stats as CommonCoreProfileStats).in_app_purchases?.receipts
+			val receipts = (commonCore.stats as CommonCoreProfileStats).in_app_purchases.receipts
 			if (receipts.isNullOrEmpty()) {
 				throw SimpleCommandExceptionType(LiteralMessage("You have no past Fortnite real money transactions or code redemptions.")).create()
 			}

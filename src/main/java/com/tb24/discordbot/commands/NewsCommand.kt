@@ -60,7 +60,7 @@ class NewsCommand : BrigadierCommand("news", "Shows the in-game news.") {
 			p.language = "en"
 			p.country = completeAccountData.country
 			//p.serverRegion
-			p.subscription = !commonCoreStats.subscriptions.isNullOrEmpty()
+			p.subscription = commonCoreStats.subscriptions.isNotEmpty()
 			p.battlepass = athenaStats.book_purchased
 			p.battlepassLevel = athenaStats.book_level
 		}

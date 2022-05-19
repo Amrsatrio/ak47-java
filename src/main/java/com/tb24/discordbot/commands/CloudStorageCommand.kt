@@ -17,7 +17,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.text.SimpleDateFormat
 
 class CloudStorageCommand : BrigadierCommand("cloudstorage", "List, download, or upload your cloud saved game settings.", arrayOf("cs")) {
-	val df = SimpleDateFormat()
+	private val df = SimpleDateFormat()
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { c ->
@@ -45,7 +45,7 @@ class CloudStorageCommand : BrigadierCommand("cloudstorage", "List, download, or
 				val fileToUpload = source.message?.attachments?.firstOrNull()
 				if (fileToUpload != null) {
 					source.loading("Uploading $fileName")
-					fileToUpload.retrieveInputStream().await().use {
+					fileToUpload.proxy.download().await().use {
 						val body = it.readBytes().toRequestBody("application/octet-stream".toMediaType())
 						source.api.fortniteService.writeUserFile(source.api.currentLoggedIn.id, fileName, body).exec()
 					}

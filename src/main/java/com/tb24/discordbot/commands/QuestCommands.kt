@@ -129,7 +129,7 @@ private fun executeQuests(source: CommandSourceStack, campaign: McpProfile, cate
 	source.ensureCompletedCampaignTutorial(campaign)
 	val category = questCategoryTable.findRowMapped<FortCategoryTableRow>(FName(categoryName))!!
 	val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
-	val numRerolls = (campaign.stats as IQuestManager).questManager?.dailyQuestRerolls ?: 0
+	val numRerolls = (campaign.stats as IQuestManager).questManager.dailyQuestRerolls
 	var description = getQuestsOfCategory(campaign, categoryName)
 		.mapIndexed { i, it -> renderChallenge(it, "${i + 1}. ", "\u2800", conditionalCondition = canReceiveMtxCurrency) }
 		.joinToString("\n")
@@ -299,7 +299,7 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 		}
 		optimalQuestToReplace ?: firstReducedXpQuest ?: throw SimpleCommandExceptionType(LiteralMessage("Can't find a quest that's good to replace.")).create()
 	}
-	val remainingRerolls = (profile.stats as IQuestManager).questManager?.dailyQuestRerolls ?: 0
+	val remainingRerolls = (profile.stats as IQuestManager).questManager.dailyQuestRerolls
 	if (remainingRerolls <= 0) {
 		throw SimpleCommandExceptionType(LiteralMessage("You ran out of daily quest rerolls for today.")).create()
 	}

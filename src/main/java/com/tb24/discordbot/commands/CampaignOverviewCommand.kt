@@ -62,7 +62,7 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 		val fortStr = fort.joinToString(" ") { "%s %,d".format(textureEmote(it.icon), hb.getStatBonus(it)) }
 		val embed = source.createEmbed(campaign.owner)
 			.setDescription("%s\n**Commander Level:** %,d\n**Days Logged in:** %,d\n**Homebase Name:** %s"
-				.format(fortStr, stats.level + stats.rewards_claimed_post_max_level, stats.daily_rewards?.totalDaysLoggedIn ?: 0, homebaseName))
+				.format(fortStr, stats.level + stats.rewards_claimed_post_max_level, stats.daily_rewards.totalDaysLoggedIn, homebaseName))
 		embed.addField("Banner Challenges", quests.joinToString("\n") { questTemplateId ->
 			val questItem = campaign.items.values.firstOrNull { it.templateId == questTemplateId }
 				?: FortItemStack(questTemplateId, 1)
@@ -96,7 +96,7 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 		embed.addField("Miscellaneous", "**Mythic Schematics:** %,d\n**Revisions:** %,d\n**Zones Completed:** %,d".format(
 			mythicSchematics.size,
 			campaign.rvn,
-			stats.gameplay_stats?.firstOrNull { it.statName == "zonescompleted" }?.statValue?.toIntOrNull() ?: 0
+			stats.gameplay_stats.firstOrNull { it.statName == "zonescompleted" }?.statValue?.toIntOrNull() ?: 0
 		), true)
 		val foundersEdition = if (foundersTiers.isNotEmpty()) foundersTiers.last() else null
 		if (foundersEdition != null || canReceiveMtxCurrency) {

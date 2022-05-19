@@ -98,7 +98,7 @@ fun executeShopImage(source: CommandSourceStack): Int {
 	if (attachedFile != null) {
 		source.loading("Processing your request")
 		val catalogManager = CatalogManager()
-		catalogManager.catalogData = InputStreamReader(attachedFile.retrieveInputStream().await()).use { EpicApi.GSON.fromJson(it, CatalogDownload::class.java) }
+		catalogManager.catalogData = InputStreamReader(attachedFile.proxy.download().await()).use { EpicApi.GSON.fromJson(it, CatalogDownload::class.java) }
 		catalogManager.sectionsData = OkHttpClient().newCall(Request.Builder().url("https://fortnitecontent-website-prod07.ol.epicgames.com/content/api/pages/fortnite-game/shop-sections").build()).exec().to<FortCmsData.ShopSectionsData>()
 		catalogManager.validate()
 		source.complete(AttachmentUpload(generateShopImage(catalogManager, 2).toPngArray(), attachedFile.fileName.substringBeforeLast('.') + ".png"))

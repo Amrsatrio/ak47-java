@@ -2,9 +2,7 @@ package com.tb24.discordbot.commands
 
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
-import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
-import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.stats.CommonCoreProfileStats
@@ -26,7 +24,6 @@ class PurchasesCommand : BrigadierCommand("purchases", "Shows your purchase hist
 		}
 		val commonCore = source.api.profileManager.getProfileData("common_core")
 		val mtxPurchaseHistory = (commonCore.stats as CommonCoreProfileStats).mtx_purchase_history
-			?: throw SimpleCommandExceptionType(LiteralMessage("No data.")).create()
 		val info = "Refund tickets: %,d / %,d\nItems refunded: %,d".format(mtxPurchaseHistory.refundCredits, 3, mtxPurchaseHistory.refundsUsed)
 		val entries = mtxPurchaseHistory.purchases
 		if (entries.isNullOrEmpty()) {

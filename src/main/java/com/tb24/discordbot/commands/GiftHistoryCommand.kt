@@ -34,9 +34,9 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 		source.api.profileManager.dispatchClientCommandRequest(QueryProfile()).await()
 		val commonCore = source.api.profileManager.getProfileData("common_core")
 		val giftHistory = (commonCore.stats as CommonCoreProfileStats).gift_history
-		val sentTo = giftHistory?.sentTo ?: emptyMap()
-		val receivedFrom = giftHistory?.receivedFrom ?: emptyMap()
-		val gifts = giftHistory?.gifts ?: emptyArray()
+		val sentTo = giftHistory.sentTo ?: emptyMap()
+		val receivedFrom = giftHistory.receivedFrom ?: emptyMap()
+		val gifts = giftHistory.gifts ?: emptyArray()
 		val idsToQuery = mutableSetOf<String>()
 		idsToQuery.addAll(sentTo.keys)
 		idsToQuery.addAll(receivedFrom.keys)

@@ -77,7 +77,7 @@ class QuestsViewController(athena: McpProfile, knownCategories: List<QuestCatego
 			for (quest in quests) {
 				// Determine if quest should be included in this category
 				val questDef = quest.defData as FortQuestItemDefinition
-				val cbId = quest.attributes.getString("challenge_bundle_id")!!
+				val cbId = quest.attributes.getString("challenge_bundle_id", "")
 				val tags = questTagsCache.getOrPut(quest.primaryAssetName) {
 					val mergedTags = mutableListOf<FName>()
 					if (cbId.isNotEmpty()) {

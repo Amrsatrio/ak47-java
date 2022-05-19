@@ -38,7 +38,7 @@ class DumpSaveGameCommand : BrigadierCommand("dumpsav", "Prints out the data ins
 			if (attachedFile.size > maxAcceptedFileSize) {
 				throw SimpleCommandExceptionType(LiteralMessage("<:amogus:866343868328443957>")).create()
 			}
-			display(source, FFortSaveGame(attachedFile.retrieveInputStream().await().readBytes(), attachedFile.url))
+			display(source, FFortSaveGame(attachedFile.proxy.download().await().readBytes(), attachedFile.url))
 		}
 
 	private fun display(source: CommandSourceStack, saveGame: FFortSaveGame): Int {

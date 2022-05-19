@@ -53,7 +53,7 @@ class MissionAlertsCommand : BrigadierCommand("alerts", "Shows today's mission a
 		source.ensureCompletedCampaignTutorial(campaign)
 		val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
 		val stats = campaign.stats as CampaignProfileStats
-		val completedAlerts = stats.mission_alert_redemption_record?.claimData
+		val completedAlerts = stats.mission_alert_redemption_record.claimData
 		val entries = mutableListOf<Pair<FortMissionAlertClaimData, Pair<String, String>>>()
 		if (!completedAlerts.isNullOrEmpty()) {
 			queryTheaters(source).iterateMissions { theater, mission, missionAlert ->
@@ -135,7 +135,7 @@ class MtxAlertsCommand : BrigadierCommand("vbucksalerts", "Shows today's V-Bucks
 			}
 			val attrs = campaign.stats as CampaignProfileStats
 			campaign.owner.displayName to mtxAlerts.entries.joinToString(" ") { (alertGuid, ratingAndNumMtx) ->
-				val hasCompletedMissionAlert = attrs.mission_alert_redemption_record?.claimData?.any { it.missionAlertId == alertGuid } == true
+				val hasCompletedMissionAlert = attrs.mission_alert_redemption_record.claimData?.any { it.missionAlertId == alertGuid } == true
 				"%,d: %s".format(ratingAndNumMtx.first, if (hasCompletedMissionAlert) {
 					completedCount++
 					totalEarnedMtx += ratingAndNumMtx.second

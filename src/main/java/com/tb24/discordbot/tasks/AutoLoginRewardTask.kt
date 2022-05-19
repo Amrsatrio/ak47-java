@@ -16,7 +16,7 @@ class AutoLoginRewardTask(client: DiscordBot) : AbstractAutoTask(client, "auto_c
 		source.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "campaign").await()
 		val dailyRewardStat = (source.api.profileManager.getProfileData("campaign").stats as CampaignProfileStats).daily_rewards
 		val millisInDay = 24L * 60L * 60L * 1000L
-		if (dailyRewardStat?.lastClaimDate?.time?.let { it / millisInDay == System.currentTimeMillis() / millisInDay } != false) {
+		if (dailyRewardStat.lastClaimDate?.time?.let { it / millisInDay == System.currentTimeMillis() / millisInDay } != false) {
 			return 0
 		}
 		val response = source.api.profileManager.dispatchClientCommandRequest(ClaimLoginReward(), "campaign").await()
