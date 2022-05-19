@@ -257,9 +257,12 @@ private fun realMoneyPurchase(source: CommandSourceStack, offer: CatalogOffer, s
 	if (true || rmPrice.discountPrice > 0) {
 		// Method 1: Let user access the payment UI
 		// Will not work on non EGS offers when they've reached some traffic threshold
+		if (source.guild != null && BotConfig.get().homeGuildInviteLink != null) {
+			throw SimpleCommandExceptionType(LiteralMessage("Please invoke the command again [in DMs](${source.getPrivateChannelLink()}), as we have to send you info that carries over your current session.")).create()
+		}
 		val purchaseToken = generatePurchaseToken(source, epicAppStoreId)
 		val purchaseLink = "https://payment-website-pci.ol.epicgames.com/payment/v1/purchase?purchaseToken=$purchaseToken&uePlatform=FNGame"
-		source.complete("Visit this link to purchase the item shown below:\n${source.generateUrl(purchaseLink)}", embed.build())
+		source.complete("Visit this link to purchase the item shown below:\n$purchaseLink", embed.build())
 	} else {
 		source.loading("Purchasing " + storeOffer?.title)
 
