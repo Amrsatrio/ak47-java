@@ -33,7 +33,7 @@ class ComposeMcpCommand : BrigadierCommand("composemcp", "Perform an arbitrary M
 						if (bodyFile.size > maxAcceptedFileSize) {
 							throw SimpleCommandExceptionType(LiteralMessage("Request body may not be larger than 1 MB.")).create()
 						}
-						val body = bodyFile.proxy.download().await().bufferedReader().use { it.readText() }
+						val body = bodyFile.retrieveInputStream().await().bufferedReader().use { it.readText() }
 						exec(source, getString(c, "command"), getString(c, "profile ID").toLowerCase(), body)
 					} else {
 						exec(source, getString(c, "command"), getString(c, "profile ID").toLowerCase())

@@ -54,7 +54,7 @@ class CampaignQuestsCommand : BrigadierCommand("quests", "STW quest log.", array
 	private fun categories(source: CommandSourceStack, campaign: McpProfile): Int {
 		val questsByCategory = campaign.items.values.filter { it.primaryAssetType == "Quest" && it.attributes["quest_state"]?.asString == "Active" }.groupBy {
 			val handle = (it.defData as? FortQuestItemDefinition)?.Category
-			handle?.rowName?.toString() to handle?.row
+			(handle?.rowName?.toString() ?: "Unknown") to handle?.row
 		}
 		val select = SelectMenu.create("category").setPlaceholder("Pick quest category")
 		questsByCategory.entries.sortedByDescending { it.key.second?.get<Int>("SortPriority") ?: 0 }.forEach { (categoryPair, quests) ->

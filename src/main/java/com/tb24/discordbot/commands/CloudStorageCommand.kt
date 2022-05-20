@@ -45,7 +45,7 @@ class CloudStorageCommand : BrigadierCommand("cloudstorage", "List, download, or
 				val fileToUpload = source.message?.attachments?.firstOrNull()
 				if (fileToUpload != null) {
 					source.loading("Uploading $fileName")
-					fileToUpload.proxy.download().await().use {
+					fileToUpload.retrieveInputStream().await().use {
 						val body = it.readBytes().toRequestBody("application/octet-stream".toMediaType())
 						source.api.fortniteService.writeUserFile(source.api.currentLoggedIn.id, fileName, body).exec()
 					}

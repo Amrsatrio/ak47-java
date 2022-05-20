@@ -299,7 +299,7 @@ private fun importFromFile(source: CommandSourceStack): Int {
 	val bodyFile = source.message?.attachments?.firstOrNull()
 		?: throw SimpleCommandExceptionType(LiteralMessage("You must attach a JSON file containing device auth(s) in { accountId, deviceId, secret, clientId } format to use this command without arguments.")).create()
 	val parsedDevices = try {
-		bodyFile.proxy.download().await().bufferedReader().use { JsonParser.parseReader(it) }
+		bodyFile.retrieveInputStream().await().bufferedReader().use { JsonParser.parseReader(it) }
 	} catch (e: JsonSyntaxException) {
 		throw SimpleCommandExceptionType(LiteralMessage("Malformed JSON: " + e.message?.substringAfter("Use JsonReader.setLenient(true) to accept malformed JSON at "))).create()
 	}
