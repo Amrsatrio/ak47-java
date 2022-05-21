@@ -6,6 +6,7 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.images.createImage
 import com.tb24.discordbot.ui.QuestsViewController
 import com.tb24.discordbot.ui.QuestsViewController.*
 import com.tb24.discordbot.util.*
@@ -21,6 +22,11 @@ class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR q
 		.executes { execute(it.source) }
 		.then(argument("category", StringArgumentType.greedyString())
 			.executes { execute(it.source, StringArgumentType.getString(it, "category")) }
+		)
+		.then(literal("image")
+			.then(argument("category", StringArgumentType.greedyString())
+				.executes { image(it.source, StringArgumentType.getString(it, "category")) }
+			)
 		)
 
 	private fun execute(source: CommandSourceStack, search: String? = null): Int {
@@ -90,6 +96,29 @@ class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR q
 			}
 			categoryNameToView = runCatching { nextCategoryEvent.await() }.getOrNull() ?: return Command.SINGLE_SUCCESS
 		}
+	}
+
+	private fun image(source: CommandSourceStack, search: String?): Int {
+		source.ensureSession()
+		var categoryNameToView: String? = null
+		val knownCategories = QuestsViewController.getCategories()
+		if (search != null) {
+			categoryNameToView = knownCategories.search(search.toLowerCase()) { it.DisplayName.format()!! }?.name
+				?: throw SimpleCommandExceptionType(LiteralMessage("No matches found for \"$search\". Available options:\n${knownCategories.sortedBy { it.SortOrder }.joinToString("\n") { "\u2022 " + it.DisplayName.format().orDash() }}")).create()
+		}
+		source.loading("Getting challenges")
+		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+		val athena = source.api.profileManager.getProfileData("athena")
+
+		val ctx = QuestsViewController(athena, knownCategories)
+		if (ctx.categories.isEmpty()) {
+			source.complete(null, source.createEmbed().setDescription("No quests").build())
+			return Command.SINGLE_SUCCESS
+		}
+		val category = ctx.allCategories[categoryNameToView]!!
+		val png = category.createImage().encodeToData()!!.bytes
+		source.complete(AttachmentUpload(png, "quests.png"))
+		return Command.SINGLE_SUCCESS
 	}
 
 	class Entry(val quest: Quest, val header: QuestCategoryHeader?, val goalCard: GoalCard?, val showHeader: Boolean) {

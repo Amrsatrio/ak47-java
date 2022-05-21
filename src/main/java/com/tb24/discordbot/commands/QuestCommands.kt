@@ -327,7 +327,7 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 	return Command.SINGLE_SUCCESS
 }
 
-private val rewardsTableCache = hashMapOf<String, Map<FName, FortQuestRewardTableRow>>()
+val rewardsTableCache = hashMapOf<String, Map<FName, FortQuestRewardTableRow>>()
 
 fun renderChallenge(item: FortItemStack, prefix: String = "", rewardsPrefix: String? = "", isAthenaDaily: Boolean = false, conditionalCondition: Boolean = false, allowBold: Boolean = true): String {
 	val quest = item.defData as FortQuestItemDefinition

@@ -1,11 +1,14 @@
 package com.tb24.discordbot.images
 
 import com.tb24.discordbot.commands.rarityData
+import com.tb24.discordbot.commands.rewardsTableCache
 import com.tb24.discordbot.util.awtColor
 import com.tb24.discordbot.util.createAndDrawCanvas
 import com.tb24.discordbot.util.forRarity
+import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.util.asItemStack
 import com.tb24.fn.util.format
+import com.tb24.fn.util.getPathName
 import com.tb24.fn.util.getPreviewImagePath
 import com.tb24.uasset.AssetManager
 import com.tb24.uasset.loadObject
@@ -36,6 +39,7 @@ import java.awt.image.BufferedImage
 import java.io.File
 import java.text.AttributedString
 import javax.imageio.ImageIO
+import kotlin.jvm.internal.Ref.ObjectRef
 import kotlin.system.exitProcess
 
 fun FortChallengeBundleItemDefinition.createChallengeBundleContainer(): ChallengeBundleContainer {
@@ -98,31 +102,9 @@ class QuestContainer {
 		//}
 		shortDescription = quest.ShortDescription
 		completionText = quest.CompletionText
-		quest.Rewards?.forEach { reward ->
-			if (reward.ItemPrimaryAssetId.PrimaryAssetType.Name.text != "Quest") {
-				rewards.add(QuestRewardContainer(reward))
-			} else {
-				nextQuest = reward.asItemStack().defData as? FortQuestItemDefinition
-			}
-		}
-		val rewardsTableRewards = quest.RewardsTable?.value?.rows
-			?.mapValues { it.value.mapToClass(FortQuestRewardTableRow::class.java) }
-			?.filter { it.value.QuestTemplateId == "*" || it.value.QuestTemplateId.substringAfter(':').equals(quest.name, true) && !it.value.Hidden }
-		if (rewardsTableRewards != null) {
-			var lastIsSelectable = false
-			rewardsTableRewards.toSortedMap { o1, o2 ->
-				val priority1 = o1.text.substringAfterLast('_', "0").toInt()
-				val priority2 = o2.text.substringAfterLast('_', "0").toInt()
-				priority1 - priority2
-			}.forEach { (_, reward) ->
-				rewards.add(QuestRewardContainer(reward))
-				if (lastIsSelectable && reward.Selectable) {
-					rewards.add(QuestRewardContainer())
-				}
-				lastIsSelectable = reward.Selectable
-			}
-		}
-
+		val nextQuest = ObjectRef<FortQuestItemDefinition?>()
+		quest.getRewards(rewards, nextQuest)
+		this.nextQuest = nextQuest.element
 		completion = 0
 		max = getQuestMax(quest)
 
@@ -336,6 +318,39 @@ fun getQuestMax(quest: FortQuestItemDefinition, allowCompletionCountOverride: Bo
 	}
 	return max
 }
+
+fun FortQuestItemDefinition.getRewards(outRewards: MutableList<QuestRewardContainer>, outNextQuest: ObjectRef<FortQuestItemDefinition?>? = null) {
+	Rewards?.forEach { reward ->
+		if (reward.ItemPrimaryAssetId.PrimaryAssetType.Name.text != "Quest") {
+			outRewards.add(QuestRewardContainer(reward))
+		} else {
+			outNextQuest?.element = reward.asItemStack().defData as? FortQuestItemDefinition
+		}
+	}
+	val rewardsTablePath = RewardsTable?.getPathName()
+	val rewardsTableRewards = if (rewardsTablePath != null) {
+		rewardsTableCache
+			.getOrPut(rewardsTablePath) { RewardsTable.value.rows.mapValues { it.value.mapToClass(FortQuestRewardTableRow::class.java) } }
+			.filter { it.value.QuestTemplateId == "*" || it.value.QuestTemplateId.substringAfter(':').equals(name, true) && !it.value.Hidden }
+	} else null
+	if (rewardsTableRewards != null) {
+		var lastIsSelectable = false
+		rewardsTableRewards.toSortedMap { o1, o2 ->
+			val priority1 = o1.text.substringAfterLast('_', "0").toInt()
+			val priority2 = o2.text.substringAfterLast('_', "0").toInt()
+			priority1 - priority2
+		}.forEach { (_, reward) ->
+			outRewards.add(QuestRewardContainer(reward))
+			if (lastIsSelectable && reward.Selectable) {
+				outRewards.add(QuestRewardContainer())
+			}
+			lastIsSelectable = reward.Selectable
+		}
+	}
+}
+
+val FortQuestItemDefinition.rewards: List<QuestRewardContainer> get() = mutableListOf<QuestRewardContainer>().also(::getRewards)
+val FortItemStack.questRewards get() = (defData as? FortQuestItemDefinition)?.rewards ?: emptyList()
 
 fun main() {
 	AssetManager.INSTANCE.loadPaks()
