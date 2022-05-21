@@ -7,6 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.LinearProgressIndicator
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -37,15 +38,7 @@ import kotlin.math.max
 
 @Composable
 fun QuestList(category: QuestsViewController.QuestCategory, modifier: Modifier = Modifier) {
-	Column(
-		modifier = modifier
-			.drawWithContent {
-				drawRect(Brush.radialGradient(listOf(Color(0xFF099AFE), Color(0xFF0942B4)), radius = max(size.width, size.height) / 2))
-				drawContent()
-			}
-			.padding(41.dp, 29.dp),
-		verticalArrangement = Arrangement.spacedBy(7.dp)
-	) {
+	Column(modifier, verticalArrangement = Arrangement.spacedBy(7.dp)) {
 		for (goalCard in category.goalCards.values) {
 			GoalsPageQuestCard(goalCard)
 		}
@@ -122,20 +115,12 @@ fun GoalsPageQuestCardLine(quest: QuestsViewController.Quest) {
 				verticalAlignment = Alignment.CenterVertically
 			) {
 				// Progress bar
-				Box(
-					Modifier
-						.weight(1f)
-						.height(8.dp)
-						.clip(RoundedCornerShape(4.dp))
-						.background(Color(0x33001166))
-				) {
-					Box(
-						Modifier
-							.fillMaxWidth(ratio)
-							.fillMaxHeight()
-							.background(Color(0xFF33EEFF))
-					)
-				}
+				LinearProgressIndicator(
+					progress = ratio,
+					modifier = Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(4.dp)),
+					color = Color(0xFF33EEFF),
+					backgroundColor = Color(0x33001166)
+				)
 				// Progress text
 				Text(
 					text = buildAnnotatedString {
@@ -303,8 +288,16 @@ fun Header(title: String) {
 	}
 }
 
-fun QuestsViewController.QuestCategory.createImage(modifier: Modifier = Modifier) = renderCompose {
-	QuestList(this, modifier.width(946.dp))
+fun QuestsViewController.createImage() = renderCompose {
+	Row(Modifier.blueGradientBackground().padding(41.dp, 29.dp), horizontalArrangement = Arrangement.spacedBy(41.dp)) {
+		for (category in categories) {
+			QuestList(category, Modifier.width(946.dp))
+		}
+	}
+}
+
+fun QuestsViewController.QuestCategory.createImage() = renderCompose {
+	QuestList(this, Modifier.width(946.dp).blueGradientBackground().padding(41.dp, 29.dp))
 }
 
 fun QuestsViewController.QuestCategory.testWindow() {
@@ -315,7 +308,12 @@ fun QuestsViewController.QuestCategory.testWindow() {
 			state = rememberWindowState(width = 300.dp, height = 300.dp)
 		) {
 			val scrollState = rememberScrollState()
-			QuestList(this@testWindow, Modifier.verticalScroll(scrollState))
+			QuestList(this@testWindow, Modifier.blueGradientBackground().verticalScroll(scrollState))
 		}
 	}
+}
+
+fun Modifier.blueGradientBackground() = drawWithContent {
+	drawRect(Brush.radialGradient(listOf(Color(0xFF099AFE), Color(0xFF0942B4)), radius = max(size.width, size.height) / 2))
+	drawContent()
 }
