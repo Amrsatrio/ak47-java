@@ -2,15 +2,21 @@ package com.tb24.discordbot.commands
 
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.LiteralMessage
+import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.rethinkdb.RethinkDB
+import com.tb24.discordbot.commands.arguments.StringArgument2
 import com.tb24.discordbot.item.ItemTypeResolver
 import com.tb24.discordbot.managers.HomebaseManager
 import com.tb24.discordbot.managers.managerData
-import com.tb24.discordbot.util.getEmoteByName
-import com.tb24.discordbot.util.replyPaginated
-import com.tb24.discordbot.util.textureEmote
+import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.mcpprofile.McpProfile
+import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.commands.campaign.AssignWorkerToSquadBatch
+import com.tb24.fn.model.mcpprofile.commands.campaign.UnassignAllSquads
 import com.tb24.fn.util.Utils
 import com.tb24.fn.util.format
 import com.tb24.fn.util.getPathName
@@ -59,9 +65,54 @@ val SURVIVOR_SQUAD_NAMES = arrayOf(
 	"Squad_Attribute_Synthesis_TheThinkTank"
 )
 
-class WorkerSquadsCommand : BrigadierCommand("survivorsquads", "Shows your or a given player's survivor squads.", arrayOf("squads")) {
+class WorkerSquadsCommand : BrigadierCommand("survivorsquads", "Shows your or a given player's survivor squads.", arrayOf("squads", "sq")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.withPublicProfile(::execute, "Getting survivor squads")
+		.then(literal("save")
+			.then(argument("name", StringArgument2.string2(true))
+				.executes { saveSquads(it.source, StringArgumentType.getString(it, "name")) }
+			)
+		)
+		.then(literal("apply")
+			.then(argument("name", StringArgument2.string2(true))
+				.executes { applySquads(it.source, StringArgumentType.getString(it, "name")) }
+			)
+		)
+		.then(literal("remove")
+			.then(argument("name", StringArgument2.string2(true))
+				.executes { removeSquads(it.source, StringArgumentType.getString(it, "name")) }
+			)
+		)
+		.then(literal("override")
+			.then(argument("name", StringArgument2.string2(true))
+				.executes {
+					removeSquads(it.source, StringArgumentType.getString(it, "name"), true)
+					saveSquads(it.source, StringArgumentType.getString(it, "name"))
+				}
+			)
+		)
+		.then(literal("list")
+			.executes {
+				listSquads(it.source)
+			}
+		)
+		.then(literal("clear")
+			.executes {
+				val source = it.source
+				if (!source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
+						.setTitle("✋ Hold up!")
+						.setDescription("This will clear **ALL** survivor squads.\n\nContinue?")
+						.build(), confirmationButtons()).awaitConfirmation(source.author).await()) {
+					source.complete("👌 Alright.")
+					return@executes Command.SINGLE_SUCCESS
+				}
+				source.api.profileManager.dispatchClientCommandRequest(UnassignAllSquads().apply {
+					squadIds = SURVIVOR_SQUAD_NAMES
+				}, "campaign").await()
+				source.complete(null, source.createEmbed().setDescription("✅ Cleared all survivor squads.").build())
+				Command.SINGLE_SUCCESS
+			}
+		)
 
 	private fun execute(source: CommandSourceStack, campaign: McpProfile): Int {
 		source.ensureCompletedCampaignTutorial(campaign)
@@ -148,6 +199,148 @@ class WorkerSquadsCommand : BrigadierCommand("survivorsquads", "Shows your or a 
 		}
 
 		return Command.SINGLE_SUCCESS
+	}
+
+	private fun saveSquads(source: CommandSourceStack, name: String): Int {
+		source.ensureSession()
+		source.loading("Getting squads")
+		val squads = getSquads(source)
+		if (!addToDb(source, squads, name)) {
+			throw SimpleCommandExceptionType(LiteralMessage("**%s** squads already exist".format(name))).create()
+		}
+		source.complete(null, source.createEmbed().setDescription("✅ Saved current squads as **%s**".format(name)).build())
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun applySquads(source: CommandSourceStack, name: String): Int {
+		source.ensureSession()
+		source.loading("Applying Survivor squads")
+		val savedLoadouts = RethinkDB.r.table("survivor_loadouts").get(source.api.currentLoggedIn.id).run(source.client.dbConn, dbEntry::class.java).first()
+			?: throw SimpleCommandExceptionType(LiteralMessage("You have no saved Survivor loadouts.")).create()
+		val loadoutToApply = savedLoadouts.squads?.find { it.name == name}
+			?: throw SimpleCommandExceptionType(LiteralMessage("Squads loadout **%s** not found.".format(name))).create()
+		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
+		val campaign = source.api.profileManager.getProfileData("campaign")
+		val characterIds = mutableListOf<String>()
+		val squadIds = mutableListOf<String>()
+		val slotIndices = mutableListOf<Int>()
+		for (squad in loadoutToApply.squads) {
+			squad.value.workers?.forEachIndexed{index, workerItem ->
+				if (workerItem.itemId in campaign.items) { // cba adding finding for a replacement
+					workerItem.itemId!!.let { characterIds.add(it) }
+					squad.key.let { squadIds.add(it) }
+					index.let { slotIndices.add(it) }
+				}
+			}
+		}
+		source.api.profileManager.dispatchClientCommandRequest(AssignWorkerToSquadBatch().apply {
+			this.characterIds = characterIds.toTypedArray()
+			this.squadIds = squadIds.toTypedArray()
+			this.slotIndices = slotIndices.toIntArray()
+		}, "campaign").await()
+		source.complete(null, source.createEmbed().setDescription("✅ Applied Squads preset **%s**".format(name)).build())
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun getSquads(source: CommandSourceStack): MutableMap<String, dbEntry.WorkerSquad> {
+		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
+		val homebase = source.session.getHomebase(source.api.currentLoggedIn.id)
+		val squads = mutableListOf<HomebaseManager.Squad>()
+		for (squadId in SURVIVOR_SQUAD_NAMES) {
+			val squad = homebase.squads[squadId.toLowerCase()]!!
+			val unlockedStates = BooleanArray(squad.slots.size)
+			var hasUnlockedSlot = false
+			squad.slots.forEachIndexed { i, slot ->
+				unlockedStates[i] = slot.unlocked
+				hasUnlockedSlot = hasUnlockedSlot || slot.unlocked
+			}
+			if (hasUnlockedSlot) {
+				squads.add(squad)
+			}
+		}
+		val dbSquads = mutableMapOf<String, dbEntry.WorkerSquad>()
+		for (squad in squads) {
+			dbSquads[squad.squadId] = dbEntry.WorkerSquad().apply {
+				workers = squad.slots.map { worker ->
+					dbEntry.WorkerItem().apply {
+						itemId = worker.item?.itemId
+						personality = worker.personality
+						setBonus = worker.setBonus
+					}
+				}
+			}
+		}
+		return dbSquads
+	}
+
+	private fun removeSquads(source: CommandSourceStack, name: String, silent: Boolean = false): Int {
+		source.ensureSession()
+		val dbEntry = RethinkDB.r.table("survivor_loadouts").get(source.api.currentLoggedIn.id).run(source.client.dbConn, dbEntry::class.java).first()
+			?: throw SimpleCommandExceptionType(LiteralMessage("You have no saved Surirvor loadouts.")).create()
+		if (!dbEntry.squads!!.any { it.name == name}) throw SimpleCommandExceptionType(LiteralMessage("You don't have a saved Surirvor loadout with that name.")).create()
+		val filtered = dbEntry.squads!!.filter { it.name != name }
+		if (filtered.isNotEmpty()) {
+			RethinkDB.r.table("survivor_loadouts").update(dbEntry().apply {
+				id = source.api.currentLoggedIn.id
+				squads = filtered.toMutableList()
+			})
+		} else {
+			RethinkDB.r.table("survivor_loadouts").get(source.api.currentLoggedIn.id).delete()
+		}.run(source.client.dbConn)
+		if (!silent) {
+			source.complete(null, source.createEmbed().setDescription("✅ Removed **%s**".format(name)).build())
+		}
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun listSquads(source: CommandSourceStack): Int {
+		source.loading("Getting saved loadouts")
+		val savedLoadouts = RethinkDB.r.table("survivor_loadouts").get(source.api.currentLoggedIn.id).run(source.client.dbConn, dbEntry::class.java).first() ?:
+		throw SimpleCommandExceptionType(LiteralMessage("No saved loadouts.")).create()
+		val names = List(savedLoadouts.squads!!.size) { i -> savedLoadouts.squads!![i].name }
+		source.complete(null, source.createEmbed().setTitle("Saved Surirvor loadouts").setDescription(names.joinToString(", ")).build())
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun addToDb(source: CommandSourceStack, loadout: MutableMap<String, dbEntry.WorkerSquad>, name: String): Boolean {
+		val dbEntry = RethinkDB.r.table("survivor_loadouts").get(source.api.currentLoggedIn.id).run(source.client.dbConn, dbEntry::class.java).first()
+		val loadouts = dbEntry?.squads ?: mutableListOf()
+		if (loadouts.firstOrNull { it.name == name } != null) {
+			return false // already exists
+		}
+		loadouts.add(WorkerSquadsCommand.dbEntry.SquadsEntry().apply {
+			this.name = name
+			squads = loadout
+		})
+		val newContents = dbEntry()
+		newContents.id = source.api.currentLoggedIn.id
+		newContents.squads = loadouts
+		if (dbEntry != null) {
+			RethinkDB.r.table("survivor_loadouts").update(newContents)
+		} else {
+			RethinkDB.r.table("survivor_loadouts").insert(newContents)
+		}.run(source.client.dbConn)
+		return true
+	}
+
+	class dbEntry {
+		 lateinit var id: String
+		 var squads: MutableList<SquadsEntry>? = null
+
+		class SquadsEntry {
+			lateinit var name: String
+			lateinit var squads: MutableMap<String, WorkerSquad>
+		}
+
+		class WorkerSquad {
+			@JvmField var workers: List<WorkerItem>? = null
+		}
+
+		class WorkerItem {
+			var itemId: String? = null
+			var personality: String? = null
+			var setBonus: String? = null
+		}
 	}
 }
 
