@@ -278,6 +278,9 @@ private fun execBuyAllCampaignBulk(source: CommandSourceStack, users: Map<String
 	if (devices.isEmpty()) {
 		throw SimpleCommandExceptionType(LiteralMessage("You don't have saved logins. Please perform `.savelogin` before continuing.")).create()
 	}
+	if (users != null && devices.none { it.accountId in users }) {
+		throw SimpleCommandExceptionType(LiteralMessage("You don't have saved accounts that are matching the name(s).")).create()
+	}
 	source.loading("Getting & purchasing offers")
 	val catalogManager = source.client.catalogManager
 	catalogManager.ensureCatalogData(source.client.internalSession.api)
