@@ -2,6 +2,7 @@ package com.tb24.discordbot.images
 
 import com.tb24.discordbot.commands.rarityData
 import com.tb24.discordbot.commands.rewardsTableCache
+import com.tb24.discordbot.util.ResourcesContext
 import com.tb24.discordbot.util.awtColor
 import com.tb24.discordbot.util.createAndDrawCanvas
 import com.tb24.discordbot.util.forRarity
@@ -28,7 +29,6 @@ import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText
 import me.fungames.jfortniteparse.util.drawCenteredString
 import me.fungames.jfortniteparse.util.toPngArray
 import java.awt.Color
-import java.awt.Font
 import java.awt.Graphics2D
 import java.awt.LinearGradientPaint
 import java.awt.font.LineBreakMeasurer
@@ -248,7 +248,7 @@ fun kekz(
 	return path
 }
 
-val f = Font.createFont(Font.TRUETYPE_FONT, File("C:\\Users\\satri\\AppData\\Local\\Microsoft\\Windows\\Fonts\\zh-cn.ttf")).deriveFont(24f)
+val f = ResourcesContext.burbankSmallBold.deriveFont(24f)
 
 class QuestRewardContainer {
 	var palette: FortColorPalette? = null
