@@ -27,6 +27,8 @@ class PartyCommand : BrigadierCommand("party", "Manages your party.", arrayOf("p
 		.executes { party(it.source) }
 		.then(literal("invite").then(argument("user(s)", UserArgument.users(3)).executes { partyInvite(it.source, UserArgument.getUsers(it, "user(s)").values) }))
 		.then(literal("kick").then(argument("user(s)", UserArgument.users(3)).executes { partyKick(it.source, UserArgument.getUsers(it, "user(s)").values) }))
+		.then(literal("kickall").executes { kickAll(it.source) })
+		.then(literal("kickallleave").executes { kickAll(it.source, true) })
 		.then(literal("promote").then(argument("user", UserArgument.users(1)).executes { partyPromote(it.source, UserArgument.getUsers(it, "user").values.first()) }))
 		.then(literal("leave").executes { partyLeave(it.source) })
 
