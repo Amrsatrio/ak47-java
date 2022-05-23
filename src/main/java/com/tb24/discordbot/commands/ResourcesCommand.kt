@@ -132,7 +132,7 @@ class ResourcesCommand : BrigadierCommand("resources", "Displays a given user's 
 		}
 		val embed = EmbedBuilder().setColor(COLOR_INFO)
 		for (entry in entries) {
-			if (embed.fields.size == 24) {
+			if (embed.fields.size == if (type == "perk") 9 else 15) {
 				source.complete(null, embed.build())
 				embed.clearFields()
 			}
