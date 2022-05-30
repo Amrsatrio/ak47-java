@@ -96,7 +96,7 @@ abstract class BaseQuestsCommand(name: String, description: String, private val 
 		)
 		node.then(literal("bulkf")
 			.then(argument("filter", greedyString())
-				.executes { bulkFilter(it.source, getString(it, "filter"))}
+				.executes { bulkFilter(it.source, getString(it, "filter").split(","))}
 			)
 		)
 		node.then(literal("bulk3")
@@ -153,7 +153,7 @@ private val xrayIcon by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/
 
 private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, usersLazy: Lazy<Collection<GameProfile>>? = null, maxDailiesOnly: Boolean = false): Int {
 	source.conditionalUseInternalSession()
-	val foundersWithMaxdailies = ArrayList<String>()
+	val foundersWithMaxdailies = mutableListOf<String>()
 	val entries = stwBulk(source, usersLazy) { campaign ->
 		val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:outpostquest_t1_l3" }?.attributes?.get("completion_complete_outpost_1_3")?.asInt ?: 0) > 0
 		if (!completedTutorial) return@stwBulk null
@@ -206,16 +206,17 @@ private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, 
 	return Command.SINGLE_SUCCESS
 }
 
-private fun bulkFilter(source: CommandSourceStack, filter: String): Int {
+private fun bulkFilter(source: CommandSourceStack, filters: List<String>): Int {
 	source.conditionalUseInternalSession()
 	var count = 0
 	val entries = stwBulk(source, null) {campaign ->
 		val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:outpostquest_t1_l3" }?.attributes?.get("completion_complete_outpost_1_3")?.asInt ?: 0) > 0
 		if (!completedTutorial) return@stwBulk null
 		val quests = getQuestsOfCategory(campaign, "DailyQuests")
-		val filtered = quests.filter { it.displayName.contains(filter, true) }.also { if (it.isNotEmpty()) getQuestCompletion(it.first()) else return@stwBulk null }
+		val filtered = quests.filter { quest -> filters.any { quest.displayName.contains(it, true) } }.also { if (it.isEmpty()) return@stwBulk null }
+		val rendered = filtered.joinToString("\n") { renderChallenge(it, "\u2800", null, allowBold = false) }
 		count++
-		campaign.owner.displayName to filtered
+		campaign.owner.displayName to rendered
 	}
 	if (entries.isEmpty()) {
 		throw SimpleCommandExceptionType(LiteralMessage("Couldn't find any accounts with that quest.")).create()
@@ -226,7 +227,7 @@ private fun bulkFilter(source: CommandSourceStack, filter: String): Int {
 			source.complete(null, embed.build())
 			embed.clearFields()
 		}
-		embed.addField(entry.first, entry.second.joinToString("\n") {"%s **[%,d/%,d]**".format(it.displayName, getQuestCompletion(it).first, getQuestCompletion(it).second)}, false)
+		embed.addField(entry.first, entry.second, false)
 	}
 	if (count > 4) {
 		embed.setFooter("%,d accounts".format(count), null)
