@@ -99,6 +99,9 @@ abstract class BaseQuestsCommand(name: String, description: String, private val 
 				.executes { bulkFilter(it.source, getString(it, "filter"))}
 			)
 		)
+		node.then(literal("bulk3")
+			.executes { executeQuestsBulk(it.source, categoryName, maxDailiesOnly = true) }
+		)
 		return node
 	}
 
@@ -148,20 +151,21 @@ private fun executeQuests(source: CommandSourceStack, campaign: McpProfile, cate
 
 private val xrayIcon by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-Items-Currency-X-RayLlama-L.T-Items-Currency-X-RayLlama-L") }
 
-private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, usersLazy: Lazy<Collection<GameProfile>>? = null): Int {
+private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, usersLazy: Lazy<Collection<GameProfile>>? = null, maxDailiesOnly: Boolean = false): Int {
 	source.conditionalUseInternalSession()
-	val foundersWith3dailies = ArrayList<String>()
+	val foundersWithMaxdailies = ArrayList<String>()
 	val entries = stwBulk(source, usersLazy) { campaign ->
 		val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:outpostquest_t1_l3" }?.attributes?.get("completion_complete_outpost_1_3")?.asInt ?: 0) > 0
 		if (!completedTutorial) return@stwBulk null
 		val quests = getQuestsOfCategory(campaign, categoryName)
+		if (maxDailiesOnly && quests.size < 3 && categoryName == "DailyQuests") return@stwBulk null
 		val rendered = quests.joinToString("\n") { renderChallenge(it, "\u2800", null, allowBold = false) }
 		var title = campaign.owner.displayName
 		if (categoryName == "DailyQuests") {
 			val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
 			if (canReceiveMtxCurrency) {
-				if (quests.size == 3) {
-					foundersWith3dailies.add(campaign.owner.displayName)
+				if (quests.size >= 3) {
+					foundersWithMaxdailies.add(campaign.owner.displayName)
 				}
 			} else {
 				title = xrayIcon?.asMention + ' ' + title
@@ -191,8 +195,12 @@ private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, 
 			embed.setDescription("That must've taken a while 😩")
 		}
 	}
-	if (foundersWith3dailies.isNotEmpty()) {
-		embed.setFooter("3 dailies (%d): %s".format(foundersWith3dailies.size, foundersWith3dailies.joinToString(", ")), Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Boost/T-Icon-FoundersBadge-128.T-Icon-FoundersBadge-128"))
+	if (foundersWithMaxdailies.isNotEmpty()) {
+		if (maxDailiesOnly) {
+			embed.setFooter("%d account%s".format(foundersWithMaxdailies.size, if (foundersWithMaxdailies.size == 1) "" else "s"), Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Boost/T-Icon-FoundersBadge-128.T-Icon-FoundersBadge-128"))
+		} else {
+			embed.setFooter("3 dailies (%d): %s".format(foundersWithMaxdailies.size, foundersWithMaxdailies.joinToString(", ")), Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Boost/T-Icon-FoundersBadge-128.T-Icon-FoundersBadge-128"))
+		}
 	}
 	source.complete(null, embed.build())
 	return Command.SINGLE_SUCCESS
