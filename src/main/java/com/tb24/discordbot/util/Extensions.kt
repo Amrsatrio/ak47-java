@@ -769,6 +769,21 @@ val machineId: String by lazy {
 	hash.substring(0, 8)
 }
 
+inline fun <T> Collection<T>.joinNiceString(mapper: (T) -> String = { it.toString() }): String {
+	val sb = StringBuilder()
+	forEachIndexed { i, s ->
+		if (i > 0) {
+			if (i == size - 1) {
+				sb.append(" and ")
+			} else {
+				sb.append(", ")
+			}
+		}
+		sb.append(mapper(s))
+	}
+	return sb.toString()
+}
+
 fun Number.awtColor(hasAlpha: Boolean = toInt() ushr 24 != 0) = Color(toInt(), hasAlpha)
 
 inline fun createAndDrawCanvas(w: Int, h: Int, withAlpha: Boolean = true, draw: (ctx: Graphics2D) -> Unit): BufferedImage {

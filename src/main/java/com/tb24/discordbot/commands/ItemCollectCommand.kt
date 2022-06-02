@@ -35,7 +35,7 @@ import java.io.FileReader
 import java.io.FileWriter
 import java.util.*
 
-class ItemCollectCommand : BrigadierCommand("collectibles", "Shows collectibles you haven't collected this season.", arrayOf("xpcoins", "omnichips", "chips")) {
+class ItemCollectCommand : BrigadierCommand("collectibles", "Shows collectibles you haven't collected this season.", arrayOf("xpcoins", STYLE_CURRENCY_SHORT_NAME)) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it.source, true) }
 		.then(literal("nomap")

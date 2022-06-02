@@ -6,23 +6,24 @@ import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.CatalogEntryHolder
-import com.tb24.discordbot.commands.BattlePassCommand.EBattlePassPurchaseOption.*
 import com.tb24.discordbot.ui.BattlePassViewController
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.assetdata.AthenaSeasonItemEntryReward
 import com.tb24.fn.model.assetdata.rows.AthenaBattlePassOfferPriceRow
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.commands.athena.ExchangeGameCurrencyForBattlePassOffer
 import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
+import com.tb24.fn.util.Utils.sumKV
 import com.tb24.fn.util.asItemStack
 import com.tb24.fn.util.countMtxCurrency
-import com.tb24.uasset.JWPSerializer
+import com.tb24.fn.util.format
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.Emoji
-import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.buttons.Button
+import java.util.*
 import java.util.concurrent.CompletableFuture
 import kotlin.math.min
 
@@ -30,31 +31,47 @@ val lockEmote by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/Locks/T
 
 class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pass.", arrayOf("bp")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.then(literal("rewards").executes { rewards(it.source) })
-		.then(literal("gatherids").executes { gatherIds(it.source) })
+		.then(literal("rewards").executes { rewards(it.source, Type.REWARDS) })
+		//.then(literal("quests").executes { rewards(it.source, Type.QUESTS) })
+		//.then(literal("bonuses").executes { rewards(it.source, Type.BONUSES) })
+		//.then(literal("styles").executes { rewards(it.source, Type.CUSTOMIZATION) })
 		.then(literal("buy").executes { purchaseBattlePass(it.source) })
+		.then(literal("buyall").executes { purchaseAllOffers(it.source) })
 
 	override fun getSlashCommand() = newCommandBuilder()
-		.then(subcommand("rewards", "Shows Battle Pass rewards.").executes(::rewards))
+		.then(subcommand("rewards", "Shows Battle Pass rewards.").executes { rewards(it, Type.REWARDS) })
+		//.then(subcommand("quests", "Shows Battle Pass quest character rewards.").executes { rewards(it, Type.QUESTS) })
+		//.then(subcommand("bonuses", "Shows Battle Pass bonus rewards.").executes { rewards(it, Type.BONUSES) })
+		//.then(subcommand("styles", "Shows Battle Pass styles rewards.").executes { rewards(it, Type.CUSTOMIZATION) })
 		.then(subcommand("buy", "Purchase Battle Pass or levels.").executes(::purchaseBattlePass))
 
-	private fun rewards(source: CommandSourceStack): Int {
+	private fun rewards(source: CommandSourceStack, type: Type): Int {
 		source.ensureSession()
 		source.loading("Getting BR data")
 		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 		val context = BattlePassViewController(source.api.profileManager.getProfileData("athena"))
-		source.replyPaginated(context.rewards.pages, 1) { (page), pageNum, pageCount ->
+		val sections = when (type) {
+			Type.REWARDS -> context.rewards
+			Type.QUESTS -> context.quests
+			Type.BONUSES -> context.bonuses
+			Type.CUSTOMIZATION -> context.customization
+		}?.sections ?: throw SimpleCommandExceptionType(LiteralMessage("Nothing to see here.")).create()
+		source.replyPaginated(sections, 1) { (page), pageNum, pageCount ->
 			val embed = EmbedBuilder().setColor(if (context.stats.book_purchased) 0xE1784D else 0x55C5FF)
 				.setAuthor("%s / Battle Pass".format(getFriendlySeasonText(context.stats.season_num)), null, Utils.benBotExportAsset(if (context.stats.book_purchased) {
 					"/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass.T-FNBR-BattlePass"
 				} else {
 					"/Game/UI/Foundation/Textures/Icons/Items/T-FNBR-BattlePass-Default.T-FNBR-BattlePass-Default"
 				}))
-				.setTitle("Page %,d".format(pageNum + 1))
+				.setTitle(page.title.format()!!.ifEmpty { "Page %,d".format(pageNum + 1) })
 				.setDescription(if (page.isUnlocked) {
 					"**%,d** / %,d claimed\n`%s`".format(page.purchased, page.entries.size, Utils.progress(page.purchased, page.entries.size, 32))
 				} else {
-					"%s Claim **%,d more rewards** or reach **Level %,d** to unlock page!".format(lockEmote?.asMention, page.backing.RewardsNeededForUnlock - page.section.purchased, page.backing.LevelsNeededForUnlock)
+					if (page is BattlePassViewController.Page) {
+						"%s Claim **%,d more rewards** or reach **Level %,d** to unlock page!".format(lockEmote?.asMention, page.rewardsForUnlock - page.parent.purchased, page.backing.LevelsNeededForUnlock)
+					} else {
+						"%s Claim **%,d more rewards** to unlock section!".format(lockEmote?.asMention, page.rewardsForUnlock - page.parent.purchased)
+					}
 				})
 				.addField("Offers", page.entries.joinToString("\n") { it.render(context.stats) }, false)
 				.addField("Balance", "%s %,d".format(battleStarEmote?.asMention, context.stats.battlestars), false)
@@ -64,49 +81,9 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 		return Command.SINGLE_SUCCESS
 	}
 
-	private fun gatherIds(source: CommandSourceStack): Int {
-		source.ensureSession()
-		source.loading("Getting BR data")
-		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
-		val athena = source.api.profileManager.getProfileData("athena")
-		val context = BattlePassViewController(athena)
-		val ids = mutableListOf<String>()
-		context.rewards.gatherOfferIds(ids)
-		context.bonuses.gatherOfferIds(ids)
-		val s = JWPSerializer.GSON.newBuilder().setPrettyPrinting().create().toJson(ids)
-		if (("```json\n\n```".length + s.length) > Message.MAX_CONTENT_LENGTH) {
-			val fileName = "BPOfferIds-%s-%d.json".format(source.api.currentLoggedIn.id, athena.rvn)
-			source.complete(AttachmentUpload(s.toByteArray(), fileName))
-		} else {
-			source.complete("```json\n$s\n```")
-		}
-		return Command.SINGLE_SUCCESS
-	}
-
-	private fun BattlePassViewController.Section.gatherOfferIds(ids: MutableList<String>) {
-		for (page in pages) {
-			if (!page.isUnlocked) continue
-			val deferred = mutableListOf<BattlePassViewController.Entry>()
-			for (entry in page.entries) {
-				if (entry.purchaseRecord == null) continue
-				val data = entry.backing as AthenaSeasonItemEntryReward
-				val rewardsNeededForUnlock = data.RewardsNeededForUnlock ?: 0
-				if (rewardsNeededForUnlock != 0) {
-					deferred.add(entry)
-				} else {
-					ids.add(data.BattlePassOffer.OfferId)
-				}
-			}
-			for (entry in deferred) {
-				val data = entry.backing as AthenaSeasonItemEntryReward
-				ids.add(data.BattlePassOffer.OfferId)
-			}
-		}
-	}
-
 	private fun BattlePassViewController.Entry.render(stats: AthenaProfileStats): String {
 		if (backing is AthenaSeasonItemEntryReward) {
-			val locked = !page.isUnlocked || (!backing.bIsFreePassReward && !stats.book_purchased) // TODO RequiredItems
+			val locked = !parent.isUnlocked || (!backing.bIsFreePassReward && !stats.book_purchased) // TODO RequiredItems
 			val offer = backing.BattlePassOffer
 			val item = offer.RewardItem.asItemStack()
 			val price = offer.OfferPriceRowHandle.getRowMapped<AthenaBattlePassOfferPriceRow>()!!
@@ -118,7 +95,7 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 			}
 			return "`%d` %s%s [%s]".format(index + 1, if (locked) lockEmote?.asMention + " " else "", item.renderWithIcon(), priceText) + if (purchaseRecord != null) " ✅" else ""
 		}
-		return "Can't render: " + backing.javaClass.simpleName
+		return "Can't render: " + backing.exportType
 	}
 
 	private fun AthenaBattlePassOfferPriceRow.asItemStack() = FortItemStack(
@@ -141,7 +118,7 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 		val offers = mutableListOf<CatalogEntryHolder>()
 		val buttons = mutableListOf<Button>()
 		val mtxEmote = Emoji.fromEmote(source.client.discord.getEmoteById(751101530626588713L)!!)
-		for (option in values()) {
+		for (option in PurchaseOption.values()) {
 			val devName = "BR.Season%d.%s.01".format(stats.season_num, option)
 			val offer = storefront.catalogEntries.first { it.devName == devName }.holder().apply { resolve(source.api.profileManager) }
 			offers.add(offer)
@@ -160,10 +137,10 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 			errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
 		}).await().first()
 		interaction.deferEdit().queue()
-		val choice = valueOf(interaction.componentId)
+		val choice = PurchaseOption.valueOf(interaction.componentId)
 		val offer = offers[choice.ordinal]
 		var quantity = 1
-		if (choice == SingleTier) {
+		if (choice == PurchaseOption.SINGLE_TIER) {
 			val limit = min(balance / offer.price.basePrice, 100 - stats.book_level)
 			if (limit > 1) {
 				source.complete("Enter the number of tiers you want to buy (1 - %,d, ⏱ 60s)".format(limit))
@@ -182,9 +159,144 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 		return purchaseOffer(source, offer.ce, quantity)
 	}
 
-	enum class EBattlePassPurchaseOption(val displayName: String, val maxLevel: Int) {
-		BattlePass("Battle Pass", -1),
-		BP25Levels("25 Levels", 75),
-		SingleTier("Individual Levels", 99)
+	private enum class PurchaseOption(val displayName: String, val maxLevel: Int) {
+		BATTLE_PASS("Battle Pass", -1),
+		BP_25_LEVELS("25 Levels", 75),
+		SINGLE_TIER("Individual Levels", 99)
+	}
+
+	private fun purchaseAllOffers(source: CommandSourceStack): Int {
+		source.ensureSession()
+		source.loading("Getting BR data")
+		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+		val athena = source.api.profileManager.getProfileData("athena")
+		val stats = athena.stats as AthenaProfileStats
+		val context = BattlePassViewController(athena)
+		val result = GatherOffersResult(stats)
+		context.rewards?.gatherPurchasableOffers(result)
+		context.bonuses?.gatherPurchasableOffers(result)
+		context.customization?.gatherPurchasableOffers(result)
+		val battlePassOrFreePass = if (stats.book_purchased) "Battle Pass" else "Free Pass"
+		val freePassDescription = "Get more rewards by purchasing the Battle Pass! Use `%sbattlepass buy` to purchase it right from the bot.".format(source.prefix)
+		if (result.ownedItems == result.totalItems) {
+			val embed = source.createEmbed()
+				.setTitle("ℹ All %s offers have already been claimed".format(battlePassOrFreePass))
+			if (!stats.book_purchased) {
+				embed.setDescription(freePassDescription)
+			}
+			source.complete(null, embed.build())
+			return 0
+		}
+		val unclaimed = result.totalItems - result.ownedItems
+		val remainingAfterPurchase = unclaimed - result.purchasableIds.size
+		val notEnoughDescription = "${result.neededBalances.renderBalanceMap()} needed to claim ${(if (remainingAfterPurchase == result.totalItems) "all **%,d**" else "remaining **%,d**").format(remainingAfterPurchase)} offer(s). Go play more to earn those before the season ends!"
+		if (result.purchasableIds.isEmpty()) {
+			source.complete(null, source.createEmbed().setColor(COLOR_ERROR)
+				.setTitle("❌ Can't claim anything left")
+				.setDescription(notEnoughDescription)
+				.build())
+			return 0
+		}
+		source.api.profileManager.dispatchClientCommandRequest(ExchangeGameCurrencyForBattlePassOffer().apply {
+			offerItemIdList = result.purchasableIds.toTypedArray()
+		}, "athena").await()
+		val embed = source.createEmbed()
+		if (remainingAfterPurchase == 0) {
+			embed.setColor(COLOR_SUCCESS)
+			embed.setTitle("✅ Claimed all %,d %s offers".format(result.purchasableIds.size, battlePassOrFreePass))
+			embed.setDescription(result.spentBalances.renderBalanceMap() + " spent.")
+		} else {
+			embed.setColor(COLOR_WARNING)
+			embed.setTitle("⚠ Claimed %,d of %,d %s offers".format(result.purchasableIds.size, unclaimed, battlePassOrFreePass))
+			embed.setDescription(notEnoughDescription)
+		}
+		if (!stats.book_purchased) {
+			embed.appendDescription('\n' + freePassDescription)
+		}
+		source.complete(null, embed.build())
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun Map<String, Int>.renderBalanceMap(): String {
+		return entries.joinNiceString { (currencyName, count) ->
+			val currencyData = seasonCurrencyData.firstOrNull { it.def.name == currencyName }!!
+			"%s **%,d**".format(textureEmote(currencyData.def.LargePreviewImage.toString())?.asMention, count)
+		}
+	}
+
+	private fun BattlePassViewController.Type.gatherPurchasableOffers(result: GatherOffersResult) {
+		val queue = mutableListOf<BattlePassViewController.Entry>()
+		val deferred = TreeSet<Pair<Int, BattlePassViewController.Entry>>() { a, b -> a.first - b.first }
+		var typePurchased = purchased
+		for (section in sections) {
+			val sectionUnlocked = typePurchased >= section.rewardsForUnlock || (section is BattlePassViewController.Page && result.stats.level >= section.backing.LevelsNeededForUnlock)
+			queue.clear()
+			deferred.clear()
+			for (entry in section.entries) {
+				++result.totalItems
+				if (entry.purchaseRecord != null) {
+					++result.ownedItems
+					continue
+				}
+				val data = entry.backing as AthenaSeasonItemEntryReward
+				if (!data.bIsFreePassReward && !result.stats.book_purchased) {
+					--result.totalItems
+					continue
+				}
+				if (!sectionUnlocked) {
+					val price = data.price()
+					result.addUnpurchasable(price.CurrencyItemTemplate.PrimaryAssetName.toString(), price.Cost)
+					continue
+				}
+				if (data.RewardsNeededForUnlock != 0) {
+					deferred.add(data.RewardsNeededForUnlock to entry)
+				} else {
+					queue.add(entry)
+				}
+			}
+			deferred.forEach { queue.add(it.second) }
+			var sectionPurchased = section.purchased
+			for (entry in queue) {
+				val data = entry.backing as AthenaSeasonItemEntryReward
+				val price = data.price()
+				val currencyName = price.CurrencyItemTemplate.PrimaryAssetName.toString()
+				val currencyBalance = result.balances[currencyName] ?: 0
+				if (currencyBalance < price.Cost || (data.RewardsNeededForUnlock != 0 && sectionPurchased < data.RewardsNeededForUnlock) || (data.TotalRewardsNeededForUnlock != 0 && typePurchased < data.TotalRewardsNeededForUnlock)) {
+					result.addUnpurchasable(currencyName, price.Cost)
+					break
+				}
+				result.balances[currencyName] = currencyBalance - price.Cost
+				result.addPurchasable(data, currencyName, price.Cost)
+				++typePurchased
+				++sectionPurchased
+			}
+		}
+	}
+
+	private fun AthenaSeasonItemEntryReward.price() = BattlePassOffer.OfferPriceRowHandle.getRowMapped<AthenaBattlePassOfferPriceRow>()!!
+
+	private class GatherOffersResult(val stats: AthenaProfileStats) {
+		var balances = seasonCurrencyData.associateTo(hashMapOf()) { it.def.name to it.getBalance(stats) }
+		var totalItems = 0
+		var ownedItems = 0
+		val neededBalances = mutableMapOf<String, Int>()
+		val spentBalances = mutableMapOf<String, Int>()
+		val purchasableIds = mutableListOf<String>()
+
+		fun addPurchasable(data: AthenaSeasonItemEntryReward, currencyName: String, cost: Int) {
+			sumKV(spentBalances, currencyName, cost)
+			purchasableIds.add(data.BattlePassOffer.OfferId)
+		}
+
+		fun addUnpurchasable(currencyName: String, cost: Int) {
+			sumKV(neededBalances, currencyName, cost)
+		}
+	}
+
+	private enum class Type {
+		REWARDS,
+		QUESTS,
+		BONUSES,
+		CUSTOMIZATION,
 	}
 }
