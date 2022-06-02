@@ -18,8 +18,9 @@ class PingCommand : BrigadierCommand("ping", "Returns latency and API ping.") {
 	private fun execute(source: CommandSourceStack): Int {
 		val message = source.complete(Utils.loadingText("Pinging"))
 		val start = System.currentTimeMillis()
-		source.client.okHttpClient.newCall(Request.Builder().url(AccountService.BASE_URL_PROD + "api/version").build()).exec()
+		val response = source.client.okHttpClient.newCall(Request.Builder().url(AccountService.BASE_URL_PROD + "api/version").build()).exec()
 		val epicLatency = System.currentTimeMillis() - start
+		response.body?.close()
 		message.editMessage(
 			"🏓 Pong!\n" +
 			"Discord API: ${Formatters.num.format(message.timeCreated.toInstant().toEpochMilli() - (source.interaction ?: source.message!!).timeCreated.toInstant().toEpochMilli())}ms\n" +
