@@ -174,7 +174,7 @@ private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, 
 		title to rendered
 	}
 	if (entries.isEmpty()) {
-		throw SimpleCommandExceptionType(LiteralMessage("All users we're trying to display aren't eligible to do daily quests.")).create()
+		throw SimpleCommandExceptionType(LiteralMessage("None of your accounts have 3 dailies.")).create()
 	}
 	val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
 	var count = 0

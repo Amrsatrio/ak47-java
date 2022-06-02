@@ -103,7 +103,7 @@ class GiftHistoryCommand : BrigadierCommand("gifthistory", "Displays how much gi
 	}
 
 	private fun bulk(source: CommandSourceStack, users: Map<String, GameProfile>?): Int {
-		source.ensurePremium("View all the balance of all your accounts at once")
+		source.ensurePremium("View available gift slots on all your accounts")
 		source.loading("Getting history")
 		val embed = EmbedBuilder().setColor(COLOR_INFO)
 		val devices = source.client.savedLoginsManager.getAll(source.author.id)

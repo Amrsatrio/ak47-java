@@ -4,7 +4,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.tb24.discordbot.commands.BrigadierCommand
 import com.tb24.discordbot.commands.CommandSourceStack
 
-class WhoAmICommand : BrigadierCommand("whoami", "Shows the display name and account id of the account you are currently logged in as") {
+class WhoAmICommand : BrigadierCommand("whoami", "Shows the display name and account id of the account you are currently logged in as", arrayOf("wai")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it.source) }
 
