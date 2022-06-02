@@ -208,7 +208,7 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 		} else {
 			embed.setColor(COLOR_WARNING)
 			embed.setTitle("⚠ Claimed %,d of %,d %s offers".format(result.purchasableIds.size, unclaimed, battlePassOrFreePass))
-			embed.setDescription(notEnoughDescription)
+			embed.setDescription(result.spentBalances.renderBalanceMap() + " spent. " + notEnoughDescription)
 		}
 		if (!stats.book_purchased) {
 			embed.appendDescription('\n' + freePassDescription)
@@ -263,7 +263,7 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 				val currencyBalance = result.balances[currencyName] ?: 0
 				if (currencyBalance < price.Cost || (data.RewardsNeededForUnlock != 0 && sectionPurchased < data.RewardsNeededForUnlock) || (data.TotalRewardsNeededForUnlock != 0 && typePurchased < data.TotalRewardsNeededForUnlock)) {
 					result.addUnpurchasable(currencyName, price.Cost)
-					break
+					continue
 				}
 				result.balances[currencyName] = currencyBalance - price.Cost
 				result.addPurchasable(data, currencyName, price.Cost)
