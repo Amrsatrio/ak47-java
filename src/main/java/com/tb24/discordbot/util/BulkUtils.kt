@@ -84,6 +84,7 @@ fun <T> withDevice(source: CommandSourceStack, device: DeviceAuth, callback: (Se
 		return result
 	} catch (e: HttpException) {
 		if (users == null) {
+			source.session = source.client.internalSession
 			source.queryUsers_map(setOf(device.accountId))
 			users = source.userCache
 		}

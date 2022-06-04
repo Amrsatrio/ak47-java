@@ -251,9 +251,11 @@ private fun realMoneyPurchase(source: CommandSourceStack, offer: CatalogOffer, s
 	}).exec().body()!!.lineOffers.first().price
 	val priceFormatter = NumberFormat.getCurrencyInstance()
 	priceFormatter.currency = Currency.getInstance(rmPrice.currencyCode)
-	val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
-		.populateOffer(storeOffer, false)
-		.addField("Price", priceFormatter.format(rmPrice.discountPrice / 100.0) + (if (rmPrice.originalPrice != rmPrice.discountPrice) " ~~" + priceFormatter.format(rmPrice.originalPrice / 100.0) + "~~" else "") + if (rmPrice.vatRate > 0.0) '\n' + "VAT included if applicable" else "", false)
+	val embed = if (!source.unattended) {
+		EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
+			.populateOffer(storeOffer, false)
+			.addField("Price", priceFormatter.format(rmPrice.discountPrice / 100.0) + (if (rmPrice.originalPrice != rmPrice.discountPrice) " ~~" + priceFormatter.format(rmPrice.originalPrice / 100.0) + "~~" else "") + if (rmPrice.vatRate > 0.0) '\n' + "VAT included if applicable" else "", false)
+	} else null
 	if (true || rmPrice.discountPrice > 0) {
 		// Method 1: Let user access the payment UI
 		// Will not work on non EGS offers when they've reached some traffic threshold
@@ -262,7 +264,7 @@ private fun realMoneyPurchase(source: CommandSourceStack, offer: CatalogOffer, s
 		}
 		val purchaseToken = generatePurchaseToken(source, epicAppStoreId)
 		val purchaseLink = "https://payment-website-pci.ol.epicgames.com/payment/v1/purchase?purchaseToken=$purchaseToken&uePlatform=FNGame"
-		source.complete("Visit this link to purchase the item shown below:\n$purchaseLink", embed.build())
+		source.complete("Visit this link to purchase the item shown below:\n$purchaseLink", embed?.build())
 	} else {
 		source.loading("Purchasing " + storeOffer?.title)
 
@@ -342,7 +344,7 @@ private fun realMoneyPurchase(source: CommandSourceStack, offer: CatalogOffer, s
 		if (!confirmOrderResponse.getBoolean("confirmation")) {
 			throw SimpleCommandExceptionType(LiteralMessage("orderPreviewResponse.confirmation != true")).create()
 		}
-		source.complete(null, embed.setTitle("✅ Purchased").build())
+		source.complete(null, embed?.setTitle("✅ Purchased")?.build())
 	}
 	return Command.SINGLE_SUCCESS
 }

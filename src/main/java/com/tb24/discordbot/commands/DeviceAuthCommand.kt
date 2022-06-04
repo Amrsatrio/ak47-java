@@ -7,6 +7,7 @@ import com.google.gson.JsonSyntaxException
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
+import com.mojang.brigadier.arguments.BoolArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType.*
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.context.CommandContext
@@ -118,15 +119,18 @@ class SaveLoginCommand : BrigadierCommand("savelogin", "Saves the current accoun
 class DeleteSavedLoginCommand : BrigadierCommand("deletesavedlogin", "Removes the current account from the bot.", arrayOf("removesavedlogin")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it.source) }
+		.then(argument("delete locally?", BoolArgumentType.bool())
+			.executes { execute(it.source, BoolArgumentType.getBool(it, "delete locally?")) }
+		)
 
 	override fun getSlashCommand() = newCommandBuilder().executes(::execute)
 
-	private fun execute(source: CommandSourceStack): Int {
+	private fun execute(source: CommandSourceStack, deleteLocally: Boolean = false): Int {
 		source.ensureSession()
 		val user = source.api.currentLoggedIn
 		val dbDevice = source.client.savedLoginsManager.get(source.session.id, user.id)
 			?: throw SimpleCommandExceptionType(LiteralMessage("You don't have a saved login for this account (${user.displayName}).")).create()
-		return devicesDelete(source, dbDevice.deviceId)
+		return devicesDelete(source, dbDevice.deviceId, deleteLocally)
 	}
 }
 
@@ -220,7 +224,7 @@ private fun EmbedBuilder.populateDeviceAuthDetails(deviceAuth: DeviceAuth) =
 		.addField("Device ID", deviceAuth.deviceId, false)
 		.addField("Secret (Do not share!)", "||" + deviceAuth.secret + "||", false)
 
-fun devicesDelete(source: CommandSourceStack, deviceId: String): Int {
+fun devicesDelete(source: CommandSourceStack, deviceId: String, deleteLocally: Boolean = false): Int {
 	if (deviceId.length != 32) {
 		throw SimpleCommandExceptionType(LiteralMessage("The device ID should be a 32 character hexadecimal string")).create()
 	}
@@ -232,8 +236,10 @@ fun devicesDelete(source: CommandSourceStack, deviceId: String): Int {
 	try {
 		val embed = source.createEmbed()
 		val msgs = mutableListOf<String>()
-		source.api.accountService.deleteDeviceAuth(user.id, deviceId).exec()
-		msgs.add("Deleted device auth from the account.")
+		if (!deleteLocally) {
+			source.api.accountService.deleteDeviceAuth(user.id, deviceId).exec()
+			msgs.add("Deleted device auth from the account.")
+		}
 		if (dbDevice != null && dbDevice.deviceId == deviceId) {
 			source.client.savedLoginsManager.remove(sessionId, user.id)
 			msgs.add("Unregistered device auth from ${source.jda.selfUser.name}.")

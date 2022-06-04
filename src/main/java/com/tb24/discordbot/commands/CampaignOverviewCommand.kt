@@ -3,8 +3,10 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
+import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.QueryPublicProfile
@@ -12,12 +14,19 @@ import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
 import com.tb24.fn.model.mcpprofile.stats.CommonPublicProfileStats
 import com.tb24.fn.util.Formatters
 import me.fungames.jfortniteparse.fort.enums.EFortStatType.*
+import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.utils.TimeFormat
 import java.util.*
 
 class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statistics of an account.", arrayOf("profile")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.withPublicProfile(::execute, "Loading profile")
+		.then(literal("bulk")
+			.executes { bulkLevel(it.source) }
+			.then(argument("users", UserArgument.users(100))
+				.executes { bulkLevel(it.source, lazy { UserArgument.getUsers(it, "users").values }) }
+			)
+		)
 
 	private fun execute(source: CommandSourceStack, campaign: McpProfile): Int {
 		if (!source.unattended) {
@@ -114,5 +123,32 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 		SUPER_DELUXE("Super Deluxe"),
 		LIMITED("Limited"),
 		ULTIMATE("Ultimate")
+	}
+
+	private fun bulkLevel(source: CommandSourceStack, usersLazy: Lazy<Collection<GameProfile>>? = null): Int {
+		source.conditionalUseInternalSession()
+		source.loading("Getting profile data")
+		val entries = stwBulk(source, usersLazy) { campaign ->
+			val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:homebaseonboarding" }?.attributes?.get("completion_hbonboarding_completezone")?.asInt ?: 0) > 0
+			if (!completedTutorial) return@stwBulk null
+			val stats = campaign.stats as CampaignProfileStats
+			if (stats.level >= 310) return@stwBulk null
+			campaign.owner.displayName to stats.level
+		}
+		if (entries.isEmpty()) {
+			source.complete(null, EmbedBuilder().setDescription("✅ All accounts are level 310 or higher").build())
+			return 0
+		}
+		val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
+		val inline = entries.size >= 6
+		for (entry in entries) {
+			if (embed.fields.size == 25) {
+				source.complete(null, embed.build())
+				embed.clearFields()
+			}
+			embed.addField(entry.first, "%,d".format(entry.second), inline)
+		}
+		source.complete(null, embed.build())
+		return Command.SINGLE_SUCCESS
 	}
 }

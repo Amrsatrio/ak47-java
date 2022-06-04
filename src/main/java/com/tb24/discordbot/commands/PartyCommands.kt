@@ -9,6 +9,7 @@ import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.managers.PartyManager
 import com.tb24.discordbot.util.awaitOneInteraction
 import com.tb24.discordbot.util.exec
+import com.tb24.discordbot.util.forEachSavedAccounts
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.party.FMemberInfo
 import com.tb24.fn.model.party.FPartyInfo
@@ -145,6 +146,32 @@ class PartyKickAllCommand : BrigadierCommand("kickall", "Kicks all party members
 class LeavePartyCommand : BrigadierCommand("leaveparty", "Leaves the party", arrayOf("lp")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { partyLeave(it.source) }
+		.then(argument("users", UserArgument.users(3))
+			.executes { bulk(it.source, UserArgument.getUsers(it, "users", loadingText = null)) }
+		)
+
+	private fun bulk(source: CommandSourceStack, users: Map<String, GameProfile>): Int {
+		source.conditionalUseInternalSession()
+		val devices = source.client.savedLoginsManager.getAll(source.author.id)
+		if (devices.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("You don't have saved logins. Please perform `.savelogin` before continuing.")).create()
+		}
+		if (devices.none { it.accountId in users }) {
+			throw SimpleCommandExceptionType(LiteralMessage("You don't have saved accounts that are matching the name(s).")).create()
+		}
+		var counter = 0
+		val devicesOrdered = devices.filter { it.accountId in users }.sortedBy { users.keys.indexOf(it.accountId) }
+		forEachSavedAccounts(source, devicesOrdered) {
+			try {
+				partyLeave(source, false)
+				counter++
+			} catch (e: Exception) {
+				source.complete(e.message ?: "Unknown error")
+			}
+		}
+		source.complete("✅ Successfully left party on %,d user(s).".format(counter))
+		return Command.SINGLE_SUCCESS
+	}
 }
 
 class KickAllAndLeaveCommand : BrigadierCommand("kickallleave", "Kicks all party members and then leaves", arrayOf("kalp")) {
@@ -253,15 +280,19 @@ private fun partyPromote(source: CommandSourceStack, user: GameProfile): Int {
 	return Command.SINGLE_SUCCESS
 }
 
-private fun partyLeave(source: CommandSourceStack): Int {
+private fun partyLeave(source: CommandSourceStack, sendMessages: Boolean = true): Int {
 	source.ensureSession()
-	source.loading("Getting party info")
+	if (sendMessages) {
+		source.loading("Getting party info")
+	}
 	val partyManager = source.session.getPartyManager(source.api.currentLoggedIn.id)
 	partyManager.fetchParty()
 	if (partyManager.partyInfo == null) {
 		throw SimpleCommandExceptionType(LiteralMessage("You are not in a party.")).create()
 	}
 	partyManager.kick(source.api.currentLoggedIn.id)
-	source.complete(null, source.createEmbed().setDescription("✅ Left the party.").build())
+	if (sendMessages) {
+		source.complete(null, source.createEmbed().setDescription("✅ Left the party.").build())
+	}
 	return Command.SINGLE_SUCCESS
 }

@@ -61,7 +61,7 @@ class AutoDailyRewardsCommand : BrigadierCommand("autodaily", "Enroll/unenroll y
 			devices.chunked(30) {
 				val text = StringBuilder()
 				it.forEach { device ->
-					text.append("${Formatters.num.format(++i)}. ${users.firstOrNull{ it.id == device.accountId }?.displayName ?: device.accountId} ${if (autoClaimEntries.any { it.id == device.accountId && it.registrantId == discordId }) " ✅" else ""}\n")
+					text.append("${Formatters.num.format(++i)}. ${users.firstOrNull{ it.id == device.accountId }?.displayName.escapeMarkdown() ?: device.accountId} ${if (autoClaimEntries.any { it.id == device.accountId && it.registrantId == discordId }) " ✅" else ""}\n")
 				}
 				embed.addField("$first - $i", text.toString(), true)
 				first = i + 1

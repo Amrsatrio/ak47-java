@@ -113,21 +113,38 @@ class AutoResearchManager(val client: DiscordBot) {
 		results.add("Collected %s %,d".format(researchPointIcon?.asMention, ctx.collected))
 
 		// Research
-		var iteration = -1
-		val unpurchasableStats = hashSetOf<EFortStatType>()
-		while (unpurchasableStats.size < order.size) {
-			val statType = order[++iteration % order.size]
-			check(iteration < 1000) { "Too many iterations" }
-			if (statType in unpurchasableStats) {
-				continue
+		if (enrollment.newSystem) {
+			val statToResearch = order.first {
+				val stat = ctx.stats[it]!!
+				stat.researchLevel < 120
 			}
-			val stat = ctx.stats[statType]!!
-			if (stat.researchLevel >= 120 || ctx.points < stat.costToNextLevel) { // Max or not enough points
-				unpurchasableStats.add(statType)
-				continue
+			val stat = ctx.stats[statToResearch]!!
+			val start = stat.researchLevel
+			var end = stat.researchLevel
+			var totalCost = 0
+			while (ctx.points >= stat.costToNextLevel && stat.researchLevel < 120) {
+				totalCost += stat.costToNextLevel
+				end++
+				ctx.research(source.api, homebase, statToResearch)
 			}
-			ctx.research(source.api, homebase, statType)
-			results.add("%s %s: Lv %,d \u2192 Lv %,d for %s %,d".format(textureEmote(statType.icon)?.asMention, statType.displayName.format(), stat.researchLevel, stat.researchLevel + 1, researchPointIcon?.asMention, stat.costToNextLevel))
+			results.add(if (totalCost != 0) "%s %s: Lv %,d \u2192 Lv %,d for %s %,d".format(textureEmote(statToResearch.icon)?.asMention, statToResearch.displayName.format(), start, end, researchPointIcon?.asMention, totalCost) else "No research performed")
+		} else {
+			var iteration = -1
+			val unpurchasableStats = hashSetOf<EFortStatType>()
+			while (unpurchasableStats.size < order.size) {
+				val statType = order[++iteration % order.size]
+				check(iteration < 1000) { "Too many iterations" }
+				if (statType in unpurchasableStats) {
+					continue
+				}
+				val stat = ctx.stats[statType]!!
+				if (stat.researchLevel >= 120 || ctx.points < stat.costToNextLevel) { // Max or not enough points
+					unpurchasableStats.add(statType)
+					continue
+				}
+				ctx.research(source.api, homebase, statType)
+				results.add("%s %s: Lv %,d \u2192 Lv %,d for %s %,d".format(textureEmote(statType.icon)?.asMention, statType.displayName.format(), stat.researchLevel, stat.researchLevel + 1, researchPointIcon?.asMention, stat.costToNextLevel))
+			}
 		}
 
 		// Schedule next

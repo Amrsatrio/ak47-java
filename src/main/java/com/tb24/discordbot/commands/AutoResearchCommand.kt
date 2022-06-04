@@ -3,6 +3,7 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
+import com.mojang.brigadier.arguments.BoolArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.rethinkdb.RethinkDB.r
@@ -24,6 +25,13 @@ class AutoResearchCommand : BrigadierCommand("autoresearch", "Enroll/unenroll yo
 			source.conditionalUseInternalSession()
 			execute(source, null)
 		}
+		.then(argument("new system?", BoolArgumentType.bool())
+			.executes {
+				val source = it.source
+				source.conditionalUseInternalSession()
+				execute(source, null, BoolArgumentType.getBool(it, "new system?"))
+			}
+		)
 		.then(argument("saved account name", users(1))
 			.executes {
 				val source = it.source
@@ -35,7 +43,7 @@ class AutoResearchCommand : BrigadierCommand("autoresearch", "Enroll/unenroll yo
 			.executes { executeEmergencyStop(it.source) }
 		)
 
-	private fun execute(source: CommandSourceStack, user: GameProfile?): Int {
+	private fun execute(source: CommandSourceStack, user: GameProfile?, newSystem: Boolean = false): Int {
 		source.ensurePremium("Automatically research")
 		var accountId = user?.id
 		var user = user
@@ -57,7 +65,7 @@ class AutoResearchCommand : BrigadierCommand("autoresearch", "Enroll/unenroll yo
 				val text = StringBuilder()
 				it.forEach { device ->
 					val enrollment = autoClaimEntries.firstOrNull { it.id == device.accountId && it.registrantId == discordId }
-					text.append("${Formatters.num.format(++i)}. ${users.firstOrNull { it.id == device.accountId }?.displayName ?: device.accountId}${if (enrollment != null) " ✅ " + enrollment.nextRun.relativeFromNow() else ""}\n")
+					text.append("${Formatters.num.format(++i)}. ${users.firstOrNull { it.id == device.accountId }?.displayName.escapeMarkdown() ?: device.accountId}${if (enrollment != null) " ✅ " + enrollment.nextRun.relativeFromNow() + if (enrollment.newSystem) " (new)" else "" else ""}\n")
 				}
 				embed.addField("$first - $i", text.toString(), true)
 				first = i + 1
@@ -84,7 +92,7 @@ class AutoResearchCommand : BrigadierCommand("autoresearch", "Enroll/unenroll yo
 				throw SimpleCommandExceptionType(LiteralMessage("Another user of ${source.jda.selfUser.name} already have that account enrolled for auto claiming. An Epic account can only be enrolled once throughout the whole bot.")).create()
 			}
 			source.api.profileManager.dispatchPublicCommandRequest(user, QueryPublicProfile(), "campaign").await()
-			val data = AutoResearchEnrollment(accountId, discordId)
+			val data = AutoResearchEnrollment(accountId, discordId, newSystem)
 			check(data.ensureData(source))
 			r.table("auto_research").insert(data).run(source.client.dbConn)
 			source.client.autoResearchManager.schedule(data)

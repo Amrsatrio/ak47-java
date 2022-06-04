@@ -144,6 +144,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(RedeemCodeCommand())
 		register(RedeemPurchasesCommand())
 		register(RefreshProfileCommand())
+		register(RemoveGiftBoxCommand())
 		register(ResearchCommand())
 		register(ResourcesCommand())
 		register(RevokeCommand())
@@ -166,6 +167,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(WorkerSquadsCommand())
 		register(WorkersCommand())
 		register(WorthCommand())
+		register(XpBoostCommand())
 
 		// Web campaigns
 		register(WebCampaignCommand("zerobuild", "Zero Build Trials", "zerobuildtrials"))
