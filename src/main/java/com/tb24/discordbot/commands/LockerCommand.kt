@@ -112,6 +112,9 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		.then(literal("exclusivesanduniques")
 			.executes { exclusives(it.source, EnumSet.allOf(ExclusivesType::class.java)) }
 		)
+		.then(literal("recent")
+			.executes { recent(it.source) }
+		)
 		.then(literal("fortnitegg")
 			.executes { fortniteGG(it.source) }
 		)
@@ -251,6 +254,20 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		confirmationMsg.editMessageEmbeds(embed.setColor(COLOR_SUCCESS)
 			.setDescription("✅ " + (if (favorite) "Favorited %,d exclusives!" else "Unfavorited %,d exclusives!").format(toFavorite.size))
 			.build()).complete()
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun recent(source: CommandSourceStack): Int {
+		source.ensureSession()
+		source.loading("Getting cosmetics")
+		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
+		val athena = source.api.profileManager.getProfileData("athena")
+		val items = athena.items.values.filter { item ->
+			names.keys.any { it.substringBefore(':') == item.primaryAssetType } && (System.currentTimeMillis() - item.attributes.getDateISO("creation_time").time) <= 30L * 24L * 60L * 60L * 1000L
+		}
+		source.loading("Generating and uploading image")
+		generateAndSendLockerImage(source, items, GenerateLockerImageParams("Recent", "/Game/UI/Foundation/Textures/Icons/Manage/T-Icon-Manage-Recent-64.T-Icon-Manage-Recent-64")).await()
+			?: throw SimpleCommandExceptionType(LiteralMessage("No cosmetics acquired within the last 30 days.")).create()
 		return Command.SINGLE_SUCCESS
 	}
 

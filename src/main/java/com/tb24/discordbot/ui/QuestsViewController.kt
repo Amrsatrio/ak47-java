@@ -1,5 +1,6 @@
 package com.tb24.discordbot.ui
 
+import com.tb24.discordbot.commands.getQuestCompletion
 import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.assetdata.QuestCategoryData
 import com.tb24.fn.model.mcpprofile.McpProfile
@@ -89,6 +90,12 @@ class QuestsViewController(athena: McpProfile, knownCategories: List<QuestCatego
 				val shouldIncludeByIncludeTags = backing.IncludeTags == null || backing.IncludeTags.any { tags.getValue(it.toString()) != null }
 				val shouldIncludeByExcludeTags = backing.ExcludeTags == null || backing.ExcludeTags.none { tags.getValue(it.toString()) != null }
 				if (!shouldIncludeByIncludeTags || !shouldIncludeByExcludeTags) {
+					continue
+				}
+
+				// Skip if the progress is under the threshold
+				val (completion, _) = getQuestCompletion(quest)
+				if (completion < (questDef.Threshold ?: 0)) {
 					continue
 				}
 
