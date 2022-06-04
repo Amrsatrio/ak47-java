@@ -119,7 +119,7 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 		val buttons = mutableListOf<Button>()
 		val mtxEmote = Emoji.fromEmote(source.client.discord.getEmoteById(751101530626588713L)!!)
 		for (option in PurchaseOption.values()) {
-			val devName = "BR.Season%d.%s.01".format(stats.season_num, option)
+			val devName = "BR.Season%d.%s.01".format(stats.season_num, option.offerName)
 			val offer = storefront.catalogEntries.first { it.devName == devName }.holder().apply { resolve(source.api.profileManager) }
 			offers.add(offer)
 			if ((option.maxLevel == -1 || stats.level <= option.maxLevel) && offer.canPurchase && balance >= offer.price.basePrice) {
@@ -159,10 +159,10 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 		return purchaseOffer(source, offer.ce, quantity)
 	}
 
-	private enum class PurchaseOption(val displayName: String, val maxLevel: Int) {
-		BATTLE_PASS("Battle Pass", -1),
-		BP_25_LEVELS("25 Levels", 75),
-		SINGLE_TIER("Individual Levels", 99)
+	private enum class PurchaseOption(val offerName: String, val displayName: String, val maxLevel: Int) {
+		BATTLE_PASS("BattlePass", "Battle Pass", -1),
+		BP_25_LEVELS("BP25Levels", "25 Levels", 75),
+		SINGLE_TIER("SingleTier", "Individual Levels", 99)
 	}
 
 	private fun purchaseAllOffers(source: CommandSourceStack): Int {
