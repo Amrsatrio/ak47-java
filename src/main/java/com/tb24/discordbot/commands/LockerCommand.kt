@@ -159,6 +159,9 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		.then(subcommand("exclusives-and-uniques", "Shows your exclusive and \"unique\" cosmetics in an image.")
 			.executes { exclusives(it, EnumSet.allOf(ExclusivesType::class.java)) }
 		)
+		.then(subcommand("recent", "Shows your recent cosmetics in an image.")
+			.executes { recent(it) }
+		)
 		.then(subcommand("fortnitegg", "Shows your BR locker in Fortnite.GG website.")
 			.executes(::fortniteGG)
 		)

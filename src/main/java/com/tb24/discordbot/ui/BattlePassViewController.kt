@@ -14,9 +14,9 @@ import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText
 class BattlePassViewController(val athena: McpProfile) {
 	val stats = athena.stats as AthenaProfileStats
 	val purchasedBpOffers = stats.purchasedBpOffers
-	val seasonData = FortItemStack("AthenaSeason:athenaseason${stats.season_num}", 1).defData as? AthenaSeasonItemDefinition ?: error("Season data not found.")
-	val battleStarData = seasonData.getAdditionalDataOfType<AthenaSeasonItemData_BattleStar>()
-	val customSkinData = seasonData.getAdditionalDataOfType<AthenaSeasonItemData_CustomSkin>()
+	val seasonData = FortItemStack("AthenaSeason:athenaseason${stats.season_num}", 1).defData as? AthenaSeasonItemDefinition
+	val battleStarData = seasonData?.getAdditionalDataOfType<AthenaSeasonItemData_BattleStar>()
+	val customSkinData = seasonData?.getAdditionalDataOfType<AthenaSeasonItemData_CustomSkin>()
 
 	val rewards by lazy { battleStarData?.PageList?.let(::Type) }
 	val quests by lazy { battleStarData?.QuestPageList?.let(::Type) }

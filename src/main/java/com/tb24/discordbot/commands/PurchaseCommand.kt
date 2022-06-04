@@ -163,6 +163,9 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 	sd.getMeta("MaxConcurrentPurchases")?.toIntOrNull()?.let {
 		maxQuantity = maxQuantity.coerceAtMost(it)
 	}
+	if (".SingleTier." in sd.ce.devName) {
+		maxQuantity = Integer.MAX_VALUE
+	}
 	val quantity = if (quantity == -1) {
 		if (price.basePrice == 0) maxQuantity else (accountBalance / price.basePrice).coerceIn(1, maxQuantity)
 	} else {

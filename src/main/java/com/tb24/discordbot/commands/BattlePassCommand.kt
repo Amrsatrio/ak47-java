@@ -141,7 +141,7 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 		val offer = offers[choice.ordinal]
 		var quantity = 1
 		if (choice == PurchaseOption.SINGLE_TIER) {
-			val limit = min(balance / offer.price.basePrice, 100 - stats.book_level)
+			val limit = min(balance / offer.price.basePrice, 200 - stats.book_level)
 			if (limit > 1) {
 				source.complete("Enter the number of tiers you want to buy (1 - %,d, ⏱ 60s)".format(limit))
 				source.loadingMsg = botMessage
