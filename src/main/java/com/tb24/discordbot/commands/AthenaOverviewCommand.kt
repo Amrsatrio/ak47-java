@@ -231,7 +231,7 @@ val seasonCurrencyData by lazy {
 	fun gather(entries: List<Lazy<AthenaSeasonItemEntryBase>>) {
 		for (entry in entries) {
 			val reward = entry.value as? AthenaSeasonItemEntryOfferBase ?: continue
-			val price = reward.BattlePassOffer.OfferPriceRowHandle.getRowMapped<AthenaBattlePassOfferPriceRow>()!!
+			val price = reward.BattlePassOffer.OfferPriceRowHandle?.getRowMapped<AthenaBattlePassOfferPriceRow>() ?: continue
 			sumKV(totals, price.CurrencyItemTemplate.PrimaryAssetName.toString().toLowerCase(), price.Cost)
 		}
 	}

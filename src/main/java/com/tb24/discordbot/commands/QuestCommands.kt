@@ -402,7 +402,7 @@ fun getQuestCompletion(item: FortItemStack, allowCompletionCountOverride: Boolea
 
 fun getQuestsOfCategory(campaign: McpProfile, categoryName: String) =
 	campaign.items.values
-		.filter { it.primaryAssetType == "Quest" && it.attributes["quest_state"]?.asString == "Active" && (it.defData as? FortQuestItemDefinition)?.Category?.rowName?.toString() == categoryName }
+		.filter { it.primaryAssetType == "Quest" && it.attributes["quest_state"]?.asString == "Active" && (it.defData as? FortQuestItemDefinition)?.category?.rowName?.toString() == categoryName }
 		.sortedByDescending { (it.defData as FortQuestItemDefinition).SortPriority ?: 0 }
 
 class CategoryPaginatorComponents<T>(val select: SelectMenu.Builder, val event: CompletableFuture<String?>) : PaginatorCustomComponents<T> {

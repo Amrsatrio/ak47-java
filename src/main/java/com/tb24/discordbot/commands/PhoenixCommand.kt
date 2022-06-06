@@ -91,7 +91,7 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 		if (nextMajorData != null && nextMajorData != nextLevelData) {
 			embed.addField("Rewards for level ${Formatters.num.format(nextMajorIdx + /*index offset*/1)}", nextMajorData.VisibleReward.joinToString("\n") { FortItemStack(it.TemplateId, it.Quantity).renderWithIcon() }, true)
 		}
-		val venturesQuests = campaign.items.values.filter { it.primaryAssetType == "Quest" && it.attributes["quest_state"]?.asString == "Active" && (it.defData as? FortQuestItemDefinition)?.Category?.rowName?.text?.startsWith("Phoenix_") == true }
+		val venturesQuests = campaign.items.values.filter { it.primaryAssetType == "Quest" && it.attributes["quest_state"]?.asString == "Active" && (it.defData as? FortQuestItemDefinition)?.category?.rowName?.text?.startsWith("Phoenix_") == true }
 			.sortedByDescending { (it.defData as FortQuestItemDefinition).SortPriority ?: 0 }
 		for (item in venturesQuests) {
 			val defData = item.defData as FortQuestItemDefinition
