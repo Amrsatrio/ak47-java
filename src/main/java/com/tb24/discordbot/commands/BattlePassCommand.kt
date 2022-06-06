@@ -9,6 +9,7 @@ import com.tb24.discordbot.CatalogEntryHolder
 import com.tb24.discordbot.ui.BattlePassViewController
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
+import com.tb24.fn.model.assetdata.AthenaSeasonItemEntryOfferBase.AthenaBattlePassOffer
 import com.tb24.fn.model.assetdata.AthenaSeasonItemEntryReward
 import com.tb24.fn.model.assetdata.rows.AthenaBattlePassOfferPriceRow
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
@@ -188,9 +189,9 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 			return 0
 		}
 		val unclaimed = result.totalItems - result.ownedItems
-		val remainingAfterPurchase = unclaimed - result.purchasableIds.size
+		val remainingAfterPurchase = unclaimed - result.purchasableOffers.size
 		val notEnoughDescription = "${result.neededBalances.renderBalanceMap()} needed to claim ${(if (remainingAfterPurchase == result.totalItems) "all **%,d**" else "remaining **%,d**").format(remainingAfterPurchase)} offer(s). Go play more to earn those before the season ends!"
-		if (result.purchasableIds.isEmpty()) {
+		if (result.purchasableOffers.isEmpty()) {
 			source.complete(null, source.createEmbed().setColor(COLOR_ERROR)
 				.setTitle("❌ Can't claim anything left")
 				.setDescription(notEnoughDescription)
@@ -198,16 +199,16 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 			return 0
 		}
 		source.api.profileManager.dispatchClientCommandRequest(ExchangeGameCurrencyForBattlePassOffer().apply {
-			offerItemIdList = result.purchasableIds.toTypedArray()
+			offerItemIdList = result.purchasableOffers.map { it.OfferId }.toTypedArray()
 		}, "athena").await()
 		val embed = source.createEmbed()
 		if (remainingAfterPurchase == 0) {
 			embed.setColor(COLOR_SUCCESS)
-			embed.setTitle("✅ Claimed all %,d %s offers".format(result.purchasableIds.size, battlePassOrFreePass))
+			embed.setTitle("✅ Claimed all %,d %s offers".format(result.purchasableOffers.size, battlePassOrFreePass))
 			embed.setDescription(result.spentBalances.renderBalanceMap() + " spent.")
 		} else {
 			embed.setColor(COLOR_WARNING)
-			embed.setTitle("⚠ Claimed %,d of %,d %s offers".format(result.purchasableIds.size, unclaimed, battlePassOrFreePass))
+			embed.setTitle("⚠ Claimed %,d of %,d %s offers".format(result.purchasableOffers.size, unclaimed, battlePassOrFreePass))
 			embed.setDescription(result.spentBalances.renderBalanceMap() + " spent. " + notEnoughDescription)
 		}
 		if (!stats.book_purchased) {
@@ -225,40 +226,42 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 	}
 
 	private fun BattlePassViewController.Type.gatherPurchasableOffers(result: GatherOffersResult) {
-		val queue = mutableListOf<BattlePassViewController.Entry>()
-		val deferred = TreeSet<Pair<Int, BattlePassViewController.Entry>>() { a, b -> a.first - b.first }
+		val queue = mutableListOf<Pair<BattlePassViewController.Entry, AthenaBattlePassOfferPriceRow>>()
+		val deferred = TreeSet<Pair<Int, Pair<BattlePassViewController.Entry, AthenaBattlePassOfferPriceRow>>>() { a, b -> a.first - b.first }
 		var typePurchased = purchased
 		for (section in sections) {
 			val sectionUnlocked = typePurchased >= section.rewardsForUnlock || (section is BattlePassViewController.Page && result.stats.level >= section.backing.LevelsNeededForUnlock)
 			queue.clear()
 			deferred.clear()
 			for (entry in section.entries) {
+				val data = entry.backing as? AthenaSeasonItemEntryReward ?: continue
+				val price = data.price() ?: continue
+				if (price.Cost == -1) { // Included, automatically purchased by the backend
+					continue
+				}
 				++result.totalItems
 				if (entry.purchaseRecord != null) {
 					++result.ownedItems
 					continue
 				}
-				val data = entry.backing as AthenaSeasonItemEntryReward
 				if (!data.bIsFreePassReward && !result.stats.book_purchased) {
 					--result.totalItems
 					continue
 				}
 				if (!sectionUnlocked) {
-					val price = data.price()
 					result.addUnpurchasable(price.CurrencyItemTemplate.PrimaryAssetName.toString(), price.Cost)
 					continue
 				}
 				if (data.RewardsNeededForUnlock != 0) {
-					deferred.add(data.RewardsNeededForUnlock to entry)
+					deferred.add(data.RewardsNeededForUnlock to (entry to price))
 				} else {
-					queue.add(entry)
+					queue.add(entry to price)
 				}
 			}
 			deferred.forEach { queue.add(it.second) }
 			var sectionPurchased = section.purchased
-			for (entry in queue) {
+			for ((entry, price) in queue) {
 				val data = entry.backing as AthenaSeasonItemEntryReward
-				val price = data.price()
 				val currencyName = price.CurrencyItemTemplate.PrimaryAssetName.toString()
 				val currencyBalance = result.balances[currencyName] ?: 0
 				if (currencyBalance < price.Cost || (data.RewardsNeededForUnlock != 0 && sectionPurchased < data.RewardsNeededForUnlock) || (data.TotalRewardsNeededForUnlock != 0 && typePurchased < data.TotalRewardsNeededForUnlock)) {
@@ -273,7 +276,7 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 		}
 	}
 
-	private fun AthenaSeasonItemEntryReward.price() = BattlePassOffer.OfferPriceRowHandle.getRowMapped<AthenaBattlePassOfferPriceRow>()!!
+	private fun AthenaSeasonItemEntryReward.price() = BattlePassOffer.OfferPriceRowHandle?.getRowMapped<AthenaBattlePassOfferPriceRow>()
 
 	private class GatherOffersResult(val stats: AthenaProfileStats) {
 		var balances = seasonCurrencyData.associateTo(hashMapOf()) { it.def.name to it.getBalance(stats) }
@@ -281,11 +284,11 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 		var ownedItems = 0
 		val neededBalances = mutableMapOf<String, Int>()
 		val spentBalances = mutableMapOf<String, Int>()
-		val purchasableIds = mutableListOf<String>()
+		val purchasableOffers = mutableListOf<AthenaBattlePassOffer>()
 
 		fun addPurchasable(data: AthenaSeasonItemEntryReward, currencyName: String, cost: Int) {
 			sumKV(spentBalances, currencyName, cost)
-			purchasableIds.add(data.BattlePassOffer.OfferId)
+			purchasableOffers.add(data.BattlePassOffer)
 		}
 
 		fun addUnpurchasable(currencyName: String, cost: Int) {

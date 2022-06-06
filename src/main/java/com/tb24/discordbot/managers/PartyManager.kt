@@ -68,7 +68,7 @@ class PartyManager(private val api: EpicApi) {
 
 	fun updateMemberState(accountId: String, payload: MetaPatchPayload = MetaPatchPayload()): Response<Void> =
 		api.partyService.updateMemberState("Fortnite", partyInfo!!.id, accountId, payload.apply {
-			revision = partyInfo!!.revision
+			revision = getMember(accountId).revision
 		}).exec()
 
 	fun promote(accountId: String): Response<Void> =

@@ -14,6 +14,7 @@ import com.tb24.fn.model.assetdata.FortLevelOverlayConfig
 import com.tb24.fn.model.mcpprofile.commands.subgame.ClientQuestLogin
 import com.tb24.fn.util.Formatters.num
 import com.tb24.fn.util.getInt
+import com.tb24.fn.util.getString
 import com.tb24.uasset.JWPSerializer
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.exports.FortChallengeBundleItemDefinition
@@ -37,6 +38,7 @@ import java.util.*
 
 class ItemCollectCommand : BrigadierCommand("collectibles", "Shows collectibles you haven't collected this season.", arrayOf("xpcoins", STYLE_CURRENCY_SHORT_NAME)) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.requires { COLLECTIBLE_SCHEDULES.isNotEmpty() }
 		.executes { execute(it.source, true) }
 		.then(literal("nomap")
 			.executes { execute(it.source, false) }
@@ -49,6 +51,14 @@ class ItemCollectCommand : BrigadierCommand("collectibles", "Shows collectibles 
 	private fun execute(source: CommandSourceStack, withMap: Boolean): Int {
 		source.ensureSession()
 		source.loading("Getting collectibles data")
+
+		val dataFile = File("config/xp_coins_data.json")
+		if (!dataFile.exists()) {
+			throw SimpleCommandExceptionType(LiteralMessage("Data does not exist.")).create()
+		}
+		val objects = FileReader(dataFile).use(JsonParser::parseReader).asJsonArray
+		val validObjectiveBackendNames = objects.mapNotNullTo(hashSetOf()) { it.asJsonObject.getString("questBackendName") }
+
 		source.api.profileManager.dispatchClientCommandRequest(ClientQuestLogin(), "athena").await()
 		val athena = source.api.profileManager.getProfileData("athena")
 		val calendarResponse = source.api.fortniteService.calendarTimeline().exec().body()!!
@@ -64,7 +74,7 @@ class ItemCollectCommand : BrigadierCommand("collectibles", "Shows collectibles 
 		val schedules = mutableListOf<ScheduleData>()
 		val states = hashMapOf<String, Boolean>()
 		for (scheduleConfig in COLLECTIBLE_SCHEDULES) {
-			val schedule = items[scheduleConfig.name] ?: continue
+			val schedule = items[scheduleConfig.name.toLowerCase()] ?: continue
 			val scheduleDef = schedule.defData as? FortChallengeBundleScheduleDefinition ?: continue
 			val scheduleData = ScheduleData(scheduleConfig.displayName, scheduleDef)
 			schedules.add(scheduleData)
@@ -74,26 +84,37 @@ class ItemCollectCommand : BrigadierCommand("collectibles", "Shows collectibles 
 				if (bundleDef.GoalCardDisplayData != null) {
 					continue
 				}
-				val numberAtEnd = bundleDef.name.substringAfterLast("_").toIntOrNull()
+				val numberAtEnd = bundleDef.name.substringAfterLast("_").substringAfter('W').toIntOrNull()
 				val bundleName = numberAtEnd?.let { "Week $it" } ?: bundleDef.name
 				val bundleData = BundleData(bundleName, bundleDef, scheduleEntry)
-				scheduleData.bundles.add(bundleData)
 
 				for (questInfo in bundleDef.QuestInfos) {
 					val questDef = questInfo.QuestDefinition.load<FortQuestItemDefinition>() ?: continue
 					val quest = items[questDef.name.toLowerCase()] // No quest means not yet available
 					val shortName = questDef.DisplayName.toString().substringAfter(scheduleConfig.substringAfter)
 					val questData = QuestData(shortName, questDef)
-					bundleData.quests.add(questData)
+					var hasValidObjective = false
 
 					for (objective in questDef.Objectives) {
 						val backendName = objective.BackendName.toString().toLowerCase()
+						if (backendName !in validObjectiveBackendNames) {
+							continue
+						}
+						hasValidObjective = true
 						val completion = quest?.attributes?.getInt("completion_$backendName")
 						if (completion != null) {
 							questData.completions.add(completion)
 							states[backendName] = completion >= objective.Count
 						}
 					}
+
+					if (hasValidObjective) {
+						bundleData.quests.add(questData)
+					}
+				}
+
+				if (bundleData.quests.isNotEmpty()) {
+					scheduleData.bundles.add(bundleData)
 				}
 			}
 		}
@@ -134,6 +155,9 @@ class ItemCollectCommand : BrigadierCommand("collectibles", "Shows collectibles 
 					}
 
 					bundleCompleted += completed
+					if (completed != 0) {
+						println("break")
+					}
 					bundleMax += completions.size
 					if (completed < completions.size) {
 						lines.add("%s: **%,d** / %,d".format(questData.displayName, completed, completions.size) /*+ if (completionStr.isNotEmpty()) " `$completionStr`" else ""*/)
@@ -158,14 +182,9 @@ class ItemCollectCommand : BrigadierCommand("collectibles", "Shows collectibles 
 
 		source.loading("Generating and uploading map")
 		val map = MapImageGenerator()
-		val dataFile = File("config/xp_coins_data.json")
-		if (!dataFile.exists()) {
-			throw SimpleCommandExceptionType(LiteralMessage("We couldn't generate the map because the data does not exist.")).create()
-		}
-
 		val iconCache = hashMapOf<String, BufferedImage?>()
 
-		for (obj_ in FileReader(dataFile).use(JsonParser::parseReader).asJsonArray) {
+		for (obj_ in objects) {
 			val obj = obj_.asJsonObject
 			val backendName = obj["questBackendName"].asString
 			val state = states[backendName] ?: continue

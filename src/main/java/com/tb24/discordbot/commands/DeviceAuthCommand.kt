@@ -351,9 +351,9 @@ private fun importFromJson(source: CommandSourceStack, device: JsonObject) {
 	val accountId = device.get("accountId").asString
 	val deviceId = device.get("deviceId").asString
 	val secret = device.get("secret").asString
-	val authClient = device.get("authClient")?.asString ?: "FORTNITE_IOS_GAME_CLIENT"
-	val clientId = authClient.replace("_", "").run {
-			EAuthClient.values().firstOrNull { it.name.replace("_", "").equals(this, true) }?.clientId } ?: throw SimpleCommandExceptionType(LiteralMessage("Invalid auth client for account $accountId")).create()
+	val authClient = device.get("clientId")?.let {
+		EAuthClient.getByClientId(it.asString) ?: throw SimpleCommandExceptionType(LiteralMessage("Invalid auth client ID for account $accountId")).create()
+	} ?: EAuthClient.FORTNITE_IOS_GAME_CLIENT
 	val dbDevices = source.client.savedLoginsManager.getAll(source.session.id)
 	val dbDevice = dbDevices.firstOrNull { it.accountId == accountId }
 	if (dbDevice != null) {
@@ -363,7 +363,7 @@ private fun importFromJson(source: CommandSourceStack, device: JsonObject) {
 		this.accountId = accountId
 		this.deviceId = deviceId
 		this.secret = secret
-		this.clientId = clientId
+		this.clientId = authClient.clientId
 	})
 }
 
