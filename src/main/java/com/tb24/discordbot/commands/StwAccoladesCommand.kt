@@ -75,7 +75,7 @@ class StwAccoladesCommand : BrigadierCommand("stwaccolades", "Shows the amount o
 	private fun executeBulk(source: CommandSourceStack, usersLazy: Lazy<Collection<GameProfile>>? = null): Int {
 		source.conditionalUseInternalSession()
 		val entries = stwBulk(source, usersLazy) { campaign ->
-			val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:homebaseonboarding" }?.attributes?.get("completion_hbonboarding_completezone")?.asInt ?: 0) > 0
+			val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:outpostquest_t1_l1" }?.attributes?.get("completion_complete_outpost_1_1")?.asInt ?: 0) > 0
 			if (!completedTutorial) return@stwBulk null
 
 			val (current, max) = get(campaign)
