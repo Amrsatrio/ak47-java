@@ -1,5 +1,7 @@
 package com.tb24.discordbot.commands
 
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonObject
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
@@ -7,12 +9,11 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.managers.PartyManager
-import com.tb24.discordbot.util.awaitOneInteraction
-import com.tb24.discordbot.util.exec
-import com.tb24.discordbot.util.forEachSavedAccounts
+import com.tb24.discordbot.util.*
 import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.party.FMemberInfo
 import com.tb24.fn.model.party.FPartyInfo
+import com.tb24.fn.util.getString
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.buttons.Button
@@ -32,6 +33,7 @@ class PartyCommand : BrigadierCommand("party", "Manages your party.", arrayOf("p
 		.then(literal("kickallleave").executes { kickAll(it.source, true) })
 		.then(literal("promote").then(argument("user", UserArgument.users(1)).executes { partyPromote(it.source, UserArgument.getUsers(it, "user").values.first()) }))
 		.then(literal("leave").executes { partyLeave(it.source) })
+		.then(literal("dump").executes { partyDump(it.source) })
 
 	private fun party(source: CommandSourceStack): Int {
 		source.ensureSession()
@@ -281,8 +283,29 @@ private fun partyPromote(source: CommandSourceStack, user: GameProfile): Int {
 }
 
 private fun partyLeave(source: CommandSourceStack, sendMessages: Boolean = true): Int {
-	source.ensureSession()
+	val partyManager = requireParty(source)
+	partyManager.kick(source.api.currentLoggedIn.id)
 	if (sendMessages) {
+		source.complete(null, source.createEmbed().setDescription("✅ Left the party.").build())
+	}
+	return Command.SINGLE_SUCCESS
+}
+
+private fun partyDump(source: CommandSourceStack): Int {
+	source.ensureSession()
+	source.loading("Getting party info")
+	val partyManager = source.session.getPartyManager(source.api.currentLoggedIn.id)
+	partyManager.fetchParty()
+	val summary = source.api.okHttpClient.newCall(source.api.partyService.getUserSummary("Fortnite", source.api.currentLoggedIn.id).request()).exec().to<JsonObject>()
+	val party = summary.getAsJsonArray("current").firstOrNull()?.asJsonObject ?: throw SimpleCommandExceptionType(LiteralMessage("You are not in a party.")).create()
+	val prettyPrintGson = GsonBuilder().setPrettyPrinting().create()
+	source.complete(AttachmentUpload(prettyPrintGson.toJson(party).toByteArray(), party.getString("id") + ".json"))
+	return Command.SINGLE_SUCCESS
+}
+
+private fun requireParty(source: CommandSourceStack): PartyManager {
+	source.ensureSession()
+	if (!source.unattended) {
 		source.loading("Getting party info")
 	}
 	val partyManager = source.session.getPartyManager(source.api.currentLoggedIn.id)
@@ -290,9 +313,5 @@ private fun partyLeave(source: CommandSourceStack, sendMessages: Boolean = true)
 	if (partyManager.partyInfo == null) {
 		throw SimpleCommandExceptionType(LiteralMessage("You are not in a party.")).create()
 	}
-	partyManager.kick(source.api.currentLoggedIn.id)
-	if (sendMessages) {
-		source.complete(null, source.createEmbed().setDescription("✅ Left the party.").build())
-	}
-	return Command.SINGLE_SUCCESS
+	return partyManager
 }
