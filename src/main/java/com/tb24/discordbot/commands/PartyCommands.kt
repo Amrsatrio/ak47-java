@@ -212,7 +212,7 @@ private fun kickAll(source: CommandSourceStack, kickSelf: Boolean = false, loadi
 	val partyManager = source.session.getPartyManager(source.api.currentLoggedIn.id)
 	partyManager.fetchParty()
 	val partyInfo = partyManager.partyInfo ?: throw SimpleCommandExceptionType(LiteralMessage("You are not in a party.")).create()
-	if (partyInfo.members.size == 1) {
+	if (!kickSelf && partyInfo.members.size == 1) {
 		throw SimpleCommandExceptionType(LiteralMessage("You are the only member in the party.")).create()
 	}
 	if (partyInfo.members.firstOrNull { it.account_id == source.api.currentLoggedIn.id }!!.role != FMemberInfo.EPartyMemberRole.CAPTAIN) {
