@@ -69,9 +69,9 @@ class CampaignShopCommand : BrigadierCommand("stwshop", "Sends the current Save 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { executeShopText(it.source, ESubGame.Campaign) }
 		.then(literal("buyall")
-			.executes{ execBuyAllCampaign(it.source) }
+			.executes { execBuyAllCampaign(it.source) }
 			.then(literal("bulk")
-				.executes{ execBuyAllCampaignBulk(it.source, null) }
+				.executes { execBuyAllCampaignBulk(it.source, null) }
 			)
 			.then(argument("users", UserArgument.users(100))
 				.executes { execBuyAllCampaignBulk(it.source, UserArgument.getUsers(it, "users", loadingText = null)) }
