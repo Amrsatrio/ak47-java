@@ -14,6 +14,7 @@ import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.party.FMemberInfo
 import com.tb24.fn.model.party.FPartyInfo
 import com.tb24.fn.util.getString
+import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.buttons.Button
@@ -29,8 +30,8 @@ class PartyCommand : BrigadierCommand("party", "Manages your party.", arrayOf("p
 		.executes { party(it.source) }
 		.then(literal("invite").then(argument("user(s)", UserArgument.users(3)).executes { partyInvite(it.source, UserArgument.getUsers(it, "user(s)").values) }))
 		.then(literal("kick").then(argument("user(s)", UserArgument.users(3)).executes { partyKick(it.source, UserArgument.getUsers(it, "user(s)").values) }))
-		.then(literal("kickall").executes { kickAll(it.source) })
-		.then(literal("kickallleave").executes { kickAll(it.source, true) })
+		.then(literal("kickall").executes { it.source.complete(null, it.source.createEmbed().setDescription(kickAll(it.source)).build()); Command.SINGLE_SUCCESS })
+		.then(literal("kickallleave").executes { it.source.complete(null, it.source.createEmbed().setDescription(kickAll(it.source, true)).build()); Command.SINGLE_SUCCESS })
 		.then(literal("promote").then(argument("user", UserArgument.users(1)).executes { partyPromote(it.source, UserArgument.getUsers(it, "user").values.first()) }))
 		.then(literal("leave").executes { partyLeave(it.source) })
 		.then(literal("dump").executes { partyDump(it.source) })
@@ -142,7 +143,7 @@ class PartyCommand : BrigadierCommand("party", "Manages your party.", arrayOf("p
 
 class PartyKickAllCommand : BrigadierCommand("kickall", "Kicks all party members", arrayOf("ka")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { kickAll(it.source) }
+		.executes { it.source.complete(null, it.source.createEmbed().setDescription(kickAll(it.source)).build()); Command.SINGLE_SUCCESS }
 }
 
 class LeavePartyCommand : BrigadierCommand("leaveparty", "Leaves the party", arrayOf("lp")) {
@@ -179,12 +180,34 @@ class LeavePartyCommand : BrigadierCommand("leaveparty", "Leaves the party", arr
 class KickAllAndLeaveCommand : BrigadierCommand("kickallleave", "Kicks all party members and then leaves", arrayOf("kalp")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
-			kickAll(it.source, true)
+			it.source.complete(null, it.source.createEmbed().setDescription(kickAll(it.source, true)).build()); Command.SINGLE_SUCCESS
 		}
+		.then(argument("bulk users", UserArgument.users(5))
+			.executes {
+				val source = it.source
+				val users = UserArgument.getUsers(it, "bulk users")
+				val devices = source.client.savedLoginsManager.getAll(source.author.id).filter { it.accountId in users }
+				if (devices.isEmpty()) {
+					throw SimpleCommandExceptionType(LiteralMessage("No saved accounts with the name(s) given.")).create()
+				}
+				val embed = EmbedBuilder().setTitle("Kalp results").setColor(COLOR_SUCCESS)
+				forEachSavedAccounts(source, devices) {
+					try {
+						embed.addField(source.api.currentLoggedIn.displayName, kickAll(source, true), false)
+					} catch(e: Exception) {
+						embed.addField(source.api.currentLoggedIn.displayName, "❌ ${e.message.toString()}", false)
+					}
+				}
+				source.complete(null, embed.build())
+				Command.SINGLE_SUCCESS
+			}
+		)
 }
 
-private fun kickAll(source: CommandSourceStack, kickSelf: Boolean = false): Int {
-	source.loading("Getting party info")
+private fun kickAll(source: CommandSourceStack, kickSelf: Boolean = false, loadingMessage: Boolean = true): String {
+	if (loadingMessage) {
+		source.loading("Getting party info")
+	}
 	source.ensureSession()
 	val partyManager = source.session.getPartyManager(source.api.currentLoggedIn.id)
 	partyManager.fetchParty()
@@ -207,8 +230,7 @@ private fun kickAll(source: CommandSourceStack, kickSelf: Boolean = false): Int 
 		partyManager.kick(source.api.currentLoggedIn.id)
 		numKicked++
 	}
-	source.complete(null, source.createEmbed().setDescription("✅ Kicked %,d party member%s.".format(numKicked, if (numKicked == 1) "" else "s")).build())
-	return Command.SINGLE_SUCCESS
+	return "✅ Kicked %,d party member%s.".format(numKicked, if (numKicked == 1) "" else "s")
 }
 private fun partyInvite(source: CommandSourceStack, users: Collection<GameProfile>): Int {
 	source.ensureSession()
