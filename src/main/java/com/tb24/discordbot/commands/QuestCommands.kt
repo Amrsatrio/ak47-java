@@ -96,7 +96,7 @@ abstract class BaseQuestsCommand(name: String, description: String, private val 
 		)
 		node.then(literal("bulkf")
 			.then(argument("filter", greedyString())
-				.executes { bulkFilter(it.source, categoryName, getString(it, "filter").split(","))}
+				.executes { executeQuestsBulk(it.source, categoryName, filters = getString(it, "filter").split(","))}
 			)
 		)
 		node.then(literal("bulk3")
@@ -151,7 +151,7 @@ private fun executeQuests(source: CommandSourceStack, campaign: McpProfile, cate
 
 private val xrayIcon by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-Items-Currency-X-RayLlama-L.T-Items-Currency-X-RayLlama-L") }
 
-private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, usersLazy: Lazy<Collection<GameProfile>>? = null, maxDailiesOnly: Boolean = false): Int {
+private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, usersLazy: Lazy<Collection<GameProfile>>? = null, maxDailiesOnly: Boolean = false, filters: List<String> = listOf()): Int {
 	source.conditionalUseInternalSession()
 	val foundersWithMaxdailies = mutableListOf<String>()
 	val entries = stwBulk(source, usersLazy) { campaign ->
@@ -159,7 +159,11 @@ private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, 
 		if (!completedTutorial) return@stwBulk null
 		val quests = getQuestsOfCategory(campaign, categoryName)
 		if (maxDailiesOnly && quests.size < 3 && categoryName == "DailyQuests") return@stwBulk null
-		val rendered = quests.joinToString("\n") { renderChallenge(it, "\u2800", null, allowBold = false) }
+		val rendered = if (filters.isEmpty()) {
+			quests.joinToString("\n") { renderChallenge(it, "\u2800", null, allowBold = false) }
+		} else {
+			quests.filter { quest -> filters.any { quest.displayName.contains(it, true) } }.also { if (it.isEmpty()) return@stwBulk null }.joinToString("\n") { renderChallenge(it, "\u2800", null, allowBold = false) }
+		}
 		var title = campaign.owner.displayName
 		if (categoryName == "DailyQuests") {
 			val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
@@ -198,39 +202,11 @@ private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, 
 	if (foundersWithMaxdailies.isNotEmpty()) {
 		if (maxDailiesOnly) {
 			embed.setFooter("%d account%s".format(foundersWithMaxdailies.size, if (foundersWithMaxdailies.size == 1) "" else "s"), Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Boost/T-Icon-FoundersBadge-128.T-Icon-FoundersBadge-128"))
+		} else if (filters.isNotEmpty()) {
+			embed.setFooter("%,d account%s, %,d with 3 dailies: %s".format(entries.size, if (entries.size == 1) "" else "s", foundersWithMaxdailies.size, foundersWithMaxdailies.joinToString(", ")))
 		} else {
 			embed.setFooter("3 dailies (%d): %s".format(foundersWithMaxdailies.size, foundersWithMaxdailies.joinToString(", ")), Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Boost/T-Icon-FoundersBadge-128.T-Icon-FoundersBadge-128"))
 		}
-	}
-	source.complete(null, embed.build())
-	return Command.SINGLE_SUCCESS
-}
-
-private fun bulkFilter(source: CommandSourceStack, categoryName: String, filters: List<String>): Int {
-	source.conditionalUseInternalSession()
-	var count = 0
-	val entries = stwBulk(source, null) {campaign ->
-		val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:outpostquest_t1_l3" }?.attributes?.get("completion_complete_outpost_1_3")?.asInt ?: 0) > 0
-		if (!completedTutorial) return@stwBulk null
-		val quests = getQuestsOfCategory(campaign, categoryName)
-		val filtered = quests.filter { quest -> filters.any { quest.displayName.contains(it, true) } }.also { if (it.isEmpty()) return@stwBulk null }
-		val rendered = filtered.joinToString("\n") { renderChallenge(it, "\u2800", null, allowBold = false) }
-		count++
-		campaign.owner.displayName to rendered
-	}
-	if (entries.isEmpty()) {
-		throw SimpleCommandExceptionType(LiteralMessage("Couldn't find any accounts with that quest.")).create()
-	}
-	val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
-	for (entry in entries) {
-		if (embed.fields.size == 25) {
-			source.complete(null, embed.build())
-			embed.clearFields()
-		}
-		embed.addField(entry.first, entry.second, false)
-	}
-	if (count > 4) {
-		embed.setFooter("%,d accounts".format(count), null)
 	}
 	source.complete(null, embed.build())
 	return Command.SINGLE_SUCCESS
