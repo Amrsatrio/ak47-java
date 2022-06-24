@@ -96,7 +96,7 @@ abstract class BaseQuestsCommand(name: String, description: String, private val 
 		)
 		node.then(literal("bulkf")
 			.then(argument("filter", greedyString())
-				.executes { bulkFilter(it.source, getString(it, "filter").split(","))}
+				.executes { bulkFilter(it.source, categoryName, getString(it, "filter").split(","))}
 			)
 		)
 		node.then(literal("bulk3")
@@ -206,13 +206,13 @@ private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, 
 	return Command.SINGLE_SUCCESS
 }
 
-private fun bulkFilter(source: CommandSourceStack, filters: List<String>): Int {
+private fun bulkFilter(source: CommandSourceStack, categoryName: String, filters: List<String>): Int {
 	source.conditionalUseInternalSession()
 	var count = 0
 	val entries = stwBulk(source, null) {campaign ->
 		val completedTutorial = (campaign.items.values.firstOrNull { it.templateId == "Quest:outpostquest_t1_l3" }?.attributes?.get("completion_complete_outpost_1_3")?.asInt ?: 0) > 0
 		if (!completedTutorial) return@stwBulk null
-		val quests = getQuestsOfCategory(campaign, "DailyQuests")
+		val quests = getQuestsOfCategory(campaign, categoryName)
 		val filtered = quests.filter { quest -> filters.any { quest.displayName.contains(it, true) } }.also { if (it.isEmpty()) return@stwBulk null }
 		val rendered = filtered.joinToString("\n") { renderChallenge(it, "\u2800", null, allowBold = false) }
 		count++
