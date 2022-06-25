@@ -203,7 +203,7 @@ private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, 
 		if (maxDailiesOnly) {
 			embed.setFooter("%d account%s".format(foundersWithMaxdailies.size, if (foundersWithMaxdailies.size == 1) "" else "s"), Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Boost/T-Icon-FoundersBadge-128.T-Icon-FoundersBadge-128"))
 		} else if (filters.isNotEmpty()) {
-			embed.setFooter("%,d account%s, %,d with 3 dailies: %s".format(entries.size, if (entries.size == 1) "" else "s", foundersWithMaxdailies.size, foundersWithMaxdailies.joinToString(", ")))
+			embed.setFooter("%,d account%s, 3 dailies (%,d): %s".format(entries.size, if (entries.size == 1) "" else "s", foundersWithMaxdailies.size, foundersWithMaxdailies.joinToString(", ")))
 		} else {
 			embed.setFooter("3 dailies (%d): %s".format(foundersWithMaxdailies.size, foundersWithMaxdailies.joinToString(", ")), Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Boost/T-Icon-FoundersBadge-128.T-Icon-FoundersBadge-128"))
 		}
