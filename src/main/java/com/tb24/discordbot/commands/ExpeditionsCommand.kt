@@ -21,7 +21,7 @@ import me.fungames.jfortniteparse.fort.exports.FortExpeditionItemDefinition
 import me.fungames.jfortniteparse.fort.objects.rows.Recipe
 import me.fungames.jfortniteparse.ue4.objects.core.i18n.FText
 import me.fungames.jfortniteparse.ue4.objects.gameplaytags.FGameplayTagContainer
-import net.dv8tion.jda.api.entities.Emoji
+import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.buttons.Button
 import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
@@ -73,9 +73,9 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 		val ongoingExpeditions = campaign.items.values.filter { it.primaryAssetType == "Expedition" && it.getAttributes(FortExpeditionItem::class.java).expedition_start_time != null }
 		val completedExpeditions = ongoingExpeditions.filter { System.currentTimeMillis() >= it.getAttributes(FortExpeditionItem::class.java).expedition_end_time.time }
 		embed.appendDescription("%s %,d / %,d - %s %,d / %,d - %s %,d / %,d".format(
-			textureEmote("/Game/UI/Foundation/Textures/Icons/SkillTree/T-Icon-ST-Struck-128.T-Icon-ST-Struck-128")?.asMention, landAvailable, 2,
-			textureEmote("/Game/UI/Foundation/Textures/Icons/SkillTree/T-Icon-ST-Speedboat-128.T-Icon-ST-Speedboat-128")?.asMention, seaAvailable, 2,
-			textureEmote("/Game/UI/Foundation/Textures/Icons/SkillTree/T-Icon-ST-Helicopter-128.T-Icon-ST-Helicopter-128")?.asMention, airAvailable, 2))
+			textureEmote("/Game/UI/Foundation/Textures/Icons/SkillTree/T-Icon-ST-Struck-128.T-Icon-ST-Struck-128")?.formatted, landAvailable, 2,
+			textureEmote("/Game/UI/Foundation/Textures/Icons/SkillTree/T-Icon-ST-Speedboat-128.T-Icon-ST-Speedboat-128")?.formatted, seaAvailable, 2,
+			textureEmote("/Game/UI/Foundation/Textures/Icons/SkillTree/T-Icon-ST-Helicopter-128.T-Icon-ST-Helicopter-128")?.formatted, airAvailable, 2))
 		if (totalAvailable > 0) {
 			embed.appendDescription("\n%,d Available Expeditions!".format(totalAvailable))
 		}
@@ -95,7 +95,7 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 		val typeIconPath = expeditionTypeIcon(ctx.type)
 		val typeEmote = textureEmote(typeIconPath)!!
 		val requirements = mutableListOf<String>()
-		requirements.add(typeEmote.asMention + ' ' + expeditionTypeTitle(ctx.type).format())
+		requirements.add(typeEmote.formatted + ' ' + expeditionTypeTitle(ctx.type).format())
 		ctx.recipe.RecipeCosts.mapTo(requirements) { it.asItemStack().renderWithIcon() }
 		val embed = source.createEmbed()
 			.setTitle(ctx.expedition.displayName)
@@ -104,19 +104,19 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 				ctx.attrs.expedition_max_target_power,
 				StringUtil.formatElapsedTime((ctx.defData.ExpeditionDuration_Minutes * 60 * 1000).toLong(), false),
 				ctx.defData.Description.format(),
-				survivorEmote.asMention,
-				typeEmote.asMention))
+				survivorEmote.formatted,
+				typeEmote.formatted))
 			.setFooter("Expires")
 			.setTimestamp(ctx.attrs.expedition_expiration_end_time.toInstant())
 			.addField("Requirements", requirements.joinToString("\n"), true)
 			.addField("Slot Bonuses", if (ctx.criteriaRequirements.isNotEmpty()) ctx.criteriaRequirements.joinToString("\n") { criteriaRequirement ->
-				textureEmote(heroTypeIcon(criteriaRequirement.RequiredTag.toString()))?.asMention + ' ' + (if (criteriaRequirement.bRequireRarity) criteriaRequirement.RequiredRarity.rarityName.format() + ' ' else "") + heroTypeTitle(criteriaRequirement.RequiredTag.toString()).format()
+				textureEmote(heroTypeIcon(criteriaRequirement.RequiredTag.toString()))?.formatted + ' ' + (if (criteriaRequirement.bRequireRarity) criteriaRequirement.RequiredRarity.rarityName.format() + ' ' else "") + heroTypeTitle(criteriaRequirement.RequiredTag.toString()).format()
 			} else "None", true)
 			.addField("Rewards", ctx.recipe.RecipeResults.joinToString("\n") { it.asItemStack().renderWithIcon() }, true)
 		val buttons = mutableListOf<Button>()
 		buttons.add(Button.of(ButtonStyle.PRIMARY, "start", "Start Expedition", Emoji.fromUnicode("✅")))
-		buttons.add(Button.of(ButtonStyle.PRIMARY, "changeSlot", "Change Slot", Emoji.fromEmote(survivorEmote)))
-		buttons.add(Button.of(ButtonStyle.PRIMARY, "changeVehicle", "Change Vehicle", Emoji.fromEmote(typeEmote)))
+		buttons.add(Button.of(ButtonStyle.PRIMARY, "changeSlot", "Change Slot", survivorEmote))
+		buttons.add(Button.of(ButtonStyle.PRIMARY, "changeVehicle", "Change Vehicle", typeEmote))
 		val message = source.complete(null, embed.build(), ActionRow.of(buttons))
 		return when (message.awaitOneInteraction(source.author, false, 120000L).componentId) {
 			"start" -> start(source, ctx)

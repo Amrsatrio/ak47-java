@@ -77,7 +77,7 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 				?: FortItemStack(questTemplateId, 1)
 			val (completion, max) = getQuestCompletion(questItem)
 			"%s **%s:**\n%,d/%,d (%s)".format(
-				textureEmote(questItem.defData.LargePreviewImage.toString())?.asMention,
+				textureEmote(questItem.defData.LargePreviewImage.toString())?.formatted,
 				questItem.displayName,
 				completion, max,
 				Formatters.percentZeroFraction.format(completion.toDouble() / max.toDouble())
@@ -89,9 +89,9 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 		), true)
 		val sb = StringBuilder()
 		sb.append(arrayOf(arrayOf(Fortitude, Offense), arrayOf(Resistance, Technology)).joinToString("\n") { line ->
-			line.joinToString(" ") { statType -> "%s %,d".format(textureEmote(statType.icon)?.asMention, stats.research_levels[statType]) }
+			line.joinToString(" ") { statType -> "%s %,d".format(textureEmote(statType.icon)?.formatted, stats.research_levels[statType]) }
 		})
-		sb.append("\n%s %,d".format(textureEmote("/Game/UI/Foundation/Textures/Icons/Currency/T-Icon-ResearchPoint-128.T-Icon-ResearchPoint-128")?.asMention, researchPoints))
+		sb.append("\n%s %,d".format(textureEmote("/Game/UI/Foundation/Textures/Icons/Currency/T-Icon-ResearchPoint-128.T-Icon-ResearchPoint-128")?.formatted, researchPoints))
 		embed.addField("Research", sb.toString(), true)
 		embed.addField("Collection Book", "**Level:** %,d\n**Spent for Unslotting:** %,d".format(
 			stats.collection_book.maxBookXpLevelAchieved,

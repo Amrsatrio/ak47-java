@@ -4,11 +4,14 @@ import com.mojang.brigadier.StringReader
 import com.mojang.brigadier.arguments.ArgumentType
 import com.mojang.brigadier.context.CommandContext
 import com.tb24.discordbot.commands.CommandSourceStack
-import net.dv8tion.jda.api.entities.*
+import net.dv8tion.jda.api.entities.IMentionable
 import net.dv8tion.jda.api.entities.Message.MentionType
+import net.dv8tion.jda.api.entities.MessageChannel
+import net.dv8tion.jda.api.entities.Role
+import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.entities.emoji.CustomEmoji
+import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.utils.MiscUtil.parseSnowflake
-import net.dv8tion.jda.internal.JDAImpl
-import net.dv8tion.jda.internal.entities.EmoteImpl
 import java.util.*
 import java.util.regex.Matcher
 
@@ -32,7 +35,7 @@ class MentionArgument private constructor(private val mentionType: MentionType) 
 					MentionType.USER -> setOf(source.jda.retrieveUserById(id).complete())
 					MentionType.ROLE -> (source.guild?.getRoleById(id) ?: source.jda.getRoleById(id))?.let(Collections::singleton)
 					MentionType.CHANNEL -> source.jda.getChannelById(MessageChannel::class.java, id)?.let(Collections::singleton)
-					MentionType.EMOTE -> source.jda.getEmoteById(id)?.let(Collections::singleton)
+					MentionType.EMOJI -> source.jda.getEmojiById(id)?.let(Collections::singleton)
 					else -> null
 				} ?: emptySet()
 			}
@@ -40,7 +43,7 @@ class MentionArgument private constructor(private val mentionType: MentionType) 
 				MentionType.USER -> processMentions(input, HashSet(), true, ::matchUser)
 				MentionType.ROLE -> processMentions(input, HashSet(), true, ::matchRole)
 				MentionType.CHANNEL -> processMentions(input, HashSet(), true, ::matchTextChannel)
-				MentionType.EMOTE -> processMentions(input, HashSet(), true, ::matchEmote)
+				MentionType.EMOJI -> processMentions(input, HashSet(), true, ::matchEmoji)
 				else -> emptySet()
 			}
 		}
@@ -75,11 +78,11 @@ class MentionArgument private constructor(private val mentionType: MentionType) 
 			return source.jda.getChannelById(MessageChannel::class.java, channelId)
 		}
 
-		private fun matchEmote(m: Matcher): Emote? {
-			val emoteId = parseSnowflake(m.group(2))
+		private fun matchEmoji(m: Matcher): CustomEmoji {
+			val emojiId = parseSnowflake(m.group(2))
 			val name = m.group(1)
 			val animated = m.group(0).startsWith("<a:")
-			return source.jda.getEmoteById(emoteId) ?: EmoteImpl(emoteId, source.jda as JDAImpl).setName(name).setAnimated(animated)
+			return source.jda.getEmojiById(emojiId) ?: Emoji.fromCustom(name, emojiId, animated)
 		}
 	}
 

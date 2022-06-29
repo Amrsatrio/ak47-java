@@ -29,7 +29,7 @@ import me.fungames.jfortniteparse.fort.exports.variants.FortCosmeticVariantBacke
 import me.fungames.jfortniteparse.util.printHexBinary
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
-import net.dv8tion.jda.api.entities.Emoji
+import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.buttons.Button
@@ -116,7 +116,7 @@ private fun execute(source: CommandSourceStack, item: FortItemStack, profile: Mc
 	val owned = item.itemId != null
 	val embed = EmbedBuilder().setColor(item.palette.Color2.toColor())
 		.setAuthor((item.defData?.Series?.value?.DisplayName ?: item.rarity.rarityName).format() + " \u00b7 " + item.shortDescription.format())
-		.setTitle((if (item.isItemSeen) "" else bangEmote?.asMention + ' ') + (if (owned) "" else "Preview: ") + item.displayName.ifEmpty { defData.name })
+		.setTitle((if (item.isItemSeen) "" else bangEmote?.formatted + ' ') + (if (owned) "" else "Preview: ") + item.displayName.ifEmpty { defData.name })
 		.setDescription(item.description)
 		.setThumbnail(Utils.benBotExportAsset(item.getPreviewImagePath(true)?.toString()))
 		.setFooter(defData.name)
@@ -178,14 +178,14 @@ private fun execute(source: CommandSourceStack, item: FortItemStack, profile: Mc
 		if (isEquipped) {
 			buttons.add(Button.of(ButtonStyle.SECONDARY, "equip", "Equipped", Emoji.fromUnicode("✅")).asDisabled())
 		} else {
-			buttons.add(Button.of(ButtonStyle.SECONDARY, "equip", "Equip", equipEmote?.let(Emoji::fromEmote)))
+			buttons.add(Button.of(ButtonStyle.SECONDARY, "equip", "Equip", equipEmote))
 		}
 	} else {
 		val equippedIndices = currentLoadout.locker_slots_data.getSlotItems(category).withIndex().filter { it.value == item.templateId }.map { it.index + 1 }
 		if (equippedIndices.isNotEmpty()) {
 			embed.setFooter("Equipped at slot(s) " + equippedIndices.joinToString(", "))
 		}
-		buttons.add(Button.of(ButtonStyle.SECONDARY, "equipTo", "Equip to...", equipEmote?.let(Emoji::fromEmote)))
+		buttons.add(Button.of(ButtonStyle.SECONDARY, "equipTo", "Equip to...", equipEmote))
 	}
 
 	// Prepare variants
@@ -202,20 +202,20 @@ private fun execute(source: CommandSourceStack, item: FortItemStack, profile: Mc
 			"%s: %s".format(it.channelName, it.activeVariantDisplayName)
 		}, false)
 		if (numItems == 1) { // TODO support editing variants for multiple slot items
-			buttons.add(Button.of(ButtonStyle.SECONDARY, "editVariants", "Edit styles", editStylesEmote?.let(Emoji::fromEmote)))
+			buttons.add(Button.of(ButtonStyle.SECONDARY, "editVariants", "Edit styles", editStylesEmote))
 		}
 	}
 
 	// Favorite button
 	if (item.isFavorite) {
-		buttons.add(Button.of(ButtonStyle.SUCCESS, "favorite", "Favorited", favoritedEmote?.let(Emoji::fromEmote)))
+		buttons.add(Button.of(ButtonStyle.SUCCESS, "favorite", "Favorited", favoritedEmote))
 	} else {
-		buttons.add(Button.of(ButtonStyle.SECONDARY, "favorite", "Favorite", favoriteEmote?.let(Emoji::fromEmote)))
+		buttons.add(Button.of(ButtonStyle.SECONDARY, "favorite", "Favorite", favoriteEmote))
 	}
 
 	// Mark seen button
 	if (!item.isItemSeen) {
-		buttons.add(Button.of(ButtonStyle.SECONDARY, "markSeen", "Mark seen", bangEmote?.let(Emoji::fromEmote)))
+		buttons.add(Button.of(ButtonStyle.SECONDARY, "markSeen", "Mark seen", bangEmote))
 	}
 
 	val message = source.complete(alert, embed.build(), ActionRow.of(buttons))
@@ -379,7 +379,7 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 			}
 			var option = SelectOption.of(variantDisplayName, backendName)
 			if (lockReason != null) {
-				option = option.withDescription(lockReason.format().ifEmpty { null }).withEmoji(Emoji.fromEmote(lockEmote!!))
+				option = option.withDescription(lockReason.format().ifEmpty { null }).withEmoji(lockEmote)
 			}
 			options.add(option)
 		}
@@ -397,7 +397,7 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 
 fun askChoice(source: CommandSourceStack, embed: EmbedBuilder, options: List<SelectOption>, hint: String): Pair<String?, String?> {
 	val selected = if (options.size > 25) {
-		embed.addFieldSeparate(hint, options, inline = true) { (it.emoji?.asMention?.let { "$it " } ?: "") + it.label }
+		embed.addFieldSeparate(hint, options, inline = true) { (it.emoji?.formatted?.let { "$it " } ?: "") + it.label }
 		embed.setFooter("Type the number of the option you want to select, or 'cancel' to return.")
 		val message = source.complete(null, embed.build())
 		source.loadingMsg = message

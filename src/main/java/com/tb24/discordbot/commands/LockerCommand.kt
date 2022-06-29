@@ -388,7 +388,7 @@ class LockerEntry(val cosmetic: FortItemStack, queryAccountIds: MutableCollectio
 	}
 
 	fun addTo(embed: EmbedBuilder, source: CommandSourceStack) {
-		val title = "%s %s".format(getEmoteByName(cosmetic.rarity.name.toLowerCase() + '2')?.asMention, if (displayName.isNullOrEmpty()) cosmetic.primaryAssetName.toLowerCase() else displayName)
+		val title = "%s %s".format(getEmoteByName(cosmetic.rarity.name.toLowerCase() + '2')?.formatted, if (displayName.isNullOrEmpty()) cosmetic.primaryAssetName.toLowerCase() else displayName)
 		val descriptionParts = mutableListOf<String>()
 		defData?.ItemVariants?.forEach { lazyVariant ->
 			val variantContainer = VariantContainer(lazyVariant.value, backendVariants)

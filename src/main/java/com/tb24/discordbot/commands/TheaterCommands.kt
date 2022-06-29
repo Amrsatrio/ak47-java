@@ -233,7 +233,7 @@ private fun FortAvailableMissionData.render(theater: FortTheaterMapData, mission
 	val title = "%s[%,d] %s %s%s%s".format(
 		strike,
 		difficulty.RecommendedRating,
-		textureEmote(missionGenerator?.MissionIcon?.ResourceObject?.getPathName())?.asMention,
+		textureEmote(missionGenerator?.MissionIcon?.ResourceObject?.getPathName())?.formatted,
 		missionGenerator?.MissionName?.format() ?: MissionGenerator.toString().substringAfterLast('.'),
 		strike,
 		if (hasCompletedMissionAlert) " ✅" else ""

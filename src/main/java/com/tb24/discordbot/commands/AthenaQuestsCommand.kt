@@ -129,7 +129,7 @@ class AthenaQuestsCommand : BrigadierCommand("brquests", "Shows your active BR q
 				} else {
 					val dd = goalCard!!.displayData
 					val tier = dd.MilestoneTier
-					"\n" + (tier?.let { textureEmote(GoalCard.Level.fromTier(it).medalTexture)?.asMention + ' ' } ?: "") + "__**" + (tier?.let { "[%,d] ".format(it) } ?: "") + dd.HeaderText.format() + "**__\n" + (goalCard.subHeaderText?.let { "$it\n" } ?: "")
+					"\n" + (tier?.let { textureEmote(GoalCard.Level.fromTier(it).medalTexture)?.formatted + ' ' } ?: "") + "__**" + (tier?.let { "[%,d] ".format(it) } ?: "") + dd.HeaderText.format() + "**__\n" + (goalCard.subHeaderText?.let { "$it\n" } ?: "")
 				}
 			} else "") + renderChallenge(quest.quest, rewardsPrefix = "\u2800")
 		}

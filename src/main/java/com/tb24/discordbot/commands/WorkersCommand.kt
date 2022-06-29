@@ -23,8 +23,7 @@ import com.tb24.fn.util.getPathName
 import me.fungames.jfortniteparse.fort.enums.EFortStatType
 import me.fungames.jfortniteparse.fort.objects.rows.HomebaseSquad.ESquadSlotType
 import net.dv8tion.jda.api.MessageBuilder
-import net.dv8tion.jda.api.entities.Emote
-
+import net.dv8tion.jda.api.entities.emoji.Emoji
 
 class WorkersCommand : BrigadierCommand("survivors", "Shows your or a given player's survivors.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -43,7 +42,7 @@ class WorkersCommand : BrigadierCommand("survivors", "Shows your or a given play
 		}
 		source.replyPaginated(survivors, 10) { content, page, pageCount ->
 			val embed = source.createEmbed(campaign.owner).setTitle("Survivors")
-			val nothing = getEmoteByName("nothing")?.asMention ?: ""
+			val nothing = getEmoteByName("nothing")?.formatted ?: ""
 			embed.setDescription(content.joinToString("\n") { item ->
 				renderWorker(item, nothing)
 			})
@@ -137,8 +136,8 @@ class WorkerSquadsCommand : BrigadierCommand("survivorsquads", "Shows your or a 
 			val synergyCategory = ItemTypeResolver.matchCategory(squad.backing.ManagerSynergyTag.toString(), true)
 			val synergyCategoryIcon = textureEmote(synergyCategory?.CategoryBrush?.Brush_XL?.ResourceObject?.getPathName())
 			val embed = source.createEmbed(campaign.owner)
-				.setTitle(synergyCategoryIcon?.asMention + ' ' + squad.backing.DisplayName)
-				.setDescription("%s +%,d (+%,d team)".format(textureEmote(statType.icon)?.asMention, squad.getStatBonus(statType), squad.getStatBonus(statTypeTeam)))
+				.setTitle(synergyCategoryIcon?.formatted + ' ' + squad.backing.DisplayName)
+				.setDescription("%s +%,d (+%,d team)".format(textureEmote(statType.icon)?.formatted, squad.getStatBonus(statType), squad.getStatBonus(statTypeTeam)))
 				.setFooter("Squad %,d of %,d".format(page + 1, pageCount))
 
 			// Calculate set bonuses
@@ -151,7 +150,7 @@ class WorkerSquadsCommand : BrigadierCommand("survivorsquads", "Shows your or a 
 				}
 				val slotItem = slot.item
 				val itemText = slotItem?.let { renderWorker(it, "") } ?: "<Empty>"
-				embed.addField(slot.backing.DisplayName.format(), "%s +%,d".format(itemText, slot.bonuses.values.sum()), slot.backing.SlotType != ESquadSlotType.SurvivorSquadLeadSurvivor)
+				embed.addField(slot.backing.DisplayName.format().orEmpty(), "%s +%,d".format(itemText, slot.bonuses.values.sum()), slot.backing.SlotType != ESquadSlotType.SurvivorSquadLeadSurvivor)
 				if (slotItem != null) {
 					// set bonuses section preparation
 					if (slot.personalityMatch) {
@@ -170,15 +169,15 @@ class WorkerSquadsCommand : BrigadierCommand("survivorsquads", "Shows your or a 
 			val setBonuses = mutableListOf<String>()
 			// - Leader Match
 			if (squad.managerMatch) {
-				setBonuses.add("✅" + ' ' + synergyCategoryIcon?.asMention + ' ' + "**Leader Match**")
+				setBonuses.add("✅" + ' ' + synergyCategoryIcon?.formatted + ' ' + "**Leader Match**")
 			} else {
-				setBonuses.add("❌" + ' ' + synergyCategoryIcon?.asMention + ' ' + "Leader Match")
+				setBonuses.add("❌" + ' ' + synergyCategoryIcon?.formatted + ' ' + "Leader Match")
 			}
 
-			fun simple(icon: Emote?, title: String?, a: Int, b: Int) = setBonuses.add(if (a < b) {
-				"❌ %s %,d/%,d %s".format(icon?.asMention, a, b, title)
+			fun simple(icon: Emoji?, title: String?, a: Int, b: Int) = setBonuses.add(if (a < b) {
+				"❌ %s %,d/%,d %s".format(icon?.formatted, a, b, title)
 			} else {
-				"✅ %s **%,d/%,d %s**".format(icon?.asMention, a, b, title)
+				"✅ %s **%,d/%,d %s**".format(icon?.formatted, a, b, title)
 			})
 
 			// - Personality Match
@@ -344,14 +343,14 @@ class WorkerSquadsCommand : BrigadierCommand("survivorsquads", "Shows your or a 
 	}
 }
 
-private fun renderWorker(item: FortItemStack, nothing: String = getEmoteByName("nothing")?.asMention ?: ""): String {
+private fun renderWorker(item: FortItemStack, nothing: String = getEmoteByName("nothing")?.formatted ?: ""): String {
 	val itemTypeResolver = ItemTypeResolver.resolveItemType(item)
 	val dn = item.displayName
 	return "%s%s%s%s Lv%,d%s".format(
-		getEmoteByName(item.rarity.name.toLowerCase() + '2')?.asMention ?: nothing,
-		textureEmote(itemTypeResolver.leftImg)?.asMention ?: nothing,
-		textureEmote(itemTypeResolver.middleImg)?.asMention ?: nothing,
-		textureEmote(itemTypeResolver.rightImg)?.asMention ?: nothing,
+		getEmoteByName(item.rarity.name.toLowerCase() + '2')?.formatted ?: nothing,
+		textureEmote(itemTypeResolver.leftImg)?.formatted ?: nothing,
+		textureEmote(itemTypeResolver.middleImg)?.formatted ?: nothing,
+		textureEmote(itemTypeResolver.rightImg)?.formatted ?: nothing,
 		item.attributes["level"]?.asInt ?: 0,
 		if (dn.isNotEmpty()) " $dn" else ""
 	)

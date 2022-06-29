@@ -21,7 +21,6 @@ import com.tb24.fn.util.countMtxCurrency
 import com.tb24.fn.util.format
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
-import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.buttons.Button
 import java.util.*
@@ -69,13 +68,13 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 					"**%,d** / %,d claimed\n`%s`".format(page.purchased, page.entries.size, Utils.progress(page.purchased, page.entries.size, 32))
 				} else {
 					if (page is BattlePassViewController.Page) {
-						"%s Claim **%,d more rewards** or reach **Level %,d** to unlock page!".format(lockEmote?.asMention, page.rewardsForUnlock - page.parent.purchased, page.backing.LevelsNeededForUnlock)
+						"%s Claim **%,d more rewards** or reach **Level %,d** to unlock page!".format(lockEmote?.formatted, page.rewardsForUnlock - page.parent.purchased, page.backing.LevelsNeededForUnlock)
 					} else {
-						"%s Claim **%,d more rewards** to unlock section!".format(lockEmote?.asMention, page.rewardsForUnlock - page.parent.purchased)
+						"%s Claim **%,d more rewards** to unlock section!".format(lockEmote?.formatted, page.rewardsForUnlock - page.parent.purchased)
 					}
 				})
 				.addField("Offers", page.entries.joinToString("\n") { it.render(context.stats) }, false)
-				.addField("Balance", "%s %,d".format(battleStarEmote?.asMention, context.stats.battlestars), false)
+				.addField("Balance", "%s %,d".format(battleStarEmote?.formatted, context.stats.battlestars), false)
 				.setFooter("Page %,d of %,d".format(pageNum + 1, pageCount))
 			MessageBuilder(embed)
 		}
@@ -90,11 +89,11 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 			val price = offer.OfferPriceRowHandle.getRowMapped<AthenaBattlePassOfferPriceRow>()!!
 			val priceText = if (price.Cost != -1) {
 				val priceItem = price.asItemStack()
-				"%s %,d".format(getItemIconEmoji(priceItem)?.asMention, priceItem.quantity)
+				"%s %,d".format(getItemIconEmoji(priceItem)?.formatted, priceItem.quantity)
 			} else {
 				"Included!"
 			}
-			return "`%d` %s%s [%s]".format(index + 1, if (locked) lockEmote?.asMention + " " else "", item.renderWithIcon(), priceText) + if (purchaseRecord != null) " ✅" else ""
+			return "`%d` %s%s [%s]".format(index + 1, if (locked) lockEmote?.formatted + " " else "", item.renderWithIcon(), priceText) + if (purchaseRecord != null) " ✅" else ""
 		}
 		return "Can't render: " + backing.exportType
 	}
@@ -118,7 +117,7 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 		val storefront = source.client.catalogManager.catalogData!!.storefronts.first { it.name == "BRSeason" + stats.season_num }
 		val offers = mutableListOf<CatalogEntryHolder>()
 		val buttons = mutableListOf<Button>()
-		val mtxEmote = Emoji.fromEmote(source.client.discord.getEmoteById(751101530626588713L)!!)
+		val mtxEmote = source.client.discord.getEmojiById(751101530626588713L)!!
 		for (option in PurchaseOption.values()) {
 			val devName = "BR.Season%d.%s.01".format(stats.season_num, option.offerName)
 			val offer = storefront.catalogEntries.first { it.devName == devName }.holder().apply { resolve(source.api.profileManager) }
@@ -221,7 +220,7 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 	private fun Map<String, Int>.renderBalanceMap(): String {
 		return entries.joinNiceString { (currencyName, count) ->
 			val currencyData = seasonCurrencyData.firstOrNull { it.def.name == currencyName }!!
-			"%s **%,d**".format(textureEmote(currencyData.def.LargePreviewImage.toString())?.asMention, count)
+			"%s **%,d**".format(textureEmote(currencyData.def.LargePreviewImage.toString())?.formatted, count)
 		}
 	}
 

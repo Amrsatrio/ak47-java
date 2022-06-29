@@ -4,6 +4,7 @@ import com.tb24.discordbot.util.CollectorEndReason.*
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageReaction
 import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.entities.emoji.CustomEmoji
 import net.dv8tion.jda.api.events.channel.ChannelDeleteEvent
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent
@@ -95,7 +96,7 @@ class ReactionCollector : Collector<MessageReaction, ReactionCollectorOptions> {
 		checkEnd()
 	}
 
-	private inline fun MessageReaction.key() = reactionEmote.run { if (isEmote) idLong else emoji }
+	private inline fun MessageReaction.key() = emoji.run { if (this is CustomEmoji) idLong else name }
 }
 
 inline fun Message.createReactionCollector(noinline filter: CollectorFilter<MessageReaction>, options: ReactionCollectorOptions = ReactionCollectorOptions()) =

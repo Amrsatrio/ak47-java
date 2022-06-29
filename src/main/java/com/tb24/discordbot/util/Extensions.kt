@@ -49,6 +49,7 @@ import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import me.fungames.jfortniteparse.util.printHexBinary
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.*
+import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.ComponentInteraction
 import net.dv8tion.jda.api.interactions.components.buttons.Button
@@ -235,7 +236,7 @@ fun FortItemStack.render(displayQty: Int = quantity, showIcons: Boolean = true, 
 			val defaultRarityEmotes = listOf("⬜", "🟩", "🟦", "🟪", "🟧", "🟨")
 			sb.append(defaultRarityEmotes[rarity.ordinal])
 		} else {
-			sb.append(getEmoteByName(rarity.name.toLowerCase() + '2')?.asMention ?: rarity.rarityName.format())
+			sb.append(getEmoteByName(rarity.name.toLowerCase() + '2')?.formatted ?: rarity.rarityName.format())
 		}
 		sb.append(' ')
 	}
@@ -251,9 +252,9 @@ fun FortItemStack.render(displayQty: Int = quantity, showIcons: Boolean = true, 
 		val middle = textureEmote(itemTypeResolver.middleImg)
 		val right = textureEmote(itemTypeResolver.rightImg)
 		val left = textureEmote(itemTypeResolver.leftImg)
-		middle?.let { sb.append(it.asMention) }
-		right?.let { sb.append(it.asMention) }
-		left?.let { sb.append(it.asMention) }
+		middle?.let { sb.append(it.formatted) }
+		right?.let { sb.append(it.formatted) }
+		left?.let { sb.append(it.formatted) }
 		if (middle != null || right != null || left != null) {
 			sb.append(' ')
 		}
@@ -300,7 +301,7 @@ fun FortItemStack.render(displayQty: Int = quantity, showIcons: Boolean = true, 
 
 fun FortItemStack.renderWithIcon(displayQty: Int = quantity, bypassWhitelist: Boolean = false, showType: Boolean = false): String {
 	transformedDefData // resolves this item if it is FortConditionalResourceItemDefinition
-	return (getItemIconEmoji(this, bypassWhitelist)?.run { "$asMention " } ?: "") + render(displayQty, showRarity = RARITY_HIDE, showType = showType)
+	return (getItemIconEmoji(this, bypassWhitelist)?.run { "$formatted " } ?: "") + render(displayQty, showRarity = RARITY_HIDE, showType = showType)
 }
 
 fun getSurvivorPersonalityText(personalityTag: String): FText? {
@@ -329,12 +330,12 @@ fun getSurvivorSetBonusText(setBonusTag: String): FText? {
 
 fun CatalogItemPrice.icon(): String = when (currencyType) {
 	EStoreCurrencyType.MtxCurrency -> Utils.MTX_EMOJI
-	EStoreCurrencyType.GameItem -> getItemIconEmoji(FortItemStack(currencySubType, 1))?.asMention ?: currencySubType
+	EStoreCurrencyType.GameItem -> getItemIconEmoji(FortItemStack(currencySubType, 1))?.formatted ?: currencySubType
 	else -> currencyType.name
 }
 
-fun CatalogItemPrice.emote(): Emote? = when (currencyType) {
-	EStoreCurrencyType.MtxCurrency -> DiscordBot.instance.discord.getEmoteById(751101530626588713L)
+fun CatalogItemPrice.emote(): Emoji? = when (currencyType) {
+	EStoreCurrencyType.MtxCurrency -> DiscordBot.instance.discord.getEmojiById(751101530626588713L)
 	EStoreCurrencyType.GameItem -> getItemIconEmoji(FortItemStack(currencySubType, 1))
 	else -> null
 }
@@ -478,7 +479,7 @@ fun Message.awaitOneReaction(source: CommandSourceStack, inTime: Long = 60000L) 
 		max = 1
 		time = inTime
 		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
-	}).await().first().reactionEmote.name
+	}).await().first().emoji.name
 
 fun Message.awaitOneInteraction(author: User, inFinalizeComponentsOnEnd: Boolean = true, inTime: Long = 60000L): ComponentInteraction {
 	val interaction = awaitMessageComponentInteractions({ _, user, _ -> user?.idLong == author.idLong }, AwaitMessageComponentInteractionsOptions().apply {
@@ -585,7 +586,7 @@ val PUBLIC_EXTERNAL_AUTH_TYPES = arrayOf("psn", "xbl", "nintendo")
 fun GameProfile.renderPublicExternalAuths() = if (externalAuths == null) emptyList() else PUBLIC_EXTERNAL_AUTH_TYPES.mapNotNull { externalAuths[it] }.map {
 	val type = it.type
 	val externalDisplayName = it.externalDisplayName
-	(externalAuthEmote(type)?.asMention ?: type) + ' ' + (if (externalDisplayName.isNullOrEmpty()) "<linked>" else externalDisplayName.escapeMarkdown())
+	(externalAuthEmote(type)?.formatted ?: type) + ' ' + (if (externalDisplayName.isNullOrEmpty()) "<linked>" else externalDisplayName.escapeMarkdown())
 }
 
 val Token.jwtPayload: JsonObject? get() {

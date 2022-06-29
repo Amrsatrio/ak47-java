@@ -17,7 +17,6 @@ import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.commands.campaign.PopulatePrerolledOffers
 import com.tb24.fn.util.getString
 import net.dv8tion.jda.api.MessageBuilder
-import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.components.ActionRow
@@ -114,7 +113,7 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 				if (sd.purchaseLimit >= 0) {
 					s += " (%,d left)".format(sd.purchaseLimit - sd.purchasesCount)
 				}
-				Button.of(ButtonStyle.PRIMARY, "purchase:" + sd.ce.offerId, s, price.emote()?.let(Emoji::fromEmote))
+				Button.of(ButtonStyle.PRIMARY, "purchase:" + sd.ce.offerId, s, price.emote())
 					.withDisabled(sd.owned || sd.purchaseLimit >= 0 && sd.purchasesCount >= sd.purchaseLimit || accountBalance < price.basePrice)
 			})
 			rows.add(row)

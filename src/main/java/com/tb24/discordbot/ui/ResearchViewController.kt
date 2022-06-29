@@ -15,7 +15,7 @@ import com.tb24.fn.model.mcpprofile.stats.CampaignProfileStats
 import com.tb24.fn.util.getDateISO
 import me.fungames.jfortniteparse.fort.enums.EFortStatType
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
-import net.dv8tion.jda.api.entities.Emote
+import net.dv8tion.jda.api.entities.emoji.Emoji
 import java.util.*
 import kotlin.math.min
 import kotlin.jvm.JvmField as F
@@ -98,7 +98,7 @@ class ResearchViewController {
 		val currentBonusPersonal: Int
 		val currentBonusTeam: Int
 		val costToNextLevel: Int
-		val statIconEmote: Emote
+		val statIconEmote: Emoji
 
 		init {
 			val s = statType.name.toLowerCase()

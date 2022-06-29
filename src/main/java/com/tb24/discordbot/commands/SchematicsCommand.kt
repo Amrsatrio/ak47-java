@@ -55,7 +55,7 @@ class SchematicsCommand : BrigadierCommand("schematics", "Lists your or a given 
 					alterations.add(alterationId.asString)
 				} else {
 					val tier = if (alteration.AlterationType != EFortAlteration.GameplaySlot && alterationItem.primaryAssetType != "Defender") {
-						getEmoteByName(alterationItem.rarity.name.toLowerCase() + '2')?.asMention + ' '
+						getEmoteByName(alterationItem.rarity.name.toLowerCase() + '2')?.formatted + ' '
 					} else ""
 					alterations.add(tier + (alteration.Description.format() ?: alteration.DisplayName.format() ?: alterationId.asString))
 				}

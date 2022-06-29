@@ -25,8 +25,8 @@ import me.fungames.jfortniteparse.fort.exports.FortAbilityKit
 import me.fungames.jfortniteparse.fort.exports.FortHeroGameplayDefinition
 import me.fungames.jfortniteparse.fort.exports.FortHeroType
 import net.dv8tion.jda.api.MessageBuilder
-import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.ComponentInteraction
 import net.dv8tion.jda.api.interactions.components.buttons.Button

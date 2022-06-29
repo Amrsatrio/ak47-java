@@ -52,7 +52,7 @@ class StwAccoladesCommand : BrigadierCommand("stwaccolades", "Shows the amount o
 			.setTitle("STW Battle Royale XP")
 			.addField(if (current >= max) "✅ Daily limit reached" else "Daily limit progress", "`%s`\n%,d / %,d %s".format(
 				Utils.progress(current, max, 32),
-				current, max, xpEmote?.asMention), false)
+				current, max, xpEmote?.formatted), false)
 		if (!result.outdated) {
 			result.tracker.attributes.getAsJsonArray("match_accolades")?.forEach { matchAccolade_ ->
 				val matchAccolade = matchAccolade_.asJsonObject
@@ -63,9 +63,9 @@ class StwAccoladesCommand : BrigadierCommand("stwaccolades", "Shows the amount o
 					val accoladeToGrant = accoladeToGrant_.asJsonObject
 					val (type, name) = accoladeToGrant.getString("templateToGrant")!!.split(':')
 					val accoladeDef = AssetManager.INSTANCE.assetRegistry.lookup(type, name)?.let { loadObject<FortAccoladeItemDefinition>(it.objectPath) }
-					"%,d \u00d7 %s - %,d %s".format(accoladeToGrant.getInt("numToGrant"), accoladeDef?.DisplayName?.format() ?: name, accoladeToGrant.getInt("realXPGranted"), xpEmote?.asMention)
+					"%,d \u00d7 %s - %,d %s".format(accoladeToGrant.getInt("numToGrant"), accoladeDef?.DisplayName?.format() ?: name, accoladeToGrant.getInt("realXPGranted"), xpEmote?.formatted)
 				}
-				embed.addField("Last mission: %s - %,d %s".format(missionName, matchAccolade.getInt("totalXPEarnedInMatch"), xpEmote?.asMention), accoladesText, true)
+				embed.addField("Last mission: %s - %,d %s".format(missionName, matchAccolade.getInt("totalXPEarnedInMatch"), xpEmote?.formatted), accoladesText.orEmpty(), true)
 			}
 		}
 		source.complete(null, embed.build())
@@ -79,7 +79,7 @@ class StwAccoladesCommand : BrigadierCommand("stwaccolades", "Shows the amount o
 			if (!completedTutorial) return@stwBulk null
 
 			val (current, max) = get(campaign)
-			campaign.owner.displayName to if (current >= max) "✅" else "%,d / %,d %s".format(current, max, xpEmote?.asMention)
+			campaign.owner.displayName to if (current >= max) "✅" else "%,d / %,d %s".format(current, max, xpEmote?.formatted)
 		}
 		if (entries.isEmpty()) {
 			throw SimpleCommandExceptionType(LiteralMessage("All users we're trying to display have not completed the STW tutorial.")).create()

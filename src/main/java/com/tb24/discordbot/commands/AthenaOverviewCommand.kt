@@ -65,7 +65,7 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 		val inventory = source.api.fortniteService.inventorySnapshot(source.api.currentLoggedIn.id).exec().body()!!
 		val embed = source.createEmbed()
 			.setTitle(getFriendlySeasonText(stats.season_num))
-			.addField("%s Level %,d".format((if (stats.book_purchased) battlePassEmote else freePassEmote)?.asMention, stats.level), "`%s`\n%,d / %,d".format(Utils.progress(stats.xp, xpToNextLevel, 32), stats.xp, xpToNextLevel), false)
+			.addField("%s Level %,d".format((if (stats.book_purchased) battlePassEmote else freePassEmote)?.formatted, stats.level), "`%s`\n%,d / %,d".format(Utils.progress(stats.xp, xpToNextLevel, 32), stats.xp, xpToNextLevel), false)
 		if (nextLevelReward != null) {
 			embed.addField("Rewards for level %,d".format(stats.level + 1), nextLevelReward.renderWithIcon(), false)
 			embed.setThumbnail(Utils.benBotExportAsset(nextLevelReward.getPreviewImagePath(true)?.toString()))
@@ -85,16 +85,16 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 			embed.addField("Supercharged XP", restedXpText, false)
 		}
 		val seasonResources = seasonCurrencyData.mapTo(mutableListOf()) {
-			"%s %s **%,d**".format(it.def.DisplayName.format(), textureEmote(it.def.LargePreviewImage.toString())?.asMention, it.getBalance(stats))
+			"%s %s **%,d**".format(it.def.DisplayName.format(), textureEmote(it.def.LargePreviewImage.toString())?.formatted, it.getBalance(stats))
 		}
-		seasonResources.add("%s %s **%,d**".format("Bars", barsEmote?.asMention, inventory.stash["globalcash"] ?: 0))
+		seasonResources.add("%s %s **%,d**".format("Bars", barsEmote?.formatted, inventory.stash["globalcash"] ?: 0))
 		embed.addField("Season Resources", seasonResources.joinToString("\n"), false)
 		val victoryCrown = athena.items.values.firstOrNull { it.templateId == "VictoryCrown:defaultvictorycrown" }
 		if (victoryCrown != null) {
 			val victoryCrownAccountData = victoryCrown.attributes.getAsJsonObject("victory_crown_account_data")
 			val hasVictoryCrown = victoryCrownAccountData?.getBoolean("has_victory_crown") ?: false
 			val totalRoyalRoyalesAchievedCount = victoryCrownAccountData?.getInt("total_royal_royales_achieved_count") ?: 0
-			embed.addField("Victory Crown", "Owned %s\nCrowned Wins %s **%,d**".format(if (hasVictoryCrown) "✅" else "❌", victoryCrownEmote?.asMention, totalRoyalRoyalesAchievedCount), false)
+			embed.addField("Victory Crown", "Owned %s\nCrowned Wins %s **%,d**".format(if (hasVictoryCrown) "✅" else "❌", victoryCrownEmote?.formatted, totalRoyalRoyalesAchievedCount), false)
 		}
 		stats.last_match_end_datetime?.apply {
 			embed.setFooter("Last match end").setTimestamp(toInstant())
@@ -129,16 +129,16 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 		val currentStylePoints = stats.style_points ?: 0
 		val totalStylePoints = stats.style_points_season_total ?: 0
 		val spentStylePoints = totalStylePoints - currentStylePoints
-		embed.addField("%s Battle Stars".format(battleStarEmote?.asMention), "%,d spent, %,d total".format(spentBattleStars, totalBattleStars), true)
+		embed.addField("%s Battle Stars".format(battleStarEmote?.formatted), "%,d spent, %,d total".format(spentBattleStars, totalBattleStars), true)
 		embed.addField("Style Points", "%,d spent, %,d total".format(spentStylePoints, totalStylePoints), true)
 		INTRO_NAME?.let {
 			embed.addField("Intro Played", if ((profileManager.getProfileData("common_core").stats as CommonCoreProfileStats).forced_intro_played == it) "✅" else "❌", true)
 		}
 		embed.addFieldSeparate("Past seasons", stats.past_seasons.toList(), 0) {
 			if (it.seasonNumber >= 11) {
-				"%s `%2d` Level %,d, %,d wins%s".format((if (it.purchasedVIP) battlePassEmote else freePassEmote)?.asMention, it.seasonNumber, it.seasonLevel, it.numWins, if (it.seasonNumber >= 19) " (%,d crowned)".format(it.numRoyalRoyales) else "")
+				"%s `%2d` Level %,d, %,d wins%s".format((if (it.purchasedVIP) battlePassEmote else freePassEmote)?.formatted, it.seasonNumber, it.seasonLevel, it.numWins, if (it.seasonNumber >= 19) " (%,d crowned)".format(it.numRoyalRoyales) else "")
 			} else {
-				"%s `%2d` Level %,d, Tier %,d, %,d wins".format((if (it.purchasedVIP) battlePassEmote else freePassEmote)?.asMention, it.seasonNumber, it.seasonLevel, it.bookLevel, it.numWins)
+				"%s `%2d` Level %,d, Tier %,d, %,d wins".format((if (it.purchasedVIP) battlePassEmote else freePassEmote)?.formatted, it.seasonNumber, it.seasonLevel, it.bookLevel, it.numWins)
 			}
 		}
 		source.complete(null, embed.build())
@@ -208,9 +208,9 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 			source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
 			val athena = source.api.profileManager.getProfileData("athena")
 			val stats = athena.stats as AthenaProfileStats
-			val ed = "%s %,d ".format((if (stats.book_purchased) battlePassEmote else freePassEmote)?.asMention, stats.level) + seasonCurrencyData.joinToString(" ") {
+			val ed = "%s %,d ".format((if (stats.book_purchased) battlePassEmote else freePassEmote)?.formatted, stats.level) + seasonCurrencyData.joinToString(" ") {
 				val spent = it.getTotal(stats) - it.getBalance(stats)
-				textureEmote(it.def.LargePreviewImage.toString())?.asMention + (if (spent >= it.max) "✅" else "❌")
+				textureEmote(it.def.LargePreviewImage.toString())?.formatted + (if (spent >= it.max) "✅" else "❌")
 			}
 			if (embed.fields.size == 25) {
 				source.complete(null, embed.build())

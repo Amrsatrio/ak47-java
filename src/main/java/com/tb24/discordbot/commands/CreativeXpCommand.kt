@@ -37,7 +37,7 @@ class CreativeXpCommand : BrigadierCommand("creativexp", "Shows info about your 
 		var playtimeXp = "`%s`\n%,d / %,d minutes played\n%,d / %,d %s".format(
 			Utils.progress(current, max, 32),
 			current, max,
-			current / delta * xpCount, max / delta * xpCount, xpEmote?.asMention)
+			current / delta * xpCount, max / delta * xpCount, xpEmote?.formatted)
 		val hasMoreXp = current < max
 		if (hasMoreXp) {
 			playtimeXp += "\nLast XP grant at 🕒 " + formatDurationSeconds((235L - (max - current)) * 60L)

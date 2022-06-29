@@ -17,14 +17,12 @@ import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.friends.FriendV2
 import com.tb24.fn.model.friends.FriendsSettings
 import com.tb24.fn.model.friends.FriendsSummary
-import com.tb24.fn.model.party.FMemberInfo
-import com.tb24.fn.model.party.FPartyInfo
 import com.tb24.fn.network.FriendsService
 import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
-import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.entities.MessageEmbed
+import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.buttons.Button
 import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
@@ -487,7 +485,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		setDescription(user.renderPublicExternalAuths().joinToString(" "))
 		val alias = friend?.alias
 		if (!alias.isNullOrEmpty()) {
-			addField("Nickname", alias.escapeMarkdown(), false)
+			addField("Nickname", alias.escapeMarkdown().orEmpty(), false)
 		}
 		populateTopMutuals(ctx, user.id)
 		val created = friend?.created

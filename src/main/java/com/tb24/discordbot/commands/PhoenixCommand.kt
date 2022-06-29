@@ -73,7 +73,7 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 		val nextMajorData = levels.getOrNull(nextMajorIdx)
 		val embed = source.createEmbed(campaign.owner, true)
 			.setTitle("Ventures: ${currentEvent.element.eventType.substringAfterLast('.')}")
-			.setDescription("**Level %,d** - %s%,d\n%s".format(levelIdx + 1, getItemIconEmoji(xpItem)?.run { "$asMention " } ?: "", xpQuantity, if (nextLevelData != null) {
+			.setDescription("**Level %,d** - %s%,d\n%s".format(levelIdx + 1, getItemIconEmoji(xpItem)?.run { "$formatted " } ?: "", xpQuantity, if (nextLevelData != null) {
 				val current = xpQuantity - levelData.TotalRequiredXP
 				val delta = nextLevelData.TotalRequiredXP - levelData.TotalRequiredXP
 				val lastLevel = levels.last()
@@ -95,7 +95,7 @@ class PhoenixCommand : BrigadierCommand("ventures", "Shows the given user's vent
 			.sortedByDescending { (it.defData as FortQuestItemDefinition).SortPriority ?: 0 }
 		for (item in venturesQuests) {
 			val defData = item.defData as FortQuestItemDefinition
-			var title = (textureEmote(defData.LargePreviewImage?.toString())?.run { "$asMention " } ?: "") + defData.DisplayName.format()
+			var title = (textureEmote(defData.LargePreviewImage?.toString())?.run { "$formatted " } ?: "") + defData.DisplayName.format()
 			item.primaryAssetName.substringAfterLast('_').toIntOrNull()?.let {
 				title += " (${Formatters.num.format(it)}/12)"
 			}

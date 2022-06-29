@@ -76,7 +76,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts a friend an offer from the i
 				strike + s + strike
 			}.joinToString("\n") else catalogOffer.devName ?: catalogOffer.offerId, false)
 			.addField("Recipient", recipient.displayName?.run { escapeMarkdown() + " - " } + "`${recipient.id}`", false)
-			.addField("Gift message", giftMessage, false)
+			.addField("Gift message", giftMessage.orEmpty(), false)
 			.addField(L10N.format("catalog.total_price"), price.render(), true)
 			.addField(L10N.format("catalog.balance"), price.getAccountBalanceText(profileManager), true)
 			.setThumbnail(Utils.benBotExportAsset(displayData.imagePath))

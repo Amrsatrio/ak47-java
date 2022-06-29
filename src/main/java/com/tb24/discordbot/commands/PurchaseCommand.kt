@@ -30,7 +30,6 @@ import com.tb24.fn.model.priceengine.QueryOfferPricesPayload
 import com.tb24.fn.model.priceengine.QueryOfferPricesPayload.LineOfferReq
 import com.tb24.fn.util.*
 import net.dv8tion.jda.api.EmbedBuilder
-import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.buttons.Button
@@ -133,7 +132,7 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 		}
 		val buttons = offer.prices.mapIndexed { i, price ->
 			val emote = price.emote()!!
-			Button.of(ButtonStyle.SECONDARY, i.toString(), Emoji.fromEmote(emote))
+			Button.of(ButtonStyle.SECONDARY, i.toString(), emote)
 		}
 		val priceSelectionMsg = source.complete(null, priceSelectionEbd.build(), ActionRow.of(buttons))
 		priceIndex = priceSelectionMsg.awaitOneInteraction(source.author).componentId.toInt()

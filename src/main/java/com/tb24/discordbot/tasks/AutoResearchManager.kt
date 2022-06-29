@@ -110,7 +110,7 @@ class AutoResearchManager(val client: DiscordBot) {
 
 		// Collect
 		ctx.collect(source.api, homebase)
-		results.add("Collected %s %,d".format(researchPointIcon?.asMention, ctx.collected))
+		results.add("Collected %s %,d".format(researchPointIcon?.formatted, ctx.collected))
 
 		// Research
 		if (enrollment.newSystem) {
@@ -127,7 +127,7 @@ class AutoResearchManager(val client: DiscordBot) {
 				end++
 				ctx.research(source.api, homebase, statToResearch)
 			}
-			results.add(if (totalCost != 0) "%s %s: Lv %,d \u2192 Lv %,d for %s %,d".format(textureEmote(statToResearch.icon)?.asMention, statToResearch.displayName.format(), start, end, researchPointIcon?.asMention, totalCost) else "No research performed")
+			results.add(if (totalCost != 0) "%s %s: Lv %,d \u2192 Lv %,d for %s %,d".format(textureEmote(statToResearch.icon)?.formatted, statToResearch.displayName.format(), start, end, researchPointIcon?.formatted, totalCost) else "No research performed")
 		} else {
 			var iteration = -1
 			val unpurchasableStats = hashSetOf<EFortStatType>()
@@ -143,7 +143,7 @@ class AutoResearchManager(val client: DiscordBot) {
 					continue
 				}
 				ctx.research(source.api, homebase, statType)
-				results.add("%s %s: Lv %,d \u2192 Lv %,d for %s %,d".format(textureEmote(statType.icon)?.asMention, statType.displayName.format(), stat.researchLevel, stat.researchLevel + 1, researchPointIcon?.asMention, stat.costToNextLevel))
+				results.add("%s %s: Lv %,d \u2192 Lv %,d for %s %,d".format(textureEmote(statType.icon)?.formatted, statType.displayName.format(), stat.researchLevel, stat.researchLevel + 1, researchPointIcon?.formatted, stat.costToNextLevel))
 			}
 		}
 

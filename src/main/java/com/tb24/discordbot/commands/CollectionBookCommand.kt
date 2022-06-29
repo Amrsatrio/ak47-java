@@ -21,6 +21,7 @@ import me.fungames.jfortniteparse.fort.objects.rows.*
 import me.fungames.jfortniteparse.ue4.assets.util.mapToClass
 import me.fungames.jfortniteparse.ue4.objects.uobject.FName
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.interactions.commands.OptionType
 import java.util.*
 import java.util.concurrent.CompletableFuture
 
@@ -33,69 +34,117 @@ val xpDataMapped by lazy { collectionBookData.BookXPData.value.rows.mapValues { 
 
 class CollectionBookCommand : BrigadierCommand("collectionbook", "Shows your collection book.", arrayOf("cb")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
-		.executes { c ->
-			val source = c.source
-			val context = obtainContext(source)
-			val embed = source.createEmbed().setTitle("Collection Book").appendXpField(context)
-			for (category in context.categories.values.sortedWith(CATEGORY_COMPARATOR)) {
-				val ctgName = category.backing.Name.format()
-				val ctgSlottables = category.calculateSlottables()
-				embed.addField(if (ctgSlottables > 0) "%s \u2013 **%,d**".format(ctgName, ctgSlottables) else ctgName, category.pages.joinToString("\n") { item ->
-					var slottables = 0
-					var slotted = 0
-					var total = 0
-					for (section in item.sections) {
-						for (slot in section.slots) {
-							slottables += slot.slottables.size
-							if (slot.profileItem != null) ++slotted
-							++total
-						}
-					}
-					var s = item.backing.Name.format().toString()
-					if (slottables > 0) {
-						s += " \u2013 **%,d**".format(slottables)
-					}
-					s + if (slotted < total) {
-						" \u2013 %,d/%,d".format(slotted, total)
-					} else {
-						" ✅"
-					}
-				}, true)
-			}
-			source.complete(null, embed.build())
-			Command.SINGLE_SUCCESS
-		}
+		.executes { execute(it.source) }
 		.then(argument("page", greedyString())
-			.executes { c ->
-				val source = c.source
-				val context = obtainContext(source)
-				val page = context.pages.search(getString(c, "page")) { it.backing.Name.format()!! }
-					?: throw SimpleCommandExceptionType(LiteralMessage("Can't find a page of that name. You can see all the page names in `${source.prefix}${c.commandName}`.")).create()
-				val embed = source.createEmbed().setTitle("Collection Book / " + page.backing.Name.format())
-				val nothing = getEmoteByName("nothing")?.asMention ?: ""
-				for (section in page.sections) {
-					val sectionTitle = section.backing.Name.format()
-					embed.addField(sectionTitle, section.slots.joinToString("\n") { slot ->
-						val profileItem = slot.profileItem
-						val item = if (profileItem != null) {
-							profileItem
-						} else {
-							val dummy = FortItemStack(slot.backing.AllowedItems[0].load<FortItemDefinition>(), 1)
-							dummy.attributes.addProperty("level", 1)
-							slot.backing.AllowedWorkerPersonalities.firstOrNull()?.let {
-								dummy.attributes.addProperty("personality", it.toString())
-							}
-							dummy
-						}
-						//val rarityIcon = getEmoteByName(item.rarity.name.toLowerCase() + '2')?.asMention ?: nothing
-						val dn = item.displayName
-						"`%d` %s %s%s".format(slot.index + 1, if (profileItem != null) "✅" else nothing, item.rarity.rarityName.format(), if (dn != sectionTitle) ' ' + item.render() else "")
-					}, true)
-				}
-				source.complete(null, embed.build())
-				Command.SINGLE_SUCCESS
-			}
+			.executes { page(it.source, getString(it, "page")) }
 		)
+		/*.then(literal("auto")
+			.executes { auto(it.source) }
+		)*/
+
+	override fun getSlashCommand() = newCommandBuilder()
+		.then(subcommand("summary", description).executes(::execute))
+		.then(subcommand("page", description)
+			.option(OptionType.STRING, "page", "Page name", true)
+			.executes { page(it, it.getOption("page")!!.asString) }
+		)
+
+	private fun execute(source: CommandSourceStack): Int {
+		val context = obtainContext(source)
+		val embed = source.createEmbed().setTitle("Collection Book").appendXpField(context)
+		for (category in context.categories.values.sortedWith(CATEGORY_COMPARATOR)) {
+			val ctgName = category.backing.Name.format()
+			val ctgSlottables = category.calculateSlottables()
+			embed.addField(if (ctgSlottables > 0) "%s \u2013 **%,d**".format(ctgName, ctgSlottables) else ctgName.orEmpty(), category.pages.joinToString("\n") { item ->
+				var slottables = 0
+				var slotted = 0
+				var total = 0
+				for (section in item.sections) {
+					for (slot in section.slots) {
+						slottables += slot.slottables.size
+						if (slot.profileItem != null) ++slotted
+						++total
+					}
+				}
+				var s = item.backing.Name.format().toString()
+				if (slottables > 0) {
+					s += " \u2013 **%,d**".format(slottables)
+				}
+				s + if (slotted < total) {
+					" \u2013 %,d/%,d".format(slotted, total)
+				} else {
+					" ✅"
+				}
+			}, true)
+		}
+		source.complete(null, embed.build())
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun page(source: CommandSourceStack, page: String): Int {
+		val context = obtainContext(source)
+		val page = context.pages.search(page) { it.backing.Name.format()!! }
+			?: throw SimpleCommandExceptionType(LiteralMessage("Can't find a page of that name. You can see all the page names in `${source.prefix}${source.commandName}`.")).create()
+		val embed = source.createEmbed().setTitle("Collection Book / " + page.backing.Name.format())
+		val nothing = getEmoteByName("nothing")?.formatted ?: ""
+		for (section in page.sections) {
+			val sectionTitle = section.backing.Name.format()
+			embed.addField(sectionTitle.orEmpty(), section.slots.joinToString("\n") { slot ->
+				val profileItem = slot.profileItem
+				val item = if (profileItem != null) {
+					profileItem
+				} else {
+					val dummy = FortItemStack(slot.backing.AllowedItems[0].load<FortItemDefinition>(), 1)
+					dummy.attributes.addProperty("level", 1)
+					slot.backing.AllowedWorkerPersonalities.firstOrNull()?.let {
+						dummy.attributes.addProperty("personality", it.toString())
+					}
+					dummy
+				}
+				//val rarityIcon = getEmoteByName(item.rarity.name.toLowerCase() + '2')?.formatted ?: nothing
+				val dn = item.displayName
+				"`%d` %s %s%s".format(slot.index + 1, if (profileItem != null) "✅" else nothing, item.rarity.rarityName.format(), if (dn != sectionTitle) ' ' + item.render() else "")
+			}, true)
+		}
+		source.complete(null, embed.build())
+		return Command.SINGLE_SUCCESS
+	}
+
+	/*private fun auto(source: CommandSourceStack): Int {
+		val context = obtainContext(source)
+		// pass 1
+		// check collection book
+		// - for each page, for each section, for each slot
+		// - if slot is empty, find for a dupe of an item with at most 2 stars aka level 20
+		// - found? slot the item
+		// - not found? find an item with lower rarities and calculate if there are enough flux to upgrade them to the desired rarity / slot's rarity
+		// - enough flux? upgrade till desired rarity respecting account resources
+		// - not enough flux or resources? break, next slot
+		//
+		// pass 2
+		// - for each page, for each section, for each slot
+		// - if item is level < 30, upgrade to level 30 if resources suffice
+		//
+		// pass 3
+		// - for each page, for each section, for each slot
+		// - if item is level >= 30, upgrade to 50 if resources suffice (at this point every slotted item are at least level 30)
+
+		for (page in context.pages) {
+			for (section in page.sections) {
+				for (slot in section.slots) {
+					if (slot.profileItem == null) {
+						val item = slot.backing.AllowedItems.take(2).map { it.load<FortItemDefinition>() }.first()
+						if (item != null) {
+							val dummy = FortItemStack(item, 1)
+							dummy.attributes.addProperty("level", 20)
+							slot.profileItem = dummy
+						}
+					}
+				}
+			}
+		}
+		return Command.SINGLE_SUCCESS
+	}*/
 
 	private fun obtainContext(source: CommandSourceStack): CollectionBookContext {
 		source.ensureSession()

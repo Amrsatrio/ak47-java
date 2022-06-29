@@ -172,7 +172,7 @@ private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, 
 					foundersWithMaxdailies.add(campaign.owner.displayName)
 				}
 			} else {
-				title = xrayIcon?.asMention + ' ' + title
+				title = xrayIcon?.formatted + ' ' + title
 			}
 		}
 		title to rendered

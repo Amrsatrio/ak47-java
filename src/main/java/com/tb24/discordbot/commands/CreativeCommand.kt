@@ -19,7 +19,6 @@ import com.tb24.fn.model.links.LinkData
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.getInt
 import net.dv8tion.jda.api.EmbedBuilder
-import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.buttons.Button
 import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
@@ -95,9 +94,9 @@ class CreativeCommand : BrigadierCommand("creative", "Manages your creative isla
 		}
 		while (true) {
 			val message = source.complete(null, embed.build(), ActionRow.of(if (isFavorite) {
-				Button.of(ButtonStyle.SUCCESS, "favorite", "Favorited", Emoji.fromEmote(favoritedEmote!!))
+				Button.of(ButtonStyle.SUCCESS, "favorite", "Favorited", favoritedEmote)
 			} else {
-				Button.of(ButtonStyle.SECONDARY, "favorite", "Favorite", Emoji.fromEmote(favoriteEmote!!))
+				Button.of(ButtonStyle.SECONDARY, "favorite", "Favorite", favoriteEmote)
 			}))
 			source.loadingMsg = message
 			val choice = message.awaitOneInteraction(source.author, false).componentId

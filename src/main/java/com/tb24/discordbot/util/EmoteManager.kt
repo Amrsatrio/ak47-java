@@ -11,8 +11,8 @@ import me.fungames.jfortniteparse.fort.exports.FortPersistentResourceItemDefinit
 import me.fungames.jfortniteparse.ue4.assets.exports.tex.UTexture2D
 import me.fungames.jfortniteparse.ue4.converters.textures.toBufferedImage
 import net.dv8tion.jda.api.Permission
-import net.dv8tion.jda.api.entities.Emote
 import net.dv8tion.jda.api.entities.Icon
+import net.dv8tion.jda.api.entities.emoji.Emoji
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
@@ -21,12 +21,12 @@ import kotlin.math.min
 val WHITELIST_ICON_EMOJI_ITEM_TYPES = arrayOf("AccountResource", "ConsumableAccountItem", "Currency", "Gadget", "Stat")
 val EMOJI_GUILDS by lazy { BotConfig.get().emojiGuildIds + BotConfig.get().homeGuildId }
 
-fun getItemIconEmoji(item: FortItemStack, bypassWhitelist: Boolean = false): Emote? {
+fun getItemIconEmoji(item: FortItemStack, bypassWhitelist: Boolean = false): Emoji? {
 	val client = DiscordBot.instance.discord
 	val type = item.primaryAssetType
 	val name = item.primaryAssetName
 	if (name == "mtxcomplimentary" || name == "mtxgiveaway" || name == "mtxpurchasebonus" || name == "mtxpurchased") {
-		return client.getEmoteById(Utils.MTX_EMOJI_ID)
+		return client.getEmojiById(Utils.MTX_EMOJI_ID)
 	}
 	if (!bypassWhitelist && !(type.isNotEmpty() && type in WHITELIST_ICON_EMOJI_ITEM_TYPES || item.defData is FortPersistentResourceItemDefinition)) {
 		return null
@@ -35,7 +35,7 @@ fun getItemIconEmoji(item: FortItemStack, bypassWhitelist: Boolean = false): Emo
 }
 
 @Synchronized
-fun textureEmote(texturePath: String?): Emote? {
+fun textureEmote(texturePath: String?): Emoji? {
 	if (texturePath == null || texturePath == "None") {
 		return null
 	}
@@ -48,16 +48,16 @@ fun textureEmote(texturePath: String?): Emote? {
 	}
 	name = name.substring(0, min(32, name.length))
 	getEmoteByName(name)?.let { return it }
-	return loadObject<UTexture2D>(texturePath)?.toBufferedImage()?.let { createEmote(name, it) }
+	return loadObject<UTexture2D>(texturePath)?.toBufferedImage()?.let { createEmoji(name, it) }
 }
 
-fun getEmoteByName(name: String): Emote? {
+fun getEmoteByName(name: String): Emoji? {
 	val client = DiscordBot.instance.discord
-	var existing: Emote? = null
+	var existing: Emoji? = null
 	for (guildId in EMOJI_GUILDS) {
 		val guild = client.getGuildById(guildId)
-			?: throw SimpleCommandExceptionType(LiteralMessage("Emote servers are not fully loaded yet. Please try again in a few minutes.")).create()
-		existing = guild.getEmotesByName(name, true).firstOrNull()
+			?: throw SimpleCommandExceptionType(LiteralMessage("Emoji servers are not fully loaded yet. Please try again in a few minutes.")).create()
+		existing = guild.getEmojisByName(name, true).firstOrNull()
 		if (existing != null) {
 			break
 		}
@@ -65,20 +65,20 @@ fun getEmoteByName(name: String): Emote? {
 	return existing
 }
 
-private fun createEmote(name: String, icon: BufferedImage): Emote? {
+private fun createEmoji(name: String, icon: BufferedImage): Emoji? {
 	val client = DiscordBot.instance.discord
 	for (guildId in EMOJI_GUILDS) {
 		val guild = client.getGuildById(guildId)
-		if (guild == null || guild.emotes.size >= 50) { // server boosts can expire, hardcode it to 50 which is the regular limit
+		if (guild == null || guild.emojis.size >= 50) { // server boosts can expire, hardcode it to 50 which is the regular limit
 			continue
 		}
-		if (!guild.selfMember.hasPermission(Permission.MANAGE_EMOTES_AND_STICKERS)) {
+		if (!guild.selfMember.hasPermission(Permission.MANAGE_EMOJIS_AND_STICKERS)) {
 			DiscordBot.LOGGER.warn("Insufficient permissions to add emoji :{}: into {}", name, guild)
 			continue
 		}
 		val baos = ByteArrayOutputStream()
 		ImageIO.write(icon, "png", baos)
-		return guild.createEmote(name, Icon.from(baos.toByteArray(), Icon.IconType.PNG)).complete()
+		return guild.createEmoji(name, Icon.from(baos.toByteArray(), Icon.IconType.PNG)).complete()
 	}
 	throw SimpleCommandExceptionType(LiteralMessage("Failed to find a server with free emoji slots.")).create()
 }

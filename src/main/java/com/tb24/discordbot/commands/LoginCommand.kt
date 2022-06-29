@@ -19,10 +19,10 @@ import com.tb24.fn.util.EAuthClient
 import com.tb24.fn.util.Formatters
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
-import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageReaction
 import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.buttons.Button
@@ -278,8 +278,8 @@ fun deviceCode(source: CommandSourceStack, authClient: EAuthClient): Int {
 		}
 	}
 	val waitingMsg = source.loading("Waiting for your action...\n⏱ ${StringUtil.formatElapsedTime(deviceCodeResponse.expiration - System.currentTimeMillis(), true)}")!!
-	waitingMsg.addReaction("❌").queue()
-	val collector = waitingMsg.createReactionCollector({ reaction, user, _ -> reaction.reactionEmote.name == "❌" && user?.idLong == source.author.idLong }, ReactionCollectorOptions().apply { max = 1 })
+	waitingMsg.addReaction(Emoji.fromUnicode("❌")).queue()
+	val collector = waitingMsg.createReactionCollector({ reaction, user, _ -> reaction.emoji.name == "❌" && user?.idLong == source.author.idLong }, ReactionCollectorOptions().apply { max = 1 })
 	collector.callback = object : CollectorListener<MessageReaction> {
 		override fun onCollect(item: MessageReaction, user: User?) {
 			task.cancel()

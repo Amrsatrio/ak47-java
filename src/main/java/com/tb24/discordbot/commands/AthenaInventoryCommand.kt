@@ -31,7 +31,7 @@ class AthenaInventoryCommand : BrigadierCommand("brinventory", "Shows your or ot
 			.setThumbnail(Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Athena/T-T-Icon-BR-GoldBars-UI-Icon-L.T-T-Icon-BR-GoldBars-UI-Icon-L"))
 			.build())*/
 		val globalCash = inventory.stash["globalcash"] ?: 0
-		source.complete(null, source.createEmbed(user).setTitle("%s %,d".format(barsEmote?.asMention, globalCash)).build())
+		source.complete(null, source.createEmbed(user).setTitle("%s %,d".format(barsEmote?.formatted, globalCash)).build())
 		return Command.SINGLE_SUCCESS
 	}
 }

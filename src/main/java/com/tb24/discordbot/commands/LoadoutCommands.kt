@@ -20,7 +20,7 @@ import com.tb24.fn.model.mcpprofile.stats.ILoadoutData
 import com.tb24.fn.util.Formatters
 import com.tb24.fn.util.getString
 import net.dv8tion.jda.api.EmbedBuilder
-import net.dv8tion.jda.api.entities.Emoji
+import net.dv8tion.jda.api.entities.emoji.Emoji
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.buttons.Button
 import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
@@ -246,7 +246,7 @@ private fun EmbedBuilder.populateLoadoutContents(loadoutAttrs: FortCosmeticLocke
 	for (type in categories) {
 		val items = loadoutAttrs.locker_slots_data.getSlotItems(type)
 		var i = 0
-		addField(names[type], items.joinToString(if (type == ItemWrap) "\n" else " - ") {
+		addField(names[type].orEmpty(), items.joinToString(if (type == ItemWrap) "\n" else " - ") {
 			val item = when {
 				it.isNullOrEmpty() -> null
 				it.contains(':') -> FortItemStack(it, 1)

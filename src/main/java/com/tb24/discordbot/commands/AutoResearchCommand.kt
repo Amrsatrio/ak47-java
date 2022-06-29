@@ -99,7 +99,7 @@ class AutoResearchCommand : BrigadierCommand("autoresearch", "Enroll/unenroll yo
 			source.complete(null, EmbedBuilder().setColor(COLOR_SUCCESS)
 				.setTitle("✅ Enrolled auto research for account `${user.displayName ?: accountId}`")
 				.setDescription("${source.jda.selfUser.name} will automatically research every time the collector reaches capacity.")
-				.addField("Next run", data.nextRun?.relativeFromNow(), false)
+				.addField("Next run", data.nextRun?.relativeFromNow().orEmpty(), false)
 				.build())
 		} else {
 			if (autoClaimEntries.any { it.id == accountId && it.registrantId != discordId }) {

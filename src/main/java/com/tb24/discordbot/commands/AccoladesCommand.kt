@@ -62,7 +62,7 @@ class AccoladesCommand : BrigadierCommand("accolades", "Shows your earned BR acc
 		}
 
 		fun addTo(embed: EmbedBuilder) {
-			embed.addField("%,d \u00d7 %s".format(accolade.attributes.getInt("earned_count"), if (displayName.isNullOrEmpty()) accolade.primaryAssetName.toLowerCase().substringAfterLast("accoladeid_") else displayName), if (description.isNullOrEmpty()) "<No description>" else description, false)
+			embed.addField("%,d \u00d7 %s".format(accolade.attributes.getInt("earned_count"), if (displayName.isNullOrEmpty()) accolade.primaryAssetName.toLowerCase().substringAfterLast("accoladeid_") else displayName), if (description.isNullOrEmpty()) "<No description>" else description.orEmpty(), false)
 		}
 	}
 }

@@ -13,7 +13,6 @@ import com.tb24.discordbot.util.textureEmote
 import com.tb24.fn.model.mcpprofile.McpProfile
 import com.tb24.fn.util.format
 import me.fungames.jfortniteparse.fort.enums.EFortStatType
-import net.dv8tion.jda.api.entities.Emoji
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.buttons.Button
@@ -49,11 +48,11 @@ class ResearchCommand : BrigadierCommand("research", "Collect your research poin
 	private fun renderEmbed(source: CommandSourceStack, campaign: McpProfile, ctx: ResearchViewController): MessageEmbed {
 		val embed = source.createEmbed(campaign.owner)
 			.setTitle("Research")
-			.setDescription("%s **%,d** / %,d".format(researchPointIcon?.asMention, ctx.points, ctx.pointLimit) + if (ctx.collected > 0) " (+%,d)".format(ctx.collected) else "")
+			.setDescription("%s **%,d** / %,d".format(researchPointIcon?.formatted, ctx.points, ctx.pointLimit) + if (ctx.collected > 0) " (+%,d)".format(ctx.collected) else "")
 		//.setThumbnail(Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Quest/T-Icon-Research-128.T-Icon-Research-128"))
 		ctx.collected = 0
 		for ((statType, stat) in ctx.stats) {
-			val name = "%s %s (Lv %,d)".format(stat.statIconEmote.asMention, statType.displayName.format(), stat.researchLevel)
+			val name = "%s %s (Lv %,d)".format(stat.statIconEmote.formatted, statType.displayName.format(), stat.researchLevel)
 			val value = "+%,d (+%,d Party)".format(stat.currentBonusPersonal, stat.currentBonusTeam)
 			embed.addField(name, value, true)
 		}
@@ -71,13 +70,13 @@ class ResearchCommand : BrigadierCommand("research", "Collect your research poin
 			val researchText = if (stat.researchLevel >= 120) "MAX" else {
 				"+%,d \u00b7 %,d pts".format(stat.gainToNextLevel, stat.costToNextLevel)
 			}
-			buttons.add(Button.of(ButtonStyle.SECONDARY, statType.name, researchText, Emoji.fromEmote(textureEmote(statType.icon)!!)).withDisabled(!isSelf || !stat.canUpgrade()))
+			buttons.add(Button.of(ButtonStyle.SECONDARY, statType.name, researchText, textureEmote(statType.icon)).withDisabled(!isSelf || !stat.canUpgrade()))
 		}
 		val isMaxPoints = ctx.points >= ctx.pointLimit
 		val collectText = if (isMaxPoints) "MAX" else {
 			"Collect %,d/%,d pts".format(min(ctx.pointLimit - ctx.points, ctx.collectorPoints), ctx.collectorLimit)
 		}
-		val collectBtn = Button.of(ButtonStyle.SECONDARY, "collect", collectText, Emoji.fromEmote(researchPointIcon!!)).withDisabled(!isSelf || isMaxPoints)
+		val collectBtn = Button.of(ButtonStyle.SECONDARY, "collect", collectText, researchPointIcon).withDisabled(!isSelf || isMaxPoints)
 		return arrayOf(ActionRow.of(buttons), ActionRow.of(collectBtn))
 	}
 }
