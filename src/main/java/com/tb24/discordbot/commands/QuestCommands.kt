@@ -178,7 +178,12 @@ private fun executeQuestsBulk(source: CommandSourceStack, categoryName: String, 
 		title to rendered
 	}
 	if (entries.isEmpty()) {
-		throw SimpleCommandExceptionType(LiteralMessage("None of your accounts have 3 dailies.")).create()
+		if (maxDailiesOnly) {
+			throw SimpleCommandExceptionType(LiteralMessage("None of your accounts have 3 dailies.")).create()
+		}
+		if (filters.isNotEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("None of your accounts have any quests matching the filter.")).create()
+		}
 	}
 	val embed = EmbedBuilder().setColor(BrigadierCommand.COLOR_INFO)
 	var count = 0
