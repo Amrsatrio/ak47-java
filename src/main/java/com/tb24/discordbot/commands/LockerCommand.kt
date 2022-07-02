@@ -99,6 +99,8 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		.executes { execute(it.source) }
 		.then(argument("type", word())
 			.executes { type(it.source, parseCosmeticType(getString(it, "type"))) }
+			.then(literal("unseen").executes { type(it.source, parseCosmeticType(getString(it, "type")), false) })
+			.then(literal("seen").executes { type(it.source, parseCosmeticType(getString(it, "type")), true) })
 		)
 		.then(literal("exclusives")
 			.executes { exclusives(it.source, EnumSet.of(ExclusivesType.EXCLUSIVE)) }
@@ -199,11 +201,21 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		return Command.SINGLE_SUCCESS
 	}
 
-	private fun type(source: CommandSourceStack, filterType: String): Int {
+	private fun type(source: CommandSourceStack, filterType: String, seenItems: Boolean? = null): Int {
 		source.ensureSession()
 		source.loading("Getting cosmetics")
 		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "athena").await()
-		val items = getLockerItems(source.api.profileManager.getProfileData("athena"), filterType)
+		val items = getLockerItems(source.api.profileManager.getProfileData("athena"), filterType).run {
+			if (seenItems != null) {
+				if (seenItems) {
+					filter { it.isItemSeen }.also { if (it.isEmpty()) throw SimpleCommandExceptionType(LiteralMessage("No seen ${names[filterType]}.")).create() }
+				} else {
+					filter { !it.isItemSeen }.also { if (it.isEmpty()) throw SimpleCommandExceptionType(LiteralMessage("No unseen ${names[filterType]}.")).create() }
+				}
+			} else {
+				this
+			}
+		}
 		source.loading("Generating and uploading image")
 		generateAndSendLockerImage(source, items, GenerateLockerImageParams(names[filterType], icons[filterType])).await()
 		return Command.SINGLE_SUCCESS
