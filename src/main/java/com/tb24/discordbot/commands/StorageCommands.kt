@@ -20,7 +20,7 @@ class BackpackCommand : BrigadierCommand("backpack", "Shows your STW backpack in
 	override fun getSlashCommand() = newCommandBuilder().executes { executeInventory(it, "theater0", "Backpack") }
 }
 
-class StorageCommand : BrigadierCommand("storage", "Shows your STW storage inventory.", arrayOf("outpost")) {
+class StorageCommand : BrigadierCommand("storage", "Shows your STW storage inventory.", arrayOf("outpost", "outpost0")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { executeInventory(it.source, "outpost0", "Storage") }
 
