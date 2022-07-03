@@ -28,8 +28,8 @@ class PartyCommand : BrigadierCommand("party", "Manages your party.", arrayOf("p
 	// party leave: leaves party
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { party(it.source) }
-		.then(literal("invite").then(argument("user(s)", UserArgument.users(3)).executes { partyInvite(it.source, UserArgument.getUsers(it, "user(s)").values) }))
-		.then(literal("kick").then(argument("user(s)", UserArgument.users(3)).executes { partyKick(it.source, UserArgument.getUsers(it, "user(s)").values) }))
+		.then(literal("invite").then(argument("user(s)", UserArgument.users(15)).executes { partyInvite(it.source, UserArgument.getUsers(it, "user(s)").values) }))
+		.then(literal("kick").then(argument("user(s)", UserArgument.users(15)).executes { partyKick(it.source, UserArgument.getUsers(it, "user(s)").values) }))
 		.then(literal("kickall").executes { it.source.complete(null, it.source.createEmbed().setDescription(kickAll(it.source)).build()); Command.SINGLE_SUCCESS })
 		.then(literal("kickallleave").executes { it.source.complete(null, it.source.createEmbed().setDescription(kickAll(it.source, true)).build()); Command.SINGLE_SUCCESS })
 		.then(literal("promote").then(argument("user", UserArgument.users(1)).executes { partyPromote(it.source, UserArgument.getUsers(it, "user").values.first()) }))
@@ -149,7 +149,7 @@ class PartyKickAllCommand : BrigadierCommand("kickall", "Kicks all party members
 class LeavePartyCommand : BrigadierCommand("leaveparty", "Leaves the party", arrayOf("lp")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { partyLeave(it.source) }
-		.then(argument("users", UserArgument.users(3))
+		.then(argument("users", UserArgument.users(10))
 			.executes { bulk(it.source, UserArgument.getUsers(it, "users", loadingText = null)) }
 		)
 
