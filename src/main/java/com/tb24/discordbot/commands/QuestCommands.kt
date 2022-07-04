@@ -35,6 +35,8 @@ import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.ComponentInteraction
+import net.dv8tion.jda.api.interactions.components.buttons.Button
+import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
 import net.dv8tion.jda.api.interactions.components.selections.SelectMenu
 import net.dv8tion.jda.api.interactions.components.selections.SelectMenuInteraction
 import java.util.concurrent.CompletableFuture
@@ -79,6 +81,15 @@ class AthenaDailyChallengesCommand : BrigadierCommand("dailychallenges", "Manage
 val questCategoryTable by lazy { loadObject<UDataTable>("/Game/Quests/QuestCategoryTable.QuestCategoryTable")!! }
 
 abstract class BaseQuestsCommand(name: String, description: String, private val categoryName: String, private val replaceable: Boolean, aliases: Array<String> = emptyArray()) : BrigadierCommand(name, description, aliases) {
+	companion object {
+		private val dailyQuestsByZone = mapOf(
+			"sub" to "tv,teddy,gnome,rural,suburb,treasures,safe,seesaws,fire,server",
+			"city" to "cities,fire,treasures,safe,server,arcade,gnome,teddy,tv",
+			"lake" to "fire,arcade,server,safe",
+			"indu" to "industrial,fire,prop,transformer,server"
+		)
+	}
+
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> {
 		val node = newRootNode().withPublicProfile({ source, campaign -> executeQuests(source, campaign, categoryName, replaceable) }, "Getting quests")
 		if (replaceable) {
@@ -101,6 +112,17 @@ abstract class BaseQuestsCommand(name: String, description: String, private val 
 		)
 		node.then(literal("bulk3")
 			.executes { executeQuestsBulk(it.source, categoryName, maxDailiesOnly = true) }
+		)
+		node.then(literal("bulkz")
+			.then(argument("type", greedyString())
+				.executes {
+					val type = getString(it, "type").toLowerCase()
+					if (type !in dailyQuestsByZone) {
+						throw SimpleCommandExceptionType(LiteralMessage("Unknown zone type $type. Valid values are: (case insensitive)```\n${dailyQuestsByZone.keys.joinToString()}\n```")).create()
+					}
+					executeQuestsBulk(it.source, categoryName, filters = dailyQuestsByZone[type]!!.split(','))
+				}
+			)
 		)
 		return node
 	}
