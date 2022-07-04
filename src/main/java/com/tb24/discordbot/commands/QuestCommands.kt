@@ -155,19 +155,23 @@ private fun executeQuests(source: CommandSourceStack, campaign: McpProfile, cate
 	val category = questCategoryTable.findRowMapped<FortCategoryTableRow>(FName(categoryName))!!
 	val canReceiveMtxCurrency = campaign.items.values.any { it.templateId == "Token:receivemtxcurrency" }
 	val numRerolls = (campaign.stats as IQuestManager).questManager.dailyQuestRerolls
-	var description = getQuestsOfCategory(campaign, categoryName)
+	val quests = getQuestsOfCategory(campaign, categoryName)
+	val canReplace = replaceable && campaign.owner == source.api.currentLoggedIn && numRerolls > 0
+	val buttons = if (canReplace) quests.mapIndexed { i, it ->
+		Button.of(ButtonStyle.SECONDARY, i.toString(), "Replace %s".format(it.displayName))
+	} else emptyList()
+	var description = quests
 		.mapIndexed { i, it -> renderChallenge(it, "${i + 1}. ", "\u2800", conditionalCondition = canReceiveMtxCurrency) }
 		.joinToString("\n")
 	if (description.isEmpty()) {
 		description = "You have no active %s".format(category.Name.format())
-	} else if (replaceable && campaign.owner == source.api.currentLoggedIn && numRerolls > 0) {
-		description += "\n\n" + "Use `%s%s replace <%s>` to replace one."
-			.format(source.prefix, source.commandName, "quest #")
 	}
-	source.complete(null, source.createEmbed(campaign.owner)
+	val message = source.complete(null, source.createEmbed(campaign.owner)
 		.setTitle(category.Name.format())
 		.setDescription(description)
-		.build())
+		.build(), *if (buttons.isNotEmpty()) arrayOf(ActionRow.of(buttons)) else emptyArray())
+	source.unattended = true
+	replaceQuest(source, "campaign", message.awaitOneInteraction(source.author).componentId.toInt() + 1) { getQuestsOfCategory(it, categoryName) }
 	return Command.SINGLE_SUCCESS
 }
 
@@ -317,7 +321,7 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 	}
 	val embed = source.createEmbed()
 	var confirmationMessage: Message? = null
-	if (questIndex != -1) {
+	if (!source.unattended && questIndex != -1) {
 		confirmationMessage = source.complete(null, embed.setColor(BrigadierCommand.COLOR_WARNING)
 			.setTitle("Replace?")
 			.setDescription(renderChallenge(questToReplace, conditionalCondition = canReceiveMtxCurrency))
