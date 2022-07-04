@@ -170,9 +170,11 @@ private fun executeQuests(source: CommandSourceStack, campaign: McpProfile, cate
 		.setTitle(category.Name.format())
 		.setDescription(description)
 		.build(), *if (buttons.isNotEmpty()) arrayOf(ActionRow.of(buttons)) else emptyArray())
+	if (buttons.isEmpty()) {
+		return Command.SINGLE_SUCCESS
+	}
 	source.unattended = true
-	replaceQuest(source, "campaign", message.awaitOneInteraction(source.author).componentId.toInt() + 1) { getQuestsOfCategory(it, categoryName) }
-	return Command.SINGLE_SUCCESS
+	return replaceQuest(source, "campaign", message.awaitOneInteraction(source.author).componentId.toInt() + 1) { quests }
 }
 
 private val xrayIcon by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-Items-Currency-X-RayLlama-L.T-Items-Currency-X-RayLlama-L") }
