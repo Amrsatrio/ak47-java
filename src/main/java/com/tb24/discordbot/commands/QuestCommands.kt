@@ -174,7 +174,7 @@ private fun executeQuests(source: CommandSourceStack, campaign: McpProfile, cate
 		return Command.SINGLE_SUCCESS
 	}
 	source.unattended = true
-	return replaceQuest(source, "campaign", message.awaitOneInteraction(source.author).componentId.toInt() + 1) { quests }
+	return replaceQuest(source, "campaign", message.awaitOneInteraction(source.author).componentId.toInt() + 1) { getQuestsOfCategory(campaign, categoryName) }
 }
 
 private val xrayIcon by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-Items-Currency-X-RayLlama-L.T-Items-Currency-X-RayLlama-L") }
