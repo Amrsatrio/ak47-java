@@ -78,4 +78,61 @@ class StormShieldCommand : BrigadierCommand("stormshield", "Shows info about you
 				Command.SINGLE_SUCCESS
 			}
 		)
+		.then(literal("bulk")
+			.executes { bulk(it.source) }
+			.then(argument("users", UserArgument.users(100))
+				.executes { bulk(it.source, lazy { UserArgument.getUsers(it, "users").values }) }
+			)
+			.then(literal("unfinished")
+				.executes { bulk(it.source, null, true) }
+				.then(argument("users", UserArgument.users(100))
+					.executes { bulk(it.source, lazy { UserArgument.getUsers(it, "users").values }, true) }
+				)
+			)
+		)
+
+	private fun bulk(source: CommandSourceStack, users: Lazy<Collection<GameProfile>>? = null, unfinishedOnly: Boolean = false): Int {
+		val names = arrayOf("S", "P", "C", "T")
+		val ltr = arrayOf("stonewood", "plankerton", "cannyvalley")
+		val entries = stwBulk(source, users) {
+			val items = it.items
+			val final = mutableListOf<String>()
+			for (i in 1..4) {
+				val templ = "Quest:outpostquest_t${i}_l"
+				val hasQuest = items.values.any { it.templateId.startsWith(templ, true) }
+				val completedLtr = if (i < 4) {
+					items.values.any { it.templateId.startsWith("Quest:${ltr[i-1]}quest_launchrocket_d5", true) && it.attributes.get("completion_complete_launchrocket_$i")?.asInt == 1 }
+				} else false
+				val completedSsds = items.values.filter {
+					val completion = it.attributes?.get("completion_complete_outpost_${i}_${it.templateId.substringAfter(templ)}")?.asInt
+					it.templateId.startsWith(templ, true) && completion == 1
+				}
+				if ((completedSsds.isEmpty() && !hasQuest) || (unfinishedOnly && completedSsds.size == 10)) {
+					continue
+				}
+				val name = names[i - 1]
+				final.add("$name${completedSsds.size}")
+				if (!completedLtr && i < 4 && completedSsds.size >= 6) {
+					final.add("%sLTR".format(if (unfinishedOnly) name else ""))
+				}
+			}
+			it.owner.displayName to final.joinToString(" ")
+		}
+		if (entries.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("%s storm shields completed.".format(if (unfinishedOnly) "All" else "No"))).create()
+		}
+		val embed = EmbedBuilder().setColor(COLOR_SUCCESS)
+		for (entry in entries) {
+			if (entry.second.isEmpty()) {
+				continue
+			}
+			if (embed.fields.size == 25) {
+				source.complete(null, embed.build())
+				embed.clearFields()
+			}
+			embed.addField(entry.first, entry.second, true)
+		}
+		source.complete(null, embed.build())
+		return Command.SINGLE_SUCCESS
+	}
 }
