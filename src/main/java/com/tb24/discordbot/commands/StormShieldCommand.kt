@@ -7,12 +7,15 @@ import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.word
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
+import com.tb24.discordbot.commands.arguments.UserArgument
 import com.tb24.discordbot.util.*
 import com.tb24.fn.model.FortItemStack
+import com.tb24.fn.model.account.GameProfile
 import com.tb24.fn.model.assetdata.FortOutpostItemDefinition
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
 import com.tb24.fn.model.mcpprofile.item.FortOutpostItem
 import com.tb24.fn.util.Formatters
+import net.dv8tion.jda.api.EmbedBuilder
 import java.util.*
 
 class StormShieldCommand : BrigadierCommand("stormshield", "Shows info about your storm shields.", arrayOf("ss", "ssd")) {
@@ -51,10 +54,10 @@ class StormShieldCommand : BrigadierCommand("stormshield", "Shows info about you
 				val source = c.source
 				source.ensureSession()
 				val lookupTemplateId = when (getString(c, "zone").toLowerCase(Locale.ROOT)) {
-					"stonewood" -> "Outpost:outpostcore_pve_01"
-					"plankerton" -> "Outpost:outpostcore_pve_02"
-					"canny", "cannyvalley" -> "Outpost:outpostcore_pve_03"
-					"twine", "twinepeaks" -> "Outpost:outpostcore_pve_04"
+					"sw", "stone", "stonewood" -> "Outpost:outpostcore_pve_01"
+					"plank", "plankerton" -> "Outpost:outpostcore_pve_02"
+					"cv", "canny", "cannyvalley" -> "Outpost:outpostcore_pve_03"
+					"tp", "twine", "twinepeaks" -> "Outpost:outpostcore_pve_04"
 					else -> throw SimpleCommandExceptionType(LiteralMessage("Valid zones are: stonewood, plankerton, canny, twine")).create()
 				}
 				source.loading("Loading storm shield")
