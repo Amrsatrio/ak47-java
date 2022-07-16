@@ -124,6 +124,9 @@ fun doLogin(source: CommandSourceStack, grantType: EGrantType, params: String, a
 		}
 		EGrantType.device_code -> deviceCode(source, authClient ?: EAuthClient.FORTNITE_NEW_SWITCH_GAME_CLIENT)
 		EGrantType.exchange_code -> {
+			if (BotConfig.get().homeGuildInviteLink != null) {
+				throw SimpleCommandExceptionType(LiteralMessage("This instance of the bot does not allow logging in with exchange code.")).create()
+			}
 			params = extractCode(params)
 			if (params.length != 32) {
 				throw SimpleCommandExceptionType(LiteralMessage("That is not an exchange code.")).create()

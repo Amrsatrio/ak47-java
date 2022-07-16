@@ -6,6 +6,7 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.arguments.StringArgumentType.getString
 import com.mojang.brigadier.arguments.StringArgumentType.greedyString
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.tb24.discordbot.BotConfig
 import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.performWebApiRequest
 import com.tb24.fn.util.EAuthClient
@@ -13,6 +14,7 @@ import com.tb24.fn.util.getString
 
 class AuthCodeCommand : BrigadierCommand("authcode", "Generates a link to the authorization code generation page.") {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
+		.requires { BotConfig.get().homeGuildInviteLink == null }
 		.executes { execute(it.source) }
 		.then(argument("auth client", greedyString())
 			.executes { execute(it.source, getString(it, "auth client")) }
