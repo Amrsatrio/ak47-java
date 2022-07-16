@@ -85,7 +85,7 @@ class AutoResearchManager(val client: DiscordBot) {
 			val savedDevice = if (displayName != null) client.savedLoginsManager.get(discordId, epicId) else null
 			if (savedDevice == null) {
 				unenroll(enrollment)
-				source.complete("Disabled auto research of `$displayName` because we couldn't login to the account.")
+				runCatching { source.complete("Disabled auto research of `$displayName` because we couldn't login to the account.") }
 				return true
 			}
 			withDevice(source, savedDevice, { performForAccount(source, enrollment) }, { unenroll(enrollment) }, mapOf(epicId to epicUser!!))
@@ -165,7 +165,7 @@ class AutoResearchManager(val client: DiscordBot) {
 		if (nextRun != null) {
 			embed.addField("Next run", nextRun.relativeFromNow(), false)
 		}
-		source.complete(null, embed.build())
+		runCatching { source.complete(null, embed.build()) }
 		enrollment.runSuccessful = true
 	}
 
