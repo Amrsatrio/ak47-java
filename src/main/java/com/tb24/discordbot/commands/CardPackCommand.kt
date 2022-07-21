@@ -14,7 +14,10 @@ import com.tb24.fn.model.FortItemStack
 import com.tb24.fn.model.gamesubcatalog.CatalogOffer
 import com.tb24.fn.model.mcpprofile.McpLootEntry
 import com.tb24.fn.model.mcpprofile.commands.QueryProfile
+import com.tb24.fn.model.mcpprofile.commands.campaign.OpenCardPack
+import com.tb24.fn.model.mcpprofile.commands.campaign.OpenCardPackBatch
 import com.tb24.fn.model.mcpprofile.commands.campaign.PopulatePrerolledOffers
+import com.tb24.fn.model.mcpprofile.notifications.CardPackResultNotification
 import com.tb24.fn.util.getString
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.entities.User
@@ -30,6 +33,12 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 		.executes { execute(it.source) }
 		.then(argument("llama #", IntegerArgumentType.integer(1))
 			.executes { execute(it.source, IntegerArgumentType.getInteger(it, "llama #")) }
+		)
+		.then(literal("openall")
+			.executes { openNonChoiceCardPack(it.source) }
+		)
+		.then(literal("cp")
+			.executes { openChoiceCardPack(it.source) }
 		)
 
 	override fun getSlashCommand() = newCommandBuilder()
@@ -90,6 +99,90 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 		}
 		val offerIdToPurchase = runCatching { event.await() }.getOrNull() ?: return Command.SINGLE_SUCCESS
 		return purchaseOffer(source, offerIdToPurchase)
+	}
+
+	private fun openNonChoiceCardPack(source: CommandSourceStack): Int {
+		source.ensureSession()
+		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
+		val campaign = source.api.profileManager.getProfileData("campaign")
+		val cardPackToOpen = campaign.items.filter { it.value.templateId.startsWith("CardPack:cardpack_", true) && !it.value.templateId.contains("choice") }
+		if (cardPackToOpen.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("You have no non-choice card packs.")).create()
+		}
+		val itemIdArray = cardPackToOpen.keys.toTypedArray()
+		val opened = source.api.profileManager.dispatchClientCommandRequest(OpenCardPackBatch().apply {
+			cardPackItemIds = itemIdArray
+		}, "campaign").await()
+		val notif = (opened.notifications.first() as CardPackResultNotification)
+		val mapItemStack = notif.lootGranted.items.map {
+			it.asItemStack()
+		}.sortedWith(CardPackItemsComparator)
+		source.replyPaginated(mapItemStack, 15) { content, page, pageCount ->
+			val embed = source.createEmbed()
+				.setTitle("Received")
+				.setFooter("Page %d/%d".format(page + 1, pageCount))
+			embed.setDescription(content.joinToString("\n") { it.render() })
+			MessageBuilder(embed)
+		}
+		return Command.SINGLE_SUCCESS
+	}
+
+	private fun openChoiceCardPack(source: CommandSourceStack): Int {
+		source.ensureSession()
+		source.loading("Getting STW data")
+		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
+		val campaign = source.api.profileManager.getProfileData("campaign")
+		val cardPackToOpen = campaign.items.filter { it.value.templateId.startsWith("CardPack:cardpack_", true) && it.value.templateId.contains("choice") }
+		if (cardPackToOpen.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("You have no choice card packs.")).create()
+		}
+		val itemsReceived = mutableListOf<FortItemStack>()
+		for (cardPack in cardPackToOpen.values.withIndex()) {
+			println(cardPack.value.itemId)
+			val options = EpicApi.GSON.fromJson(cardPack.value.attributes.getAsJsonArray("options"), Array<McpLootEntry>::class.java).map {
+				it.asItemStack()
+			}
+			val buttons = ActionRow.of(
+				Button.secondary("0", options[0].render(showIcons = false, showRarity = RARITY_HIDE, showLevelAndTier = false)),
+				Button.secondary("1", options[1].render(showIcons = false, showRarity = RARITY_HIDE, showLevelAndTier = false)),
+				Button.danger("end", "Stop")
+			)
+			val text = "%s (have: %,d)\n- OR -\n%s (have: %,d)".format(options[0].render(), campaign.items.values.filter { it.templateId == options[0].templateId }.size, options[1].render(), campaign.items.values.filter { it.templateId == options[1].templateId }.size)
+			val message = source.complete(null, source.createEmbed().setTitle("Choose an item").setDescription(text).setFooter("%,d/%,d".format(cardPack.index + 1, cardPackToOpen.size)).build(), buttons)
+			source.loadingMsg = message
+			try {
+				val choice = message.awaitOneInteraction(source.author)
+				if (choice.componentId == "end") {
+					source.loadingMsg = null
+					break
+				}
+				val res = source.api.profileManager.dispatchClientCommandRequest(OpenCardPack().apply {
+					cardPackItemId = cardPack.value.itemId
+					selectionIdx = choice.componentId.toInt()
+				}, "campaign").await()
+				(res.notifications.first() as CardPackResultNotification).lootGranted.items.forEach {
+					itemsReceived.add(it.asItemStack())
+				}
+			} catch (e: Exception) {
+				if (e is CollectorException && e.reason == CollectorEndReason.TIME) {
+					source.loadingMsg = null
+					break
+				} else {
+					throw e
+				}
+			}
+		}
+		if (itemsReceived.isEmpty()) {
+			throw SimpleCommandExceptionType(LiteralMessage("No loot received")).create()
+		}
+		source.replyPaginated(itemsReceived, 15) { content, page, pageCount ->
+			val embed = source.createEmbed()
+				.setTitle("Received")
+				.setFooter("Page %d/%d, %,d items".format(page + 1, pageCount, itemsReceived.size))
+			embed.setDescription(content.joinToString("\n") { it.render() })
+			MessageBuilder(embed)
+		}
+		return Command.SINGLE_SUCCESS
 	}
 
 	private class Entry(val name: String, val items: List<FortItemStack>) {
