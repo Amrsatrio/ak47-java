@@ -170,8 +170,9 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(XpBoostCommand())
 
 		// Web campaigns
-		register(WebCampaignCommand("zerobuild", "Zero Build Trials", "zerobuildtrials"))
-		register(LanternTrialsCommand())
+		// register(WebCampaignCommand("zerobuild", "Zero Build Trials", "zerobuildtrials"))
+		// register(LanternTrialsCommand())
+		register(RafCommand())
 
 		// Misc utility commands
 		register(FortniteAndroidApkCommand())
