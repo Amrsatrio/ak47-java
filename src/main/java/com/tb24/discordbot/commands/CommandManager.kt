@@ -82,6 +82,7 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		register(CampaignQuestsCommand())
 		register(CampaignShopCommand())
 		register(CampsiteCommand())
+		register(CardPackChestCommand())
 		register(CardPackCommand())
 		register(CharacterCollectionCommand())
 		register(CheckCodeCommand())
