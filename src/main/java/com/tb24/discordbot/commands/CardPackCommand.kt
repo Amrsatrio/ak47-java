@@ -103,6 +103,7 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 
 	private fun openNonChoiceCardPack(source: CommandSourceStack): Int {
 		source.ensureSession()
+		source.loading("Getting STW data")
 		source.api.profileManager.dispatchClientCommandRequest(QueryProfile(), "campaign").await()
 		val campaign = source.api.profileManager.getProfileData("campaign")
 		val cardPackToOpen = campaign.items.filter { it.value.templateId.startsWith("CardPack:cardpack_", true) && !it.value.templateId.contains("choice") }
