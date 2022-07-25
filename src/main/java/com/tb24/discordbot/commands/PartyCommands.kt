@@ -180,11 +180,14 @@ class LeavePartyCommand : BrigadierCommand("leaveparty", "Leaves the party", arr
 class KickAllAndLeaveCommand : BrigadierCommand("kickallleave", "Kicks all party members and then leaves", arrayOf("kalp")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes {
-			it.source.complete(null, it.source.createEmbed().setDescription(kickAll(it.source, true)).build()); Command.SINGLE_SUCCESS
+			it.source.ensureSession()
+			it.source.complete(null, it.source.createEmbed().setDescription(kickAll(it.source, true)).build())
+			Command.SINGLE_SUCCESS
 		}
 		.then(argument("bulk users", UserArgument.users(5))
 			.executes {
 				val source = it.source
+				source.ensureSession()
 				val users = UserArgument.getUsers(it, "bulk users")
 				val devices = source.client.savedLoginsManager.getAll(source.author.id).filter { it.accountId in users }
 				if (devices.isEmpty()) {
