@@ -288,7 +288,7 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 		embed.appendDescription(if (allowClear) "\nPick type or clear:" else "\nPick type:")
 		val buttons = mutableListOf<Button>()
 		itemTextureChoiceDisplayData.forEach { (type, data) ->
-			buttons.add(Button.of(ButtonStyle.PRIMARY, "$type...", data.first))
+			buttons.add(Button.of(ButtonStyle.PRIMARY, type, data.first + "..."))
 		}
 		if (allowClear) {
 			buttons.add(Button.of(ButtonStyle.PRIMARY, "clear", "Clear"))

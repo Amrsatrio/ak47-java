@@ -33,6 +33,7 @@ import com.tb24.fn.model.mcpprofile.ProfileUpdate
 import com.tb24.fn.model.mcpprofile.stats.AthenaProfileStats
 import com.tb24.fn.util.*
 import com.tb24.uasset.AssetManager
+import com.tb24.uasset.AssetRegistryManager
 import com.tb24.uasset.loadObject
 import me.fungames.jfortniteparse.fort.enums.EFortRarity
 import me.fungames.jfortniteparse.fort.exports.*
@@ -750,15 +751,27 @@ fun similarity(s1: String, s2: String): Float {
 	return (longerLength - Utils.damerauLevenshteinDistance(longer, shorter)) / longerLength.toFloat()
 }
 
-fun searchItemDefinition(displayName: String, primaryAssetType: String, className: String? = null): Pair<String, FortItemDefinition>? {
-	val lowerPrimaryAssetType = primaryAssetType.toLowerCase()
-	val result = AssetManager.INSTANCE.assetRegistry.templateIdToAssetDataMap.entries.search(displayName) { (templateId, assetData) ->
-		if (!templateId.startsWith(lowerPrimaryAssetType) || className != null && assetData.assetClass != className) {
-			return@search null
+fun searchItemDefinition(query: String, primaryAssetType: String, className: String? = null): Pair<String, FortItemDefinition>? {
+	val templateId: String
+	val assetData: AssetRegistryManager.AssetData
+	if (query.contains('_')) {
+		templateId = ("$primaryAssetType:$query").toLowerCase()
+		assetData = AssetManager.INSTANCE.assetRegistry.templateIdToAssetDataMap[templateId] ?: return null
+		if (className != null && assetData.assetClass != className) {
+			return null
 		}
-		assetData.displayName
+	} else {
+		val lowerPrimaryAssetType = primaryAssetType.toLowerCase()
+		val result = AssetManager.INSTANCE.assetRegistry.templateIdToAssetDataMap.entries.search(query) { (templateId, assetData) ->
+			if (!templateId.startsWith(lowerPrimaryAssetType) || className != null && assetData.assetClass != className) {
+				return@search null
+			}
+			if (assetData.displayName != "TBD") assetData.displayName else null
+		} ?: return null
+		templateId = result.key
+		assetData = result.value
 	}
-	return result?.let { it.key to loadObject<FortItemDefinition>(it.value.objectPath)!! }
+	return loadObject<FortItemDefinition>(assetData.objectPath)?.let { templateId to it }
 }
 
 inline fun <reified T : AthenaSeasonItemData> AthenaSeasonItemDefinition.getAdditionalDataOfType() = AdditionalSeasonData?.firstOrNull { it.value is T }?.value as T?
