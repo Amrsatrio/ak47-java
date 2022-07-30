@@ -66,7 +66,7 @@ class QuestsViewController(athena: McpProfile, knownCategories: List<QuestCatego
 		val goalCards = hashMapOf<String, GoalCard>()
 		private val allHeaders = mutableListOf<QuestCategoryHeader>()
 		private val defaultHeader = QuestCategoryHeader(this, backing.DefaultHeaderName, backing.DefaultHeaderSortOrder ?: 0) // TODO Is it 0 or something else?
-		private val challengeBundles = hashMapOf<String, FortItemStack?>()
+		val challengeBundles = hashMapOf<String, FortItemStack?>()
 
 		init {
 			allHeaders.add(defaultHeader)
