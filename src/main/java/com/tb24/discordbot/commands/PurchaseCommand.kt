@@ -135,7 +135,7 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 			Button.of(ButtonStyle.SECONDARY, i.toString(), emote)
 		}
 		val priceSelectionMsg = source.complete(null, priceSelectionEbd.build(), ActionRow.of(buttons))
-		priceIndex = priceSelectionMsg.awaitOneInteraction(source.author).componentId.toInt()
+		priceIndex = priceSelectionMsg.awaitOneComponent(source).componentId.toInt()
 	} else if (priceIndex < 0) { // only one price, just use it
 		priceIndex = 0
 	}
@@ -194,7 +194,7 @@ fun purchaseOffer(source: CommandSourceStack, offer: CatalogOffer, quantity: Int
 		}
 		embed.setDescription(warnings.joinToString("\n") { "⚠ $it" })
 		if (!source.unattended) {
-			if (!source.complete(null, embed.build(), confirmationButtons()).awaitConfirmation(source.author).await()) {
+			if (!source.complete(null, embed.build(), confirmationButtons()).awaitConfirmation(source).await()) {
 				throw SimpleCommandExceptionType(LiteralMessage("Purchase canceled.")).create()
 			}
 		} else {
@@ -419,7 +419,7 @@ fun EmbedBuilder.renewAffiliateAndPopulateMtxFields(source: CommandSourceStack, 
 				val useDevsCode = source.complete(null, embed.build(), ActionRow.of(
 					Button.of(ButtonStyle.PRIMARY, "positive", "Yes, use code %s".format(devAffiliateName)),
 					Button.of(ButtonStyle.SECONDARY, "negative", "No, just proceed")
-				)).awaitConfirmation(source.author).await()
+				)).awaitConfirmation(source).await()
 				if (useDevsCode) {
 					try {
 						source.api.profileManager.dispatchClientCommandRequest(SetAffiliateName().apply { affiliateName = devAffiliateName }, "common_core").await()

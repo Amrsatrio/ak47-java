@@ -194,7 +194,7 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 			buttons.add(Button.of(ButtonStyle.SECONDARY, categoryKey, "%s (%,d)".format(names[categoryKey]!!, items.size)))
 		}
 		val message = source.complete("**Pick a category**", null, *buttons.chunked(5, ActionRow::of).toTypedArray())
-		val choice = message.awaitOneInteraction(source.author).componentId
+		val choice = message.awaitOneComponent(source).componentId
 		source.loading("Generating and uploading image")
 		generateAndSendLockerImage(source, finalItems[choice], GenerateLockerImageParams(names[choice], icons[choice])).await()
 			?: throw SimpleCommandExceptionType(LiteralMessage("You have no ${names[choice]}.")).create()
@@ -258,7 +258,7 @@ class LockerCommand : BrigadierCommand("locker", "Shows your BR locker in form o
 		val embed = source.createEmbed().setColor(COLOR_WARNING)
 			.setDescription((if (favorite) "Favorite **%,d** of **%,d** exclusive items?" else "Unfavorite **%,d** of **%,d** exclusive items?").format(toFavorite.size, items.size))
 		val confirmationMsg = source.complete(null, embed.build(), confirmationButtons())
-		if (!confirmationMsg.awaitConfirmation(source.author).await()) {
+		if (!confirmationMsg.awaitConfirmation(source).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS
 		}

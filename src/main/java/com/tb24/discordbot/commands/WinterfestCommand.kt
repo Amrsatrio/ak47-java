@@ -105,7 +105,7 @@ class WinterfestCommand : BrigadierCommand("winterfest", "Visit the Winterfest l
 		// Open present selection
 		val message = source.complete(null, embed.build(), ActionRow.of(select.build()))
 		source.loadingMsg = message
-		val rewardNodeTagToOpen = (message.awaitOneInteraction(source.author, false, 120000L) as SelectMenuInteraction).values.first() // 2 minutes is enough for people to glance at
+		val rewardNodeTagToOpen = (message.awaitOneComponent(source, false, 120000L) as SelectMenuInteraction).values.first() // 2 minutes is enough for people to glance at
 		val response = source.api.profileManager.dispatchClientCommandRequest(UnlockRewardNode().apply {
 			nodeId = rewardNodeTagToOpen
 			rewardGraphId = state.rewardGraphItem.itemId

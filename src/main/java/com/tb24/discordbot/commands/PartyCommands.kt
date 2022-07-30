@@ -73,7 +73,7 @@ class PartyCommand : BrigadierCommand("party", "Manages your party.", arrayOf("p
 			val message = source.complete(null, embed.build(), ActionRow.of(buttons))
 			embed.fields.remove(membersField)
 			source.loadingMsg = message
-			when (message.awaitOneInteraction(source.author, false).componentId) {
+			when (message.awaitOneComponent(source, false).componentId) {
 				"manageMembers" -> {
 					// Choose member to manage
 					val memberPickerButtons = mutableListOf<Button>()
@@ -85,7 +85,7 @@ class PartyCommand : BrigadierCommand("party", "Manages your party.", arrayOf("p
 					}
 					val memberPickerMessage = source.complete("**Choose member**", null, ActionRow.of(memberPickerButtons))
 					source.loadingMsg = memberPickerMessage
-					val memberId = memberPickerMessage.awaitOneInteraction(source.author, false).componentId
+					val memberId = memberPickerMessage.awaitOneComponent(source, false).componentId
 					if (manageMember(party, memberId, source, selfIsLeader, partyManager) == 0) {
 						break
 					}
@@ -119,7 +119,7 @@ class PartyCommand : BrigadierCommand("party", "Manages your party.", arrayOf("p
 		memberButtons.add(Button.of(ButtonStyle.SECONDARY, "cancel", "Cancel"))
 		val memberMessage = source.complete("**Manage $memberDisplayName**", null, ActionRow.of(memberButtons))
 		source.loadingMsg = memberMessage
-		return when (memberMessage.awaitOneInteraction(source.author, false).componentId) {
+		return when (memberMessage.awaitOneComponent(source, false).componentId) {
 			"promote" -> {
 				partyManager.promote(member.account_id)
 				source.channel.sendMessage("**$memberDisplayName** is now leader.").queue()

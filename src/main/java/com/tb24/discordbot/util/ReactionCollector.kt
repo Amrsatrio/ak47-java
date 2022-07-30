@@ -6,6 +6,7 @@ import net.dv8tion.jda.api.entities.MessageReaction
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.entities.emoji.CustomEmoji
 import net.dv8tion.jda.api.events.channel.ChannelDeleteEvent
+import net.dv8tion.jda.api.events.message.MessageBulkDeleteEvent
 import net.dv8tion.jda.api.events.message.MessageDeleteEvent
 import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent
 import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveAllEvent
@@ -43,6 +44,12 @@ class ReactionCollector : Collector<MessageReaction, ReactionCollectorOptions> {
 
 	override fun onMessageDelete(event: MessageDeleteEvent) {
 		if (event.messageIdLong == message.idLong) {
+			stop(MESSAGE_DELETE)
+		}
+	}
+
+	override fun onMessageBulkDelete(event: MessageBulkDeleteEvent) {
+		if (message.id in event.messageIds) {
 			stop(MESSAGE_DELETE)
 		}
 	}

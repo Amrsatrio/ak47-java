@@ -19,12 +19,14 @@ enum class CollectorEndReason {
 	IDLE,
 	USER,
 	LIMIT,
-	COMPONENT_LIMIT,
+	INTERACTION_LIMIT,
 	EMOJI_LIMIT,
 	PROCESSED_LIMIT,
 	USER_LIMIT,
 	MESSAGE_DELETE,
-	CHANNEL_DELETE
+	CHANNEL_DELETE,
+	THREAD_DELETE,
+	GUILD_DELETE,
 }
 
 class CollectorException(val collector: Collector<*, *>, val reason: CollectorEndReason) : Exception()

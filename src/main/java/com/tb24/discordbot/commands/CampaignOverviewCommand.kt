@@ -109,7 +109,7 @@ class CampaignOverviewCommand : BrigadierCommand("stw", "Shows campaign statisti
 		), true)
 		val foundersEdition = if (foundersTiers.isNotEmpty()) foundersTiers.last() else null
 		if (foundersEdition != null || canReceiveMtxCurrency) {
-			embed.setFooter(foundersEdition?.let { it.displayName + " Founders Account" } ?: "Founders Account (Unknown edition, account is broken!)", Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Boost/T-Icon-FoundersBadge-128.T-Icon-FoundersBadge-128"))
+			embed.setFooter(foundersEdition?.let { it.displayName + " Founders Account" } ?: "Founders Account (Unknown edition, account was merged or is broken!)", Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Boost/T-Icon-FoundersBadge-128.T-Icon-FoundersBadge-128"))
 		} else {
 			embed.setFooter("Non-Founders Account", Utils.benBotExportAsset("/Game/UI/Foundation/Textures/Icons/Items/T-Items-Currency-X-RayLlama.T-Items-Currency-X-RayLlama"))
 		}

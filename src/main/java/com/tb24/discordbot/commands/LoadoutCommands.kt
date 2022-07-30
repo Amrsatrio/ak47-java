@@ -69,7 +69,7 @@ private fun summary(source: CommandSourceStack, profileId: String): Int {
 		buttons.add(Button.secondary("toggleShuffle", if (oldRandom) "Disable shuffle" else "Enable shuffle"))
 		val message = source.complete(null, embed.build(), ActionRow.of(buttons))
 		source.loadingMsg = message
-		when (message.awaitOneInteraction(source.author, false).componentId) {
+		when (message.awaitOneComponent(source, false).componentId) {
 			"saveTo" -> {
 				val allPresetsMsg = source.complete(null, source.createEmbed()
 					.setTitle("Type the preset slot number to save to")
@@ -93,7 +93,7 @@ private fun summary(source: CommandSourceStack, profileId: String): Int {
 				if (preset != null && mainLoadoutItem.isSameAs(preset, mutableListOf())) {
 					val confirmationMsg = source.complete("Overwrite %s (#%,d) with current loadout?".format(preset.locker_name.ifEmpty { "Unnamed Preset" }, choice), null, confirmationButtons())
 					source.loadingMsg = confirmationMsg
-					if (!confirmationMsg.awaitConfirmation(source.author).await()) {
+					if (!confirmationMsg.awaitConfirmation(source).await()) {
 						continue
 					}
 				}
@@ -107,7 +107,7 @@ private fun summary(source: CommandSourceStack, profileId: String): Int {
 				check(lastAppliedLoadoutItem != null)
 				val confirmationMsg = source.complete("Overwrite your last loaded preset with current loadout?", null, confirmationButtons())
 				source.loadingMsg = confirmationMsg
-				if (!confirmationMsg.awaitConfirmation(source.author).await()) {
+				if (!confirmationMsg.awaitConfirmation(source).await()) {
 					continue
 				}
 				source.api.profileManager.dispatchClientCommandRequest(CopyCosmeticLoadout().apply {
@@ -122,7 +122,7 @@ private fun summary(source: CommandSourceStack, profileId: String): Int {
 					.populateLoadoutsList(profile)
 					.build(), ActionRow.of(Button.secondary("back", "Back")))
 				source.loadingMsg = allPresetsMsg
-				val interaction = allPresetsMsg.awaitOneInteraction(source.author, false)
+				val interaction = allPresetsMsg.awaitOneComponent(source, false)
 				if (interaction.componentId == "back") {
 					continue
 				}
@@ -164,11 +164,11 @@ private fun details(source: CommandSourceStack, profileId: String, index: Int): 
 			.populateLoadoutContents(loadoutAttrs, profile)
 			.build(), ActionRow.of(buttons))
 		source.loadingMsg = message
-		when (message.awaitOneInteraction(source.author, false).componentId) {
+		when (message.awaitOneComponent(source, false).componentId) {
 			"load" -> {
 				val confirmationMsg = source.complete("Overwrite your current loadout with %s?".format(loadoutName), null, confirmationButtons())
 				source.loadingMsg = confirmationMsg
-				if (!confirmationMsg.awaitConfirmation(source.author).await()) {
+				if (!confirmationMsg.awaitConfirmation(source).await()) {
 					continue
 				}
 				source.api.profileManager.dispatchClientCommandRequest(CopyCosmeticLoadout().apply {

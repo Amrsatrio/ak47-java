@@ -146,7 +146,7 @@ private fun execute(source: CommandSourceStack, item: FortItemStack, profile: Mc
 
 		val message = source.complete(alert, embed.build(), ActionRow.of(buttons))
 		source.loadingMsg = message
-		return when (message.awaitOneInteraction(source.author, false).componentId) {
+		return when (message.awaitOneInteraction(source, false).componentId) {
 			"wishlist" -> {
 				return execute(source, item, profile)
 			}
@@ -220,7 +220,7 @@ private fun execute(source: CommandSourceStack, item: FortItemStack, profile: Mc
 
 	val message = source.complete(alert, embed.build(), ActionRow.of(buttons))
 	source.loadingMsg = message
-	return when (message.awaitOneInteraction(source.author, false).componentId) {
+	return when (message.awaitOneComponent(source, false).componentId) {
 		"equip" -> equip(source, profile.profileId, loadoutItemId.element, category, item, 0)
 		"equipTo" -> equipTo(source, profile.profileId, currentLoadout, loadoutItemId.element, category, item)
 		"editVariants" -> editVariants(source, profile.profileId, loadoutItemId.element, category, item, variants)
@@ -243,7 +243,7 @@ private fun equipTo(source: CommandSourceStack, profileId: String, currentLoadou
 	buttons.add(Button.of(ButtonStyle.SECONDARY, "cancel", "Cancel", Emoji.fromUnicode("❌")))
 	val message = source.complete("**To which slot?**", null, *buttons.chunked(5, ActionRow::of).toTypedArray())
 	source.loadingMsg = message
-	val choice = message.awaitOneInteraction(source.author, false).componentId
+	val choice = message.awaitOneComponent(source, false).componentId
 	if (choice == "cancel") {
 		return execute(source, item, source.api.profileManager.getProfileData("athena"))
 	}
@@ -262,7 +262,7 @@ private fun editVariants(source: CommandSourceStack, profileId: String, lockerIt
 	buttons.add(Button.of(ButtonStyle.SECONDARY, "cancel", "Cancel", Emoji.fromUnicode("❌")))
 	val message = source.complete("**Select style to edit**", null, *buttons.chunked(5, ActionRow::of).toTypedArray())
 	source.loadingMsg = message
-	val choice = message.awaitOneInteraction(source.author, false).componentId
+	val choice = message.awaitOneComponent(source, false).componentId
 	if (choice == "cancel") {
 		return execute(source, item, source.api.profileManager.getProfileData("athena"))
 	}
@@ -287,7 +287,7 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 		buttons.add(Button.of(ButtonStyle.SECONDARY, "cancel", "Cancel", Emoji.fromUnicode("❌")))
 		val message = source.complete(null, embed.build(), ActionRow.of(buttons))
 		source.loadingMsg = message
-		val interaction = message.awaitOneInteraction(source.author, false)
+		val interaction = message.awaitOneComponent(source, false)
 		val choice = interaction.componentId
 		if (choice == "cancel") {
 			return execute(source, item, source.api.profileManager.getProfileData("athena"))
@@ -417,7 +417,7 @@ fun askChoice(source: CommandSourceStack, embed: EmbedBuilder, options: List<Sel
 	} else {
 		val message = source.complete(null, embed.build(), ActionRow.of(SelectMenu.create("choice").setPlaceholder(hint).addOptions(options).build()), ActionRow.of(Button.of(ButtonStyle.SECONDARY, "cancel", "Cancel", Emoji.fromUnicode("❌"))))
 		source.loadingMsg = message
-		val interaction = message.awaitOneInteraction(source.author, false)
+		val interaction = message.awaitOneComponent(source, false)
 		if (interaction.componentId == "cancel") {
 			return null to null
 		}

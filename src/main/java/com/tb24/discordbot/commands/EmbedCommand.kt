@@ -12,7 +12,7 @@ import com.tb24.discordbot.commands.arguments.MentionArgument.Companion.mention
 import com.tb24.discordbot.util.AwaitMessagesOptions
 import com.tb24.discordbot.util.await
 import com.tb24.discordbot.util.awaitMessages
-import com.tb24.discordbot.util.awaitOneInteraction
+import com.tb24.discordbot.util.awaitOneComponent
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.MessageBuilder
 import net.dv8tion.jda.api.Permission
@@ -59,14 +59,14 @@ class EmbedCommand : BrigadierCommand("embed", "Shiver me embeds!") {
 			bMsg.editMessage("*Preview:*\n$content").setEmbeds(embed.build()).setActionRow(*buttons.toTypedArray()).allowedMentions(emptySet()).queue()
 		}
 		while (true) {
-			when (bMsg.awaitOneInteraction(source.author, false, 600000L).componentId) {
+			when (bMsg.awaitOneComponent(source, false, 600000L).componentId) {
 				"addField" -> {
 					if (embed.fields.size == 25) {
 						source.complete("❌ Embeds can only have 25 fields.")
 						continue
 					}
 					val fieldPrompt = source.complete("Send the content for the field.")
-					val fieldResponse = fieldPrompt.channel.awaitMessages({ _, user, _ -> user == source.author }, AwaitMessagesOptions().apply { time = 600000L; max = 1 }).await().firstOrNull()
+					val fieldResponse = fieldPrompt.channel.awaitMessages(source, AwaitMessagesOptions().apply { time = 600000L; max = 1 }).await().firstOrNull()
 						?: break
 					if (botHasMessageManage) fieldPrompt.delete().queue()
 					if (!fieldResponse.contentRaw.contains('\n')) {
@@ -81,7 +81,7 @@ class EmbedCommand : BrigadierCommand("embed", "Shiver me embeds!") {
 				}
 				"addMessage" -> {
 					val messagePrompt = source.complete("Send the content for the message.")
-					val messageResponse = messagePrompt.channel.awaitMessages({ _, user, _ -> user == source.author }, AwaitMessagesOptions().apply { time = 600000L; max = 1 }).await().firstOrNull()
+					val messageResponse = messagePrompt.channel.awaitMessages(source, AwaitMessagesOptions().apply { time = 600000L; max = 1 }).await().firstOrNull()
 						?: break
 					if (botHasMessageManage) messagePrompt.delete().queue()
 					content = messageResponse.contentRaw

@@ -155,7 +155,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			.populateFriendInfo(ctx, true)
 			.build(), *buttons.chunked(5, ActionRow::of).toTypedArray())
 		source.loadingMsg = message
-		return when (message.awaitOneInteraction(source.author, false).componentId) {
+		return when (message.awaitOneComponent(source, false).componentId) {
 			"invite" -> inviteToParty(ctx, partyManager)
 			"alias" -> aliasOrNote(ctx, friend.alias, false)
 			"note" -> aliasOrNote(ctx, friend.note, true)
@@ -226,7 +226,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			.populateFriendInfo(ctx)
 			.build(), ActionRow.of(buttons))
 		source.loadingMsg = message
-		return when (message.awaitOneInteraction(source.author, false).componentId) {
+		return when (message.awaitOneComponent(source, false).componentId) {
 			"accept" -> accept(ctx)
 			"reject" -> reject(ctx)
 			"block" -> block(ctx)
@@ -244,7 +244,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			.populateFriendInfo(ctx)
 			.build(), ActionRow.of(buttons))
 		source.loadingMsg = message
-		return when (message.awaitOneInteraction(source.author, false).componentId) {
+		return when (message.awaitOneComponent(source, false).componentId) {
 			"cancel" -> cancel(ctx)
 			"block" -> block(ctx)
 			else -> throw AssertionError()
@@ -260,7 +260,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			.populateFriendInfo(ctx)
 			.build(), ActionRow.of(buttons))
 		source.loadingMsg = message
-		return when (message.awaitOneInteraction(source.author, false).componentId) {
+		return when (message.awaitOneComponent(source, false).componentId) {
 			"unblock" -> unblock(ctx)
 			else -> throw AssertionError()
 		}
@@ -288,7 +288,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		}
 		val message = source.complete(null, embed.build(), ActionRow.of(buttons))
 		source.loadingMsg = message
-		return when (message.awaitOneInteraction(source.author, false).componentId) {
+		return when (message.awaitOneComponent(source, false).componentId) {
 			"request" -> add(ctx)
 			"mutuals" -> mutuals(ctx, user.id)
 			"block" -> block(ctx)
@@ -354,7 +354,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 			.setTitle("Confirmation")
 			.setDescription(L10N.format("friends.$type.bulk.warning"))
 			.build(), confirmationButtons())
-		if (!confirmationMessage.awaitConfirmation(source.author).await()) {
+		if (!confirmationMessage.awaitConfirmation(source).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS
 		}

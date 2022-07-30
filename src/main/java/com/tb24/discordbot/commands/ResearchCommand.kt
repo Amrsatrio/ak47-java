@@ -7,7 +7,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.managers.HomebaseManager
 import com.tb24.discordbot.ui.ResearchViewController
-import com.tb24.discordbot.util.awaitOneInteraction
+import com.tb24.discordbot.util.awaitOneComponent
 import com.tb24.discordbot.util.relativeFromNow
 import com.tb24.discordbot.util.textureEmote
 import com.tb24.fn.model.mcpprofile.McpProfile
@@ -36,7 +36,7 @@ class ResearchCommand : BrigadierCommand("research", "Collect your research poin
 		while (true) {
 			val message = source.complete(null, renderEmbed(source, campaign, ctx), *createComponents(ctx, true))
 			source.loadingMsg = message
-			val choice = message.awaitOneInteraction(source.author, false, 90000L).componentId
+			val choice = message.awaitOneComponent(source, false, 90000L).componentId
 			if (choice == "collect") {
 				ctx.collect(source.api, homebase)
 			} else {

@@ -25,7 +25,7 @@ import net.dv8tion.jda.internal.requests.restaction.interactions.ReplyCallbackAc
 import java.net.URLEncoder
 import java.util.concurrent.CompletableFuture
 
-open class CommandSourceStack {
+open class CommandSourceStack : CollectorFilter<Any> {
 	companion object {
 		val IS_DEBUG = System.getProperty("intellij.debug.agent") == "true"
 	}
@@ -223,7 +223,7 @@ open class CommandSourceStack {
 		if (guild != null && BotConfig.get().homeGuildInviteLink != null && !complete(null, createEmbed().setColor(BrigadierCommand.COLOR_WARNING)
 				.setTitle("✋ Hold up!")
 				.setDescription("We're about to send something that carries your current Epic account session which will be valid for some time or until you log out. Make sure you trust the people here, or you may do the command again [in DMs](${getPrivateChannelLink()}).\n\nContinue?")
-				.build(), confirmationButtons()).awaitConfirmation(author).await()) {
+				.build(), confirmationButtons()).awaitConfirmation(this).await()) {
 			throw SimpleCommandExceptionType(LiteralMessage("Alright.")).create()
 		}
 	}
@@ -270,4 +270,16 @@ open class CommandSourceStack {
 	}
 
 	fun getPrivateChannelLink() = author.openPrivateChannel().complete().let { "https://discord.com/channels/%s/%s".format("@me", it.id) }
+
+	// region CollectorFilter<Any> interface
+	override fun invoke(item: Any, user: User?, collected: Map<Any, Any>): Boolean {
+		if (user == author) {
+			return true
+		}
+		if (item is IReplyCallback) {
+			item.reply("That interface is not yours.").setEphemeral(true).queue()
+		}
+		return false
+	}
+	// endregion
 }

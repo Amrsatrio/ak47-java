@@ -97,7 +97,7 @@ class DeviceAuthCommand : BrigadierCommand("devices", "Device auth operation com
 				.setFooter("Changes are saved automatically")
 				.build(), buttons)
 			source.loadingMsg = message
-			when (message.awaitOneInteraction(source.author, false, 30000L).componentId) {
+			when (message.awaitOneComponent(source, false, 30000L).componentId) {
 				"first" -> swap(0)
 				"prev" -> swap(currentIndex - 1)
 				"next" -> swap(currentIndex + 1)

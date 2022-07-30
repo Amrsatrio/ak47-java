@@ -11,7 +11,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.commands.arguments.StringArgument2.Companion.string2
 import com.tb24.discordbot.util.AttachmentUpload
-import com.tb24.discordbot.util.awaitOneInteraction
+import com.tb24.discordbot.util.awaitOneComponent
 import com.tb24.discordbot.util.exec
 import com.tb24.discordbot.util.to
 import com.tb24.fn.EpicApi
@@ -27,7 +27,7 @@ import java.util.regex.Pattern
 
 class CreativeCommand : BrigadierCommand("creative", "Manages your creative islands and codes.") {
 	companion object {
-		private val MNEMONIC_PATTERN = Pattern.compile("(\\d{4}-\\d{4}-\\d{4})(\\?v=\\d+)?")
+		val MNEMONIC_PATTERN = Pattern.compile("(\\d{4}-\\d{4}-\\d{4})(\\?v=\\d+)?")
 	}
 
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
@@ -56,21 +56,7 @@ class CreativeCommand : BrigadierCommand("creative", "Manages your creative isla
 		}
 		val linkData = EpicApi.GSON.fromJson(linkDataJson, LinkData::class.java)
 		val embed = EmbedBuilder().setColor(COLOR_INFO)
-			.setAuthor(linkData.creatorName + " presents")
-			.setTitle(linkData.metadata.title, "https://fortnite.com/creative/island-codes/$mnemonic")
-			.setDescription(linkData.metadata.tagline)
-			.setImage(linkData.metadata.image_url ?: linkData.metadata.generated_image_urls?.url)
-			.setFooter(mnemonic)
-			.setTimestamp(linkData.published?.toInstant())
-		val introduction = linkData.metadata.introduction
-		if (!introduction.isNullOrEmpty()) {
-			embed.addField("Introduction", introduction, false)
-		}
-		val descriptionTags = linkData.descriptionTags ?: emptyArray()
-		if (descriptionTags.isNotEmpty()) {
-			embed.addField("Tags", descriptionTags.joinToString(), false)
-		}
-		embed.addField("Version", Formatters.num.format(linkData.version), false)
+			.populateCreativeLink(linkData)
 		if (source.session == source.client.internalSession) {
 			source.complete(null, embed.build())
 			return Command.SINGLE_SUCCESS
@@ -99,7 +85,7 @@ class CreativeCommand : BrigadierCommand("creative", "Manages your creative isla
 				Button.of(ButtonStyle.SECONDARY, "favorite", "Favorite", favoriteEmote)
 			}))
 			source.loadingMsg = message
-			val choice = message.awaitOneInteraction(source.author, false).componentId
+			val choice = message.awaitOneComponent(source, false).componentId
 			if (choice == "favorite") {
 				isFavorite = if (isFavorite) {
 					source.api.fortniteService.removeCodeFromCreativeFavorites(source.api.currentLoggedIn.id, mnemonic).exec()
@@ -114,4 +100,23 @@ class CreativeCommand : BrigadierCommand("creative", "Manages your creative isla
 		}
 		return Command.SINGLE_SUCCESS
 	}
+}
+
+fun EmbedBuilder.populateCreativeLink(linkData: LinkData): EmbedBuilder {
+	this.setTitle(linkData.metadata.title, "https://fortnite.com/creative/island-codes/${linkData.mnemonic}")
+		.setDescription(linkData.metadata.tagline.orEmpty() + "\n*by " + linkData.creatorName + '*')
+		.addField("Creator", linkData.creatorName, false)
+		.setImage(linkData.metadata.image_url ?: linkData.metadata.generated_image_urls?.url)
+		.setFooter(linkData.mnemonic)
+		.setTimestamp(linkData.published?.toInstant())
+	val introduction = linkData.metadata.introduction
+	if (!introduction.isNullOrEmpty()) {
+		addField("Introduction", introduction, false)
+	}
+	val descriptionTags = linkData.descriptionTags ?: emptyArray()
+	if (descriptionTags.isNotEmpty()) {
+		addField("Tags", descriptionTags.joinToString(), false)
+	}
+	addField("Version", Formatters.num.format(linkData.version), false)
+	return this
 }

@@ -118,7 +118,7 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 		buttons.add(Button.of(ButtonStyle.PRIMARY, "changeSlot", "Change Slot", survivorEmote))
 		buttons.add(Button.of(ButtonStyle.PRIMARY, "changeVehicle", "Change Vehicle", typeEmote))
 		val message = source.complete(null, embed.build(), ActionRow.of(buttons))
-		return when (message.awaitOneInteraction(source.author, false, 120000L).componentId) {
+		return when (message.awaitOneComponent(source, false, 120000L).componentId) {
 			"start" -> start(source, ctx)
 			"changeSlot" -> changeSlot(source, ctx)
 			"changeVehicle" -> changeVehicle(source, ctx)
@@ -150,7 +150,7 @@ class ExpeditionsCommand : BrigadierCommand("expeditions", "Manages your expedit
 			))
 			.setThumbnail(Utils.benBotExportAsset(expeditionTypeIcon(recipe.RequiredCatalysts.first().toString())))
 		val message = source.complete(null, embed.build(), ActionRow.of(Button.primary("continue", "Continue")))
-		val choice = message.awaitOneInteraction(source.author, false).componentId
+		val choice = message.awaitOneComponent(source, false).componentId
 		if (choice != "continue") {
 			return Command.SINGLE_SUCCESS
 		}

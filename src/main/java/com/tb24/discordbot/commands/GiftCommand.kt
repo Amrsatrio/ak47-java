@@ -82,7 +82,7 @@ class GiftCommand : BrigadierCommand("gift", "Gifts a friend an offer from the i
 			.setThumbnail(Utils.benBotExportAsset(displayData.imagePath))
 			.setColor(displayData.color)
 			.renewAffiliateAndPopulateMtxFields(source, price)
-		if (!source.complete(null, embed.build(), confirmationButtons()).awaitConfirmation(source.author).await()) {
+		if (!source.complete(null, embed.build(), confirmationButtons()).awaitConfirmation(source).await()) {
 			throw SimpleCommandExceptionType(LiteralMessage("Gift canceled.")).create()
 		}
 		source.errorTitle = "Gift Failed"

@@ -3,7 +3,7 @@ package com.tb24.discordbot.commands
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
-import com.mojang.brigadier.arguments.IntegerArgumentType
+import com.mojang.brigadier.arguments.IntegerArgumentType.*
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.CatalogEntryHolder
@@ -31,8 +31,8 @@ import java.util.concurrent.CompletableFuture
 class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open them.", arrayOf("ll", "ocp")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.executes { execute(it.source) }
-		.then(argument("llama #", IntegerArgumentType.integer(1))
-			.executes { execute(it.source, IntegerArgumentType.getInteger(it, "llama #")) }
+		.then(argument("llama #", integer(1))
+			.executes { execute(it.source, getInteger(it, "llama #")) }
 		)
 		.then(literal("openall")
 			.executes { openNonChoiceCardPack(it.source) }
@@ -152,7 +152,7 @@ class CardPackCommand : BrigadierCommand("llamas", "Look at your llamas and open
 			val message = source.complete(null, source.createEmbed().setTitle("Choose an item").setDescription(text).setFooter("%,d/%,d".format(cardPack.index + 1, cardPackToOpen.size)).build(), buttons)
 			source.loadingMsg = message
 			try {
-				val choice = message.awaitOneInteraction(source.author)
+				val choice = message.awaitOneComponent(source)
 				if (choice.componentId == "end") {
 					source.loadingMsg = null
 					break

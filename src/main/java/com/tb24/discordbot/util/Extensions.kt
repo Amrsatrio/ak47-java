@@ -50,6 +50,8 @@ import me.fungames.jfortniteparse.util.printHexBinary
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.*
 import net.dv8tion.jda.api.entities.emoji.Emoji
+import net.dv8tion.jda.api.interactions.Interaction
+import net.dv8tion.jda.api.interactions.ModalInteraction
 import net.dv8tion.jda.api.interactions.components.ActionRow
 import net.dv8tion.jda.api.interactions.components.ComponentInteraction
 import net.dv8tion.jda.api.interactions.components.buttons.Button
@@ -470,19 +472,19 @@ fun confirmationButtons() = ActionRow.of(
 )
 
 @Throws(CommandSyntaxException::class)
-fun Message.awaitConfirmation(author: User, inFinalizeComponentsOnEnd: Boolean = true, inTime: Long = 60000L): CompletableFuture<Boolean> = CompletableFuture.supplyAsync {
-	awaitOneInteraction(author, inFinalizeComponentsOnEnd, inTime).componentId == "positive"
+fun Message.awaitConfirmation(source: CommandSourceStack, inFinalizeComponentsOnEnd: Boolean = true, inTime: Long = 60000L): CompletableFuture<Boolean> = CompletableFuture.supplyAsync {
+	awaitOneComponent(source, inFinalizeComponentsOnEnd, inTime).componentId == "positive"
 }
 
 fun Message.awaitOneReaction(source: CommandSourceStack, inTime: Long = 60000L) =
-	awaitReactions({ _, user, _ -> user?.idLong == source.author.idLong }, AwaitReactionsOptions().apply {
+	awaitReactions(source, AwaitReactionsOptions().apply {
 		max = 1
 		time = inTime
 		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
 	}).await().first().emoji.name
 
-fun Message.awaitOneInteraction(author: User, inFinalizeComponentsOnEnd: Boolean = true, inTime: Long = 60000L): ComponentInteraction {
-	val interaction = awaitMessageComponentInteractions({ _, user, _ -> user?.idLong == author.idLong }, AwaitMessageComponentInteractionsOptions().apply {
+fun Message.awaitOneComponent(source: CommandSourceStack, inFinalizeComponentsOnEnd: Boolean = true, inTime: Long = 60000L): ComponentInteraction {
+	val interaction = awaitMessageComponent(source, AwaitMessageComponentOptions().apply {
 		max = 1
 		time = inTime
 		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
@@ -503,6 +505,13 @@ fun Message.finalizeComponents(selectedIds: Collection<String>) {
 		}.toTypedArray())
 	}).queue()
 }
+
+val Interaction.message: Message?
+	get() = when (this) {
+		is ComponentInteraction -> message
+		is ModalInteraction -> message
+		else -> null
+	}
 
 fun <T> Future<T>.await(): T {
 	try {

@@ -174,7 +174,7 @@ private fun executeQuests(source: CommandSourceStack, campaign: McpProfile, cate
 		return Command.SINGLE_SUCCESS
 	}
 	source.unattended = true
-	return replaceQuest(source, "campaign", message.awaitOneInteraction(source.author).componentId.toInt() + 1) { getQuestsOfCategory(campaign, categoryName) }
+	return replaceQuest(source, "campaign", message.awaitOneComponent(source).componentId.toInt() + 1) { getQuestsOfCategory(campaign, categoryName) }
 }
 
 private val xrayIcon by lazy { textureEmote("/Game/UI/Foundation/Textures/Icons/Items/T-Items-Currency-X-RayLlama-L.T-Items-Currency-X-RayLlama-L") }
@@ -328,7 +328,7 @@ fun replaceQuest(source: CommandSourceStack, profileId: String, questIndex: Int,
 			.setTitle("Replace?")
 			.setDescription(renderChallenge(questToReplace, conditionalCondition = canReceiveMtxCurrency))
 			.build(), confirmationButtons())
-		if (!confirmationMessage.awaitConfirmation(source.author).await()) {
+		if (!confirmationMessage.awaitConfirmation(source).await()) {
 			source.complete("👌 Alright.")
 			return Command.SINGLE_SUCCESS
 		}

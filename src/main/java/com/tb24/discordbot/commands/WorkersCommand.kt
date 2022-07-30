@@ -101,7 +101,7 @@ class WorkerSquadsCommand : BrigadierCommand("survivorsquads", "Shows your or a 
 				if (!source.complete(null, source.createEmbed().setColor(COLOR_WARNING)
 						.setTitle("✋ Hold up!")
 						.setDescription("This will clear **ALL** survivor squads.\n\nContinue?")
-						.build(), confirmationButtons()).awaitConfirmation(source.author).await()) {
+						.build(), confirmationButtons()).awaitConfirmation(source).await()) {
 					source.complete("👌 Alright.")
 					return@executes Command.SINGLE_SUCCESS
 				}

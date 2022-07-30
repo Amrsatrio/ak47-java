@@ -180,7 +180,7 @@ private inline fun accountPicker_buttons(source: CommandSourceStack, devices: Li
 	}
 	buttons.add(Button.secondary("new", "Login to another account").withEmoji(Emoji.fromUnicode("✨")))
 	val botMessage = source.complete("**Pick an account**", null, *buttons.chunked(5, ActionRow::of).toTypedArray())
-	val choice = botMessage.awaitOneInteraction(source.author).componentId
+	val choice = botMessage.awaitOneComponent(source).componentId
 	source.session = source.initialSession
 	return if (choice == "new") {
 		startDefaultLoginFlow(source)
@@ -201,7 +201,7 @@ private inline fun accountPicker_prompt(source: CommandSourceStack, devices: Lis
 		.setDescription(description.joinToString("\n"))
 		.setFooter("Type the account number within 30 seconds to log in")
 		.build())
-	val choice = source.channel.awaitMessages({ _, user, _ -> user == source.author }, AwaitMessagesOptions().apply {
+	val choice = source.channel.awaitMessages(source, AwaitMessagesOptions().apply {
 		max = 1
 		time = 30000
 		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
