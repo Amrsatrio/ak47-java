@@ -131,7 +131,7 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 		}
 		val botMessage = source.complete("**Which Battle Pass offer would you like to purchase?**\nYour level: %s Level %,d\nBalance: %s %,d\n".format(if (stats.book_purchased) "Battle Pass" else "Free Pass", stats.level, Utils.MTX_EMOJI, balance), null, *buttons.chunked(5, ActionRow::of).toTypedArray())
 		source.loadingMsg = botMessage
-		val interaction = botMessage.awaitMessageComponent(source, AwaitMessageComponentOptions().apply {
+		val interaction = botMessage.awaitMessageComponent(source, AwaitInteractionOptions().apply {
 			max = 1
 			time = 30000
 			errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
@@ -143,7 +143,7 @@ class BattlePassCommand : BrigadierCommand("battlepass", "Manage your Battle Pas
 		if (choice == PurchaseOption.SINGLE_TIER) {
 			val limit = min(balance / offer.price.basePrice, 200 - stats.book_level)
 			if (limit > 1) {
-				source.complete("Enter the number of tiers you want to buy (1 - %,d, ⏱ 60s)".format(limit))
+				source.complete("Enter the number of tiers you want to buy (1 - %,d, ⏱ 90s)".format(limit))
 				source.loadingMsg = botMessage
 				quantity = source.channel.awaitMessages(source, AwaitMessagesOptions().apply {
 					max = 1

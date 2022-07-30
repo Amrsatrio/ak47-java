@@ -181,7 +181,7 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 		val (source, friend, user) = ctx
 		ctx.source.loadingMsg?.finalizeComponents(setOf("alias", "note"))
 		val propName = if (note) "note" else "nickname"
-		val promptMsg = source.channel.sendMessage("The current $propName is: `${old.orUnset()}`\nEnter the new $propName, or `clear` to unset: (⏱ 60s)").complete()
+		val promptMsg = source.channel.sendMessage("The current $propName is: `${old.orUnset()}`\nEnter the new $propName, or `clear` to unset: (⏱ 90s)").complete()
 		var new = source.channel.awaitMessages({ collected, _, _ -> collected.author == source.author }, AwaitMessagesOptions().apply {
 			max = 1
 			time = 60000L

@@ -28,7 +28,7 @@ class LogoutCommand : BrigadierCommand("logout", "Logs out the Epic account.", a
 				.setDescription("If you do nothing within 15 seconds, we will only log you out.")
 				.build(), ActionRow.of(Button.primary("positive", "Yes, remove and log out"), Button.primary("negative", "No, just log out (15s)"), Button.of(ButtonStyle.SECONDARY, "cancel", "Cancel", Emoji.fromUnicode("❌"))))
 			source.loadingMsg = prompt
-			val interaction = prompt.awaitMessageComponent(source, AwaitMessageComponentOptions().apply {
+			val interaction = prompt.awaitMessageComponent(source, AwaitInteractionOptions().apply {
 				max = 1
 				time = 15000L
 				errors = arrayOf(CollectorEndReason.MESSAGE_DELETE)

@@ -179,7 +179,7 @@ private fun details(source: CommandSourceStack, profileId: String, index: Int): 
 			}
 			"rename" -> {
 				source.loadingMsg?.finalizeComponents(setOf("rename"))
-				val promptMsg = source.channel.sendMessage("The current preset name is: `$loadoutName`\nEnter the new preset name: (⏱ 60s)").complete()
+				val promptMsg = source.channel.sendMessage("The current preset name is: `$loadoutName`\nEnter the new preset name: (⏱ 90s)").complete()
 				val new = source.channel.awaitMessages({ collected, _, _ -> collected.author == source.author }, AwaitMessagesOptions().apply {
 					max = 1
 					time = 60000L

@@ -472,25 +472,36 @@ fun confirmationButtons() = ActionRow.of(
 )
 
 @Throws(CommandSyntaxException::class)
-fun Message.awaitConfirmation(source: CommandSourceStack, inFinalizeComponentsOnEnd: Boolean = true, inTime: Long = 60000L): CompletableFuture<Boolean> = CompletableFuture.supplyAsync {
+fun Message.awaitConfirmation(source: CommandSourceStack, inFinalizeComponentsOnEnd: Boolean = true, inTime: Long = 90000L): CompletableFuture<Boolean> = CompletableFuture.supplyAsync {
 	awaitOneComponent(source, inFinalizeComponentsOnEnd, inTime).componentId == "positive"
 }
 
-fun Message.awaitOneReaction(source: CommandSourceStack, inTime: Long = 60000L) =
+fun Message.awaitOneReaction(source: CommandSourceStack, inTime: Long = 90000L) =
 	awaitReactions(source, AwaitReactionsOptions().apply {
 		max = 1
 		time = inTime
 		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
 	}).await().first().emoji.name
 
-fun Message.awaitOneComponent(source: CommandSourceStack, inFinalizeComponentsOnEnd: Boolean = true, inTime: Long = 60000L): ComponentInteraction {
-	val interaction = awaitMessageComponent(source, AwaitMessageComponentOptions().apply {
+fun Message.awaitOneComponent(source: CommandSourceStack, inFinalizeComponentsOnEnd: Boolean = true, inTime: Long = 90000L): ComponentInteraction {
+	val interaction = awaitMessageComponent(source, AwaitInteractionOptions().apply {
 		max = 1
 		time = inTime
 		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
 		finalizeComponentsOnEnd = inFinalizeComponentsOnEnd
 	}).await().first()
 	interaction.deferEdit().queue()
+	return interaction
+}
+
+fun Message.awaitOneInteraction(source: CommandSourceStack, inFinalizeComponentsOnEnd: Boolean = true, inTime: Long = 90000L): Interaction {
+	val interaction = awaitInteraction(source, AwaitInteractionOptions().apply {
+		max = 1
+		time = inTime
+		errors = arrayOf(CollectorEndReason.TIME, CollectorEndReason.MESSAGE_DELETE)
+		finalizeComponentsOnEnd = inFinalizeComponentsOnEnd
+	}).await().first()
+	//(interaction as? IMessageEditCallback)?.deferEdit()?.queue()
 	return interaction
 }
 
@@ -505,6 +516,13 @@ fun Message.finalizeComponents(selectedIds: Collection<String>) {
 		}.toTypedArray())
 	}).queue()
 }
+
+val Interaction.customId: String?
+	get() = when (this) {
+		is ComponentInteraction -> componentId
+		is ModalInteraction -> modalId
+		else -> null
+	}
 
 val Interaction.message: Message?
 	get() = when (this) {

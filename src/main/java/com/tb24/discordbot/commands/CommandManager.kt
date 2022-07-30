@@ -497,10 +497,9 @@ ${e.getStackTraceAsString()}```""", null)
 	override fun onGenericComponentInteractionCreate(event: GenericComponentInteractionCreateEvent) {
 		if (event.componentId == "submitAuthCode".appendMachineId()) {
 			val inputCode = TextInput.create("code", "Code", TextInputStyle.SHORT)
-				.setMinLength(32)
-				.setMaxLength(200)
 				.setPlaceholder("aabbccddeeff11223344556677889900")
 				.setRequired(true)
+				.setRequiredRange(32, 200)
 				.build()
 
 			event.replyModal(Modal.create("authCodeSubmission".appendMachineId(), "Log in to your Epic Games account")

@@ -1,3 +1,5 @@
+@file:Suppress("NOTHING_TO_INLINE")
+
 package com.tb24.discordbot.util
 
 import com.tb24.discordbot.util.CollectorEndReason.*
@@ -12,6 +14,7 @@ import net.dv8tion.jda.api.interactions.Interaction
 import net.dv8tion.jda.api.interactions.InteractionType
 import net.dv8tion.jda.api.interactions.components.Component
 import net.dv8tion.jda.api.interactions.components.ComponentInteraction
+import java.util.concurrent.CompletableFuture
 
 open class InteractionCollectorOptions : CollectorOptions() {
 	var channel: MessageChannel? = null
@@ -113,4 +116,39 @@ class InteractionCollector<T : Interaction>(client: JDA, filter: CollectorFilter
 		users.clear()
 		checkEnd()
 	}
+}
+
+inline fun <T : Interaction> Message.createInteractionCollector(noinline filter: CollectorFilter<T>, options: InteractionCollectorOptions = InteractionCollectorOptions()) =
+	InteractionCollector(jda, filter, options.also { it.message = this })
+
+inline fun <T : Interaction> MessageChannel.createInteractionCollector(noinline filter: CollectorFilter<T>, options: InteractionCollectorOptions = InteractionCollectorOptions()) =
+	InteractionCollector(jda, filter, options.also { it.channel = this })
+
+class AwaitInteractionOptions : InteractionCollectorOptions() {
+	var errors: Array<CollectorEndReason>? = null
+	var finalizeComponentsOnEnd = true
+}
+
+@Throws(CollectorException::class)
+fun <T : Interaction> Message.awaitInteraction(filter: CollectorFilter<T>, options: AwaitInteractionOptions = AwaitInteractionOptions()): CompletableFuture<Collection<Interaction>> {
+	val future = CompletableFuture<Collection<Interaction>>()
+	val collector = createInteractionCollector(filter, options)
+	collector.callback = object : CollectorListener<T> {
+		override fun onCollect(item: T, user: User?) {}
+		override fun onRemove(item: T, user: User?) {}
+		override fun onDispose(item: T, user: User?) {}
+
+		override fun onEnd(collected: Map<Any, T>, reason: CollectorEndReason) {
+			if (options.errors?.contains(reason) == true) {
+				future.completeExceptionally(CollectorException(collector, reason))
+				finalizeComponents(collected.values.mapNotNull { (it as? ComponentInteraction)?.componentId })
+			} else {
+				future.complete(collected.values)
+				if (options.finalizeComponentsOnEnd) {
+					finalizeComponents(collected.values.mapNotNull { (it as? ComponentInteraction)?.componentId })
+				}
+			}
+		}
+	}
+	return future
 }

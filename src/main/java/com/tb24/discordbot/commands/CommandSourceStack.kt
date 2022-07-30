@@ -73,7 +73,7 @@ open class CommandSourceStack : CollectorFilter<Any> {
 		guild = interaction.guild
 		member = interaction.member
 		_user = interaction.user
-		channel = interaction.channel as MessageChannel // TODO IMPORTANT
+		channel = interaction.channel as MessageChannel
 		initialSession = getInitialSession(sessionId, ignoreSessionLimit)
 		session = initialSession
 		prefix = "/"

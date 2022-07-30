@@ -30,7 +30,7 @@ class Paginator<T>(
 	init {
 		val msg = source.complete(builder.setActionRows(buildRows()).build())
 		if (!source.unattended && (pageCount > 1 || customComponents != null)) {
-			collector = msg.createMessageComponentCollector(source, MessageComponentCollectorOptions().apply {
+			collector = msg.createMessageComponentCollector(source, AwaitInteractionOptions().apply {
 				idle = 90000L
 				//dispose = true
 			})

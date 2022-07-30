@@ -5,6 +5,7 @@ import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.LiteralMessage
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
+import com.mojang.brigadier.exceptions.CommandSyntaxException
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType
 import com.tb24.discordbot.commands.arguments.ItemArgument
 import com.tb24.discordbot.util.*
@@ -29,14 +30,21 @@ import me.fungames.jfortniteparse.fort.exports.variants.FortCosmeticVariantBacke
 import me.fungames.jfortniteparse.util.printHexBinary
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
+import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.emoji.Emoji
+import net.dv8tion.jda.api.interactions.ModalInteraction
+import net.dv8tion.jda.api.interactions.callbacks.IMessageEditCallback
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.components.ActionRow
+import net.dv8tion.jda.api.interactions.components.ComponentInteraction
+import net.dv8tion.jda.api.interactions.components.Modal
 import net.dv8tion.jda.api.interactions.components.buttons.Button
 import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle
 import net.dv8tion.jda.api.interactions.components.selections.SelectMenu
 import net.dv8tion.jda.api.interactions.components.selections.SelectMenuInteraction
 import net.dv8tion.jda.api.interactions.components.selections.SelectOption
+import net.dv8tion.jda.api.interactions.components.text.TextInput
+import net.dv8tion.jda.api.interactions.components.text.TextInputStyle
 import java.nio.ByteBuffer
 import java.util.concurrent.CompletableFuture
 import kotlin.jvm.internal.Ref
@@ -75,7 +83,7 @@ class CosmeticCommand : BrigadierCommand("cosmetic", "Shows info and options abo
 		}
 }
 
-class CampaignCosmeticCommand : BrigadierCommand("stwcosmetic", "Shows info and options about a BR cosmetic you own, and interact with STW locker instead of BR.") {
+class CampaignCosmeticCommand : BrigadierCommand("stwcosmetic", "Shows info and options about a BR cosmetic you own, and interact with STW locker instead of BR.", arrayOf("stwc")) {
 	override fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack> = newRootNode()
 		.then(argument("type", StringArgumentType.string())
 			.then(argument("item", ItemArgument.item(true))
@@ -279,41 +287,25 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 		val allowClear = cosmeticVariant.ItemTextureVar.bAllowClear ?: true
 		embed.appendDescription(if (allowClear) "\nPick type or clear:" else "\nPick type:")
 		val buttons = mutableListOf<Button>()
-		buttons.add(Button.of(ButtonStyle.PRIMARY, "AthenaEmojiItemDefinition", "Emoticon"))
-		buttons.add(Button.of(ButtonStyle.PRIMARY, "AthenaSprayItemDefinition", "Spray"))
+		itemTextureChoiceDisplayData.forEach { (type, data) ->
+			buttons.add(Button.of(ButtonStyle.PRIMARY, "$type...", data.first))
+		}
 		if (allowClear) {
 			buttons.add(Button.of(ButtonStyle.PRIMARY, "clear", "Clear"))
 		}
 		buttons.add(Button.of(ButtonStyle.SECONDARY, "cancel", "Cancel", Emoji.fromUnicode("❌")))
 		val message = source.complete(null, embed.build(), ActionRow.of(buttons))
 		source.loadingMsg = message
-		val interaction = message.awaitOneComponent(source, false)
-		val choice = interaction.componentId
-		if (choice == "cancel") {
-			return execute(source, item, source.api.profileManager.getProfileData("athena"))
-		}
-		if (choice == "clear") {
-			"ItemTexture.None"
-		} else {
-			val typeName = (interaction.component as Button).label
-			source.loadingMsg = source.complete("Type in the exact name of the %s that you want to pick, or `cancel` to cancel:".format(typeName))
-			val response = source.channel.awaitMessages({ collected, _, _ -> collected.author == source.author }, AwaitMessagesOptions().apply {
-				max = 1
-				time = 60000L
-				errors = arrayOf(CollectorEndReason.TIME)
-			}).await().first()
-			val search = response.contentRaw
-			if (source.guild?.selfMember?.hasPermission(Permission.MESSAGE_MANAGE) == true) {
-				response.delete().queue()
+		var result = ""
+		while (result.isEmpty()) {
+			try {
+				result = awaitEditItemTextureInteraction(source, message, variant)
+					?: return execute(source, item, source.api.profileManager.getProfileData("athena"))
+			} catch (e: CommandSyntaxException) {
+				return execute(source, item, source.api.profileManager.getProfileData("athena"), e.rawMessage.string)
 			}
-			if (search == "cancel") {
-				return execute(source, item, source.api.profileManager.getProfileData("athena"))
-			}
-			source.loading("Searching for `$search`")
-			val (_, itemDef) = searchItemDefinition(search, "AthenaDance", choice)
-				?: return execute(source, item, source.api.profileManager.getProfileData("athena"), "⚠ No %s found for `%s`".format(typeName, search))
-			"ItemTexture.AthenaDance:${itemDef.name.toLowerCase()}"
 		}
+		result
 	} else if (cosmeticVariant is FortCosmeticRichColorVariant) {
 		val colors = cosmeticVariant.InlineVariant.RichColorVar.ColorSwatchForChoices?.load<CustomDynamicColorSwatch>()?.ColorPairs
 			?: throw SimpleCommandExceptionType(LiteralMessage("No color swatch for %s. Custom colors are not yet supported.".format(variant.channelName))).create()
@@ -395,7 +387,50 @@ private fun editVariant(source: CommandSourceStack, profileId: String, lockerIte
 	return equip(source, profileId, lockerItem, category, item, 0, arrayOf(McpVariantReader(cosmeticVariant.backendChannelName, selected, emptyArray())))
 }
 
-fun askChoice(source: CommandSourceStack, embed: EmbedBuilder, options: List<SelectOption>, hint: String): Pair<String?, String?> {
+private val itemTextureChoiceDisplayData = mapOf(
+	"AthenaEmojiItemDefinition" to ("Emoticon" to "In Love or Emoji_InLove"),
+	"AthenaSprayItemDefinition" to ("Spray" to "GG Smiley or SPID_007_SmileGG")
+)
+
+private fun awaitEditItemTextureInteraction(source: CommandSourceStack, message: Message, variant: VariantContainer): String? {
+	val interaction = message.awaitOneInteraction(source, false)
+	val choice = interaction.customId ?: return null
+	when {
+		choice == "cancel" -> {
+			(interaction as? IMessageEditCallback)?.deferEdit()?.queue()
+			return null
+		}
+		choice == "clear" -> {
+			(interaction as? IMessageEditCallback)?.deferEdit()?.queue()
+			return "ItemTexture.None"
+		}
+		interaction is ComponentInteraction -> {
+			val (typeName, placeholder) = itemTextureChoiceDisplayData[choice] ?: return null
+			val inputQuery = TextInput.create("query", "$typeName English display name or ID", TextInputStyle.SHORT)
+				.setPlaceholder(placeholder)
+				.setRequired(true)
+				.setRequiredRange(2, 50)
+				.build()
+			interaction.replyModal(Modal.create("submit-$choice", "Which $typeName to assign as ${variant.channelName}?")
+				.addActionRow(inputQuery)
+				.build()).queue()
+			return "" // Repeat, wait for modal
+		}
+		interaction is ModalInteraction && choice.startsWith("submit-") -> {
+			(interaction as? IMessageEditCallback)?.deferEdit()?.queue()
+			val type = choice.substringAfter("submit-")
+			val (typeName, _) = itemTextureChoiceDisplayData[type] ?: return null
+			val search = interaction.getValue("query")?.asString ?: return null
+			source.loading("Searching for `$search`")
+			val (_, itemDef) = searchItemDefinition(search, "AthenaDance", type)
+				?: throw SimpleCommandExceptionType(LiteralMessage("⚠ No %s found for `%s`".format(typeName, search))).create()
+			return "ItemTexture.AthenaDance:${itemDef.name.toLowerCase()}"
+		}
+	}
+	return null
+}
+
+private fun askChoice(source: CommandSourceStack, embed: EmbedBuilder, options: List<SelectOption>, hint: String): Pair<String?, String?> {
 	val selected = if (options.size > 25) {
 		embed.addFieldSeparate(hint, options, inline = true) { (it.emoji?.formatted?.let { "$it " } ?: "") + it.label }
 		embed.setFooter("Type the number of the option you want to select, or 'cancel' to return.")
