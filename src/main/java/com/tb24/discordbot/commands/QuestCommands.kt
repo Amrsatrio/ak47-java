@@ -112,6 +112,9 @@ abstract class BaseQuestsCommand(name: String, description: String, private val 
 		)
 		node.then(literal("bulk3")
 			.executes { executeQuestsBulk(it.source, categoryName, maxDailiesOnly = true) }
+			.then(argument("users", UserArgument.users(100))
+				.executes { executeQuestsBulk(it.source, categoryName, lazy { UserArgument.getUsers(it, "users").values }, true)}
+			)
 		)
 		node.then(literal("bulkz")
 			.then(argument("type", greedyString())
