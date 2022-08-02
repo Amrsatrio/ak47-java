@@ -30,6 +30,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.Call
 import java.net.HttpURLConnection
+import java.util.*
 
 class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", arrayOf("f")) {
 	companion object {
@@ -311,7 +312,8 @@ class FriendsCommand : BrigadierCommand("friends", "Epic Friends operations.", a
 	}
 
 	private fun accept(ctx: FriendContext): Int {
-		val (source, _, user) = ctx
+		val (source, friend, user) = ctx
+		friend?.created = Date()
 		source.api.friendsService.sendInviteOrAcceptInvite(source.api.currentLoggedIn.id, user.id).exec()
 		ctx.titleOverride = "✅ ${user.displayName} is now your friend"
 		return friends(ctx)

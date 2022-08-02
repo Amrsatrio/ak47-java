@@ -208,10 +208,10 @@ class DiscordBot(token: String) {
 			scheduleUtcMidnightTask()
 			if (BotConfig.get().loadGameFiles != BotConfig.EGameFileLoadOption.NoLoad) {
 				scheduleKeychainTask()
+				autoResearchManager.initSchedule()
 			}
 		}
 		catalogManager.initialize(this)
-		autoResearchManager.initSchedule()
 	}
 
 	/** Schedules item shop poster and auto daily at 00:00 UTC */
