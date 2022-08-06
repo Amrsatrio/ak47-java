@@ -33,7 +33,9 @@ fun renderCompose(density: Float = 1f, content: @Composable () -> Unit): SkImage
 	val surface = SkSurface.makeRasterN32Premul(scene.contentSize.width, scene.contentSize.height)
 	scene.render(surface.canvas, System.nanoTime())
 	scene.close()
-	return surface.makeImageSnapshot()
+	val image = surface.makeImageSnapshot()
+	surface.close()
+	return image
 }
 
 fun Modifier.shear(x: Float = 0f, y: Float = 0f) = drawWithContent {

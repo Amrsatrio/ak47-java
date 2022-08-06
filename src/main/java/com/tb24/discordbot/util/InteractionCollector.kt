@@ -32,7 +32,7 @@ class InteractionCollector<T : Interaction>(client: JDA, filter: CollectorFilter
 	val message = options.message
 	val messageInteraction = options.interaction
 	val channel = options.interaction?.channel ?: options.message?.channel ?: options.channel
-	val guild = options.interaction?.guild ?: options.message?.guild ?: (options.channel as? TextChannel)?.guild ?: options.guild
+	val guild = options.interaction?.guild ?: (options.message?.channel as? GuildChannel)?.guild ?: (options.channel as? TextChannel)?.guild ?: options.guild
 	private val interactionType = options.interactionType
 	private val componentType = options.componentType
 	private val users = mutableMapOf<Long, User>()
