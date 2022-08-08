@@ -194,22 +194,21 @@ class CommandManager(private val client: DiscordBot) : ListenerAdapter() {
 		DiscordBot.LOGGER.info("Updated commands (total {})", commands.size)
 	}
 
-	private fun register(command: BrigadierCommand): LiteralCommandNode<CommandSourceStack> {
+	private fun register(command: BrigadierCommand) {
 		// Register classic text command
 		commandMap[command.name] = command
-		val registered = command.register(dispatcher)
-		for (alias in command.aliases) {
-			redirects[alias] = command
-			dispatcher.register(buildRedirect(alias, registered))
+		command.register(dispatcher)?.let {
+			for (alias in command.aliases) {
+				redirects[alias] = command
+				dispatcher.register(buildRedirect(alias, it))
+			}
+			command.registeredNode = it
 		}
-		command.registeredNode = registered
 
 		// Register slash command
 		command.getSlashCommand()?.let {
 			slashCommands[it.name] = it
 		}
-
-		return registered
 	}
 
 	// Redirects only work for nodes with children, but break the top argument-less command.

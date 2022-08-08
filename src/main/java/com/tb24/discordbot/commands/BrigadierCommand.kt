@@ -19,11 +19,11 @@ import net.dv8tion.jda.api.interactions.commands.OptionType
 abstract class BrigadierCommand @JvmOverloads constructor(val name: String, val description: String, val aliases: Array<String> = emptyArray()) {
 	lateinit var registeredNode: CommandNode<CommandSourceStack>
 
-	abstract fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack>
+	open fun getNode(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralArgumentBuilder<CommandSourceStack>? = null
 	open fun getSlashCommand(): BaseCommandBuilder<CommandSourceStack>? = null
 
-	open fun register(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralCommandNode<CommandSourceStack> =
-		dispatcher.register(getNode(dispatcher))
+	open fun register(dispatcher: CommandDispatcher<CommandSourceStack>): LiteralCommandNode<CommandSourceStack>? =
+		getNode(dispatcher)?.let(dispatcher::register)
 
 	protected inline fun newRootNode() = literal(name)
 	protected inline fun newCommandBuilder() = command(name, description)
