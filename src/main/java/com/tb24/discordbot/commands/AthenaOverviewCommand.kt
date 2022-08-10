@@ -75,12 +75,18 @@ class AthenaOverviewCommand : BrigadierCommand("br", "Shows an overview of your 
 		}
 		if (stats.rested_xp > 0) {
 			val restedXpMaxAccrue = seasonData?.RestedXpMaxAccrue ?: 0
-			var restedXpText = "`%s`\n%,d / %,d\nMultiplier: %,.2f\u00d7 \u00b7 Exchange: %,.2f \u00b7 Overflow: %,d".format(
-				Utils.progress(stats.rested_xp, restedXpMaxAccrue, 32),
-				stats.rested_xp, restedXpMaxAccrue,
-				stats.rested_xp_mult, stats.rested_xp_exchange, stats.rested_xp_overflow)
-			if (restedXpMaxAccrue > 0 && stats.rested_xp >= restedXpMaxAccrue) {
-				restedXpText += "\n⚠ " + "Your supercharged XP is at maximum. You won't be granted more supercharged XP if you don't complete your daily challenges until you deplete it."
+			val restedXpDetailsText = "Multiplier: %,.2f\u00d7 \u00b7 Exchange: %,.2f \u00b7 Overflow: %,d".format(stats.rested_xp_mult, stats.rested_xp_exchange, stats.rested_xp_overflow)
+			var restedXpText: String
+			if (restedXpMaxAccrue != 0) {
+				restedXpText = "`%s`\n%,d / %,d\n%s".format(
+					Utils.progress(stats.rested_xp, restedXpMaxAccrue, 32),
+					stats.rested_xp, restedXpMaxAccrue,
+					restedXpDetailsText)
+				if (restedXpMaxAccrue > 0 && stats.rested_xp >= restedXpMaxAccrue) {
+					restedXpText += "\n⚠ " + "Your supercharged XP is at maximum. You won't be granted more supercharged XP if you don't complete your daily challenges until you deplete it."
+				}
+			} else {
+				restedXpText = "%,d\n%s".format(stats.rested_xp, restedXpDetailsText)
 			}
 			embed.addField("Supercharged XP", restedXpText, false)
 		}
