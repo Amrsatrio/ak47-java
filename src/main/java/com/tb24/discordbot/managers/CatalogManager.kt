@@ -67,8 +67,7 @@ class CatalogManager {
 	fun validate(firstLoad: Boolean = true) {
 		athenaSections.clear()
 		sectionsData!!.sectionList.sections.associateTo(athenaSections) {
-			val section = ShopSection(it)
-			section.sectionData.sectionId.lowercase() to section
+			it.sectionId.lowercase() to ShopSection(it)
 		}
 		campaignSections.values.forEach { it.items.clear() }
 		for (storefront in catalogData!!.storefronts) {
@@ -78,7 +77,9 @@ class CatalogManager {
 					LOGGER.info("[FortStorefront]: Adding key $it to keychain through store offer ${offer.offerId}")
 					client?.keychainTask?.handle(it)
 				}
-				(athenaSections[offer.getMeta("SectionId")?.lowercase() ?: continue] ?: continue).items.add(offer)
+				val sectionId = offer.getMeta("SectionId")?.lowercase() ?: continue
+				val section = athenaSections.getOrPut(sectionId) { ShopSection(sectionId) }
+				section.items.add(offer)
 				if (offer.getMeta("IsLevelBundle").equals("true", true)) {
 					val tierToken = FortItemStack("Token:athenabattlepasstier", offer.getMeta("LevelsToGrant")?.toIntOrNull() ?: 1)
 					offer.itemGrants = listOf(tierToken)
